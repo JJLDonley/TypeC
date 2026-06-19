@@ -161,6 +161,7 @@ function validateCompilerFlag(flag: Str): void {
   if (isEntrypointFlag(flag)) throw configError("project.json compiler.flags cannot override the program entrypoint");
   if (isHostedEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot remove the hosted C environment");
   if (isTargetEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot override the target environment");
+  if (isForcedIncludeFlag(flag)) throw configError("project.json compiler.flags cannot force source includes");
   if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
   if (flag.startsWith("-x")) throw configError("project.json compiler.flags cannot override input language");
 }
@@ -218,8 +219,12 @@ function linkerOperands(flag: Str): Str[] {
   return flag.slice("-Wl,".length).split(",");
 }
 
+function isForcedIncludeFlag(flag: Str): b8 {
+  return flag === "-include" || flag.startsWith("-include");
+}
+
 function isSeparateOperandFlag(flag: Str): b8 {
-  return flag === "-I" || flag === "-D" || flag === "-U" || flag === "-L" || flag === "-l" || flag === "-include" || flag === "-isystem";
+  return flag === "-I" || flag === "-D" || flag === "-U" || flag === "-L" || flag === "-l" || flag === "-isystem";
 }
 
 function isRecord(value: unknown): value is JsonRecord {

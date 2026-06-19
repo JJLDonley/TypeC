@@ -64,7 +64,8 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["--sysroot=/sdk"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-isysroot/sdk"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
-  assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
+  assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler.flags cannot force source includes");
+  assertConfigError(`{"compiler":{"flags":["-includeconfig.h"]}}`, "project.json compiler.flags cannot force source includes");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");
   assertConfigError(`{"compiler":{"flags":["-xc++"]}}`, "project.json compiler.flags cannot override input language");
   assertConfigError(`{"dependencies":{"./math.tc":"std/math.tc"}}`, "Dependency alias './math.tc' must not be relative or std");
