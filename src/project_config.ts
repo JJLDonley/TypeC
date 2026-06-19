@@ -81,6 +81,15 @@ function validateDependencyAlias(name: Str): void {
 function validateDependencyTarget(name: Str, path: Str): void {
   if (!path.endsWith(".tc")) throw configError(`Dependency '${name}' target must be a .tc file`);
   if (hasUrlScheme(path)) throw configError(`Dependency '${name}' target must be a local TypeC path`);
+  if (isProjectRelativeTarget(path) && hasParentTraversal(path)) throw configError(`Dependency '${name}' target must stay within the project`);
+}
+
+function isProjectRelativeTarget(path: Str): b8 {
+  return !path.startsWith("/") && !isStdImportPath(path);
+}
+
+function hasParentTraversal(path: Str): b8 {
+  return path.split("/").some((part) => part === "..");
 }
 
 function hasUrlScheme(path: Str): b8 {

@@ -706,7 +706,7 @@ Supported fields:
 - `dependencies`: maps import aliases to `.tc` files.
 - `compiler.flags`: extra native C compiler flags.
 
-Dependency targets may be relative project paths, absolute paths, or `std/` paths.
+Dependency targets may be relative project paths, absolute paths, or `std/` paths. Project-relative dependency targets cannot escape the project with `..` segments.
 
 Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form.
 
