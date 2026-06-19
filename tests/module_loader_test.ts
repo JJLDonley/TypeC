@@ -17,6 +17,15 @@ Deno.test("loads imported type aliases", async () => {
   assertIncludes(program.typeAliases.map((typeAlias) => typeAlias.name), "Pair");
 });
 
+Deno.test("loads dependencies of imported functions", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/ops.tc`, `function inc(x: i32): i32 { return x + 1; } export function answer(): i32 { return inc(41); }`);
+  await writeText(`${dir}/main.tc`, `import { answer } from "./ops.tc"; function main(): i32 { return answer(); }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "inc");
+  assertIncludes(program.functions.map((fn) => fn.name), "answer");
+});
+
 Deno.test("rejects missing exports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);

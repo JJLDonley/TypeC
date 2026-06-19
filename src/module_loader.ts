@@ -2,6 +2,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
 import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
 import { lex } from "./lexer.ts";
+import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
 
 type Str = string;
@@ -57,7 +58,7 @@ function selectImports(program: Program, names: Str[], span: Diagnostic["span"])
   const found = new Set<Str>([...typeAliases.map((decl) => decl.name), ...functions.map((decl) => decl.name)]);
   const missing = names.filter((name) => !found.has(name));
   if (missing.length > 0) throw new TypeCError(missing.map((name) => ({ message: `Module does not export '${name}'`, span })));
-  return { kind: "Program", imports: [], typeAliases, functions, span: program.span };
+  return selectDependencyClosure(program, typeAliases.map((typeAlias) => typeAlias.name), functions.map((fn) => fn.name));
 }
 
 function selectTypeAlias(typeAliases: TypeAliasDecl[], name: Str): TypeAliasDecl[] {
