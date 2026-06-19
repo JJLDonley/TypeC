@@ -731,23 +731,267 @@ export function main(): i32 {
 
 ---
 
-# Phase 12: Advanced TypeC Features
+# Phase 12: Compile-Time Constants
 
-Only add after the core compiler is stable.
+## Goal
 
-Possible features:
+Allow named values that are evaluated by the compiler and emitted as C constants or substituted literals.
 
-- generics
-- tagged unions
-- enums
-- pattern matching
-- interfaces as compile-time constraints
-- methods
-- safe pointer modes
-- defer
-- arenas
-- compile-time constants
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define exactly which expressions are compile-time evaluable.
+- Keep evaluation deterministic and side-effect free.
+- Reject values that cannot be represented in their declared TypeC type.
+- Emit fixed-width C types and literals.
+
+## Do Not
+
+- Do not add macros as a substitute for typed constants.
+- Do not evaluate function calls unless explicitly specified later.
+- Do not introduce hidden runtime initialization.
+
+---
+
+# Phase 13: Defer
+
+## Goal
+
+Allow explicit scope-exit cleanup without hidden ownership semantics.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define execution order precisely.
+- Lower to explicit C statements.
+- Run deferred actions on all local exits from the scope.
+- Keep deferred expressions type-checked like normal statements.
+
+## Do Not
+
+- Do not implement exceptions.
+- Do not hide allocation or ownership behavior.
+- Do not allow control flow that cannot be lowered clearly to C.
+
+---
+
+# Phase 14: Enums
+
+## Goal
+
+Add simple closed sets of named integer values.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define representation explicitly.
+- Require deterministic discriminant values.
+- Type-check enum values distinctly from raw integers unless conversion rules are specified.
+- Emit portable C using TypeC fixed-width integer aliases.
+
+## Do Not
+
+- Do not add payloads in this phase.
+- Do not add pattern matching in this phase.
+- Do not rely on C enum implementation-defined sizes.
+
+---
+
+# Phase 15: Classes and Methods
+
+## Goal
+
+Add static-layout data types with associated functions, lowered predictably to records and functions.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Keep object layout static and C-compatible where possible.
+- Lower methods to explicit functions with an explicit receiver.
+- Reuse record field checking rules.
+- Keep dispatch static.
+
+## Do Not
+
+- Do not add prototypes.
+- Do not add runtime reflection.
+- Do not add implicit heap allocation.
+- Do not add inheritance in this phase.
+
+---
+
+# Phase 16: Safe Pointer Modes
+
+## Goal
+
+Add stricter pointer categories or annotations that improve safety while preserving explicit memory behavior.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define each pointer mode's aliasing, nullability, and mutability rules.
+- Keep lowering to C explicit and auditable.
+- Reject unsafe conversions unless explicitly written and specified.
+- Preserve existing raw pointer interop rules.
+
+## Do Not
+
+- Do not promise memory safety without enforceable rules.
+- Do not infer ownership silently.
+- Do not break C ABI compatibility for raw pointers.
+
+---
+
+# Phase 17: Arenas
+
+## Goal
+
+Add explicit region-style allocation as a standard memory-management pattern.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Make arena lifetime explicit.
+- Define allocation failure behavior.
+- Lower to portable C runtime support only if specified.
+- Keep interaction with `defer` clear.
+
+## Do Not
+
+- Do not add garbage collection.
+- Do not hide allocation behind ordinary value construction.
+- Do not make arenas required for programs that do not use them.
+
+---
+
+# Phase 18: Interfaces
+
+## Goal
+
+Add compile-time constraints for generic or static-dispatch code.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Keep interfaces compile-time only unless runtime dispatch is explicitly specified later.
+- Define satisfaction rules structurally or nominally before implementation.
+- Require clear diagnostics for missing members.
+- Keep generated C monomorphic and explicit.
+
+## Do Not
+
+- Do not add dynamic dispatch by accident.
+- Do not add runtime type information.
+- Do not copy TypeScript interface semantics blindly.
+
+---
+
+# Phase 19: Generics
+
+## Goal
+
+Allow reusable typed functions and data structures through compile-time instantiation.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define monomorphization rules.
+- Define generic type parameter constraints.
+- Emit deterministic C names for instantiations.
+- Keep diagnostics tied to source generic definitions and call sites.
+
+## Do Not
+
+- Do not add type erasure unless explicitly designed.
+- Do not emit runtime generic metadata.
+- Do not allow unconstrained operations on unknown types.
+
+---
+
+# Phase 20: Tagged Unions
+
+## Goal
+
+Add sum types with explicit variants and payloads.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define representation as a tag plus payload storage.
+- Require explicit construction of variants.
+- Check payload types statically.
+- Emit portable C structs/unions only after layout is specified.
+
+## Do Not
+
+- Do not rely on unspecified C layout.
+- Do not add implicit conversions between variants.
+- Do not require pattern matching in this phase.
+
+---
+
+# Phase 21: Pattern Matching
+
+## Goal
+
+Add exhaustive branching over enums and tagged unions.
+
+## Syntax
+
+TBD before implementation.
+
+## Do
+
+- Define exhaustiveness rules.
+- Define binding and scope rules.
+- Lower to explicit C control flow.
+- Require all arms to be type-consistent.
+
+## Do Not
+
+- Do not add partial matching without diagnostics.
+- Do not add runtime reflection.
+- Do not implement before enums and tagged unions are stable.
+
+---
+
+# Future Features
+
+Only add after their syntax, semantics, examples, lowering, and tests are documented.
+
+Possible future work:
+
 - package manager
+- inheritance, if ever needed
+- runtime dynamic dispatch, if explicitly chosen
+- garbage collection, only if TypeC explicitly chooses that path later
 
 ## Do
 
