@@ -21,6 +21,7 @@ export async function loadProjectConfig(entryPath: Str): Promise<ProjectConfig> 
 export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
   const value = parseJson(text);
   if (!isRecord(value)) throw configError("project.json must contain an object");
+  rejectUnknownKeys("project.json", value, ["dependencies", "compiler"]);
   return {
     projectDir,
     dependencies: readDependencies(value.dependencies),
@@ -92,6 +93,7 @@ function isStdImportPath(path: Str): b8 {
 function readCompilerFlags(value: unknown): Str[] {
   if (value === undefined) return [];
   if (!isRecord(value)) throw configError("project.json compiler must be an object");
+  rejectUnknownKeys("project.json compiler", value, ["flags"]);
   const flags = value.flags;
   if (flags === undefined) return [];
   if (!Array.isArray(flags) || !flags.every((flag) => typeof flag === "string")) throw configError("project.json compiler.flags must be a string array");
@@ -106,6 +108,13 @@ function validateCompilerFlag(flag: Str): void {
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function rejectUnknownKeys(scope: Str, value: JsonRecord, knownKeys: Str[]): void {
+  const known = new Set<Str>(knownKeys);
+  for (const key of Object.keys(value)) {
+    if (!known.has(key)) throw configError(`${scope} has unknown key '${key}'`);
+  }
 }
 
 function configError(message: Str): TypeCError {
