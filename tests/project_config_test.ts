@@ -52,6 +52,7 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"dependencies":{"raylib.h":"vendor/raylib.h"}}`, "Dependency alias 'raylib.h' must not include a file extension");
   assertConfigError(`{"dependencies":{"basic/math":"std/math"}}`, "Dependency 'basic/math' target must be a .tc or .h file");
   assertConfigError(`{"dependencies":{"basic/math":"https://example.test/math.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
+  assertConfigError(`{"dependencies":{"basic/math":"vendor\\\\math.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
   assertConfigError(`{"dependencies":{"basic/math":"std/../math.tc"}}`, "Dependency 'basic/math' std target must stay within std");
   assertConfigError(`{"dependencies":{"basic/math":"std/%2e%2e/math.tc"}}`, "Dependency 'basic/math' std target must stay within std");
   assertConfigError(`{"dependencies":{"basic/math":"../math.tc"}}`, "Dependency 'basic/math' target must stay within the project");
