@@ -132,7 +132,12 @@ function projectImportPath(projectDir: Str, importPath: Str): Str {
 }
 
 function stdImportPath(importPath: Str): Str {
-  return normalizePath(importPath);
+  const modulePath = importPath.slice("std/".length);
+  return fileUrlPath(new URL(`../std/${modulePath}`, import.meta.url));
+}
+
+function fileUrlPath(url: URL): Str {
+  return decodeURIComponent(url.pathname);
 }
 
 function fileDirectoryUrl(path: Str): URL {

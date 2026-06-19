@@ -60,6 +60,18 @@ Deno.test("loads std imports", async () => {
   assertIncludes(program.functions.map((fn) => fn.name), "clamp_i32");
 });
 
+Deno.test("loads std imports outside project cwd", async () => {
+  const cwd = Deno.cwd();
+  const dir = await Deno.makeTempDir();
+  try {
+    Deno.chdir(dir);
+    const program = await loadProgram(`${cwd}/examples/std_math.tc`);
+    assertIncludes(program.functions.map((fn) => fn.name), "abs_i32");
+  } finally {
+    Deno.chdir(cwd);
+  }
+});
+
 Deno.test("loads std project dependency imports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/project.json`, `{"dependencies":{"basic/math.tc":"std/math.tc"}}`);
