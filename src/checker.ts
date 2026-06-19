@@ -4,8 +4,9 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
+import { checkBinaryOperation } from "./checker_binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
-import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
+import { isAddressable, spanKey } from "./checker_exprs.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
   checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
@@ -14,7 +15,7 @@ import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
-import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
+import { integerRange, isAssignable, isFloatType, isIntegerType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
 import {
   checkArrayElementType as collectArrayElementTypeDiagnostics,
@@ -237,15 +238,9 @@ class Checker {
 
   private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const hinted = this.binaryOperandTypes(expr, locals);
-    if (hinted.left !== hinted.right) {
-      this.error(`Cannot apply '${expr.operator}' to '${hinted.left}' and '${hinted.right}'`, expr.span);
-      return "<error>";
-    }
-    if (!isNumericType(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
-    if (expr.operator === "%" && !isIntegerType(hinted.left)) this.error("Operator '%' requires integer operands", expr.span);
-    if ((expr.operator === "/" || expr.operator === "%") && isIntegerType(hinted.left) && isIntegerZeroLiteral(expr.right)) this.error(`Operator '${expr.operator}' cannot divide by zero`, expr.span);
-    if (isComparisonOperator(expr.operator)) return "bool";
-    return hinted.left;
+    const result = checkBinaryOperation(expr, hinted);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private binaryOperandTypes(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): { left: TypeName; right: TypeName } {
