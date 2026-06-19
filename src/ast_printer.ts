@@ -69,6 +69,14 @@ class AstPrinter {
           this.block(statement.body);
         });
         return;
+      case "IfStmt":
+        this.line("IfStmt");
+        this.indented(() => {
+          this.expression(statement.condition);
+          this.block(statement.thenBody);
+          if (statement.elseBody) this.block(statement.elseBody);
+        });
+        return;
     }
   }
 

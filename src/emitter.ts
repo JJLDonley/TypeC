@@ -56,7 +56,23 @@ function emitStatement(stmt: Statement, returnType: Str): Str {
       return `${stmt.name} = ${emitExpression(stmt.expression)};`;
     case "WhileStmt":
       return emitWhile(stmt);
+    case "IfStmt":
+      return emitIf(stmt);
   }
+}
+
+function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>): Str {
+  const out: Str[] = [];
+  out.push(`if (${emitExpression(stmt.condition)}) {`);
+  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, "void")}`);
+  if (!stmt.elseBody) {
+    out.push("}");
+    return out.join("\n  ");
+  }
+  out.push("} else {");
+  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, "void")}`);
+  out.push("}");
+  return out.join("\n  ");
 }
 
 function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>): Str {

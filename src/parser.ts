@@ -152,6 +152,7 @@ class Parser {
 
   private parseStatement(): CastStatement {
     if (this.checkText("return")) return this.parseReturn();
+    if (this.checkText("if")) return this.parseIf();
     if (this.checkText("while")) return this.parseWhile();
     if (this.checkText("let") || this.checkText("const")) return this.parseVarDecl();
     if (this.check("identifier") && this.peek(1).text === "=") return this.parseAssignment();
@@ -165,6 +166,17 @@ class Parser {
     const expression = this.parseExpression();
     const semi = this.expectText(";");
     return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
+  }
+
+  private parseIf(): CastStatement {
+    const start = this.expectText("if");
+    this.expectText("(");
+    const condition = this.parseExpression();
+    this.expectText(")");
+    const thenBody = this.parseBlock();
+    const elseBody = this.matchText("else") ? this.parseBlock() : null;
+    const end = elseBody?.span.end ?? thenBody.span.end;
+    return { kind: "IfStmt", condition, thenBody, elseBody, span: span(start.span.start, end) };
   }
 
   private parseWhile(): CastStatement {

@@ -44,6 +44,13 @@ Deno.test("parses bool literals", () => {
   if (statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
 });
 
+Deno.test("parses if else statements", () => {
+  const program = parse(lex(`function main(): i32 { if (true) { return 1; } else { return 0; } }`));
+  const statement = program.functions[0].body.statements[0];
+  if (statement.kind !== "IfStmt") throw new Error("Expected if statement");
+  if (!statement.elseBody) throw new Error("Expected else body");
+});
+
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);

@@ -57,6 +57,11 @@ class Resolver {
         this.resolveExpression(statement.condition, scope);
         for (const child of statement.body.statements) this.resolveStatement(child, scope);
         return;
+      case "IfStmt":
+        this.resolveExpression(statement.condition, scope);
+        for (const child of statement.thenBody.statements) this.resolveStatement(child, scope);
+        for (const child of statement.elseBody?.statements ?? []) this.resolveStatement(child, scope);
+        return;
     }
   }
 

@@ -53,14 +53,10 @@ class Checker {
     const locals = new Map<Str, LocalInfo>();
     for (const param of fn.params) locals.set(param.name, { type: typeName(param.type), mutable: false });
 
-    let hasReturn = false;
     const returnType = typeName(fn.returnType);
     if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
-    for (const stmt of fn.body.statements) {
-      if (stmt.kind === "ReturnStmt") hasReturn = true;
-      this.checkStatement(stmt, locals, returnType);
-    }
-    if (returnType !== "void" && !hasReturn) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
+    for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
+    if (returnType !== "void" && !blockReturns(fn.body.statements)) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
   }
 
   private checkStatement(stmt: Statement, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
@@ -76,6 +72,9 @@ class Checker {
         return;
       case "WhileStmt":
         this.checkWhile(stmt, locals, returnType);
+        return;
+      case "IfStmt":
+        this.checkIf(stmt, locals, returnType);
         return;
     }
   }
@@ -105,6 +104,13 @@ class Checker {
     const condition = this.typeOf(stmt.condition, locals);
     if (condition !== "bool") this.error(`While condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
     for (const child of stmt.body.statements) this.checkStatement(child, locals, returnType);
+  }
+
+  private checkIf(stmt: Extract<Statement, { kind: "IfStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
+    const condition = this.typeOf(stmt.condition, locals);
+    if (condition !== "bool") this.error(`If condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
+    for (const child of stmt.thenBody.statements) this.checkStatement(child, locals, returnType);
+    for (const child of stmt.elseBody?.statements ?? []) this.checkStatement(child, locals, returnType);
   }
 
   private typeOf(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
@@ -336,6 +342,17 @@ class Checker {
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
   }
+}
+
+function blockReturns(statements: Statement[]): b8 {
+  return statements.some(statementReturns);
+}
+
+function statementReturns(statement: Statement): b8 {
+  if (statement.kind === "ReturnStmt") return true;
+  if (statement.kind !== "IfStmt") return false;
+  if (!statement.elseBody) return false;
+  return blockReturns(statement.thenBody.statements) && blockReturns(statement.elseBody.statements);
 }
 
 function isComparisonOperator(operator: Str): b8 {

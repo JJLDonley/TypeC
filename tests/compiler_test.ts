@@ -81,6 +81,13 @@ Deno.test("emits C for bool literals", () => {
   assertIncludes(c, "const b8 ok = false;");
 });
 
+Deno.test("emits C for if else statements", () => {
+  const source = `function main(): i32 { if (true) { return 1; } else { return 0; } }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "if (true) {");
+  assertIncludes(c, "} else {");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

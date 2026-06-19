@@ -80,6 +80,14 @@ Deno.test("checks bool literals", () => {
   check(resolve(parse(lex(`function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`))));
 });
 
+Deno.test("checks if else statements", () => {
+  check(resolve(parse(lex(`function main(): i32 { if (true) { return 1; } else { return 0; } }`))));
+});
+
+Deno.test("rejects non-bool if conditions", () => {
+  assertCheckError(`function main(): i32 { if (1) { return 1; } return 0; }`, "If condition type 'i32' is not assignable to 'bool'");
+});
+
 Deno.test("rejects non-bool while conditions", () => {
   assertCheckError(`function main(): i32 { while (1) { return 0; } return 0; }`, "While condition type 'i32' is not assignable to 'bool'");
 });

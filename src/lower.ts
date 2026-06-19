@@ -11,6 +11,7 @@ import type {
   FloatLiteral,
   FunctionDecl,
   IdentifierExpr,
+  IfStmt,
   IndexExpr,
   InferredArrayTypeRef,
   IntegerLiteral,
@@ -41,6 +42,7 @@ import type {
   CastFloatLiteral,
   CastFunctionDecl,
   CastIdentifierExpr,
+  CastIfStmt,
   CastIndexExpr,
   CastInferredArrayTypeRef,
   CastIntegerLiteral,
@@ -160,7 +162,19 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerAssignmentStmt(statement);
     case "WhileStmt":
       return lowerWhileStmt(statement);
+    case "IfStmt":
+      return lowerIfStmt(statement);
   }
+}
+
+function lowerIfStmt(statement: CastIfStmt): IfStmt {
+  return {
+    kind: "IfStmt",
+    condition: lowerExpression(statement.condition),
+    thenBody: lowerBlockStmt(statement.thenBody),
+    elseBody: statement.elseBody ? lowerBlockStmt(statement.elseBody) : null,
+    span: statement.span,
+  };
 }
 
 function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
