@@ -370,7 +370,15 @@ class Checker {
     }
     const index = this.typeOf(expr.index, locals);
     if (!isIntegerType(index)) this.error(`Array index type '${index}' is not an integer`, expr.index.span);
+    this.checkArrayIndexBounds(expr.index, array.length);
     return array.element;
+  }
+
+  private checkArrayIndexBounds(index: Expression, length: i32 | null): void {
+    if (length === null) return;
+    if (index.kind !== "IntegerLiteral") return;
+    if (index.value < BigInt(length)) return;
+    this.error(`Array index ${index.text} is out of bounds for length ${length}`, index.span);
   }
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {

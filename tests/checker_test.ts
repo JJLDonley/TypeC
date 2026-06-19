@@ -138,6 +138,11 @@ Deno.test("checks usize array indexes", () => {
   check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; const i: usize = 0; return xs[i]; }`))));
 });
 
+Deno.test("rejects literal array indexes out of bounds", () => {
+  assertCheckError(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[3]; }`, "Array index 3 is out of bounds for length 3");
+  assertCheckError(`function main(): i32 { const xs: i32[3] = [1, 2, 3]; return xs[3]; }`, "Array index 3 is out of bounds for length 3");
+});
+
 Deno.test("rejects array element mismatch", () => {
   assertCheckError(`function main(): i32 { const xs: i32[] = [1, 2.5]; return 0; }`, "Array element type 'f64' is not assignable to 'i32'");
 });
