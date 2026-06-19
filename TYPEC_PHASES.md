@@ -679,7 +679,8 @@ Support multi-file TypeC projects and standard-library imports.
 ```json
 {
   "dependencies": {
-    "basic/math": "std/math.tc"
+    "basic/math": "std/math.tc",
+    "raylib": "vendor/raylib.h"
   },
   "compiler": {
     "flags": ["-O2"]
@@ -708,7 +709,7 @@ Supported fields:
 
 Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, URL-like paths, `std/` paths, or contain `..` segments.
 
-Dependency targets may be relative project paths, absolute paths, or `std/` paths. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
+Dependency targets may be relative project paths, absolute paths, or `std/` paths. TypeC dependency targets use `.tc`; C header dependency targets use `.h` and are converted to explicit extern declarations through compiler AST output. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
 Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form.
 
@@ -734,6 +735,7 @@ Feature phases must include stdlib impact checks:
 - Support explicit exports.
 - Support `std/` imports from the checked-in TypeC standard library.
 - Support `project.json` dependency aliases and compiler flags.
+- Support `project.json` aliases to C headers for generated extern declarations.
 - Treat stdlib modules as first-class TypeC modules that may use any completed language feature.
 
 ## Do Not
@@ -768,6 +770,7 @@ export function main(): i32 {
 - Define ABI rules clearly.
 - Use C-compatible layouts.
 - Require explicit external declarations.
+- Allow header-generated extern declarations only when derived from compiler AST output.
 - Keep name mangling predictable.
 - Use existing postfix pointer type syntax (`T*`) in extern declarations.
 

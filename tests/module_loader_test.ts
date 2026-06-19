@@ -90,6 +90,16 @@ Deno.test("loads relative project dependency imports", async () => {
   assertIncludes(program.functions.map((fn) => fn.name), "answer");
 });
 
+Deno.test("loads C header project dependency imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/include`);
+  await writeText(`${dir}/project.json`, `{"dependencies":{"basic/math":"include/math.h"}}`);
+  await writeText(`${dir}/include/math.h`, `#include <stdint.h>\nint32_t add_i32(int32_t left, int32_t right);`);
+  await writeText(`${dir}/main.tc`, `import { add_i32 } from "basic/math"; extern function provide(): i32; function main(): i32 { return 0; }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "add_i32");
+});
+
 Deno.test("rejects missing exports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);

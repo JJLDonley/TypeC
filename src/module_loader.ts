@@ -1,5 +1,6 @@
 import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { generateExternsFromHeader } from "./c_header_generator.ts";
 import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
 import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
@@ -35,13 +36,31 @@ async function loadModule(path: Str, state: LoadState): Promise<Program> {
   if (state.loading.has(canonicalPath)) throw new TypeCError([{ message: `Import cycle involving '${canonicalPath}'` }]);
 
   state.loading.add(canonicalPath);
-  const source = await Deno.readTextFile(canonicalPath);
-  const local = parse(lex(source));
-  const imported = await collectImports(canonicalPath, local, state);
-  const merged = mergeProgram(local, imported);
+  const merged = await loadCanonicalModule(canonicalPath, state);
   state.loading.delete(canonicalPath);
   state.loaded.set(canonicalPath, merged);
   return merged;
+}
+
+async function loadCanonicalModule(path: Str, state: LoadState): Promise<Program> {
+  if (isCHeaderPath(path)) return await loadHeaderModule(path);
+  const source = await Deno.readTextFile(path);
+  const local = parse(lex(source));
+  const imported = await collectImports(path, local, state);
+  return mergeProgram(local, imported);
+}
+
+async function loadHeaderModule(path: Str): Promise<Program> {
+  const source = await generateExternsFromHeader(path);
+  return exportAll(parse(lex(source)));
+}
+
+function exportAll(program: Program): Program {
+  return { ...program, functions: program.functions.map((fn) => ({ ...fn, exported: true })) };
+}
+
+function isCHeaderPath(path: Str): b8 {
+  return path.endsWith(".h");
 }
 
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {
