@@ -11,7 +11,13 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
+  },
+  "imports": {
+    "checker": "./src/checker/mod.ts",
+    "checker/": "./src/checker/"
   }
 }

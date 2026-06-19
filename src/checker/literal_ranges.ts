@@ -1,7 +1,7 @@
-import type { Diagnostic } from "./diagnostics.ts";
-import type { Expression } from "./ast.ts";
-import type { TypeName } from "./tast.ts";
-import { integerRange, maxF32 } from "./checker_types.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import type { Expression } from "../ast.ts";
+import type { TypeName } from "../tast.ts";
+import { integerRange, maxF32 } from "checker/types.ts";
 
 type IntegerLiteral = Extract<Expression, { kind: "IntegerLiteral" }>;
 type FloatLiteral = Extract<Expression, { kind: "FloatLiteral" }>;

@@ -1,6 +1,6 @@
-import type { Diagnostic } from "./diagnostics.ts";
-import type { FunctionDecl } from "./ast.ts";
-import type { TypeName } from "./tast.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import type { FunctionDecl } from "../ast.ts";
+import type { TypeName } from "../tast.ts";
 
 export function checkMainFunction(fn: FunctionDecl, returnType: TypeName): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

@@ -1,6 +1,6 @@
 import type { Expression } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "../src/checker_exprs.ts";
+import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "checker/exprs.ts";
 
 type Str = string;
 type b8 = boolean;

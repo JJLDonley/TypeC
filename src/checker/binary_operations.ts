@@ -1,8 +1,8 @@
-import type { Diagnostic } from "./diagnostics.ts";
-import type { Expression } from "./ast.ts";
-import type { TypeName } from "./tast.ts";
-import { isComparisonOperator, isIntegerZeroLiteral } from "./checker_exprs.ts";
-import { isIntegerType, isNumericType } from "./checker_types.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import type { Expression } from "../ast.ts";
+import type { TypeName } from "../tast.ts";
+import { isComparisonOperator, isIntegerZeroLiteral } from "checker/exprs.ts";
+import { isIntegerType, isNumericType } from "checker/types.ts";
 
 type b8 = boolean;
 

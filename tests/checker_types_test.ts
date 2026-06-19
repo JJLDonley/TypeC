@@ -1,4 +1,4 @@
-import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "../src/checker_types.ts";
+import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "checker/types.ts";
 
 type Str = string;
 type b8 = boolean;

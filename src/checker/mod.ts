@@ -1,57 +1,57 @@
-import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
-import { TypeCError } from "./diagnostics.ts";
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
-import type { ResolvedProgram } from "./rast.ts";
-import type { TypedProgram, TypeName } from "./tast.ts";
-import { checkArrayIndex as collectArrayIndexDiagnostics } from "./checker_array_indexes.ts";
-import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
+import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
+import { TypeCError } from "../diagnostics.ts";
+import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "../ast.ts";
+import type { ResolvedProgram } from "../rast.ts";
+import type { TypedProgram, TypeName } from "../tast.ts";
+import { checkArrayIndex as collectArrayIndexDiagnostics } from "checker/array_indexes.ts";
+import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "checker/array_initializers.ts";
 import {
   checkArrayLiteralElementType as collectArrayLiteralElementTypeDiagnostics,
   checkArrayLiteralLength as collectArrayLiteralLengthDiagnostics,
   checkArrayLiteralTarget as collectArrayLiteralTargetDiagnostics,
   checkInferredArrayLiteral as collectInferredArrayLiteralDiagnostics,
-} from "./checker_array_literals.ts";
-import { checkBinaryOperation } from "./checker_binary_operations.ts";
-import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
+} from "checker/array_literals.ts";
+import { checkBinaryOperation } from "checker/binary_operations.ts";
+import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import {
   checkCallArgumentType as collectCallArgumentTypeDiagnostics,
   checkCallArity as collectCallArityDiagnostics,
-} from "./checker_call_args.ts";
+} from "checker/call_args.ts";
 import {
   checkIfCondition as collectIfConditionDiagnostics,
   checkWhileCondition as collectWhileConditionDiagnostics,
-} from "./checker_conditions.ts";
-import { spanKey } from "./checker_exprs.ts";
-import { checkFieldAccess } from "./checker_field_access.ts";
+} from "checker/conditions.ts";
+import { spanKey } from "checker/exprs.ts";
+import { checkFieldAccess } from "checker/field_access.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
   checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
-} from "./checker_function_signatures.ts";
+} from "checker/function_signatures.ts";
 import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
   checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
-} from "./checker_literal_ranges.ts";
-import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
-import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
-import { checkPostfixPointerOperation } from "./checker_pointer_ops.ts";
+} from "checker/literal_ranges.ts";
+import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
+import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
+import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
 import {
   checkRecordLiteralFieldName as collectRecordLiteralFieldNameDiagnostics,
   checkRecordLiteralMissingFields as collectRecordLiteralMissingFieldDiagnostics,
   checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics,
   findRecordField,
-} from "./checker_record_literals.ts";
-import { blockReturns } from "./checker_returns.ts";
-import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
-import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "./checker_types.ts";
-import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
+} from "checker/record_literals.ts";
+import { blockReturns } from "checker/returns.ts";
+import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
+import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
+import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "checker/type_alias_order.ts";
 import {
   checkArrayElementType as collectArrayElementTypeDiagnostics,
   checkArraySize as collectArraySizeDiagnostics,
   checkPointerElementType as collectPointerElementTypeDiagnostics,
   checkReferenceElementType as collectReferenceElementTypeDiagnostics,
-} from "./checker_type_shapes.ts";
-import { primitiveTypes } from "./token.ts";
-import { typeName } from "./type_ref.ts";
+} from "checker/type_shapes.ts";
+import { primitiveTypes } from "../token.ts";
+import { typeName } from "../type_ref.ts";
 
 type Str = string;
 type usize = number;

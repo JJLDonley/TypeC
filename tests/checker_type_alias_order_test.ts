@@ -1,6 +1,6 @@
 import type { TypeAliasDecl, TypeRef } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { checkTypeAliasOrder } from "../src/checker_type_alias_order.ts";
+import { checkTypeAliasOrder } from "checker/type_alias_order.ts";
 
 type Str = string;
 type usize = number;

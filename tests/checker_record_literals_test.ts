@@ -5,7 +5,7 @@ import {
   checkRecordLiteralMissingFields,
   checkRecordLiteralTarget,
   findRecordField,
-} from "../src/checker_record_literals.ts";
+} from "checker/record_literals.ts";
 
 type Str = string;
 type usize = number;

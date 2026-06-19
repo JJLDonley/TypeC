@@ -1,6 +1,6 @@
-import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
-import type { TypeRef } from "./ast.ts";
-import { isVoidValueType } from "./checker_type_refs.ts";
+import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
+import type { TypeRef } from "../ast.ts";
+import { isVoidValueType } from "checker/type_refs.ts";
 
 type Str = string;
 

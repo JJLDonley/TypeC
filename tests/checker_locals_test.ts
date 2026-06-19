@@ -1,6 +1,6 @@
 import type { FunctionDecl, TypeRef } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { createFunctionLocals } from "../src/checker_locals.ts";
+import { createFunctionLocals } from "checker/locals.ts";
 
 type Str = string;
 type b8 = boolean;

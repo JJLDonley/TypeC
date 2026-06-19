@@ -5,7 +5,7 @@ import {
   checkArrayLiteralLength,
   checkArrayLiteralTarget,
   checkInferredArrayLiteral,
-} from "../src/checker_array_literals.ts";
+} from "checker/array_literals.ts";
 
 type Str = string;
 type usize = number;

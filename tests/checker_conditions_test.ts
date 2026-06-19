@@ -2,7 +2,7 @@ import type { SourceSpan } from "../src/diagnostics.ts";
 import {
   checkIfCondition,
   checkWhileCondition,
-} from "../src/checker_conditions.ts";
+} from "checker/conditions.ts";
 
 type Str = string;
 type usize = number;

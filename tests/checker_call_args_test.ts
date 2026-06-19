@@ -2,7 +2,7 @@ import type { SourceSpan } from "../src/diagnostics.ts";
 import {
   checkCallArgumentType,
   checkCallArity,
-} from "../src/checker_call_args.ts";
+} from "checker/call_args.ts";
 
 type Str = string;
 type usize = number;

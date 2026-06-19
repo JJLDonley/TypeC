@@ -1,6 +1,6 @@
 import type { SourceSpan } from "../src/diagnostics.ts";
 import type { Expression } from "../src/ast.ts";
-import { checkBinaryOperation } from "../src/checker_binary_operations.ts";
+import { checkBinaryOperation } from "checker/binary_operations.ts";
 
 type Str = string;
 

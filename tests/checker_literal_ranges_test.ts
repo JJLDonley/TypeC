@@ -3,7 +3,7 @@ import type { Expression } from "../src/ast.ts";
 import {
   checkFloatLiteralRange,
   checkIntegerLiteralRange,
-} from "../src/checker_literal_ranges.ts";
+} from "checker/literal_ranges.ts";
 
 type Str = string;
 type f64 = number;

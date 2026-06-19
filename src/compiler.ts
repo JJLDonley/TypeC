@@ -1,4 +1,4 @@
-import { check } from "./checker.ts";
+import { check } from "checker";
 import { formatDiagnostic, TypeCError } from "./diagnostics.ts";
 import { emitC } from "./emitter.ts";
 import { hasMain } from "./entrypoint.ts";

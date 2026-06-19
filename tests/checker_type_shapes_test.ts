@@ -5,7 +5,7 @@ import {
   checkArraySize,
   checkPointerElementType,
   checkReferenceElementType,
-} from "../src/checker_type_shapes.ts";
+} from "checker/type_shapes.ts";
 
 type Str = string;
 type usize = number;

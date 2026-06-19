@@ -1,6 +1,6 @@
 import type { FunctionDecl, TypeRef } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { checkFunctionParamType, checkFunctionReturnType } from "../src/checker_function_signatures.ts";
+import { checkFunctionParamType, checkFunctionReturnType } from "checker/function_signatures.ts";
 
 type Str = string;
 type usize = number;

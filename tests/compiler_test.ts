@@ -1,4 +1,4 @@
-import { check } from "../src/checker.ts";
+import { check } from "checker";
 import { compileFile } from "../src/compiler.ts";
 import { emitC } from "../src/emitter.ts";
 import { lex } from "../src/lexer.ts";

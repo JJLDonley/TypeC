@@ -1,7 +1,7 @@
-import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
-import type { RecordTypeRef } from "./ast.ts";
-import type { TypeName } from "./tast.ts";
-import { typeName } from "./type_ref.ts";
+import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
+import type { RecordTypeRef } from "../ast.ts";
+import type { TypeName } from "../tast.ts";
+import { typeName } from "../type_ref.ts";
 
 type Str = string;
 

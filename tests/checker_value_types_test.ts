@@ -1,6 +1,6 @@
 import type { TypeRef } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { checkValueType } from "../src/checker_value_types.ts";
+import { checkValueType } from "checker/value_types.ts";
 
 type Str = string;
 type usize = number;

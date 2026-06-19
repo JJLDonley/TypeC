@@ -1,6 +1,6 @@
 import type { Expression } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { checkArrayInitializer } from "../src/checker_array_initializers.ts";
+import { checkArrayInitializer } from "checker/array_initializers.ts";
 
 type Str = string;
 type usize = number;

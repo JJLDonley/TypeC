@@ -1,6 +1,6 @@
 import type { BlockStmt, Statement } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { blockReturns } from "../src/checker_returns.ts";
+import { blockReturns } from "checker/returns.ts";
 
 type b8 = boolean;
 

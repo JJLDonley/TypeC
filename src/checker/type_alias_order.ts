@@ -1,6 +1,6 @@
-import type { Diagnostic } from "./diagnostics.ts";
-import type { TypeAliasDecl } from "./ast.ts";
-import { collectTypeAliasRefs } from "./checker_type_refs.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import type { TypeAliasDecl } from "../ast.ts";
+import { collectTypeAliasRefs } from "checker/type_refs.ts";
 
 type Str = string;
 type usize = number;

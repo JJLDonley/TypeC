@@ -1,6 +1,6 @@
 import type { SourceSpan } from "../src/diagnostics.ts";
 import type { TypeRef } from "../src/ast.ts";
-import { isCAbiType } from "../src/checker_c_abi.ts";
+import { isCAbiType } from "checker/c_abi.ts";
 
 type Str = string;
 type b8 = boolean;

@@ -1,7 +1,7 @@
-import type { Diagnostic } from "./diagnostics.ts";
-import type { FunctionDecl } from "./ast.ts";
-import type { TypeName } from "./tast.ts";
-import { parseArrayType } from "./checker_types.ts";
+import type { Diagnostic } from "../diagnostics.ts";
+import type { FunctionDecl } from "../ast.ts";
+import type { TypeName } from "../tast.ts";
+import { parseArrayType } from "checker/types.ts";
 
 type Str = string;
 type usize = number;

@@ -1,5 +1,5 @@
 import type { FunctionDecl } from "./ast.ts";
-import type { CheckedProgram } from "./checker.ts";
+import type { CheckedProgram } from "checker";
 import { emitCPrelude } from "./c_prelude.ts";
 import { emitCType } from "./c_type.ts";
 import { createEmitContext, type EmitContext } from "./emitter_context.ts";

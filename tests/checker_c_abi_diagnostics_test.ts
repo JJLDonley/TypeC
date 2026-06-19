@@ -1,6 +1,6 @@
 import type { FunctionDecl, TypeRef } from "../src/ast.ts";
 import type { SourceSpan } from "../src/diagnostics.ts";
-import { checkCAbiFunction } from "../src/checker_c_abi_diagnostics.ts";
+import { checkCAbiFunction } from "checker/c_abi_diagnostics.ts";
 
 type Str = string;
 type usize = number;

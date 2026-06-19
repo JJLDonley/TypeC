@@ -1,5 +1,5 @@
 import type { FunctionDecl, TypeAliasDecl } from "./ast.ts";
-import type { CheckedProgram } from "./checker.ts";
+import type { CheckedProgram } from "checker";
 
 type Str = string;
 

@@ -1,6 +1,6 @@
-import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
-import type { TypeName } from "./tast.ts";
-import { isAssignable } from "./checker_types.ts";
+import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
+import type { TypeName } from "../tast.ts";
+import { isAssignable } from "checker/types.ts";
 
 type Str = string;
 type usize = number;

@@ -1,6 +1,6 @@
 import type { SourceSpan } from "../src/diagnostics.ts";
 import type { Expression } from "../src/ast.ts";
-import { checkPostfixPointerOperation } from "../src/checker_pointer_ops.ts";
+import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
 
 type Str = string;
 type usize = number;

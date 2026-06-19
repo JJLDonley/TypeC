@@ -1,6 +1,6 @@
 import type { SourceSpan } from "../src/diagnostics.ts";
 import type { RecordTypeRef, TypeRef } from "../src/ast.ts";
-import { checkFieldAccess } from "../src/checker_field_access.ts";
+import { checkFieldAccess } from "checker/field_access.ts";
 
 type Str = string;
 type usize = number;

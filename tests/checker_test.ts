@@ -1,4 +1,4 @@
-import { check } from "../src/checker.ts";
+import { check } from "checker";
 import { TypeCError } from "../src/diagnostics.ts";
 import { lex } from "../src/lexer.ts";
 import { parse } from "../src/parser.ts";

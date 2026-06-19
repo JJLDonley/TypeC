@@ -1,5 +1,5 @@
-import type { TypeRef } from "./ast.ts";
-import { primitiveTypes } from "./token.ts";
+import type { TypeRef } from "../ast.ts";
+import { primitiveTypes } from "../token.ts";
 
 type Str = string;
 type b8 = boolean;
