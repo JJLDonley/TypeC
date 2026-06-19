@@ -103,8 +103,10 @@ function unambiguousFunctions(functions: CFunction[]): CFunction[] {
 function functionSignatures(functions: CFunction[]): Map<Str, Set<Str>> {
   const signatures = new Map<Str, Set<Str>>();
   for (const fn of functions) {
+    const signature = functionTypeCSignature(fn);
+    if (signature === null) continue;
     const types = signatures.get(fn.name) ?? new Set<Str>();
-    types.add(functionTypeCSignature(fn));
+    types.add(signature);
     signatures.set(fn.name, types);
   }
   return signatures;
@@ -121,15 +123,15 @@ function isPathWithinDir(path: Str, dir: Str): b8 {
 }
 
 function functionKey(fn: CFunction): Str {
-  return `${fn.name}:${functionTypeCSignature(fn)}`;
+  return `${fn.name}:${functionTypeCSignature(fn) ?? `unsupported:${fn.functionType}`}`;
 }
 
-function functionTypeCSignature(fn: CFunction): Str {
+function functionTypeCSignature(fn: CFunction): Str | null {
   try {
     const params = fn.params.map((param) => mapCHeaderType(param.type)).join(",");
     return `${mapCHeaderType(fn.returnType)}(${params})`;
   } catch (error) {
-    if (error instanceof TypeCError) return `unsupported:${fn.functionType}`;
+    if (error instanceof TypeCError) return null;
     throw error;
   }
 }
