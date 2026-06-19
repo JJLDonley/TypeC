@@ -35,6 +35,16 @@ Deno.test("merges repeated imports from one module", async () => {
   assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
 });
 
+Deno.test("deduplicates shared transitive imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/util.tc`, `export function inc(x: i32): i32 { return x + 1; }`);
+  await writeText(`${dir}/a.tc`, `import { inc } from "./util.tc"; export function a(): i32 { return inc(1); }`);
+  await writeText(`${dir}/b.tc`, `import { inc } from "./util.tc"; export function b(): i32 { return inc(2); }`);
+  await writeText(`${dir}/main.tc`, `import { a } from "./a.tc"; import { b } from "./b.tc"; function main(): i32 { return a() + b(); }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
+});
+
 Deno.test("rejects missing exports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);

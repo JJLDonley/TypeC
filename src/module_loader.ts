@@ -66,10 +66,14 @@ function mergeProgram(local: Program, imports: Program[]): Program {
   return {
     kind: "Program",
     imports: [],
-    typeAliases: [...imports.flatMap((program) => program.typeAliases), ...local.typeAliases],
-    functions: [...imports.flatMap((program) => program.functions), ...local.functions],
+    typeAliases: uniqueRefs([...imports.flatMap((program) => program.typeAliases), ...local.typeAliases]),
+    functions: uniqueRefs([...imports.flatMap((program) => program.functions), ...local.functions]),
     span: local.span,
   };
+}
+
+function uniqueRefs<T>(items: T[]): T[] {
+  return [...new Set<T>(items)];
 }
 
 function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
