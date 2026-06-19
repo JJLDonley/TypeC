@@ -3,6 +3,7 @@ import { formatDiagnostic, TypeCError } from "./diagnostics.ts";
 import { emitC } from "./emitter.ts";
 import { lex } from "./lexer.ts";
 import { parse } from "./parser.ts";
+import { resolve } from "./resolver.ts";
 
 export interface CompileResult {
   cPath: string;
@@ -15,7 +16,8 @@ export async function compileFile(inputPath: string, buildDir = "build"): Promis
   try {
     const tokens = lex(source);
     const ast = parse(tokens);
-    const checked = check(ast);
+    const resolved = resolve(ast);
+    const checked = check(resolved);
     const cSource = emitC(checked);
 
     await Deno.mkdir(buildDir, { recursive: true });
