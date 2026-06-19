@@ -78,6 +78,7 @@ class Checker {
     if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
     if (fn.external) this.checkCAbiFunction(fn, "Extern");
     else if (fn.exported) this.checkCAbiFunction(fn, "Exported");
+    if (fn.name === "main") this.checkMainFunction(fn, returnType);
     if (!fn.body) return;
     for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
     if (returnType !== "void" && !blockReturns(fn.body.statements)) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
@@ -363,6 +364,12 @@ class Checker {
     for (const param of fn.params) {
       if (!this.isCAbiType(param.type)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
     }
+  }
+
+  private checkMainFunction(fn: FunctionDecl, returnType: TypeName): void {
+    if (fn.external) this.error("Function 'main' cannot be extern", fn.span);
+    if (fn.params.length !== 0) this.error("Function 'main' cannot have parameters", fn.span);
+    if (returnType !== "i32") this.error(`Function 'main' must return 'i32'`, fn.returnType.span);
   }
 
   private isCAbiType(type: TypeRef, seen: Set<Str> = new Set<Str>()): b8 {

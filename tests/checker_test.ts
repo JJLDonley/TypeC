@@ -10,6 +10,12 @@ Deno.test("checks extern function calls", () => {
   check(resolve(parse(lex(`extern function add(a: i32, b: i32): i32; function main(): i32 { return add(20, 22); }`))));
 });
 
+Deno.test("rejects invalid main signatures", () => {
+  assertCheckError(`function main(argc: i32): i32 { return argc; }`, "Function 'main' cannot have parameters");
+  assertCheckError(`function main(): void { return; }`, "Function 'main' must return 'i32'");
+  assertCheckError(`extern function main(): i32;`, "Function 'main' cannot be extern");
+});
+
 Deno.test("rejects non-C ABI extern parameter types", () => {
   assertCheckError(`extern function use_ref(x: i32&): void; function main(): i32 { return 0; }`, "Extern function 'use_ref' parameter 'x' type 'i32&' is not C ABI compatible");
 });
