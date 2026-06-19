@@ -3,7 +3,6 @@ import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
-import { checkArrayLiteralExpression } from "checker/array_literal_expressions.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
@@ -11,24 +10,20 @@ import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
+import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccessExpression } from "checker/field_access_expressions.ts";
 import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
-import {
-  checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
-  checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
-} from "checker/literal_ranges.ts";
+import { checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics } from "checker/literal_ranges.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
-import { checkRecordLiteralExpression } from "checker/record_literal_expressions.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
-import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
-import { isFloatType, isIntegerType } from "checker/types.ts";
+import { stringLiteralType } from "checker/string_literals.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -134,33 +129,11 @@ class Checker {
   }
 
   private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
-      this.diagnostics.push(...collectIntegerLiteralRangeDiagnostics(expr, expected));
-      this.expressionTypes.set(spanKey(expr.span), { type: expected });
-      return expected;
-    }
-    if (expr.kind === "FloatLiteral" && isFloatType(expected)) {
-      this.diagnostics.push(...collectFloatLiteralRangeDiagnostics(expr, expected));
-      this.expressionTypes.set(spanKey(expr.span), { type: expected });
-      return expected;
-    }
-    if (expr.kind === "RecordLiteralExpr") {
-      const type = this.recordLiteralType(expr, locals, expected);
-      this.expressionTypes.set(spanKey(expr.span), { type });
-      return type;
-    }
-    if (expr.kind === "ArrayLiteralExpr") {
-      const type = this.arrayLiteralType(expr, locals, expected);
-      this.expressionTypes.set(spanKey(expr.span), { type });
-      return type;
-    }
-    if (expr.kind === "StringLiteral") {
-      const type = stringLiteralType(expr);
-      this.diagnostics.push(...collectStringLiteralTargetDiagnostics(type, expected, expr));
-      this.expressionTypes.set(spanKey(expr.span), { type });
-      return type;
-    }
-    return this.typeOf(expr, locals);
+    const result = checkExpectedExpression(expr, expected, this.typeAliases, (value, target) => this.typeOfExpected(value, locals, target));
+    if (!result.handled) return this.typeOf(expr, locals);
+    this.diagnostics.push(...result.diagnostics);
+    this.expressionTypes.set(spanKey(expr.span), { type: result.type });
+    return result.type;
   }
 
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
@@ -217,18 +190,6 @@ class Checker {
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
-    this.diagnostics.push(...result.diagnostics);
-    return result.type;
-  }
-
-  private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const result = checkRecordLiteralExpression(expr, expected, this.typeAliases, (fieldExpr, target) => this.typeOfExpected(fieldExpr, locals, target));
-    this.diagnostics.push(...result.diagnostics);
-    return result.type;
-  }
-
-  private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const result = checkArrayLiteralExpression(expr, expected, (element, target) => this.typeOfExpected(element, locals, target));
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
