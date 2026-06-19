@@ -43,7 +43,7 @@ const typeMap = new Map<Str, Str>([
 ]);
 
 export function generateExternsFromClangAst(ast: unknown): Str {
-  const functions = collectFunctions(ast).flatMap(formatSupportedFunction);
+  const functions = uniqueFunctions(collectFunctions(ast)).flatMap(formatSupportedFunction);
   return `${functions.join("\n")}${functions.length > 0 ? "\n" : ""}`;
 }
 
@@ -97,6 +97,22 @@ function collectFunctions(value: unknown): CFunction[] {
   const functions: CFunction[] = [];
   collectFunctionsInto(value, functions);
   return functions;
+}
+
+function uniqueFunctions(functions: CFunction[]): CFunction[] {
+  const seen = new Set<Str>();
+  const unique: CFunction[] = [];
+  for (const fn of functions) {
+    const key = functionKey(fn);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(fn);
+  }
+  return unique;
+}
+
+function functionKey(fn: CFunction): Str {
+  return `${fn.name}:${fn.returnType}(${fn.params.map((param) => param.type).join(",")})`;
 }
 
 function collectFunctionsInto(value: unknown, functions: CFunction[]): void {
