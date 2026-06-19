@@ -19,6 +19,7 @@ interface CFunction {
   params: CParam[];
   sourceFile: Str | null;
   storageClass: Str | null;
+  hasBody: b8;
 }
 
 const typeMap = new Map<Str, Str>([
@@ -171,7 +172,7 @@ function readFunction(value: JsonRecord): CFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
   const functionType = readText(type.qualType, `Function '${value.name}' has no type`);
   const params = readParams(value.inner);
-  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value), storageClass: readStorageClass(value) };
+  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value), storageClass: readStorageClass(value), hasBody: hasFunctionBody(value) };
 }
 
 function readParams(value: unknown): CParam[] {
@@ -180,6 +181,11 @@ function readParams(value: unknown): CParam[] {
   const names = new Set<Str>();
   for (const child of value) if (isParam(child)) params.push(readParam(child, params.length, names));
   return params;
+}
+
+function hasFunctionBody(value: JsonRecord): b8 {
+  const inner = value.inner;
+  return Array.isArray(inner) && inner.some(isCompoundStmt);
 }
 
 function readParam(value: JsonRecord, index: usize, names: Set<Str>): CParam {
@@ -234,7 +240,7 @@ function readReturnType(type: Str): Str {
 
 function formatSupportedFunction(fn: CFunction): Str[] {
   try {
-    if (isVariadicFunction(fn) || isStaticFunction(fn) || !isTypeCIdentifier(fn.name)) return [];
+    if (isVariadicFunction(fn) || isStaticFunction(fn) || fn.hasBody || !isTypeCIdentifier(fn.name)) return [];
     return [formatFunction(fn)];
   } catch (error) {
     if (error instanceof TypeCError) return [];
@@ -281,6 +287,10 @@ function isHeaderDeclaration(value: JsonRecord): b8 {
 
 function isParam(value: unknown): value is JsonRecord {
   return isRecord(value) && value.kind === "ParmVarDecl";
+}
+
+function isCompoundStmt(value: unknown): b8 {
+  return isRecord(value) && value.kind === "CompoundStmt";
 }
 
 function hasName(value: JsonRecord): b8 {

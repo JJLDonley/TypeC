@@ -16,6 +16,7 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("use_keyword", "void (int32_t, int32_t)", [param("function", "int32_t"), param("function", "int32_t")]),
       functionDecl("export", "void (void)", []),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
+      definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("unsupported", "long (long)", [param("value", "long")]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
     ],
@@ -29,6 +30,7 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;");
   assertExcludes(output, "extern function export");
   assertExcludes(output, "extern function helper");
+  assertExcludes(output, "extern function defined");
   assertExcludes(output, "unsupported");
   assertExcludes(output, "log_message");
 });
@@ -39,6 +41,10 @@ function functionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
 
 function staticFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
   return { kind: "FunctionDecl", name, type: { qualType }, storageClass: "static", inner };
+}
+
+function definedFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
+  return { kind: "FunctionDecl", name, type: { qualType }, inner: [...inner, { kind: "CompoundStmt" }] };
 }
 
 function param(name: Str, qualType: Str): unknown {
