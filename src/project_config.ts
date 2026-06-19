@@ -220,7 +220,7 @@ function linkerOperands(flag: Str): Str[] {
 }
 
 function isForcedIncludeFlag(flag: Str): b8 {
-  return flag === "-include" || flag.startsWith("-include");
+  return flag === "-include" || flag.startsWith("-include") || flag === "-imacros" || flag.startsWith("-imacros") || flag === "-include-pch" || flag.startsWith("-include-pch");
 }
 
 function isSeparateOperandFlag(flag: Str): b8 {
