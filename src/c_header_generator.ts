@@ -13,6 +13,7 @@ interface CParam {
 
 interface CFunction {
   name: Str;
+  functionType: Str;
   returnType: Str;
   params: CParam[];
 }
@@ -112,7 +113,7 @@ function uniqueFunctions(functions: CFunction[]): CFunction[] {
 }
 
 function functionKey(fn: CFunction): Str {
-  return `${fn.name}:${fn.returnType}(${fn.params.map((param) => param.type).join(",")})`;
+  return `${fn.name}:${fn.functionType}`;
 }
 
 function collectFunctionsInto(value: unknown, functions: CFunction[]): void {
@@ -126,8 +127,9 @@ function collectFunctionsInto(value: unknown, functions: CFunction[]): void {
 
 function readFunction(value: JsonRecord): CFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
+  const functionType = readText(type.qualType, `Function '${value.name}' has no type`);
   const params = readParams(value.inner);
-  return { name: value.name as Str, returnType: readReturnType(readText(type.qualType, `Function '${value.name}' has no type`)), params };
+  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params };
 }
 
 function readParams(value: unknown): CParam[] {
@@ -156,11 +158,16 @@ function readReturnType(type: Str): Str {
 
 function formatSupportedFunction(fn: CFunction): Str[] {
   try {
+    if (isVariadicFunction(fn)) return [];
     return [formatFunction(fn)];
   } catch (error) {
     if (error instanceof TypeCError) return [];
     throw error;
   }
+}
+
+function isVariadicFunction(fn: CFunction): b8 {
+  return fn.functionType.includes("...");
 }
 
 function formatFunction(fn: CFunction): Str {
