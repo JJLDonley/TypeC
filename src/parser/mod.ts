@@ -24,6 +24,7 @@ import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
 import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
+import { parseStatementWith, type StatementParser } from "parser/statements.ts";
 import { parseTypeRefWith } from "parser/type_refs.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
@@ -161,70 +162,21 @@ class Parser {
   }
 
   private parseStatement(): CastStatement {
-    if (this.checkText("return")) return this.parseReturn();
-    if (this.checkText("if")) return this.parseIf();
-    if (this.checkText("while")) return this.parseWhile();
-    if (this.checkText("let") || this.checkText("const")) return this.parseVarDecl();
-    if (this.check("identifier") && this.peek(1).text === "=") return this.parseAssignment();
-    return this.parseExpressionStatement();
+    return parseStatementWith(this.statementParser());
   }
 
-  private parseExpressionStatement(): CastStatement {
-    const expression = this.parseExpression();
-    const semi = this.expectText(";");
-    return { kind: "ExpressionStmt", expression, span: span(expression.span.start, semi.span.end) };
-  }
-
-  private parseReturn(): CastStatement {
-    const start = this.expectText("return");
-    const expression = this.checkText(";") ? null : this.parseExpression();
-    const semi = this.expectText(";");
-    return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
-  }
-
-  private parseIf(): CastStatement {
-    const start = this.expectText("if");
-    this.expectText("(");
-    const condition = this.parseExpression();
-    this.expectText(")");
-    const thenBody = this.parseBlock();
-    const elseBody = this.matchText("else") ? this.parseBlock() : null;
-    const end = elseBody?.span.end ?? thenBody.span.end;
-    return { kind: "IfStmt", condition, thenBody, elseBody, span: span(start.span.start, end) };
-  }
-
-  private parseWhile(): CastStatement {
-    const start = this.expectText("while");
-    this.expectText("(");
-    const condition = this.parseExpression();
-    this.expectText(")");
-    const body = this.parseBlock();
-    return { kind: "WhileStmt", condition, body, span: span(start.span.start, body.span.end) };
-  }
-
-  private parseAssignment(): CastStatement {
-    const name = this.expectKind("identifier", "Expected assignment target");
-    this.expectText("=");
-    const expression = this.parseExpression();
-    const semi = this.expectText(";");
-    return { kind: "AssignmentStmt", name: name.text, expression, span: span(name.span.start, semi.span.end) };
-  }
-
-  private parseVarDecl(): CastStatement {
-    const keyword = this.advance();
-    const name = this.expectKind("identifier", "Expected variable name");
-    this.expectText(":");
-    const type = this.parseTypeRef();
-    this.expectText("=");
-    const initializer = this.parseExpression();
-    const semi = this.expectText(";");
+  private statementParser(): StatementParser {
     return {
-      kind: "VarDeclStmt",
-      mutable: keyword.text === "let",
-      name: name.text,
-      type,
-      initializer,
-      span: span(keyword.span.start, semi.span.end),
+      check: (kind) => this.check(kind),
+      checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
+      advance: () => this.advance(),
+      expectKind: (kind, message) => this.expectKind(kind, message),
+      expectText: (text) => this.expectText(text),
+      peek: (offset = 0) => this.peek(offset),
+      parseExpression: () => this.parseExpression(),
+      parseTypeRef: () => this.parseTypeRef(),
+      parseBlock: () => this.parseBlock(),
     };
   }
 
