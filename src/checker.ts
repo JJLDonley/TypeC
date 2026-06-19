@@ -7,7 +7,6 @@ import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
 type Str = string;
-type i32 = number;
 type b8 = boolean;
 type usize = number;
 type IntLiteralValue = bigint;
@@ -75,12 +74,12 @@ class Checker {
   }
 
   private checkTypeAliasOrder(): void {
-    const indexes = new Map<Str, i32>();
-    for (let index = 0; index < this.program.typeAliases.length; index++) indexes.set(this.program.typeAliases[index]!.name, index as i32);
-    for (let index = 0; index < this.program.typeAliases.length; index++) this.checkTypeAliasDeps(this.program.typeAliases[index]!, index as i32, indexes);
+    const indexes = new Map<Str, usize>();
+    for (let index = 0; index < this.program.typeAliases.length; index++) indexes.set(this.program.typeAliases[index]!.name, index as usize);
+    for (let index = 0; index < this.program.typeAliases.length; index++) this.checkTypeAliasDeps(this.program.typeAliases[index]!, index as usize, indexes);
   }
 
-  private checkTypeAliasDeps(typeAlias: TypeAliasDecl, index: i32, indexes: Map<Str, i32>): void {
+  private checkTypeAliasDeps(typeAlias: TypeAliasDecl, index: usize, indexes: Map<Str, usize>): void {
     for (const name of collectTypeAliasRefs(typeAlias.type)) {
       const refIndex = indexes.get(name);
       if (refIndex === undefined || refIndex < index) continue;
@@ -285,11 +284,11 @@ class Checker {
 
   private checkCallArgs(args: Expression[], fn: FunctionDecl, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
     if (args.length !== fn.params.length) this.error(`Function '${fn.name}' expects ${fn.params.length} arguments, got ${args.length}`, span);
-    const count = Math.min(args.length, fn.params.length) as i32;
-    for (let index = 0; index < count; index++) this.checkCallArg(args[index]!, fn, locals, index);
+    const count = Math.min(args.length, fn.params.length) as usize;
+    for (let index = 0; index < count; index++) this.checkCallArg(args[index]!, fn, locals, index as usize);
   }
 
-  private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, LocalInfo>, index: i32): void {
+  private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, LocalInfo>, index: usize): void {
     const expected = typeName(fn.params[index]!.type);
     const actual = this.typeOfExpected(arg, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
@@ -487,7 +486,7 @@ class Checker {
   }
 
   private checkArraySize(sizeText: Str, span: SourceSpan): void {
-    if (Number(sizeText) > 0) return;
+    if (BigInt(sizeText) > 0n) return;
     this.error(`Array size must be greater than zero`, span);
   }
 
