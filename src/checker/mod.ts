@@ -31,7 +31,7 @@ import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
 import { checkRecordLiteralFields as collectRecordLiteralFieldDiagnostics } from "checker/record_literal_fields.ts";
 import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } from "checker/record_literals.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
-import { blockReturns } from "checker/returns.ts";
+import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
 import { isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
 import { typeName } from "core/type_ref.ts";
@@ -76,7 +76,7 @@ class Checker {
     if (fn.name === "main") this.checkMainFunction(fn, returnType);
     if (!fn.body) return;
     for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
-    if (returnType !== "void" && !blockReturns(fn.body.statements)) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
+    this.diagnostics.push(...collectMissingFunctionReturnDiagnostics(fn, returnType));
   }
 
   private checkStatement(stmt: Statement, locals: Map<Str, LocalInfo>, returnType: TypeName): void {

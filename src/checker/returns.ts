@@ -1,6 +1,13 @@
-import type { Statement } from "core/ast.ts";
+import type { FunctionDecl, Statement } from "core/ast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { TypeName } from "core/tast.ts";
 
 type b8 = boolean;
+
+export function checkMissingFunctionReturn(fn: FunctionDecl, returnType: TypeName): Diagnostic[] {
+  if (returnType === "void" || !fn.body || blockReturns(fn.body.statements)) return [];
+  return [{ message: `Function '${fn.name}' must return '${returnType}'`, span: fn.span }];
+}
 
 export function blockReturns(statements: Statement[]): b8 {
   return statements.some(statementReturns);
