@@ -107,14 +107,20 @@ function readCompilerFlags(value: unknown): Str[] {
 }
 
 function validateCompilerFlag(flag: Str): void {
+  if (!flag.startsWith("-")) throw configError("project.json compiler.flags must contain flags only");
   if (flag === "-std" || flag.startsWith("-std=")) throw configError("project.json compiler.flags cannot override the C standard");
   if (flag === "-o" || flag.startsWith("-o")) throw configError("project.json compiler.flags cannot override output paths");
   if (isArtifactModeFlag(flag)) throw configError("project.json compiler.flags cannot change build artifact mode");
+  if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
   if (flag === "-x") throw configError("project.json compiler.flags cannot override input language");
 }
 
 function isArtifactModeFlag(flag: Str): b8 {
   return flag === "-c" || flag === "-E" || flag === "-S" || flag === "-shared";
+}
+
+function isSeparateOperandFlag(flag: Str): b8 {
+  return flag === "-I" || flag === "-D" || flag === "-U" || flag === "-L" || flag === "-l" || flag === "-include" || flag === "-isystem";
 }
 
 function isRecord(value: unknown): value is JsonRecord {

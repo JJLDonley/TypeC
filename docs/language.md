@@ -56,7 +56,7 @@ import { abs_i32 } from "std/math.tc";
 }
 ```
 
-Compiler flags are appended to the native C compiler invocation. Flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode.
+Compiler flags are appended to the native C compiler invocation. Entries must be flags, not extra source files. Flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form such as `-Iinclude` or `-DNAME=VALUE`.
 
 ```json
 {

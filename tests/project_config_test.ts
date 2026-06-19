@@ -24,6 +24,7 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"unknown":true}`, "project.json has unknown key 'unknown'");
   assertConfigError(`{"compiler":{"unknown":true}}`, "project.json compiler has unknown key 'unknown'");
   assertConfigError(`{"compiler":{"flags":[1]}}`, "project.json compiler.flags must be a string array");
+  assertConfigError(`{"compiler":{"flags":["extra.c"]}}`, "project.json compiler.flags must contain flags only");
   assertConfigError(`{"compiler":{"flags":["-std=c11"]}}`, "project.json compiler.flags cannot override the C standard");
   assertConfigError(`{"compiler":{"flags":["-std"]}}`, "project.json compiler.flags cannot override the C standard");
   assertConfigError(`{"compiler":{"flags":["-o"]}}`, "project.json compiler.flags cannot override output paths");
@@ -32,6 +33,8 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-E"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-S"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-shared"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
+  assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");
   assertConfigError(`{"dependencies":{"basic/math":"std/math.tc"}}`, "Dependency alias 'basic/math' must target a .tc import path");
   assertConfigError(`{"dependencies":{"./math.tc":"std/math.tc"}}`, "Dependency alias './math.tc' must not be relative or std");
