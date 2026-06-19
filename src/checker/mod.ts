@@ -10,7 +10,7 @@ import {
   checkInferredArrayLiteral as collectInferredArrayLiteralDiagnostics,
 } from "checker/array_literals.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
-import { checkBinaryOperation } from "checker/binary_operations.ts";
+import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import { checkCallArguments as collectCallArgumentDiagnostics } from "checker/calls.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
@@ -209,18 +209,9 @@ class Checker {
   }
 
   private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
-    const hinted = this.binaryOperandTypes(expr, locals);
-    const result = checkBinaryOperation(expr, hinted);
+    const result = checkBinaryExpression(expr, (value) => this.typeOf(value, locals), (value, expected) => this.typeOfExpected(value, locals, expected));
     this.diagnostics.push(...result.diagnostics);
     return result.type;
-  }
-
-  private binaryOperandTypes(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): { left: TypeName; right: TypeName } {
-    const left = this.typeOf(expr.left, locals);
-    const right = this.typeOfExpected(expr.right, locals, left);
-    if (left === right) return { left, right };
-    if (expr.left.kind === "IntegerLiteral" || expr.left.kind === "FloatLiteral") return { left: this.typeOfExpected(expr.left, locals, right), right };
-    return { left, right };
   }
 
   private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
