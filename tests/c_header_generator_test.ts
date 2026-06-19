@@ -9,6 +9,7 @@ Deno.test("generates externs from clang AST", () => {
     inner: [
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
+      functionDecl("set_name", "void (const char *)", [param("name", "const char *")]),
       functionDecl("unsupported", "long (long)", [param("value", "long")]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
     ],
@@ -16,6 +17,7 @@ Deno.test("generates externs from clang AST", () => {
 
   assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
+  assertIncludes(output, "extern function set_name(name: u8*): void;");
   assertExcludes(output, "unsupported");
   assertExcludes(output, "log_message");
 });
