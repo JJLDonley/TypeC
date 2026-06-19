@@ -14,7 +14,8 @@ export class ScopeTable {
   private scopes: ScopeInfo[] = [];
 
   createScope(kind: ScopeKind, parent: Scope | null): Scope {
-    const info = { id: this.scopes.length as u32, kind, parentId: parent?.info.id ?? null };
+    const id: u32 = this.scopes.length;
+    const info = { id, kind, parentId: parent?.info.id ?? null };
     this.scopes.push(info);
     return { info, parent, symbols: new Map() };
   }
@@ -22,7 +23,8 @@ export class ScopeTable {
   declare(scope: Scope, name: Str, kind: SymbolKind): SymbolInfo | null {
     if (scope.symbols.has(name)) return null;
 
-    const symbol = { id: this.symbols.length as u32, scopeId: scope.info.id, kind, name };
+    const id: u32 = this.symbols.length;
+    const symbol = { id, scopeId: scope.info.id, kind, name };
     scope.symbols.set(name, symbol);
     this.symbols.push(symbol);
     return symbol;
