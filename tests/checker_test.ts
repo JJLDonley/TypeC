@@ -28,6 +28,10 @@ Deno.test("checks record literals and field access", () => {
   check(resolve(parse(lex(`type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const v: Vec2 = { x: 1.5, y: 2.5 }; return 0; }`))));
 });
 
+Deno.test("rejects duplicate record type fields", () => {
+  assertCheckError(`type Vec2 = { x: f64; x: f64; }; function main(): i32 { return 0; }`, "Duplicate field 'x'");
+});
+
 Deno.test("rejects missing record fields", () => {
   assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): i32 { const v: Vec2 = { x: 1.5 }; return 0; }`, "Missing field 'y' on type 'Vec2'");
 });

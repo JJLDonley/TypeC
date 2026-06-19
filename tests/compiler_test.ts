@@ -35,6 +35,7 @@ Deno.test("emits C typedef for record aliases", () => {
   assertIncludes(c, "  f32 x;");
   assertIncludes(c, "  f32 y;");
   assertIncludes(c, "} Vec2;");
+  assertOrdered(c, "  f32 x;", "  f32 y;");
 });
 
 Deno.test("emits C for record literals and field access", () => {
@@ -53,4 +54,8 @@ Deno.test("emits C for functions returning records", () => {
 
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
+}
+
+function assertOrdered(haystack: Str, first: Str, second: Str): void {
+  if (haystack.indexOf(first) >= haystack.indexOf(second)) throw new Error(`Expected ${first} before ${second}`);
 }
