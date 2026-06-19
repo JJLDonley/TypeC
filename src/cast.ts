@@ -7,13 +7,22 @@ type b8 = boolean;
 
 export interface CastProgram {
   kind: "Program";
+  imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
   functions: CastFunctionDecl[];
   span: SourceSpan;
 }
 
+export interface CastImportDecl {
+  kind: "ImportDecl";
+  names: Str[];
+  path: Str;
+  span: SourceSpan;
+}
+
 export interface CastTypeAliasDecl {
   kind: "TypeAliasDecl";
+  exported: b8;
   name: Str;
   type: CastTypeRef;
   span: SourceSpan;
@@ -21,6 +30,7 @@ export interface CastTypeAliasDecl {
 
 export interface CastFunctionDecl {
   kind: "FunctionDecl";
+  exported: b8;
   name: Str;
   params: CastParam[];
   returnType: CastTypeRef;

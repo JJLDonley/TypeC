@@ -12,6 +12,7 @@ import type {
   FunctionDecl,
   IdentifierExpr,
   IfStmt,
+  ImportDecl,
   IndexExpr,
   InferredArrayTypeRef,
   IntegerLiteral,
@@ -43,6 +44,7 @@ import type {
   CastFunctionDecl,
   CastIdentifierExpr,
   CastIfStmt,
+  CastImportDecl,
   CastIndexExpr,
   CastInferredArrayTypeRef,
   CastIntegerLiteral,
@@ -64,15 +66,21 @@ import type {
 export function lowerCast(program: CastProgram): Program {
   return {
     kind: "Program",
+    imports: program.imports.map(lowerImportDecl),
     typeAliases: program.typeAliases.map(lowerTypeAliasDecl),
     functions: program.functions.map(lowerFunctionDecl),
     span: program.span,
   };
 }
 
+function lowerImportDecl(importDecl: CastImportDecl): ImportDecl {
+  return { kind: "ImportDecl", names: importDecl.names, path: importDecl.path, span: importDecl.span };
+}
+
 function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl {
   return {
     kind: "TypeAliasDecl",
+    exported: typeAlias.exported,
     name: typeAlias.name,
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
@@ -82,6 +90,7 @@ function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl {
 function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
   return {
     kind: "FunctionDecl",
+    exported: fn.exported,
     name: fn.name,
     params: fn.params.map(lowerParam),
     returnType: lowerTypeRef(fn.returnType),

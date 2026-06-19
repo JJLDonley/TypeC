@@ -4,6 +4,17 @@ import { typeName } from "../src/type_ref.ts";
 
 type Str = string;
 
+Deno.test("parses imports", () => {
+  const program = parse(lex(`import { add } from "./math.tc"; function main(): i32 { return add(1, 2); }`));
+  if (program.imports.length !== 1) throw new Error("Expected one import");
+  if (program.imports[0].names[0] !== "add") throw new Error("Expected add import");
+});
+
+Deno.test("parses exported functions", () => {
+  const program = parse(lex(`export function add(a: i32, b: i32): i32 { return a + b; }`));
+  if (!program.functions[0].exported) throw new Error("Expected exported function");
+});
+
 Deno.test("parses record type alias", () => {
   const program = parse(lex(`type Vec2 = { x: f32; y: f32; }; function main(): i32 { return 0; }`));
   if (program.typeAliases.length !== 1) throw new Error("Expected one type alias");

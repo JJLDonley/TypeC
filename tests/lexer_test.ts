@@ -14,6 +14,12 @@ Deno.test("lexes float literals", () => {
   assertEqualText(tokens.map((token) => token.text), ["1", "2.5", "3", ".", ""]);
 });
 
+Deno.test("lexes string literals", () => {
+  const tokens = lex(`"./math.tc"`);
+  assertEqualText(tokens.map((token) => token.kind), ["string", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ["./math.tc", ""]);
+});
+
 function tokenTexts(source: Str): Str[] {
   return lex(source).map((token) => token.text);
 }

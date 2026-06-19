@@ -6,6 +6,7 @@ export type TokenKind =
   | "identifier"
   | "integer"
   | "float"
+  | "string"
   | "keyword"
   | "punctuation"
   | "operator"

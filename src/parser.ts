@@ -5,6 +5,7 @@ import type {
   CastBlockStmt,
   CastExpression,
   CastFunctionDecl,
+  CastImportDecl,
   CastParam,
   CastProgram,
   CastRecordField,
@@ -35,27 +36,49 @@ class Parser {
 
   parseProgram(): CastProgram {
     const start = this.peek().span.start;
+    const imports: CastImportDecl[] = [];
     const typeAliases: CastTypeAliasDecl[] = [];
     const functions: CastFunctionDecl[] = [];
     while (!this.check("eof")) {
-      if (this.checkText("type")) typeAliases.push(this.parseTypeAlias());
-      else functions.push(this.parseFunction());
+      const exported = this.matchText("export");
+      if (this.checkText("import")) imports.push(this.parseImport());
+      else if (this.checkText("type")) typeAliases.push(this.parseTypeAlias(exported));
+      else functions.push(this.parseFunction(exported));
     }
     const end = this.peek().span.end;
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
-    return { kind: "Program", typeAliases, functions, span: { start, end } };
+    return { kind: "Program", imports, typeAliases, functions, span: { start, end } };
   }
 
-  private parseTypeAlias(): CastTypeAliasDecl {
+  private parseImport(): CastImportDecl {
+    const start = this.expectText("import");
+    this.expectText("{");
+    const names = this.parseImportNames();
+    this.expectText("}");
+    this.expectText("from");
+    const path = this.expectKind("string", "Expected import path");
+    const semi = this.expectText(";");
+    return { kind: "ImportDecl", names, path: path.text, span: span(start.span.start, semi.span.end) };
+  }
+
+  private parseImportNames(): Str[] {
+    const names: Str[] = [];
+    if (this.checkText("}")) return names;
+    do names.push(this.expectKind("identifier", "Expected imported name").text);
+    while (this.matchText(","));
+    return names;
+  }
+
+  private parseTypeAlias(exported: b8): CastTypeAliasDecl {
     const start = this.expectText("type");
     const name = this.expectKind("identifier", "Expected type alias name");
     this.expectText("=");
     const type = this.parseTypeRef();
     const semi = this.expectText(";");
-    return { kind: "TypeAliasDecl", name: name.text, type, span: span(start.span.start, semi.span.end) };
+    return { kind: "TypeAliasDecl", exported, name: name.text, type, span: span(start.span.start, semi.span.end) };
   }
 
-  private parseFunction(): CastFunctionDecl {
+  private parseFunction(exported: b8): CastFunctionDecl {
     const functionToken = this.expectText("function");
     const name = this.expectKind("identifier", "Expected function name");
     this.expectText("(");
@@ -66,6 +89,7 @@ class Parser {
     const body = this.parseBlock();
     return {
       kind: "FunctionDecl",
+      exported,
       name: name.text,
       params,
       returnType,

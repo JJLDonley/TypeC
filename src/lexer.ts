@@ -48,6 +48,12 @@ class Lexer {
         continue;
       }
 
+      if (ch === '"') {
+        const text = this.readString(start);
+        this.tokens.push({ kind: "string", text, span: { start, end: this.pos() } });
+        continue;
+      }
+
       if (ch === "." && (this.peek(1) === "*" || this.peek(1) === "&")) {
         const text = this.advance() + this.advance();
         this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
@@ -114,6 +120,24 @@ class Lexer {
       text += this.advance();
       text += this.readWhile(isDigit);
     }
+    return text;
+  }
+
+  private readString(start: SourcePos): Str {
+    this.advance();
+    let text = "";
+    while (!this.isAtEnd() && this.peek() !== '"') {
+      if (this.peek() === "\n") {
+        this.diagnostics.push({ message: "Unterminated string literal", span: { start, end: this.pos() } });
+        return text;
+      }
+      text += this.advance();
+    }
+    if (this.isAtEnd()) {
+      this.diagnostics.push({ message: "Unterminated string literal", span: { start, end: this.pos() } });
+      return text;
+    }
+    this.advance();
     return text;
   }
 

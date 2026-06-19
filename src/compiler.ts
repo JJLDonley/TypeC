@@ -1,8 +1,7 @@
 import { check } from "./checker.ts";
 import { formatDiagnostic, TypeCError } from "./diagnostics.ts";
 import { emitC } from "./emitter.ts";
-import { lex } from "./lexer.ts";
-import { parse } from "./parser.ts";
+import { loadProgram } from "./module_loader.ts";
 import { buildOutputPaths } from "./path.ts";
 import { resolve } from "./resolver.ts";
 
@@ -24,17 +23,16 @@ export async function compileFile(inputPath: Str, buildDir: Str = "build"): Prom
   }
 }
 
-async function compileSourceFile(inputPath: Str, buildDir: Str, source: Str): Promise<CompileResult> {
-  const cSource = compileSource(source);
+async function compileSourceFile(inputPath: Str, buildDir: Str, _source: Str): Promise<CompileResult> {
+  const cSource = await compileSource(inputPath);
   await Deno.mkdir(buildDir, { recursive: true });
   const paths = buildOutputPaths(inputPath, buildDir);
   await Deno.writeTextFile(paths.cPath, cSource);
   return { ...paths, cSource };
 }
 
-function compileSource(source: Str): Str {
-  const tokens = lex(source);
-  const ast = parse(tokens);
+async function compileSource(inputPath: Str): Promise<Str> {
+  const ast = await loadProgram(inputPath);
   const resolved = resolve(ast);
   const checked = check(resolved);
   return emitC(checked);

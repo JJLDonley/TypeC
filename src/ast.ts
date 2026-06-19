@@ -7,13 +7,22 @@ type b8 = boolean;
 
 export interface Program {
   kind: "Program";
+  imports: ImportDecl[];
   typeAliases: TypeAliasDecl[];
   functions: FunctionDecl[];
   span: SourceSpan;
 }
 
+export interface ImportDecl {
+  kind: "ImportDecl";
+  names: Str[];
+  path: Str;
+  span: SourceSpan;
+}
+
 export interface TypeAliasDecl {
   kind: "TypeAliasDecl";
+  exported: b8;
   name: Str;
   type: TypeRef;
   span: SourceSpan;
@@ -21,6 +30,7 @@ export interface TypeAliasDecl {
 
 export interface FunctionDecl {
   kind: "FunctionDecl";
+  exported: b8;
   name: Str;
   params: Param[];
   returnType: TypeRef;

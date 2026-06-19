@@ -12,12 +12,13 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
 - Fixed arrays `T[N]`, inferred local arrays `T[]`, array literals, and indexing
+- Static imports and explicit exports
 - `//` and `/* */` comments
 
 ## Example
 
 ```ts
-function add(a: i32, b: i32): i32 {
+export function add(a: i32, b: i32): i32 {
   return a + b;
 }
 
