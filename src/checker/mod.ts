@@ -6,7 +6,6 @@ import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBasicExpression } from "checker/basic_expressions.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
-import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
@@ -14,12 +13,11 @@ import { spanKey } from "checker/exprs.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccessExpression } from "checker/field_access_expressions.ts";
-import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
+import { checkFunctionHeader as collectFunctionHeaderDiagnostics } from "checker/function_checks.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
-import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
@@ -59,10 +57,7 @@ class Checker {
   private checkFunction(fn: FunctionDecl): void {
     const locals = createFunctionLocals(fn);
     const returnType = typeName(fn.returnType);
-    this.diagnostics.push(...collectFunctionReturnTypeDiagnostics(fn, returnType));
-    if (fn.external) this.checkCAbiFunction(fn, "Extern");
-    else if (fn.exported) this.checkCAbiFunction(fn, "Exported");
-    if (fn.name === "main") this.checkMainFunction(fn, returnType);
+    this.diagnostics.push(...collectFunctionHeaderDiagnostics(fn, returnType, this.typeAliases));
     if (!fn.body) return;
     for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
     this.diagnostics.push(...collectMissingFunctionReturnDiagnostics(fn, returnType));
@@ -201,14 +196,6 @@ class Checker {
     const result = checkPostfixPointerExpression(expr, operand);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
-  }
-
-  private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
-    this.diagnostics.push(...collectCAbiFunctionDiagnostics(fn, label, this.typeAliases));
-  }
-
-  private checkMainFunction(fn: FunctionDecl, returnType: TypeName): void {
-    this.diagnostics.push(...collectMainFunctionDiagnostics(fn, returnType));
   }
 
   private error(message: Str, span: Diagnostic["span"]): void {
