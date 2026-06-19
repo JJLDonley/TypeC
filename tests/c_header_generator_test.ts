@@ -22,6 +22,8 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("unsupported", "long (long)", [param("value", "long")]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
       functionDecl("old_style", "void ()", []),
+      functionDecl("get_callback", "int32_t (*(void))(int32_t)", []),
+      functionDecl("set_callback", "void (int32_t (*)(int32_t))", [param("callback", "int32_t (*)(int32_t)")]),
     ],
   });
 
@@ -39,6 +41,8 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "unsupported");
   assertExcludes(output, "log_message");
   assertExcludes(output, "old_style");
+  assertExcludes(output, "get_callback");
+  assertExcludes(output, "set_callback");
 });
 
 function functionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
