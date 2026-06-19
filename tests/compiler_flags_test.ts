@@ -1,4 +1,4 @@
-import { compilerFlagError } from "../src/compiler_flags.ts";
+import { compilerFlagError } from "project/flags.ts";
 
 type Str = string;
 

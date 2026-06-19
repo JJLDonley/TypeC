@@ -1,6 +1,6 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { isDependencyImportPath, isStdImportPath, validateImportPath } from "../src/import_paths.ts";
-import type { ProjectConfig } from "../src/project_config.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { isDependencyImportPath, isStdImportPath, validateImportPath } from "paths/imports.ts";
+import type { ProjectConfig } from "project/config.ts";
 
 type Str = string;
 type b8 = boolean;

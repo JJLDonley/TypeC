@@ -1,4 +1,4 @@
-import { generateExternsFromClangAst } from "../src/c_header_generator.ts";
+import { generateExternsFromClangAst } from "c/header/generator.ts";
 
 type Str = string;
 type usize = number;

@@ -1,10 +1,10 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { Token } from "../src/token.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { Token } from "core/token.ts";
 import {
   functionModifierDiagnostics,
   importModifierDiagnostics,
   typeAliasModifierDiagnostics,
-} from "../src/parser_declaration_modifiers.ts";
+} from "parser/declaration_modifiers.ts";
 
 type Str = string;
 type usize = number;

@@ -1,5 +1,5 @@
-import type { CHeaderFunction } from "../src/c_header_ast.ts";
-import { isIncludedHeaderFunction, isSupportedHeaderFunction } from "../src/c_header_support.ts";
+import type { CHeaderFunction } from "c/header/ast.ts";
+import { isIncludedHeaderFunction, isSupportedHeaderFunction } from "c/header/support.ts";
 
 type Str = string;
 type b8 = boolean;

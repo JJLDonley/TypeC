@@ -1,4 +1,4 @@
-import { emitCPrelude } from "../src/c_prelude.ts";
+import { emitCPrelude } from "c/prelude.ts";
 
 type Str = string;
 

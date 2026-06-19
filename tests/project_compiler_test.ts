@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { readProjectCompilerFlags } from "../src/project_compiler.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { readProjectCompilerFlags } from "project/compiler.ts";
 
 type Str = string;
 type usize = number;

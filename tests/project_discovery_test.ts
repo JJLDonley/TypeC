@@ -1,4 +1,4 @@
-import { findProjectDir, projectConfigPath } from "../src/project_discovery.ts";
+import { findProjectDir, projectConfigPath } from "project/discovery.ts";
 
 type Str = string;
 

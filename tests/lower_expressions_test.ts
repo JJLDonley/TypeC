@@ -1,6 +1,6 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { CastExpression } from "../src/cast.ts";
-import { lowerExpression } from "../src/lower_expressions.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { CastExpression } from "core/cast.ts";
+import { lowerExpression } from "lower/expressions.ts";
 
 type Str = string;
 

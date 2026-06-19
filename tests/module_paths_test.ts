@@ -1,6 +1,6 @@
-import { canonicalModulePath, isCHeaderPath, resolveModuleImportPath } from "../src/module_paths.ts";
-import type { ProjectConfig } from "../src/project_config.ts";
-import { TypeCError } from "../src/diagnostics.ts";
+import { canonicalModulePath, isCHeaderPath, resolveModuleImportPath } from "module/paths.ts";
+import type { ProjectConfig } from "project/config.ts";
+import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
 type b8 = boolean;

@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { loadProgram } from "../src/module_loader.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { loadProgram } from "module/loader.ts";
 
 type Str = string;
 type usize = number;

@@ -1,8 +1,8 @@
 import { check } from "checker";
-import { TypeCError } from "../src/diagnostics.ts";
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
-import { resolve } from "../src/resolver.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
+import { resolve } from "core/resolver.ts";
 
 type Str = string;
 

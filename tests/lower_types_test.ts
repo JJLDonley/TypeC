@@ -1,6 +1,6 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { CastTypeRef } from "../src/cast.ts";
-import { lowerTypeRef } from "../src/lower_types.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { CastTypeRef } from "core/cast.ts";
+import { lowerTypeRef } from "lower/types.ts";
 
 type Str = string;
 

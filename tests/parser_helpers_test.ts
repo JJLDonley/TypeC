@@ -1,5 +1,5 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import { parseFloatLiteral, precedence, span } from "../src/parser_helpers.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
 
 type Str = string;
 type i32 = number;

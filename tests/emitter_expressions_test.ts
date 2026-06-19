@@ -1,7 +1,7 @@
-import type { Expression, FunctionDecl, TypeAliasDecl, TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
-import { createEmitContext, type EmitContext } from "../src/emitter_context.ts";
-import { emitExpression, emitExpressionExpected } from "../src/emitter_expressions.ts";
+import type { Expression, FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import { createEmitContext, type EmitContext } from "emitter/context.ts";
+import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 
 type Str = string;
 

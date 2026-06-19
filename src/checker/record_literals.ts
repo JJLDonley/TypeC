@@ -1,6 +1,6 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { Expression, RecordTypeRef } from "../ast.ts";
-import type { TypeName } from "../tast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { Expression, RecordTypeRef } from "core/ast.ts";
+import type { TypeName } from "core/tast.ts";
 
 type Str = string;
 type usize = number;

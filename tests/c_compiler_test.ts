@@ -1,4 +1,4 @@
-import { nativeCompileArgs } from "../src/c_compiler.ts";
+import { nativeCompileArgs } from "c/compiler.ts";
 
 type Str = string;
 

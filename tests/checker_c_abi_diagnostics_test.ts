@@ -1,5 +1,5 @@
-import type { FunctionDecl, TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
+import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
 import { checkCAbiFunction } from "checker/c_abi_diagnostics.ts";
 
 type Str = string;

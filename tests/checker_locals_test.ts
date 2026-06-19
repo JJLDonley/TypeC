@@ -1,5 +1,5 @@
-import type { FunctionDecl, TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
+import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
 import { createFunctionLocals } from "checker/locals.ts";
 
 type Str = string;

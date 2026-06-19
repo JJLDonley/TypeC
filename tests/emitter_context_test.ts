@@ -1,7 +1,7 @@
-import type { FunctionDecl, TypeAliasDecl } from "../src/ast.ts";
+import type { FunctionDecl, TypeAliasDecl } from "core/ast.ts";
 import type { CheckedProgram } from "checker";
-import type { SourceSpan } from "../src/diagnostics.ts";
-import { createEmitContext } from "../src/emitter_context.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import { createEmitContext } from "emitter/context.ts";
 
 type Str = string;
 

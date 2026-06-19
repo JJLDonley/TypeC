@@ -1,5 +1,5 @@
-import type { CHeaderFunction } from "../src/c_header_ast.ts";
-import { formatHeaderExterns } from "../src/c_header_externs.ts";
+import type { CHeaderFunction } from "c/header/ast.ts";
+import { formatHeaderExterns } from "c/header/externs.ts";
 
 type Str = string;
 type b8 = boolean;

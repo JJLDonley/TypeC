@@ -1,4 +1,4 @@
-import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "../src/emitter_helpers.ts";
+import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 
 type Str = string;
 type usize = number;

@@ -1,4 +1,4 @@
-import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "../src/c_header_identifiers.ts";
+import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "c/header/identifiers.ts";
 
 type Str = string;
 type b8 = boolean;

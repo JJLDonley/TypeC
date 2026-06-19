@@ -1,7 +1,7 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { FunctionDecl, TypeRef } from "../ast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { FunctionDecl, TypeRef } from "core/ast.ts";
 import { isCAbiType } from "checker/c_abi.ts";
-import { typeName } from "../type_ref.ts";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 

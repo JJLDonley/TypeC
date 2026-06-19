@@ -1,4 +1,4 @@
-import { parseCliArgs, usageText } from "../src/cli.ts";
+import { parseCliArgs, usageText } from "driver/cli.ts";
 
 type Str = string;
 
@@ -15,7 +15,7 @@ Deno.test("rejects invalid CLI request", () => {
 });
 
 Deno.test("prints usage", () => {
-  assertEquals(usageText(), "Usage: deno run -A src/main.ts <build|run|emit-c|emit-ast|watch> <file.tc>");
+  assertEquals(usageText(), "Usage: deno run -A src/driver/main.ts <build|run|emit-c|emit-ast|watch> <file.tc>");
 });
 
 function assertEquals(actual: Str, expected: Str): void {

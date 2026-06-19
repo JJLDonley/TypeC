@@ -1,4 +1,4 @@
-import { readHeaderFunction } from "../src/c_header_function.ts";
+import { readHeaderFunction } from "c/header/function.ts";
 
 type Str = string;
 type b8 = boolean;

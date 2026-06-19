@@ -1,6 +1,6 @@
-import type { FunctionDecl, TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
-import { emitFunctionPrototype, emitFunctionSignature } from "../src/emitter_functions.ts";
+import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import { emitFunctionPrototype, emitFunctionSignature } from "emitter/functions.ts";
 
 type Str = string;
 type b8 = boolean;

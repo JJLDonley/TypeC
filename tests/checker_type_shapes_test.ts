@@ -1,5 +1,5 @@
-import type { TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
+import type { TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
 import {
   checkArrayElementType,
   checkArraySize,

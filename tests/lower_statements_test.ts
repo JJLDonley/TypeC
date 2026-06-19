@@ -1,6 +1,6 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { CastBlockStmt, CastExpression, CastStatement, CastTypeRef } from "../src/cast.ts";
-import { lowerBlockStmt } from "../src/lower_statements.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { CastBlockStmt, CastExpression, CastStatement, CastTypeRef } from "core/cast.ts";
+import { lowerBlockStmt } from "lower/statements.ts";
 
 type Str = string;
 

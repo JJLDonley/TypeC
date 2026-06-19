@@ -1,5 +1,5 @@
-import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
-import type { TypeName } from "../tast.ts";
+import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
+import type { TypeName } from "core/tast.ts";
 
 type Str = string;
 

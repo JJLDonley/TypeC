@@ -1,5 +1,5 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { TypeAliasDecl } from "../ast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { TypeAliasDecl } from "core/ast.ts";
 import { collectTypeAliasRefs } from "checker/type_refs.ts";
 
 type Str = string;

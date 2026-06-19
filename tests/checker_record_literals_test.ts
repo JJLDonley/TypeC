@@ -1,5 +1,5 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { Expression, RecordTypeRef, TypeRef } from "../src/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { Expression, RecordTypeRef, TypeRef } from "core/ast.ts";
 import {
   checkRecordLiteralFieldName,
   checkRecordLiteralMissingFields,

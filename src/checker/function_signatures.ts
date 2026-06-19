@@ -1,6 +1,6 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { FunctionDecl } from "../ast.ts";
-import type { TypeName } from "../tast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { FunctionDecl } from "core/ast.ts";
+import type { TypeName } from "core/tast.ts";
 import { parseArrayType } from "checker/types.ts";
 
 type Str = string;

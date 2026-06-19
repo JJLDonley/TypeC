@@ -1,4 +1,4 @@
-import { shouldBuildWatchedResult, shouldRebuild } from "../src/watch.ts";
+import { shouldBuildWatchedResult, shouldRebuild } from "driver/watch.ts";
 
 Deno.test("detects rebuild file events", () => {
   if (!shouldRebuild("modify")) throw new Error("Expected modify to rebuild");

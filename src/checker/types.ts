@@ -1,4 +1,4 @@
-import type { TypeName } from "../tast.ts";
+import type { TypeName } from "core/tast.ts";
 
 type Str = string;
 type f64 = number;

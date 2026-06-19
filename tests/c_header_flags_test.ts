@@ -1,4 +1,4 @@
-import { headerCompilerFlags } from "../src/c_header_flags.ts";
+import { headerCompilerFlags } from "c/header/flags.ts";
 
 type Str = string;
 

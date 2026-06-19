@@ -1,6 +1,6 @@
-import type { FunctionDecl } from "../ast.ts";
-import type { TypeName } from "../tast.ts";
-import { typeName } from "../type_ref.ts";
+import type { FunctionDecl } from "core/ast.ts";
+import type { TypeName } from "core/tast.ts";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 type b8 = boolean;

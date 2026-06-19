@@ -1,4 +1,4 @@
-import { hasParentTraversal } from "../src/path_security.ts";
+import { hasParentTraversal } from "paths/security.ts";
 
 type b8 = boolean;
 

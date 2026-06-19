@@ -1,8 +1,8 @@
-import type { Diagnostic, SourceSpan } from "../diagnostics.ts";
-import { TypeCError } from "../diagnostics.ts";
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "../ast.ts";
-import type { ResolvedProgram } from "../rast.ts";
-import type { TypedProgram, TypeName } from "../tast.ts";
+import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "core/ast.ts";
+import type { ResolvedProgram } from "core/rast.ts";
+import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkArrayIndex as collectArrayIndexDiagnostics } from "checker/array_indexes.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "checker/array_initializers.ts";
 import {
@@ -50,8 +50,8 @@ import {
   checkPointerElementType as collectPointerElementTypeDiagnostics,
   checkReferenceElementType as collectReferenceElementTypeDiagnostics,
 } from "checker/type_shapes.ts";
-import { primitiveTypes } from "../token.ts";
-import { typeName } from "../type_ref.ts";
+import { primitiveTypes } from "core/token.ts";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 type usize = number;

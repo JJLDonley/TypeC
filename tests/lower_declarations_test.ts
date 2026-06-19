@@ -1,6 +1,6 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { CastBlockStmt, CastFunctionDecl, CastImportDecl, CastTypeAliasDecl, CastTypeRef } from "../src/cast.ts";
-import { lowerFunctionDecl, lowerImportDecl, lowerTypeAliasDecl } from "../src/lower_declarations.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { CastBlockStmt, CastFunctionDecl, CastImportDecl, CastTypeAliasDecl, CastTypeRef } from "core/cast.ts";
+import { lowerFunctionDecl, lowerImportDecl, lowerTypeAliasDecl } from "lower/declarations.ts";
 
 type Str = string;
 type b8 = boolean;

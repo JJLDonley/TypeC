@@ -1,5 +1,5 @@
-import type { TypeRef } from "../src/ast.ts";
-import { emitCDeclarator, emitCType } from "../src/c_type.ts";
+import type { TypeRef } from "core/ast.ts";
+import { emitCDeclarator, emitCType } from "c/type.ts";
 
 type Str = string;
 

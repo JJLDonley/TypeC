@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { readHeaderParams } from "../src/c_header_params.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { readHeaderParams } from "c/header/params.ts";
 
 type Str = string;
 type usize = number;

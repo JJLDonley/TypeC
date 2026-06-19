@@ -1,7 +1,7 @@
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
-import { collectFunctionDeps, collectTypeAliasDeps } from "../src/module_dependency_collectors.ts";
-import { createDependencySet } from "../src/module_dependency_index.ts";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
+import { collectFunctionDeps, collectTypeAliasDeps } from "module/dependency_collectors.ts";
+import { createDependencySet } from "module/dependency_index.ts";
 
 type b8 = boolean;
 

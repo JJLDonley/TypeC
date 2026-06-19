@@ -1,5 +1,5 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { TypeRef } from "../src/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { TypeRef } from "core/ast.ts";
 import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "checker/type_refs.ts";
 
 type Str = string;

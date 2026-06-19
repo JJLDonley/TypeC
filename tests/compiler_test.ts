@@ -1,9 +1,9 @@
 import { check } from "checker";
-import { compileFile } from "../src/compiler.ts";
-import { emitC } from "../src/emitter.ts";
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
-import { resolve } from "../src/resolver.ts";
+import { compileFile } from "driver/compiler.ts";
+import { emitC } from "emitter";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
+import { resolve } from "core/resolver.ts";
 
 type Str = string;
 

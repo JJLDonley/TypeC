@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { parseJsonRecord, rejectUnknownJsonKeys } from "../src/json_config.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { parseJsonRecord, rejectUnknownJsonKeys } from "json/config.ts";
 
 type Str = string;
 type usize = number;

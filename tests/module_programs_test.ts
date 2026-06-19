@@ -1,7 +1,7 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
-import { exportAllFunctions, mergeProgram, selectImports } from "../src/module_programs.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
+import { exportAllFunctions, mergeProgram, selectImports } from "module/programs.ts";
 
 type Str = string;
 type b8 = boolean;

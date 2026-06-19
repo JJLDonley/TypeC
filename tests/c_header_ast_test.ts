@@ -1,4 +1,4 @@
-import { collectHeaderFunctions } from "../src/c_header_ast.ts";
+import { collectHeaderFunctions } from "c/header/ast.ts";
 
 type Str = string;
 type b8 = boolean;

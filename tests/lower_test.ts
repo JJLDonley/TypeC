@@ -1,7 +1,7 @@
-import { printAst } from "../src/ast_printer.ts";
-import { lex } from "../src/lexer.ts";
-import { lowerCast } from "../src/lower.ts";
-import { parseCast } from "../src/parser.ts";
+import { printAst } from "core/ast_printer.ts";
+import { lex } from "core/lexer.ts";
+import { lowerCast } from "lower";
+import { parseCast } from "parser";
 
 type Str = string;
 

@@ -1,4 +1,4 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
 import {
   checkCallArgumentType,
   checkCallArity,

@@ -1,4 +1,4 @@
-import { basenameNoExt, buildOutputPaths, directoryOf, fileDirectoryUrl, fileUrlPath, isPathWithinDir, normalizePath, stripTrailingSlash } from "../src/path.ts";
+import { basenameNoExt, buildOutputPaths, directoryOf, fileDirectoryUrl, fileUrlPath, isPathWithinDir, normalizePath, stripTrailingSlash } from "paths";
 
 type Str = string;
 type b8 = boolean;

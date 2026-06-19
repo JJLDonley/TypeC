@@ -1,4 +1,4 @@
-import { lex } from "../src/lexer.ts";
+import { lex } from "core/lexer.ts";
 
 type Str = string;
 type b8 = boolean;

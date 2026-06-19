@@ -1,5 +1,5 @@
-import type { CHeaderFunction } from "../src/c_header_ast.ts";
-import { headerFunctionTypeCSignature, unambiguousHeaderFunctions, uniqueHeaderFunctions } from "../src/c_header_signatures.ts";
+import type { CHeaderFunction } from "c/header/ast.ts";
+import { headerFunctionTypeCSignature, unambiguousHeaderFunctions, uniqueHeaderFunctions } from "c/header/signatures.ts";
 
 type Str = string;
 type b8 = boolean;

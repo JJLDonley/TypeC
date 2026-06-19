@@ -1,5 +1,5 @@
-import type { Expression } from "../ast.ts";
-import type { SourceSpan } from "../diagnostics.ts";
+import type { Expression } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
 
 type Str = string;
 type b8 = boolean;

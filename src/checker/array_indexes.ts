@@ -1,6 +1,6 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { Expression } from "../ast.ts";
-import type { TypeName } from "../tast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { Expression } from "core/ast.ts";
+import type { TypeName } from "core/tast.ts";
 import { isIntegerType } from "checker/types.ts";
 
 type IntLiteralValue = bigint;

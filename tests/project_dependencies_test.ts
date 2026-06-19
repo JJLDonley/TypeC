@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { readProjectDependencies } from "../src/project_dependencies.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { readProjectDependencies } from "project/dependencies.ts";
 
 type Str = string;
 

@@ -1,5 +1,5 @@
-import { TypeCError } from "../src/diagnostics.ts";
-import { mapCHeaderType } from "../src/c_header_types.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { mapCHeaderType } from "c/header/types.ts";
 
 type Str = string;
 

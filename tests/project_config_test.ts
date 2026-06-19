@@ -1,5 +1,5 @@
-import { loadProjectConfig, parseProjectConfig } from "../src/project_config.ts";
-import { TypeCError } from "../src/diagnostics.ts";
+import { loadProjectConfig, parseProjectConfig } from "project/config.ts";
+import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
 

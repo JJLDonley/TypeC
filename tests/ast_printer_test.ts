@@ -1,6 +1,6 @@
-import { printAst } from "../src/ast_printer.ts";
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
+import { printAst } from "core/ast_printer.ts";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
 
 type Str = string;
 

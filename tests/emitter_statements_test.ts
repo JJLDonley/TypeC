@@ -1,7 +1,7 @@
-import type { Expression, Statement, TypeRef } from "../src/ast.ts";
-import type { SourceSpan } from "../src/diagnostics.ts";
-import { createEmitContext, type EmitContext } from "../src/emitter_context.ts";
-import { emitStatement } from "../src/emitter_statements.ts";
+import type { Expression, Statement, TypeRef } from "core/ast.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import { createEmitContext, type EmitContext } from "emitter/context.ts";
+import { emitStatement } from "emitter/statements.ts";
 
 type Str = string;
 type b8 = boolean;

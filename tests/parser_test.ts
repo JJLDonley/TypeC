@@ -1,8 +1,8 @@
-import type { BlockStmt } from "../src/ast.ts";
-import { TypeCError } from "../src/diagnostics.ts";
-import { lex } from "../src/lexer.ts";
-import { parse } from "../src/parser.ts";
-import { typeName } from "../src/type_ref.ts";
+import type { BlockStmt } from "core/ast.ts";
+import { TypeCError } from "core/diagnostics.ts";
+import { lex } from "core/lexer.ts";
+import { parse } from "parser";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 

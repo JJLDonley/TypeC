@@ -1,6 +1,6 @@
-import type { SourceSpan } from "../src/diagnostics.ts";
-import type { TypeAliasDecl, TypeRef } from "../src/ast.ts";
-import { emitTypeAlias } from "../src/emitter_type_aliases.ts";
+import type { SourceSpan } from "core/diagnostics.ts";
+import type { TypeAliasDecl, TypeRef } from "core/ast.ts";
+import { emitTypeAlias } from "emitter/type_aliases.ts";
 
 type Str = string;
 type b8 = boolean;

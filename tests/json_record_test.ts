@@ -1,4 +1,4 @@
-import { isJsonRecord } from "../src/json_record.ts";
+import { isJsonRecord } from "json/record.ts";
 
 type b8 = boolean;
 

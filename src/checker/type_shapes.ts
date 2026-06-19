@@ -1,5 +1,5 @@
-import type { Diagnostic } from "../diagnostics.ts";
-import type { TypeRef } from "../ast.ts";
+import type { Diagnostic } from "core/diagnostics.ts";
+import type { TypeRef } from "core/ast.ts";
 import { isArrayTypeRef, isVoidNamedType } from "checker/type_refs.ts";
 
 type Str = string;

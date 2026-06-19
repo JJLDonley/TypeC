@@ -1,4 +1,4 @@
-import type { Statement } from "../ast.ts";
+import type { Statement } from "core/ast.ts";
 
 type b8 = boolean;
 
