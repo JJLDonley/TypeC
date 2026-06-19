@@ -22,6 +22,7 @@ import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralPar
 import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
+import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
 import { parseTypeRefWith } from "parser/type_refs.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
@@ -237,34 +238,18 @@ class Parser {
   }
 
   private parsePostfixExpression(): CastExpression {
-    let expr = this.parsePrimary();
-    while (this.checkText(".*") || this.checkText(".&") || this.checkText(".") || this.checkText("[")) {
-      if (this.checkText(".")) {
-        const field = this.parseFieldAccessName();
-        expr = { kind: "FieldAccessExpr", operand: expr, field: field.text, span: span(expr.span.start, field.span.end) };
-        continue;
-      }
-      if (this.checkText("[")) {
-        const close = this.parseIndexClose();
-        expr = { kind: "IndexExpr", operand: expr, index: close.index, span: span(expr.span.start, close.end.span.end) };
-        continue;
-      }
-      const op = this.advance();
-      expr = { kind: "PostfixPointerExpr", operator: op.text as ".*" | ".&", operand: expr, span: span(expr.span.start, op.span.end) };
-    }
-    return expr;
+    return parsePostfixExpressionWith(this.postfixExpressionParser());
   }
 
-  private parseFieldAccessName(): Token {
-    this.expectText(".");
-    return this.expectKind("identifier", "Expected field name");
-  }
-
-  private parseIndexClose(): { index: CastExpression; end: Token } {
-    this.expectText("[");
-    const index = this.parseExpression();
-    const end = this.expectText("]");
-    return { index, end };
+  private postfixExpressionParser(): PostfixExpressionParser {
+    return {
+      checkText: (text) => this.checkText(text),
+      advance: () => this.advance(),
+      expectText: (text) => this.expectText(text),
+      expectKind: (kind, message) => this.expectKind(kind, message),
+      parsePrimary: () => this.parsePrimary(),
+      parseExpression: () => this.parseExpression(),
+    };
   }
 
   private parsePrimary(): CastExpression {
