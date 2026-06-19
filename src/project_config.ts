@@ -76,8 +76,12 @@ function readDependencies(value: unknown): Map<Str, Str> {
 
 function validateDependencyAlias(name: Str): void {
   if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
-  if (isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
+  if (!hasValidAliasSegments(name) || isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
   if (isAliasFilePath(name)) throw configError(`Dependency alias '${name}' must not include a file extension`);
+}
+
+function hasValidAliasSegments(path: Str): b8 {
+  return path.length > 0 && path.split("/").every((segment) => segment.length > 0);
 }
 
 function isAliasFilePath(path: Str): b8 {
