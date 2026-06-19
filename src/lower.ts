@@ -1,44 +1,31 @@
 import type {
   AssignmentStmt,
   BlockStmt,
-  FixedArrayTypeRef,
   FunctionDecl,
   IfStmt,
   ImportDecl,
-  InferredArrayTypeRef,
   Param,
-  PointerTypeRef,
-  RecordField,
-  RecordTypeRef,
   Program,
-  ReferenceTypeRef,
   Statement,
   TypeAliasDecl,
-  TypeRef,
   VarDeclStmt,
   WhileStmt,
 } from "./ast.ts";
 import type {
   CastAssignmentStmt,
   CastBlockStmt,
-  CastFixedArrayTypeRef,
   CastFunctionDecl,
   CastIfStmt,
   CastImportDecl,
-  CastInferredArrayTypeRef,
   CastParam,
-  CastPointerTypeRef,
-  CastRecordField,
-  CastRecordTypeRef,
   CastProgram,
-  CastReferenceTypeRef,
   CastStatement,
   CastTypeAliasDecl,
-  CastTypeRef,
   CastVarDeclStmt,
   CastWhileStmt,
 } from "./cast.ts";
 import { lowerExpression } from "./lower_expressions.ts";
+import { lowerTypeRef } from "./lower_types.ts";
 
 export function lowerCast(program: CastProgram): Program {
   return {
@@ -85,51 +72,6 @@ function lowerParam(param: CastParam): Param {
   };
 }
 
-function lowerTypeRef(type: CastTypeRef): TypeRef {
-  switch (type.kind) {
-    case "NamedTypeRef":
-      return { kind: "NamedTypeRef", name: type.name, span: type.span };
-    case "PointerTypeRef":
-      return lowerPointerTypeRef(type);
-    case "ReferenceTypeRef":
-      return lowerReferenceTypeRef(type);
-    case "InferredArrayTypeRef":
-      return lowerInferredArrayTypeRef(type);
-    case "FixedArrayTypeRef":
-      return lowerFixedArrayTypeRef(type);
-    case "RecordTypeRef":
-      return lowerRecordTypeRef(type);
-  }
-}
-
-function lowerPointerTypeRef(type: CastPointerTypeRef): PointerTypeRef {
-  return { kind: "PointerTypeRef", element: lowerTypeRef(type.element), span: type.span };
-}
-
-function lowerReferenceTypeRef(type: CastReferenceTypeRef): ReferenceTypeRef {
-  return { kind: "ReferenceTypeRef", element: lowerTypeRef(type.element), span: type.span };
-}
-
-function lowerInferredArrayTypeRef(type: CastInferredArrayTypeRef): InferredArrayTypeRef {
-  return { kind: "InferredArrayTypeRef", element: lowerTypeRef(type.element), span: type.span };
-}
-
-function lowerFixedArrayTypeRef(type: CastFixedArrayTypeRef): FixedArrayTypeRef {
-  return {
-    kind: "FixedArrayTypeRef",
-    element: lowerTypeRef(type.element),
-    sizeText: type.sizeText,
-    span: type.span,
-  };
-}
-
-function lowerRecordTypeRef(type: CastRecordTypeRef): RecordTypeRef {
-  return { kind: "RecordTypeRef", fields: type.fields.map(lowerRecordField), span: type.span };
-}
-
-function lowerRecordField(field: CastRecordField): RecordField {
-  return { name: field.name, type: lowerTypeRef(field.type), span: field.span };
-}
 
 function lowerBlockStmt(block: CastBlockStmt): BlockStmt {
   return {
