@@ -52,9 +52,13 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-nostdinc"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
   assertConfigError(`{"compiler":{"flags":["-ffreestanding"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
   assertConfigError(`{"compiler":{"flags":["-target"]}}`, "project.json compiler.flags cannot override the target environment");
+  assertConfigError(`{"compiler":{"flags":["-target=wasm32"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["--target=wasm32"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-arch"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-m32"]}}`, "project.json compiler.flags cannot override the target environment");
+  assertConfigError(`{"compiler":{"flags":["-march=native"]}}`, "project.json compiler.flags cannot override the target environment");
+  assertConfigError(`{"compiler":{"flags":["-mcpu=native"]}}`, "project.json compiler.flags cannot override the target environment");
+  assertConfigError(`{"compiler":{"flags":["-mtune=native"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["--sysroot=/sdk"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-isysroot/sdk"]}}`, "project.json compiler.flags cannot override the target environment");
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");

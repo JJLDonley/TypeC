@@ -202,7 +202,11 @@ function isHostedEnvironmentFlag(flag: Str): b8 {
 }
 
 function isTargetEnvironmentFlag(flag: Str): b8 {
-  return flag === "-target" || flag.startsWith("--target=") || flag === "--target" || flag === "-arch" || flag === "-m32" || flag === "-m64" || flag === "--sysroot" || flag.startsWith("--sysroot=") || flag === "-isysroot" || flag.startsWith("-isysroot");
+  return flag === "-target" || flag.startsWith("-target=") || flag.startsWith("--target=") || flag === "--target" || flag === "-arch" || isMachineTargetFlag(flag) || flag === "--sysroot" || flag.startsWith("--sysroot=") || flag === "-isysroot" || flag.startsWith("-isysroot");
+}
+
+function isMachineTargetFlag(flag: Str): b8 {
+  return flag === "-m32" || flag === "-m64" || flag.startsWith("-march=") || flag.startsWith("-mcpu=") || flag.startsWith("-mtune=");
 }
 
 function linkerOperands(flag: Str): Str[] {
