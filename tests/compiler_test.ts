@@ -17,6 +17,14 @@ Deno.test("tracks whether compiled source has main", async () => {
   if (!main.hasMain) throw new Error("Expected main file with main");
 });
 
+Deno.test("tracks project compiler flags", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/project.json`, `{"compiler":{"flags":["-O2","-Wall"]}}`);
+  await Deno.writeTextFile(`${dir}/main.tc`, `function main(): i32 { return 0; }`);
+  const result = await compileFile(`${dir}/main.tc`, `${dir}/build`);
+  assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
+});
+
 Deno.test("emits C prototypes for extern functions", () => {
   const source = `extern function puts(s: u8*): i32; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
@@ -200,6 +208,12 @@ function assertIncludes(haystack: Str, needle: Str): void {
 
 function assertNotIncludes(haystack: Str, needle: Str): void {
   if (haystack.includes(needle)) throw new Error(`Expected output not to include ${needle}`);
+}
+
+function assertEqualText(actual: Str[], expected: Str[]): void {
+  const sameLength = actual.length === expected.length;
+  const sameItems = actual.every((value, index) => value === expected[index]);
+  if (!sameLength || !sameItems) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
 
 function assertOrdered(haystack: Str, first: Str, second: Str): void {
