@@ -8,6 +8,10 @@ import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./c
 import { checkBinaryOperation } from "./checker_binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
 import {
+  checkCallArgumentType as collectCallArgumentTypeDiagnostics,
+  checkCallArity as collectCallArityDiagnostics,
+} from "./checker_call_args.ts";
+import {
   checkIfCondition as collectIfConditionDiagnostics,
   checkWhileCondition as collectWhileConditionDiagnostics,
 } from "./checker_conditions.ts";
@@ -258,14 +262,12 @@ class Checker {
   }
 
   private checkCallArgs(args: Expression[], fn: FunctionDecl, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
-    if (args.length !== fn.params.length) this.error(`Function '${fn.name}' expects ${fn.params.length} arguments, got ${args.length}`, span);
-    for (let index: usize = 0; index < args.length && index < fn.params.length; index++) this.checkCallArg(args[index]!, fn, locals, index);
-  }
-
-  private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, LocalInfo>, index: usize): void {
-    const expected = typeName(fn.params[index]!.type);
-    const actual = this.typeOfExpected(arg, locals, expected);
-    if (!isAssignable(actual, expected)) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
+    this.diagnostics.push(...collectCallArityDiagnostics(args.length, fn.params.length, fn.name, span));
+    for (let index: usize = 0; index < args.length && index < fn.params.length; index++) {
+      const expected = typeName(fn.params[index]!.type);
+      const actual = this.typeOfExpected(args[index]!, locals, expected);
+      this.diagnostics.push(...collectCallArgumentTypeDiagnostics(actual, expected, index, args[index]!.span));
+    }
   }
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
