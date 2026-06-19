@@ -102,11 +102,17 @@ export interface CastBlockStmt {
   span: SourceSpan;
 }
 
-export type CastStatement = CastReturnStmt | CastVarDeclStmt | CastAssignmentStmt | CastWhileStmt | CastIfStmt;
+export type CastStatement = CastReturnStmt | CastExpressionStmt | CastVarDeclStmt | CastAssignmentStmt | CastWhileStmt | CastIfStmt;
 
 export interface CastReturnStmt {
   kind: "ReturnStmt";
   expression: CastExpression | null;
+  span: SourceSpan;
+}
+
+export interface CastExpressionStmt {
+  kind: "ExpressionStmt";
+  expression: CastExpression;
   span: SourceSpan;
 }
 

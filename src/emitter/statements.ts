@@ -11,6 +11,8 @@ export function emitStatement(stmt: Statement, returnType: Str, context: EmitCon
   switch (stmt.kind) {
     case "ReturnStmt":
       return stmt.expression ? `return ${emitExpressionExpected(stmt.expression, returnType, context)};` : "return;";
+    case "ExpressionStmt":
+      return `${emitExpression(stmt.expression, context)};`;
     case "VarDeclStmt":
       return emitVarDecl(stmt, context);
     case "AssignmentStmt":

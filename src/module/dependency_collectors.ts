@@ -22,6 +22,9 @@ function collectStatementDeps(statement: Statement, selected: DependencySet): vo
     case "ReturnStmt":
       if (statement.expression) collectExpressionDeps(statement.expression, selected);
       return;
+    case "ExpressionStmt":
+      collectExpressionDeps(statement.expression, selected);
+      return;
     case "VarDeclStmt":
       collectTypeDeps(statement.type, selected);
       collectExpressionDeps(statement.initializer, selected);
@@ -46,6 +49,7 @@ function collectExpressionDeps(expression: Expression, selected: DependencySet):
     case "IntegerLiteral":
     case "FloatLiteral":
     case "BoolLiteral":
+    case "StringLiteral":
     case "IdentifierExpr":
       return;
     case "BinaryExpr":

@@ -1,5 +1,5 @@
-import type { AssignmentStmt, BlockStmt, IfStmt, Statement, VarDeclStmt, WhileStmt } from "core/ast.ts";
-import type { CastAssignmentStmt, CastBlockStmt, CastIfStmt, CastStatement, CastVarDeclStmt, CastWhileStmt } from "core/cast.ts";
+import type { AssignmentStmt, BlockStmt, ExpressionStmt, IfStmt, Statement, VarDeclStmt, WhileStmt } from "core/ast.ts";
+import type { CastAssignmentStmt, CastBlockStmt, CastExpressionStmt, CastIfStmt, CastStatement, CastVarDeclStmt, CastWhileStmt } from "core/cast.ts";
 import { lowerExpression } from "lower/expressions.ts";
 import { lowerTypeRef } from "lower/types.ts";
 
@@ -15,6 +15,8 @@ function lowerStatement(statement: CastStatement): Statement {
   switch (statement.kind) {
     case "ReturnStmt":
       return { kind: "ReturnStmt", expression: statement.expression ? lowerExpression(statement.expression) : null, span: statement.span };
+    case "ExpressionStmt":
+      return lowerExpressionStmt(statement);
     case "VarDeclStmt":
       return lowerVarDeclStmt(statement);
     case "AssignmentStmt":
@@ -24,6 +26,10 @@ function lowerStatement(statement: CastStatement): Statement {
     case "IfStmt":
       return lowerIfStmt(statement);
   }
+}
+
+function lowerExpressionStmt(statement: CastExpressionStmt): ExpressionStmt {
+  return { kind: "ExpressionStmt", expression: lowerExpression(statement.expression), span: statement.span };
 }
 
 function lowerIfStmt(statement: CastIfStmt): IfStmt {

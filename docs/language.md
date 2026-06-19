@@ -7,7 +7,7 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Function declarations
 - Required parameter and return type annotations
 - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`, `f64`, `void`
-- `return expr;`, `return;`, `while`, assignment, `let`, and `const` statements
+- `return expr;`, `return;`, expression statements, `while`, assignment, `let`, and `const` statements
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access

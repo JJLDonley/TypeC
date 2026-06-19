@@ -57,6 +57,10 @@ class AstPrinter {
           this.indented(() => this.expression(expression));
         }
         return;
+      case "ExpressionStmt":
+        this.line("ExpressionStmt");
+        this.indented(() => this.expression(statement.expression));
+        return;
       case "VarDeclStmt":
         this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`);
         this.indented(() => this.expression(statement.initializer));

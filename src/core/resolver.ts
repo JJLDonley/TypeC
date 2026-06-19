@@ -46,6 +46,9 @@ class Resolver {
       case "ReturnStmt":
         if (statement.expression) this.resolveExpression(statement.expression, scope);
         return;
+      case "ExpressionStmt":
+        this.resolveExpression(statement.expression, scope);
+        return;
       case "VarDeclStmt":
         this.resolveExpression(statement.initializer, scope);
         this.declare(scope, statement.name, "local", statement.span);
@@ -76,6 +79,7 @@ class Resolver {
       case "IntegerLiteral":
       case "FloatLiteral":
       case "BoolLiteral":
+      case "StringLiteral":
         return;
       case "IdentifierExpr":
         this.requireSymbol(scope, expression.name, expression.span);

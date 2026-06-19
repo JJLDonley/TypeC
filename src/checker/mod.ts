@@ -118,6 +118,9 @@ class Checker {
       case "ReturnStmt":
         this.checkReturn(stmt.expression, locals, returnType, stmt.span);
         return;
+      case "ExpressionStmt":
+        this.typeOf(stmt.expression, locals);
+        return;
       case "VarDeclStmt":
         this.checkVarDecl(stmt, locals);
         return;

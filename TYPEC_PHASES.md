@@ -238,6 +238,7 @@ Then expand to:
 ```ts
 const x: i32 = 1;
 let y: i32 = x + 2;
+call_side_effect();
 ```
 
 Then add low-level type syntax:
@@ -367,6 +368,7 @@ TAST means Typed AST.
 - return checking
 - bare `return;` for `void` functions
 - function call checking
+- expression statement checking
 - binary operator checking
 - pointer/reference checking
 - slice/array checking

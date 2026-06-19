@@ -224,9 +224,13 @@ class Parser {
     if (this.checkText("while")) return this.parseWhile();
     if (this.checkText("let") || this.checkText("const")) return this.parseVarDecl();
     if (this.check("identifier") && this.peek(1).text === "=") return this.parseAssignment();
-    const token = this.peek();
-    this.error(token, "Expected statement");
-    throw new TypeCError(this.diagnostics);
+    return this.parseExpressionStatement();
+  }
+
+  private parseExpressionStatement(): CastStatement {
+    const expression = this.parseExpression();
+    const semi = this.expectText(";");
+    return { kind: "ExpressionStmt", expression, span: span(expression.span.start, semi.span.end) };
   }
 
   private parseReturn(): CastStatement {
