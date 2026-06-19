@@ -144,6 +144,11 @@ Deno.test("rejects assignment to const", () => {
   assertCheckError(`function main(): i32 { const x: i32 = 0; x = 1; return x; }`, "Cannot assign to const 'x'");
 });
 
+Deno.test("rejects assignment to arrays", () => {
+  assertCheckError(`function main(): i32 { let xs: i32[] = [1]; xs = [2]; return xs[0]; }`, "Cannot assign to array variable 'xs'");
+  assertCheckError(`function main(): i32 { let xs: i32[1] = [1]; xs = [2]; return xs[0]; }`, "Cannot assign to array variable 'xs'");
+});
+
 Deno.test("checks bool literals", () => {
   check(resolve(parse(lex(`function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`))));
 });

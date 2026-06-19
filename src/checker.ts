@@ -132,6 +132,7 @@ class Checker {
     const local = locals.get(stmt.name);
     if (!local) return;
     if (!local.mutable) this.error(`Cannot assign to const '${stmt.name}'`, stmt.span);
+    if (parseArrayType(local.type)) this.error(`Cannot assign to array variable '${stmt.name}'`, stmt.span);
     const actual = this.typeOfExpected(stmt.expression, locals, local.type);
     if (!isAssignable(actual, local.type)) this.error(`Assignment type '${actual}' is not assignable to '${local.type}'`, stmt.span);
   }
