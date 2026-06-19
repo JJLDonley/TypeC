@@ -26,6 +26,10 @@ Deno.test("checks exported record aliases as C ABI types", () => {
   check(resolve(parse(lex(`type Vec2 = { x: f64; y: f64; }; export function len(v: Vec2): f64 { return v.x + v.y; } function main(): i32 { return 0; }`))));
 });
 
+Deno.test("checks exported fixed-array record fields as C ABI types", () => {
+  check(resolve(parse(lex(`type Block = { values: i32[3]; }; export function use_block(b: Block): i32 { return b.values[0]; } function main(): i32 { return 0; }`))));
+});
+
 Deno.test("rejects non-record type aliases", () => {
   assertCheckError(`type Count = i32; function main(): i32 { return 0; }`, "Type alias 'Count' must name a record type");
 });

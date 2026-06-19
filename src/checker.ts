@@ -353,7 +353,7 @@ class Checker {
       case "PointerTypeRef":
         return this.isCAbiType(type.element, seen);
       case "RecordTypeRef":
-        return type.fields.every((field) => this.isCAbiType(field.type, seen));
+        return type.fields.every((field) => this.isCAbiRecordFieldType(field.type, seen));
       case "ReferenceTypeRef":
       case "InferredArrayTypeRef":
       case "FixedArrayTypeRef":
@@ -367,6 +367,11 @@ class Checker {
     if (seen.has(name)) return false;
     seen.add(name);
     return this.isCAbiType(alias, seen);
+  }
+
+  private isCAbiRecordFieldType(type: TypeRef, seen: Set<Str>): b8 {
+    if (type.kind === "FixedArrayTypeRef") return this.isCAbiRecordFieldType(type.element, seen);
+    return this.isCAbiType(type, seen);
   }
 
   private checkRecordType(type: RecordTypeRef): void {
