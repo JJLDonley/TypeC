@@ -13,10 +13,7 @@ import {
 } from "checker/array_literals.ts";
 import { checkBinaryOperation } from "checker/binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
-import {
-  checkCallArgumentType as collectCallArgumentTypeDiagnostics,
-  checkCallArity as collectCallArityDiagnostics,
-} from "checker/call_args.ts";
+import { checkCallArguments as collectCallArgumentDiagnostics } from "checker/calls.ts";
 import {
   checkIfCondition as collectIfConditionDiagnostics,
   checkWhileCondition as collectWhileConditionDiagnostics,
@@ -56,7 +53,6 @@ import { primitiveTypes } from "core/token.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
-type usize = number;
 
 export type CheckedProgram = TypedProgram;
 
@@ -286,17 +282,8 @@ class Checker {
       return "<error>";
     }
 
-    this.checkCallArgs(expr.args, fn, locals, expr.span);
+    this.diagnostics.push(...collectCallArgumentDiagnostics(expr.args, fn, (arg, expected) => this.typeOfExpected(arg, locals, expected), expr.span));
     return typeName(fn.returnType);
-  }
-
-  private checkCallArgs(args: Expression[], fn: FunctionDecl, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
-    this.diagnostics.push(...collectCallArityDiagnostics(args.length, fn.params.length, fn.name, span));
-    for (let index: usize = 0; index < args.length && index < fn.params.length; index++) {
-      const expected = typeName(fn.params[index]!.type);
-      const actual = this.typeOfExpected(args[index]!, locals, expected);
-      this.diagnostics.push(...collectCallArgumentTypeDiagnostics(actual, expected, index, args[index]!.span));
-    }
   }
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
