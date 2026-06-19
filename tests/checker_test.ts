@@ -197,6 +197,12 @@ Deno.test("rejects integer divide by zero literals", () => {
   assertCheckError(`function main(): i32 { return 1 % 0; }`, "Operator '%' cannot divide by zero");
 });
 
+Deno.test("rejects integer literals outside target range", () => {
+  assertCheckError(`function main(): i32 { const x: i8 = 128; return 0; }`, "Integer literal '128' is out of range for 'i8'");
+  assertCheckError(`function main(): i32 { const x: u8 = 256; return 0; }`, "Integer literal '256' is out of range for 'u8'");
+  assertCheckError(`function main(): i32 { return 2147483648; }`, "Integer literal '2147483648' is out of range for 'i32'");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });

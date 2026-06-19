@@ -10,15 +10,31 @@ type Str = string;
 type i32 = number;
 type b8 = boolean;
 type usize = number;
+type IntLiteralValue = bigint;
 
 interface LocalInfo {
   type: TypeName;
   mutable: b8;
 }
 
+interface IntegerRange {
+  min: IntLiteralValue;
+  max: IntLiteralValue;
+}
+
 export type CheckedProgram = TypedProgram;
 
 const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64"]);
+const integerRanges = new Map<Str, IntegerRange>([
+  ["i8", { min: -128n, max: 127n }],
+  ["i16", { min: -32768n, max: 32767n }],
+  ["i32", { min: -2147483648n, max: 2147483647n }],
+  ["i64", { min: -9223372036854775808n, max: 9223372036854775807n }],
+  ["u8", { min: 0n, max: 255n }],
+  ["u16", { min: 0n, max: 65535n }],
+  ["u32", { min: 0n, max: 4294967295n }],
+  ["u64", { min: 0n, max: 18446744073709551615n }],
+]);
 
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
@@ -170,6 +186,7 @@ class Checker {
 
   private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
+      this.checkIntegerLiteralRange(expr, expected);
       this.expressionTypes.set(spanKey(expr.span), { type: expected });
       return expected;
     }
@@ -193,6 +210,7 @@ class Checker {
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     switch (expr.kind) {
       case "IntegerLiteral":
+        this.checkIntegerLiteralRange(expr, "i32");
         return "i32";
       case "FloatLiteral":
         return "f64";
@@ -217,6 +235,13 @@ class Checker {
       case "IndexExpr":
         return this.indexType(expr, locals);
     }
+  }
+
+  private checkIntegerLiteralRange(expr: Extract<Expression, { kind: "IntegerLiteral" }>, type: TypeName): void {
+    const range = integerRanges.get(type);
+    if (!range) return;
+    if (expr.value >= range.min && expr.value <= range.max) return;
+    this.error(`Integer literal '${expr.text}' is out of range for '${type}'`, expr.span);
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
