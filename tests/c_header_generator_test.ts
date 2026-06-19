@@ -20,6 +20,7 @@ Deno.test("generates externs from clang AST", () => {
       definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("unsupported", "long (long)", [param("value", "long")]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
+      functionDecl("old_style", "void ()", []),
     ],
   });
 
@@ -35,6 +36,7 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "extern function defined");
   assertExcludes(output, "unsupported");
   assertExcludes(output, "log_message");
+  assertExcludes(output, "old_style");
 });
 
 function functionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {

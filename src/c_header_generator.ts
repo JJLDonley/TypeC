@@ -240,7 +240,7 @@ function readReturnType(type: Str): Str {
 
 function formatSupportedFunction(fn: CFunction): Str[] {
   try {
-    if (isVariadicFunction(fn) || isStaticFunction(fn) || fn.hasBody || !isTypeCIdentifier(fn.name)) return [];
+    if (isVariadicFunction(fn) || isUnprototypedFunction(fn) || isStaticFunction(fn) || fn.hasBody || !isTypeCIdentifier(fn.name)) return [];
     return [formatFunction(fn)];
   } catch (error) {
     if (error instanceof TypeCError) return [];
@@ -250,6 +250,10 @@ function formatSupportedFunction(fn: CFunction): Str[] {
 
 function isVariadicFunction(fn: CFunction): b8 {
   return fn.functionType.includes("...");
+}
+
+function isUnprototypedFunction(fn: CFunction): b8 {
+  return fn.functionType.endsWith("()");
 }
 
 function isStaticFunction(fn: CFunction): b8 {
