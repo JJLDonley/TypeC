@@ -79,7 +79,14 @@ function emitCallArg(arg: Expression, param: FunctionDecl["params"][usize] | und
   if (!param) return emitExpression(arg, context);
   const expectedType = emitCTypeName(param.type);
   if (arg.kind === "ArrayLiteralExpr") return emitArrayCompoundLiteral(arg, emitArrayArgumentType(param.type), context);
+  if (isStringLiteralU8ArrayArgument(arg, param.type)) return emitCStringPointer(arg.text);
   return emitExpressionExpected(arg, expectedType, context);
+}
+
+function isStringLiteralU8ArrayArgument(arg: Expression, type: FunctionDecl["params"][usize]["type"]): arg is Extract<Expression, { kind: "StringLiteral" }> {
+  if (arg.kind !== "StringLiteral") return false;
+  if (type.kind !== "FixedArrayTypeRef" && type.kind !== "InferredArrayTypeRef") return false;
+  return emitCType(type.element) === "u8";
 }
 
 function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {

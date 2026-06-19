@@ -787,7 +787,7 @@ function main(): i32 {
 - `T[N]` in function parameter position lowers as a C array parameter, which is ABI-equivalent to `T*`; the declared `N` is documentation/checking metadata, not passed at runtime.
 - Passing an array expression to a function expecting `T*`, `T[]`, or `void*` decays to a pointer to its first element.
 - `u8[]` is the TypeC spelling for C byte/string buffers. In C header interop, `char*`, `const char*`, and `unsigned char*` map to `u8*`; array forms map to `u8[]` when preserved by the header AST and to `u8*` after ABI decay.
-- TypeC string literals are NUL-terminated `u8[]` values and can decay to `u8*` or `void*` for C calls.
+- TypeC string literals are NUL-terminated `u8[]` values and can decay to `u8*`, `u8[]`, `u8[N]`, or `void*` for C calls.
 - Raw `T[]`/`T*` carries no length; APIs needing length must pass an explicit `usize`.
 - Array return types remain invalid; return `T*` for C pointer-return APIs.
 

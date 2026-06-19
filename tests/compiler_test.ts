@@ -220,6 +220,12 @@ Deno.test("emits C string literals for void pointer calls", () => {
   assertIncludes(c, "consume((void*)\"hello\");");
 });
 
+Deno.test("emits C string literals for fixed u8 array calls", () => {
+  const source = `extern function consume(data: u8[6]): void; function main(): i32 { consume("hello"); return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "consume((u8*)\"hello\");");
+});
+
 Deno.test("emits local C string arrays", () => {
   const source = `function main(): i32 { const text: u8[] = "hi"; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
