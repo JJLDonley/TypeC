@@ -38,6 +38,7 @@ import {
   checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics,
   findRecordField,
 } from "checker/record_literals.ts";
+import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { blockReturns } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
@@ -111,16 +112,7 @@ class Checker {
   }
 
   private checkReturn(expr: Expression | null, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
-    if (!expr) {
-      if (expected !== "void") this.error(`Function must return '${expected}'`, span);
-      return;
-    }
-    if (expected === "void") {
-      this.error("Void function cannot return a value", span);
-      return;
-    }
-    const actual = this.typeOfExpected(expr, locals, expected);
-    if (!isAssignable(actual, expected)) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
+    this.diagnostics.push(...collectReturnStatementDiagnostics(expr, expected, span, (value, target) => this.typeOfExpected(value, locals, target)));
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
