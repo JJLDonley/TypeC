@@ -14,6 +14,11 @@ import type {
   CastTypeRef,
 } from "./cast.ts";
 import { lowerCast } from "./lower.ts";
+import {
+  functionModifierDiagnostics,
+  importModifierDiagnostics,
+  typeAliasModifierDiagnostics,
+} from "./parser_declaration_modifiers.ts";
 import { parseFloatLiteral, precedence, span } from "./parser_helpers.ts";
 import type { Token, TokenKind } from "./token.ts";
 
@@ -47,14 +52,13 @@ class Parser {
       const external = this.matchText("extern");
       const externToken = external ? this.previous() : null;
       if (this.checkText("import")) {
-        if (exportToken) this.error(exportToken, "Imports cannot be exported");
-        if (externToken) this.error(externToken, "Imports cannot be extern");
+        this.diagnostics.push(...importModifierDiagnostics(exportToken, externToken));
         imports.push(this.parseImport());
       } else if (this.checkText("type")) {
-        if (externToken) this.error(externToken, "Type aliases cannot be extern");
+        this.diagnostics.push(...typeAliasModifierDiagnostics(externToken));
         typeAliases.push(this.parseTypeAlias(exported));
       } else {
-        if (exportToken && externToken) this.error(externToken, "Extern functions cannot be exported");
+        this.diagnostics.push(...functionModifierDiagnostics(exportToken, externToken));
         functions.push(this.parseFunction(exported, external));
       }
     }
