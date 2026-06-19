@@ -160,6 +160,7 @@ function validateCompilerFlag(flag: Str): void {
   if (isArtifactModeFlag(flag)) throw configError("project.json compiler.flags cannot change build artifact mode");
   if (isEntrypointFlag(flag)) throw configError("project.json compiler.flags cannot override the program entrypoint");
   if (isHostedEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot remove the hosted C environment");
+  if (isTargetEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot override the target environment");
   if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
   if (flag.startsWith("-x")) throw configError("project.json compiler.flags cannot override input language");
 }
@@ -198,6 +199,10 @@ function joinedEntrypointOperand(operand: Str): b8 {
 
 function isHostedEnvironmentFlag(flag: Str): b8 {
   return flag === "-nostdlib" || flag === "-nodefaultlibs" || flag === "-nostartfiles" || flag === "-nostdinc" || flag === "-ffreestanding";
+}
+
+function isTargetEnvironmentFlag(flag: Str): b8 {
+  return flag === "-target" || flag.startsWith("--target=") || flag === "--target" || flag === "-arch" || flag === "-m32" || flag === "-m64" || flag === "--sysroot" || flag.startsWith("--sysroot=") || flag === "-isysroot" || flag.startsWith("-isysroot");
 }
 
 function linkerOperands(flag: Str): Str[] {
