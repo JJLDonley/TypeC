@@ -3,12 +3,7 @@ import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
-import {
-  checkArrayLiteralElementType as collectArrayLiteralElementTypeDiagnostics,
-  checkArrayLiteralLength as collectArrayLiteralLengthDiagnostics,
-  checkArrayLiteralTarget as collectArrayLiteralTargetDiagnostics,
-  checkInferredArrayLiteral as collectInferredArrayLiteralDiagnostics,
-} from "checker/array_literals.ts";
+import { checkArrayLiteralExpression } from "checker/array_literal_expressions.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
@@ -237,16 +232,9 @@ class Checker {
   }
 
   private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const target = collectArrayLiteralTargetDiagnostics(expected, expr);
-    this.diagnostics.push(...target.diagnostics);
-    if (!target.array) return "<error>";
-    this.diagnostics.push(...collectInferredArrayLiteralDiagnostics(expr, target.array));
-    for (const element of expr.elements) {
-      const actual = this.typeOfExpected(element, locals, target.array.element);
-      this.diagnostics.push(...collectArrayLiteralElementTypeDiagnostics(actual, target.array.element, element));
-    }
-    this.diagnostics.push(...collectArrayLiteralLengthDiagnostics(expr.elements.length, target.array, expected, expr));
-    return `${target.array.element}[${expr.elements.length}]`;
+    const result = checkArrayLiteralExpression(expr, expected, (element, target) => this.typeOfExpected(element, locals, target));
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
