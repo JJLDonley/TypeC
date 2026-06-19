@@ -165,7 +165,11 @@ function isLinkerOutputFlag(flag: Str): b8 {
 }
 
 function isArtifactModeFlag(flag: Str): b8 {
-  return flag === "-c" || flag === "-E" || flag === "-S" || flag === "-shared";
+  return flag === "-c" || flag === "-E" || flag === "-S" || flag === "-shared" || isLinkerArtifactModeFlag(flag);
+}
+
+function isLinkerArtifactModeFlag(flag: Str): b8 {
+  return flag === "-Wl,-shared" || flag.startsWith("-Wl,-shared,") || flag === "-Wl,-r" || flag.startsWith("-Wl,-r,");
 }
 
 function isSeparateOperandFlag(flag: Str): b8 {

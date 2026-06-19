@@ -36,6 +36,8 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-E"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-S"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-shared"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-Wl,-shared"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-Wl,-r"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");
