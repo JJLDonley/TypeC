@@ -6,6 +6,10 @@ import { resolve } from "../src/resolver.ts";
 
 type Str = string;
 
+Deno.test("checks extern function calls", () => {
+  check(resolve(parse(lex(`extern function add(a: i32, b: i32): i32; function main(): i32 { return add(20, 22); }`))));
+});
+
 Deno.test("records typed expression information", () => {
   const program = check(resolve(parse(lex(`function main(): i32 { return 0; }`))));
   const types = [...program.expressionTypes.values()].map((entry) => entry.type);

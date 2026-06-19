@@ -31,10 +31,11 @@ export interface TypeAliasDecl {
 export interface FunctionDecl {
   kind: "FunctionDecl";
   exported: b8;
+  external: b8;
   name: Str;
   params: Param[];
   returnType: TypeRef;
-  body: BlockStmt;
+  body: BlockStmt | null;
   span: SourceSpan;
 }
 

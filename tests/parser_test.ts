@@ -1,8 +1,16 @@
+import type { BlockStmt } from "../src/ast.ts";
 import { lex } from "../src/lexer.ts";
 import { parse } from "../src/parser.ts";
 import { typeName } from "../src/type_ref.ts";
 
 type Str = string;
+
+Deno.test("parses extern functions", () => {
+  const program = parse(lex(`extern function puts(s: u8*): i32; function main(): i32 { return 0; }`));
+  const fn = program.functions[0];
+  if (!fn.external) throw new Error("Expected extern function");
+  if (fn.body) throw new Error("Expected no extern body");
+});
 
 Deno.test("parses imports", () => {
   const program = parse(lex(`import { add } from "./math.tc"; function main(): i32 { return add(1, 2); }`));
@@ -29,7 +37,7 @@ Deno.test("parses pointer reference and array type syntax", () => {
 
 Deno.test("parses postfix pointer expressions", () => {
   const program = parse(lex(`function f(p: i32*): i32 { return p.*; }`));
-  const statement = program.functions[0].body.statements[0];
+  const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
   if (statement.expression.kind !== "PostfixPointerExpr") throw new Error("Expected postfix pointer expression");
   if (statement.expression.operator !== ".*") throw new Error("Expected .* operator");
@@ -37,30 +45,35 @@ Deno.test("parses postfix pointer expressions", () => {
 
 Deno.test("parses array literals and indexing", () => {
   const program = parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`));
-  const returnStatement = program.functions[0].body.statements[1];
+  const returnStatement = requireBody(program.functions[0].body).statements[1];
   if (returnStatement.kind !== "ReturnStmt") throw new Error("Expected return statement");
   if (returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
 });
 
 Deno.test("parses while and assignment statements", () => {
   const program = parse(lex(`function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`));
-  const statement = program.functions[0].body.statements[1];
+  const statement = requireBody(program.functions[0].body).statements[1];
   if (statement.kind !== "WhileStmt") throw new Error("Expected while statement");
 });
 
 Deno.test("parses bool literals", () => {
   const program = parse(lex(`function flag(): bool { return true; }`));
-  const statement = program.functions[0].body.statements[0];
+  const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
   if (statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
 });
 
 Deno.test("parses if else statements", () => {
   const program = parse(lex(`function main(): i32 { if (true) { return 1; } else { return 0; } }`));
-  const statement = program.functions[0].body.statements[0];
+  const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "IfStmt") throw new Error("Expected if statement");
   if (!statement.elseBody) throw new Error("Expected else body");
 });
+
+function requireBody(body: BlockStmt | null): BlockStmt {
+  if (!body) throw new Error("Expected function body");
+  return body;
+}
 
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;

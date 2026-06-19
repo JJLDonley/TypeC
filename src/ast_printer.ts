@@ -27,10 +27,10 @@ class AstPrinter {
   }
 
   private functionDecl(fn: FunctionDecl): void {
-    this.line(`FunctionDecl ${fn.name} -> ${this.type(fn.returnType)}`);
+    this.line(`${fn.external ? "ExternFunctionDecl" : "FunctionDecl"} ${fn.name} -> ${this.type(fn.returnType)}`);
     this.indented(() => {
       this.params(fn.params);
-      this.block(fn.body);
+      if (fn.body) this.block(fn.body);
     });
   }
 

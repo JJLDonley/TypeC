@@ -41,9 +41,10 @@ class Parser {
     const functions: CastFunctionDecl[] = [];
     while (!this.check("eof")) {
       const exported = this.matchText("export");
+      const external = this.matchText("extern");
       if (this.checkText("import")) imports.push(this.parseImport());
       else if (this.checkText("type")) typeAliases.push(this.parseTypeAlias(exported));
-      else functions.push(this.parseFunction(exported));
+      else functions.push(this.parseFunction(exported, external));
     }
     const end = this.peek().span.end;
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
@@ -78,7 +79,7 @@ class Parser {
     return { kind: "TypeAliasDecl", exported, name: name.text, type, span: span(start.span.start, semi.span.end) };
   }
 
-  private parseFunction(exported: b8): CastFunctionDecl {
+  private parseFunction(exported: b8, external: b8): CastFunctionDecl {
     const functionToken = this.expectText("function");
     const name = this.expectKind("identifier", "Expected function name");
     this.expectText("(");
@@ -86,15 +87,31 @@ class Parser {
     this.expectText(")");
     this.expectText(":");
     const returnType = this.parseTypeRef();
+    if (external) return this.parseExternFunction(exported, functionToken, name.text, params, returnType);
     const body = this.parseBlock();
     return {
       kind: "FunctionDecl",
       exported,
+      external,
       name: name.text,
       params,
       returnType,
       body,
       span: span(functionToken.span.start, body.span.end),
+    };
+  }
+
+  private parseExternFunction(exported: b8, functionToken: Token, name: Str, params: CastParam[], returnType: CastTypeRef): CastFunctionDecl {
+    const semi = this.expectText(";");
+    return {
+      kind: "FunctionDecl",
+      exported,
+      external: true,
+      name,
+      params,
+      returnType,
+      body: null,
+      span: span(functionToken.span.start, semi.span.end),
     };
   }
 

@@ -56,7 +56,7 @@ function collectFunctionDeps(fn: FunctionDecl | undefined, selected: DependencyS
   if (!fn) return;
   for (const param of fn.params) collectTypeDeps(param.type, selected);
   collectTypeDeps(fn.returnType, selected);
-  collectBlockDeps(fn.body, selected);
+  if (fn.body) collectBlockDeps(fn.body, selected);
 }
 
 function collectBlockDeps(block: BlockStmt, selected: DependencySet): void {

@@ -703,7 +703,7 @@ Allow TypeC to call C and expose C-compatible functions.
 ## Possible Syntax
 
 ```ts
-extern function puts(s: ptr<u8>): i32;
+extern function puts(s: u8*): i32;
 
 export function main(): i32 {
   return 0;
@@ -716,6 +716,7 @@ export function main(): i32 {
 - Use C-compatible layouts.
 - Require explicit external declarations.
 - Keep name mangling predictable.
+- Use existing postfix pointer type syntax (`T*`) in extern declarations.
 
 ## Do Not
 

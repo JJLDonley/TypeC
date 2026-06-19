@@ -31,10 +31,11 @@ export interface CastTypeAliasDecl {
 export interface CastFunctionDecl {
   kind: "FunctionDecl";
   exported: b8;
+  external: b8;
   name: Str;
   params: CastParam[];
   returnType: CastTypeRef;
-  body: CastBlockStmt;
+  body: CastBlockStmt | null;
   span: SourceSpan;
 }
 

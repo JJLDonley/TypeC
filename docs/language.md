@@ -13,6 +13,7 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Record type aliases, record literals, and field access
 - Fixed arrays `T[N]`, inferred local arrays `T[]`, array literals, and indexing
 - Static imports and explicit exports
+- Explicit C extern function declarations
 - `//` and `/* */` comments
 
 ## Example

@@ -6,6 +6,13 @@ import { resolve } from "../src/resolver.ts";
 
 type Str = string;
 
+Deno.test("emits C prototypes for extern functions", () => {
+  const source = `extern function puts(s: u8*): i32; function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32 puts(u8* s);");
+  assertIncludes(c, "i32 main(void)");
+});
+
 Deno.test("emits C for minimal main", () => {
   const source = `function main(): i32 {\n  return 0;\n}\n`;
   const c = emitC(check(resolve(parse(lex(source)))));

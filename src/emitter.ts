@@ -34,6 +34,7 @@ function emitRecordTypeAlias(name: Str, type: RecordTypeRef): Str {
 
 function emitFunction(fn: FunctionDecl): Str {
   const params = emitParams(fn);
+  if (!fn.body) return `${emitCType(fn.returnType)} ${fn.name}(${params});`;
   const out: Str[] = [];
   out.push(`${emitCType(fn.returnType)} ${fn.name}(${params}) {`);
   for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType))}`);

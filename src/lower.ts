@@ -91,10 +91,11 @@ function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
   return {
     kind: "FunctionDecl",
     exported: fn.exported,
+    external: fn.external,
     name: fn.name,
     params: fn.params.map(lowerParam),
     returnType: lowerTypeRef(fn.returnType),
-    body: lowerBlockStmt(fn.body),
+    body: fn.body ? lowerBlockStmt(fn.body) : null,
     span: fn.span,
   };
 }

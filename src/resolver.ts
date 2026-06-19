@@ -37,6 +37,7 @@ class Resolver {
   private resolveFunction(fn: FunctionDecl): void {
     const scope = this.scopeTable.createScope("function", this.globalScope);
     for (const param of fn.params) this.declare(scope, param.name, "parameter", param.span);
+    if (!fn.body) return;
     for (const statement of fn.body.statements) this.resolveStatement(statement, scope);
   }
 
