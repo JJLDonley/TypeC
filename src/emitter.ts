@@ -77,30 +77,30 @@ function emitStatement(stmt: Statement, returnType: Str, typeAliases: Map<Str, T
     case "AssignmentStmt":
       return `${stmt.name} = ${emitExpression(stmt.expression, typeAliases)};`;
     case "WhileStmt":
-      return emitWhile(stmt, typeAliases);
+      return emitWhile(stmt, returnType, typeAliases);
     case "IfStmt":
-      return emitIf(stmt, typeAliases);
+      return emitIf(stmt, returnType, typeAliases);
   }
 }
 
-function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>, returnType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
   const out: Str[] = [];
   out.push(`if (${emitExpression(stmt.condition, typeAliases)}) {`);
-  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
+  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, returnType, typeAliases)}`);
   if (!stmt.elseBody) {
     out.push("}");
     return out.join("\n  ");
   }
   out.push("} else {");
-  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
+  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, returnType, typeAliases)}`);
   out.push("}");
   return out.join("\n  ");
 }
 
-function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, returnType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
   const out: Str[] = [];
   out.push(`while (${emitExpression(stmt.condition, typeAliases)}) {`);
-  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
+  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, returnType, typeAliases)}`);
   out.push("}");
   return out.join("\n  ");
 }

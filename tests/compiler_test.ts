@@ -114,6 +114,13 @@ Deno.test("emits C for functions returning records", () => {
   assertIncludes(c, "return (Vec2){ .x = a.x + b.x, .y = a.y + b.y };");
 });
 
+Deno.test("emits C for nested record returns", () => {
+  const source = `type Vec2 = { x: f64; y: f64; }; function choose(ok: bool): Vec2 { if (ok) { return { x: 1.0, y: 2.0 }; } return { x: 3.0, y: 4.0 }; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return (Vec2){ .x = 1.0, .y = 2.0 };");
+  assertIncludes(c, "return (Vec2){ .x = 3.0, .y = 4.0 };");
+});
+
 Deno.test("emits C for inferred arrays and indexing", () => {
   const source = `function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
