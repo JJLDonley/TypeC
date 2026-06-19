@@ -3,6 +3,7 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { isCAbiType } from "./checker_c_abi.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
@@ -426,9 +427,9 @@ class Checker {
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
-    if (!this.isCAbiType(fn.returnType)) this.error(`${label} function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
+    if (!isCAbiType(fn.returnType, this.typeAliases)) this.error(`${label} function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
     for (const param of fn.params) {
-      if (!this.isCAbiType(param.type)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
+      if (!isCAbiType(param.type, this.typeAliases)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
     }
   }
 
@@ -436,34 +437,6 @@ class Checker {
     if (fn.external) this.error("Function 'main' cannot be extern", fn.span);
     if (fn.params.length !== 0) this.error("Function 'main' cannot have parameters", fn.span);
     if (returnType !== "i32") this.error(`Function 'main' must return 'i32'`, fn.returnType.span);
-  }
-
-  private isCAbiType(type: TypeRef, seen: Set<Str> = new Set<Str>()): b8 {
-    switch (type.kind) {
-      case "NamedTypeRef":
-        return this.isCAbiNamedType(type.name, seen);
-      case "PointerTypeRef":
-        return this.isCAbiType(type.element, seen);
-      case "RecordTypeRef":
-        return type.fields.every((field) => this.isCAbiRecordFieldType(field.type, seen));
-      case "ReferenceTypeRef":
-      case "InferredArrayTypeRef":
-      case "FixedArrayTypeRef":
-        return false;
-    }
-  }
-
-  private isCAbiNamedType(name: Str, seen: Set<Str>): b8 {
-    const alias = this.typeAliases.get(name);
-    if (!alias) return primitiveTypes.has(name);
-    if (seen.has(name)) return false;
-    seen.add(name);
-    return this.isCAbiType(alias, seen);
-  }
-
-  private isCAbiRecordFieldType(type: TypeRef, seen: Set<Str>): b8 {
-    if (type.kind === "FixedArrayTypeRef") return this.isCAbiRecordFieldType(type.element, seen);
-    return this.isCAbiType(type, seen);
   }
 
   private checkRecordType(type: RecordTypeRef): void {
