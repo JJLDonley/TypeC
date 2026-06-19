@@ -52,6 +52,10 @@ Deno.test("checks inferred array literals and indexing", () => {
   check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`))));
 });
 
+Deno.test("checks usize array indexes", () => {
+  check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; const i: usize = 0; return xs[i]; }`))));
+});
+
 Deno.test("rejects array element mismatch", () => {
   assertCheckError(`function main(): i32 { const xs: i32[] = [1, 2.5]; return 0; }`, "Array element type 'f64' is not assignable to 'i32'");
 });

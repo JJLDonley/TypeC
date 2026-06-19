@@ -1,0 +1,16 @@
+function sum3(values: i32[3]): i32 {
+  let total: i32 = 0;
+  let i: usize = 0;
+
+  while (i < 3) {
+    total = total + values[i];
+    i = i + 1;
+  }
+
+  return total;
+}
+
+function main(): i32 {
+  const values: i32[] = [10, 20, 12];
+  return sum3(values);
+}

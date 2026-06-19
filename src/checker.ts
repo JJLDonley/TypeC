@@ -17,7 +17,7 @@ interface LocalInfo {
 
 export type CheckedProgram = TypedProgram;
 
-const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64"]);
+const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64"]);
 
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
@@ -114,6 +114,14 @@ class Checker {
   }
 
   private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
+    if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
+      this.expressionTypes.set(spanKey(expr.span), { type: expected });
+      return expected;
+    }
+    if (expr.kind === "FloatLiteral" && isFloatType(expected)) {
+      this.expressionTypes.set(spanKey(expr.span), { type: expected });
+      return expected;
+    }
     if (expr.kind === "RecordLiteralExpr") {
       const type = this.recordLiteralType(expr, locals, expected);
       this.expressionTypes.set(spanKey(expr.span), { type });
@@ -162,15 +170,22 @@ class Checker {
   }
 
   private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
-    const left = this.typeOf(expr.left, locals);
-    const right = this.typeOf(expr.right, locals);
-    if (left !== right) {
-      this.error(`Cannot apply '${expr.operator}' to '${left}' and '${right}'`, expr.span);
+    const hinted = this.binaryOperandTypes(expr, locals);
+    if (hinted.left !== hinted.right) {
+      this.error(`Cannot apply '${expr.operator}' to '${hinted.left}' and '${hinted.right}'`, expr.span);
       return "<error>";
     }
-    if (!numericTypes.has(left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
+    if (!numericTypes.has(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
     if (isComparisonOperator(expr.operator)) return "bool";
-    return left;
+    return hinted.left;
+  }
+
+  private binaryOperandTypes(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): { left: TypeName; right: TypeName } {
+    const left = this.typeOf(expr.left, locals);
+    const right = this.typeOfExpected(expr.right, locals, left);
+    if (left === right) return { left, right };
+    if (expr.left.kind === "IntegerLiteral" || expr.left.kind === "FloatLiteral") return { left: this.typeOfExpected(expr.left, locals, right), right };
+    return { left, right };
   }
 
   private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
@@ -343,6 +358,10 @@ function parseArrayType(type: TypeName): { element: TypeName; length: i32 | null
 
 function isIntegerType(type: TypeName): b8 {
   return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" || type === "u16" || type === "u32" || type === "u64" || type === "usize";
+}
+
+function isFloatType(type: TypeName): b8 {
+  return type === "f32" || type === "f64";
 }
 
 function isPointerLikeType(type: TypeName): b8 {
