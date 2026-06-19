@@ -30,6 +30,8 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-std"]}}`, "project.json compiler.flags cannot override the C standard");
   assertConfigError(`{"compiler":{"flags":["-o"]}}`, "project.json compiler.flags cannot override output paths");
   assertConfigError(`{"compiler":{"flags":["-obad"]}}`, "project.json compiler.flags cannot override output paths");
+  assertConfigError(`{"compiler":{"flags":["-Wl,-o,bad"]}}`, "project.json compiler.flags cannot override output paths");
+  assertConfigError(`{"compiler":{"flags":["-Wl,--output=bad"]}}`, "project.json compiler.flags cannot override output paths");
   assertConfigError(`{"compiler":{"flags":["-c"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-E"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-S"]}}`, "project.json compiler.flags cannot change build artifact mode");
