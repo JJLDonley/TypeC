@@ -17,7 +17,7 @@ import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
-import { checkFieldAccess } from "checker/field_access.ts";
+import { checkFieldAccessExpression } from "checker/field_access_expressions.ts";
 import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
@@ -223,7 +223,7 @@ class Checker {
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    const result = checkFieldAccess(lookupRecordAlias(operand, this.typeAliases), operand, expr.field, expr.span);
+    const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
