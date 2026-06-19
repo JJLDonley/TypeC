@@ -76,7 +76,7 @@ function readDependencies(value: unknown): Map<Str, Str> {
 
 function validateDependencyAlias(name: Str): void {
   if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
-  if (!hasValidAliasSegments(name) || isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
+  if (!hasValidAliasSegments(name) || hasBackslash(name) || isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
   if (isAliasFilePath(name)) throw configError(`Dependency alias '${name}' must not include a file extension`);
 }
 
@@ -90,6 +90,10 @@ function isValidAliasSegment(segment: Str): b8 {
 
 function isAliasFilePath(path: Str): b8 {
   return path.endsWith(".tc") || path.endsWith(".h");
+}
+
+function hasBackslash(path: Str): b8 {
+  return path.includes("\\");
 }
 
 function validateDependencyTarget(name: Str, path: Str): void {

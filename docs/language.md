@@ -57,7 +57,7 @@ import { abs_i32 } from "std/math.tc";
 }
 ```
 
-Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty or `.` path segments, be relative paths, absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
+Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty or `.` path segments, use backslashes, be relative paths, absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
 
 Imports may target relative `.tc` files or relative `.h` headers. Dependency targets may be `std/` modules, absolute `.tc` or `.h` paths, or project-relative `.tc` or `.h` paths. Header targets are read through clang AST output and exposed as explicit extern declarations. Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and `-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
