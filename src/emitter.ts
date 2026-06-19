@@ -7,6 +7,7 @@ type Str = string;
 
 export function emitC(program: CheckedProgram): Str {
   const out: Str[] = [];
+  const typeAliases = typeAliasMap(program.typeAliases);
   out.push(...emitCPrelude());
   for (const typeAlias of program.typeAliases) {
     out.push(emitTypeAlias(typeAlias));
@@ -16,10 +17,14 @@ export function emitC(program: CheckedProgram): Str {
   for (const fn of program.functions.filter((fn) => !fn.external)) out.push(emitFunctionPrototype(fn));
   out.push("");
   for (const fn of program.functions.filter((fn) => fn.body)) {
-    out.push(emitFunctionDefinition(fn));
+    out.push(emitFunctionDefinition(fn, typeAliases));
     out.push("");
   }
   return out.join("\n");
+}
+
+function typeAliasMap(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl> {
+  return new Map(typeAliases.map((typeAlias) => [typeAlias.name, typeAlias]));
 }
 
 function emitTypeAlias(typeAlias: TypeAliasDecl): Str {
@@ -39,11 +44,11 @@ function emitFunctionPrototype(fn: FunctionDecl): Str {
   return `${emitFunctionSignature(fn)};`;
 }
 
-function emitFunctionDefinition(fn: FunctionDecl): Str {
+function emitFunctionDefinition(fn: FunctionDecl, typeAliases: Map<Str, TypeAliasDecl>): Str {
   if (!fn.body) throw new Error("Function definition requires a body");
   const out: Str[] = [];
   out.push(`${emitFunctionSignature(fn)} {`);
-  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType))}`);
+  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType), typeAliases)}`);
   out.push("}");
   return out.join("\n");
 }
@@ -62,57 +67,57 @@ function emitParams(fn: FunctionDecl): Str {
   return fn.params.map((param) => emitCDeclarator(param.type, param.name)).join(", ");
 }
 
-function emitStatement(stmt: Statement, returnType: Str): Str {
+function emitStatement(stmt: Statement, returnType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
   switch (stmt.kind) {
     case "ReturnStmt":
-      return `return ${emitExpressionExpected(stmt.expression, returnType)};`;
+      return `return ${emitExpressionExpected(stmt.expression, returnType, typeAliases)};`;
     case "VarDeclStmt":
-      return emitVarDecl(stmt);
+      return emitVarDecl(stmt, typeAliases);
     case "AssignmentStmt":
-      return `${stmt.name} = ${emitExpression(stmt.expression)};`;
+      return `${stmt.name} = ${emitExpression(stmt.expression, typeAliases)};`;
     case "WhileStmt":
-      return emitWhile(stmt);
+      return emitWhile(stmt, typeAliases);
     case "IfStmt":
-      return emitIf(stmt);
+      return emitIf(stmt, typeAliases);
   }
 }
 
-function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>): Str {
+function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
   const out: Str[] = [];
-  out.push(`if (${emitExpression(stmt.condition)}) {`);
-  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, "void")}`);
+  out.push(`if (${emitExpression(stmt.condition, typeAliases)}) {`);
+  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
   if (!stmt.elseBody) {
     out.push("}");
     return out.join("\n  ");
   }
   out.push("} else {");
-  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, "void")}`);
+  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
   out.push("}");
   return out.join("\n  ");
 }
 
-function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>): Str {
+function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
   const out: Str[] = [];
-  out.push(`while (${emitExpression(stmt.condition)}) {`);
-  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, "void")}`);
+  out.push(`while (${emitExpression(stmt.condition, typeAliases)}) {`);
+  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, "void", typeAliases)}`);
   out.push("}");
   return out.join("\n  ");
 }
 
-function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): Str {
-  if (stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef") return emitArrayVarDecl(stmt);
-  return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpressionExpected(stmt.initializer, emitCType(stmt.type))};`;
+function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  if (stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef") return emitArrayVarDecl(stmt, typeAliases);
+  return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpressionExpected(stmt.initializer, emitCType(stmt.type), typeAliases)};`;
 }
 
-function emitArrayVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): Str {
+function emitArrayVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
   if (stmt.initializer.kind !== "ArrayLiteralExpr") throw new Error("Array declarations require array literals");
   const element = stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef" ? emitCType(stmt.type.element) : "";
   const length = stmt.type.kind === "FixedArrayTypeRef" ? stmt.type.sizeText : String(stmt.initializer.elements.length);
   const declarator = `${element} ${stmt.name}[${length}]`;
-  return `${stmt.mutable ? "" : "const "}${declarator} = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`)};`;
+  return `${stmt.mutable ? "" : "const "}${declarator} = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`, typeAliases)};`;
 }
 
-function emitExpression(expr: Expression): Str {
+function emitExpression(expr: Expression, typeAliases: Map<Str, TypeAliasDecl>): Str {
   switch (expr.kind) {
     case "IntegerLiteral":
       return expr.text;
@@ -123,39 +128,52 @@ function emitExpression(expr: Expression): Str {
     case "IdentifierExpr":
       return expr.name;
     case "BinaryExpr":
-      return `${emitExpression(expr.left)} ${expr.operator} ${emitExpression(expr.right)}`;
+      return `${emitExpression(expr.left, typeAliases)} ${expr.operator} ${emitExpression(expr.right, typeAliases)}`;
     case "CallExpr":
-      return `${expr.callee}(${expr.args.map(emitExpression).join(", ")})`;
+      return `${expr.callee}(${expr.args.map((arg) => emitExpression(arg, typeAliases)).join(", ")})`;
     case "PostfixPointerExpr":
-      return emitPostfixPointerExpression(expr);
+      return emitPostfixPointerExpression(expr, typeAliases);
     case "FieldAccessExpr":
-      return `${emitExpression(expr.operand)}.${expr.field}`;
+      return `${emitExpression(expr.operand, typeAliases)}.${expr.field}`;
     case "RecordLiteralExpr":
       throw new Error("Record literals require an expected C type");
     case "ArrayLiteralExpr":
       throw new Error("Array literals require an expected C type");
     case "IndexExpr":
-      return `${emitExpression(expr.operand)}[${emitExpression(expr.index)}]`;
+      return `${emitExpression(expr.operand, typeAliases)}[${emitExpression(expr.index, typeAliases)}]`;
   }
 }
 
-function emitExpressionExpected(expr: Expression, expectedType: Str): Str {
-  if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType);
-  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr);
-  return emitExpression(expr);
+function emitExpressionExpected(expr: Expression, expectedType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType, typeAliases);
+  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, typeAliases);
+  return emitExpression(expr, typeAliases);
 }
 
-function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str): Str {
-  const fields = expr.fields.map((field) => `.${field.name} = ${emitExpression(field.expression)}`).join(", ");
+function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const record = typeAliases.get(expectedType)?.type;
+  const fields = expr.fields.map((field) => emitRecordLiteralField(field, record?.kind === "RecordTypeRef" ? record : null, typeAliases)).join(", ");
   return `(${expectedType}){ ${fields} }`;
 }
 
-function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>): Str {
-  return `{ ${expr.elements.map(emitExpression).join(", ")} }`;
+function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][number], record: RecordTypeRef | null, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const expected = record?.fields.find((candidate) => candidate.name === field.name);
+  const value = expected ? emitExpressionExpected(field.expression, emitCTypeName(expected.type), typeAliases) : emitExpression(field.expression, typeAliases);
+  return `.${field.name} = ${value}`;
 }
 
-function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): Str {
-  const operand = emitExpression(expr.operand);
+function emitCTypeName(type: TypeAliasDecl["type"]): Str {
+  if (type.kind === "FixedArrayTypeRef") return `${emitCType(type.element)}[${type.sizeText}]`;
+  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element)}[]`;
+  return emitCType(type);
+}
+
+function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  return `{ ${expr.elements.map((element) => emitExpression(element, typeAliases)).join(", ")} }`;
+}
+
+function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const operand = emitExpression(expr.operand, typeAliases);
   if (expr.operator === ".&") return `&${operand}`;
   return `*${operand}`;
 }

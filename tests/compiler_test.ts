@@ -71,6 +71,12 @@ Deno.test("emits C typedef for fixed array record fields", () => {
   assertIncludes(c, "  i32 values[3];");
 });
 
+Deno.test("emits C for record literals with array fields", () => {
+  const source = `type Block = { values: i32[3]; }; function main(): i32 { const b: Block = { values: [1, 2, 3] }; return b.values[0]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const Block b = (Block){ .values = { 1, 2, 3 } };");
+});
+
 Deno.test("emits C for record literals and field access", () => {
   const source = `type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const v: Vec2 = { x: 1.5, y: 2.5 }; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
