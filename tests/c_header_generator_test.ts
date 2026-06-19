@@ -20,6 +20,7 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("nullable_text", "void (char * _Nullable)", [param("text", "char * _Nullable")]),
       functionDecl("use_keyword", "void (int32_t, int32_t)", [param("function", "int32_t"), param("function", "int32_t")]),
       functionDecl("export", "void (void)", []),
+      functionDecl("i32", "void (void)", []),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
       definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("unsupported", "long (long)", [param("value", "long")]),
@@ -42,6 +43,7 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "extern function nullable_text(text: u8*): void;");
   assertIncludes(output, "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;");
   assertExcludes(output, "extern function export");
+  assertExcludes(output, "extern function i32");
   assertExcludes(output, "extern function helper");
   assertExcludes(output, "extern function defined");
   assertExcludes(output, "unsupported");

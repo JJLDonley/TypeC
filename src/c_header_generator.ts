@@ -1,5 +1,5 @@
 import { TypeCError } from "./diagnostics.ts";
-import { keywords } from "./token.ts";
+import { keywords, primitiveTypes } from "./token.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -283,7 +283,7 @@ function isStaticFunction(fn: CFunction): b8 {
 }
 
 function isTypeCIdentifier(name: Str): b8 {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !keywords.has(name);
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !keywords.has(name) && !primitiveTypes.has(name);
 }
 
 function formatFunction(fn: CFunction): Str {
