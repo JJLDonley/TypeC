@@ -28,6 +28,12 @@ import {
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { checkPostfixPointerOperation } from "./checker_pointer_ops.ts";
+import {
+  checkRecordLiteralFieldName as collectRecordLiteralFieldNameDiagnostics,
+  checkRecordLiteralMissingFields as collectRecordLiteralMissingFieldDiagnostics,
+  checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics,
+  findRecordField,
+} from "./checker_record_literals.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "./checker_types.ts";
@@ -281,10 +287,8 @@ class Checker {
 
   private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     const record = this.recordAlias(expected);
-    if (!record) {
-      this.error(`Record literal is not assignable to non-record type '${expected}'`, expr.span);
-      return "<error>";
-    }
+    this.diagnostics.push(...collectRecordLiteralTargetDiagnostics(record, expected, expr));
+    if (!record) return "<error>";
     this.checkRecordLiteralFields(expr, locals, expected, record);
     return expected;
   }
@@ -292,21 +296,15 @@ class Checker {
   private checkRecordLiteralFields(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName, record: RecordTypeRef): void {
     const seen = new Set<Str>();
     for (const field of expr.fields) {
-      if (seen.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
-      seen.add(field.name);
-      const expectedField = record.fields.find((candidate) => candidate.name === field.name);
-      if (!expectedField) {
-        this.error(`Unknown field '${field.name}' on type '${expected}'`, field.span);
-        continue;
-      }
+      this.diagnostics.push(...collectRecordLiteralFieldNameDiagnostics(field, record, expected, seen));
+      const expectedField = findRecordField(record, field.name);
+      if (!expectedField) continue;
       const expectedType = typeName(expectedField.type);
       this.diagnostics.push(...collectArrayInitializerDiagnostics(field.expression, expectedType, field.span));
       const actual = this.typeOfExpected(field.expression, locals, expectedType);
       if (!isAssignable(actual, expectedType)) this.error(`Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`, field.span);
     }
-    for (const field of record.fields) {
-      if (!seen.has(field.name)) this.error(`Missing field '${field.name}' on type '${expected}'`, expr.span);
-    }
+    this.diagnostics.push(...collectRecordLiteralMissingFieldDiagnostics(expr, record, expected, seen));
   }
 
   private recordAlias(name: TypeName): RecordTypeRef | null {
