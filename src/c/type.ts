@@ -29,6 +29,16 @@ export function emitCDeclarator(type: TypeRef, name: Str): Str {
   }
 }
 
+export function emitCParamDeclarator(type: TypeRef, name: Str): Str {
+  switch (type.kind) {
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+      return `${emitCType(type.element)}* ${name}`;
+    default:
+      return `${emitCType(type)} ${name}`;
+  }
+}
+
 function emitNamedCType(name: Str): Str {
   return name === "bool" ? "b8" : name;
 }

@@ -1,5 +1,5 @@
 import type { TypeRef } from "core/ast.ts";
-import { emitCDeclarator, emitCType } from "c/type.ts";
+import { emitCDeclarator, emitCParamDeclarator, emitCType } from "c/type.ts";
 
 type Str = string;
 
@@ -19,9 +19,11 @@ Deno.test("emits fixed array declarators", () => {
   assertEquals(emitCDeclarator(type, "values"), "i32 values[3]");
 });
 
-Deno.test("emits inferred array parameters as pointers", () => {
-  const type: TypeRef = { kind: "InferredArrayTypeRef", element: namedType("i32"), span: fakeSpan() };
-  assertEquals(emitCDeclarator(type, "values"), "i32* values");
+Deno.test("emits array parameter declarators as pointers", () => {
+  const inferred: TypeRef = { kind: "InferredArrayTypeRef", element: namedType("i32"), span: fakeSpan() };
+  const fixed: TypeRef = { kind: "FixedArrayTypeRef", element: namedType("i32"), sizeText: "3", span: fakeSpan() };
+  assertEquals(emitCParamDeclarator(inferred, "values"), "i32* values");
+  assertEquals(emitCParamDeclarator(fixed, "values"), "i32* values");
 });
 
 function namedType(name: Str): TypeRef {
