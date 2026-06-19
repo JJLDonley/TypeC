@@ -29,6 +29,7 @@ import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
   checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
 } from "checker/literal_ranges.ts";
+import { localDeclaredType } from "checker/local_types.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
@@ -53,11 +54,6 @@ export type CheckedProgram = TypedProgram;
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
   return checker.check();
-}
-
-function localDeclaredType(expected: TypeName, actual: TypeName): TypeName {
-  if (parseArrayType(expected)?.length === null) return actual;
-  return expected;
 }
 
 class Checker {
