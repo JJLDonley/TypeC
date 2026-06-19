@@ -85,7 +85,16 @@ function hasValidAliasSegments(path: Str): b8 {
 }
 
 function isValidAliasSegment(segment: Str): b8 {
-  return segment.length > 0 && segment !== ".";
+  const decoded = decodedAliasSegment(segment);
+  return segment.length > 0 && decoded !== null && decoded.length > 0 && decoded !== "." && !decoded.includes("/");
+}
+
+function decodedAliasSegment(segment: Str): Str | null {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return null;
+  }
 }
 
 function isAliasFilePath(path: Str): b8 {
