@@ -3,6 +3,7 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
@@ -489,43 +490,6 @@ class Checker {
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
-  }
-}
-
-function isArrayTypeRef(type: TypeRef): b8 {
-  return type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef";
-}
-
-function isVoidValueType(type: TypeRef): b8 {
-  if (isVoidNamedType(type)) return true;
-  if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef") return isVoidValueType(type.element);
-  return false;
-}
-
-function isVoidNamedType(type: TypeRef): b8 {
-  return type.kind === "NamedTypeRef" && type.name === "void";
-}
-
-function collectTypeAliasRefs(type: TypeRef): Set<Str> {
-  const refs = new Set<Str>();
-  collectTypeAliasRefsInto(type, refs);
-  return refs;
-}
-
-function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
-  switch (type.kind) {
-    case "NamedTypeRef":
-      if (!primitiveTypes.has(type.name)) refs.add(type.name);
-      return;
-    case "PointerTypeRef":
-    case "ReferenceTypeRef":
-    case "InferredArrayTypeRef":
-    case "FixedArrayTypeRef":
-      collectTypeAliasRefsInto(type.element, refs);
-      return;
-    case "RecordTypeRef":
-      for (const field of type.fields) collectTypeAliasRefsInto(field.type, refs);
-      return;
   }
 }
 
