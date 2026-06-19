@@ -3,6 +3,7 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
 import { isCAbiType } from "./checker_c_abi.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
@@ -111,16 +112,10 @@ class Checker {
     this.checkType(stmt.type);
     this.checkValueType(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span);
     const expected = typeName(stmt.type);
-    this.checkArrayInitializer(stmt.initializer, expected, stmt.span);
+    this.diagnostics.push(...collectArrayInitializerDiagnostics(stmt.initializer, expected, stmt.span));
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
     locals.set(stmt.name, { type: actual, mutable: stmt.mutable });
-  }
-
-  private checkArrayInitializer(initializer: Expression, expected: TypeName, span: SourceSpan): void {
-    if (!parseArrayType(expected)) return;
-    if (initializer.kind === "ArrayLiteralExpr") return;
-    this.error(`Array variable initializer must be an array literal`, span);
   }
 
   private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
@@ -309,7 +304,7 @@ class Checker {
         continue;
       }
       const expectedType = typeName(expectedField.type);
-      this.checkArrayInitializer(field.expression, expectedType, field.span);
+      this.diagnostics.push(...collectArrayInitializerDiagnostics(field.expression, expectedType, field.span));
       const actual = this.typeOfExpected(field.expression, locals, expectedType);
       if (!isAssignable(actual, expectedType)) this.error(`Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`, field.span);
     }
