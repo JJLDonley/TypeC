@@ -25,6 +25,10 @@ Deno.test("parses imports", () => {
   if (program.imports[0].names[0] !== "add") throw new Error("Expected add import");
 });
 
+Deno.test("rejects empty imports", () => {
+  assertParseError(`import { } from "./math.tc"; function main(): i32 { return 0; }`, "Import must name at least one symbol");
+});
+
 Deno.test("parses exported functions", () => {
   const program = parse(lex(`export function add(a: i32, b: i32): i32 { return a + b; }`));
   if (!program.functions[0].exported) throw new Error("Expected exported function");

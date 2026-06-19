@@ -76,7 +76,10 @@ class Parser {
 
   private parseImportNames(): Str[] {
     const names: Str[] = [];
-    if (this.checkText("}")) return names;
+    if (this.checkText("}")) {
+      this.error(this.peek(), "Import must name at least one symbol");
+      return names;
+    }
     do names.push(this.expectKind("identifier", "Expected imported name").text);
     while (this.matchText(","));
     return names;
