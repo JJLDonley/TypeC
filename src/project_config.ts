@@ -163,7 +163,11 @@ function validateCompilerFlag(flag: Str): void {
 }
 
 function isLinkerOutputFlag(flag: Str): b8 {
-  return flag.startsWith("-Wl,-o") || flag.startsWith("-Wl,--output");
+  return linkerOperands(flag).some(isLinkerOutputOperand);
+}
+
+function isLinkerOutputOperand(operand: Str): b8 {
+  return operand === "-o" || operand.startsWith("-o") || operand.startsWith("--output");
 }
 
 function isArtifactModeFlag(flag: Str): b8 {
@@ -171,15 +175,32 @@ function isArtifactModeFlag(flag: Str): b8 {
 }
 
 function isLinkerArtifactModeFlag(flag: Str): b8 {
-  return flag === "-Wl,-shared" || flag.startsWith("-Wl,-shared,") || flag === "-Wl,-r" || flag.startsWith("-Wl,-r,");
+  return linkerOperands(flag).some(isLinkerArtifactModeOperand);
+}
+
+function isLinkerArtifactModeOperand(operand: Str): b8 {
+  return operand === "-shared" || operand === "-r";
 }
 
 function isEntrypointFlag(flag: Str): b8 {
-  return flag === "-e" || flag === "-Wl,-e" || flag.startsWith("-Wl,-e,") || flag.startsWith("-Wl,--entry");
+  return flag === "-e" || linkerOperands(flag).some(isLinkerEntrypointOperand);
+}
+
+function isLinkerEntrypointOperand(operand: Str): b8 {
+  return operand === "-e" || operand.startsWith("-e=") || operand.startsWith("--entry") || joinedEntrypointOperand(operand);
+}
+
+function joinedEntrypointOperand(operand: Str): b8 {
+  return operand.startsWith("-e") && operand.length > "-e".length && !operand.startsWith("-export");
 }
 
 function isHostedEnvironmentFlag(flag: Str): b8 {
   return flag === "-nostdlib" || flag === "-nodefaultlibs" || flag === "-nostartfiles" || flag === "-nostdinc" || flag === "-ffreestanding";
+}
+
+function linkerOperands(flag: Str): Str[] {
+  if (!flag.startsWith("-Wl,")) return [];
+  return flag.slice("-Wl,".length).split(",");
 }
 
 function isSeparateOperandFlag(flag: Str): b8 {

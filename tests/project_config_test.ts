@@ -40,6 +40,8 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-Wl,-r"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-e"]}}`, "project.json compiler.flags cannot override the program entrypoint");
   assertConfigError(`{"compiler":{"flags":["-Wl,-e,custom_start"]}}`, "project.json compiler.flags cannot override the program entrypoint");
+  assertConfigError(`{"compiler":{"flags":["-Wl,-emain"]}}`, "project.json compiler.flags cannot override the program entrypoint");
+  assertConfigError(`{"compiler":{"flags":["-Wl,-e=custom_start"]}}`, "project.json compiler.flags cannot override the program entrypoint");
   assertConfigError(`{"compiler":{"flags":["-Wl,--entry=custom_start"]}}`, "project.json compiler.flags cannot override the program entrypoint");
   assertConfigError(`{"compiler":{"flags":["-nostdlib"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
   assertConfigError(`{"compiler":{"flags":["-nodefaultlibs"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
