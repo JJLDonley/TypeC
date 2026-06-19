@@ -4,7 +4,9 @@ import { hasParentTraversal } from "./path_security.ts";
 type Str = string;
 type b8 = boolean;
 
-type JsonRecord = Record<Str, unknown>;
+interface JsonRecord {
+  [key: Str]: unknown;
+}
 
 export interface ProjectConfig {
   projectDir: Str;

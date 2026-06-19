@@ -5,7 +5,9 @@ type Str = string;
 type b8 = boolean;
 type usize = number;
 
-type JsonRecord = Record<Str, unknown>;
+interface JsonRecord {
+  [key: Str]: unknown;
+}
 
 interface CParam {
   name: Str;
