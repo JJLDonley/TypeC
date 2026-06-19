@@ -21,6 +21,7 @@ import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
+import { checkStatementDispatch } from "checker/statements.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -64,27 +65,19 @@ class Checker {
   }
 
   private checkStatement(stmt: Statement, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
-    switch (stmt.kind) {
-      case "ReturnStmt":
-        this.checkReturn(stmt.expression, locals, returnType, stmt.span);
-        return;
-      case "ExpressionStmt":
-        this.diagnostics.push(...collectExpressionStatementDiagnostics(stmt.expression));
-        this.typeOf(stmt.expression, locals);
-        return;
-      case "VarDeclStmt":
-        this.checkVarDecl(stmt, locals);
-        return;
-      case "AssignmentStmt":
-        this.checkAssignment(stmt, locals);
-        return;
-      case "WhileStmt":
-        this.checkWhile(stmt, locals, returnType);
-        return;
-      case "IfStmt":
-        this.checkIf(stmt, locals, returnType);
-        return;
-    }
+    checkStatementDispatch(stmt, {
+      returnStatement: (expr, span) => this.checkReturn(expr, locals, returnType, span),
+      expressionStatement: (expr) => this.checkExpressionStatement(expr, locals),
+      variableDeclaration: (value) => this.checkVarDecl(value, locals),
+      assignment: (value) => this.checkAssignment(value, locals),
+      whileStatement: (value) => this.checkWhile(value, locals, returnType),
+      ifStatement: (value) => this.checkIf(value, locals, returnType),
+    });
+  }
+
+  private checkExpressionStatement(expr: Expression, locals: Map<Str, LocalInfo>): void {
+    this.diagnostics.push(...collectExpressionStatementDiagnostics(expr));
+    this.typeOf(expr, locals);
   }
 
   private checkReturn(expr: Expression | null, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
