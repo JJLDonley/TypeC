@@ -1,43 +1,23 @@
 import type { BlockStmt, Expression, FunctionDecl, Program, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
+import { createDependencySet, filterProgramDependencies, indexProgramDependencies, type DependencySet, type ProgramDependencyIndex } from "./module_dependency_index.ts";
 
 type Str = string;
 type b8 = boolean;
 type usize = number;
 
-interface DependencySet {
-  types: Set<Str>;
-  functions: Set<Str>;
-}
-
-interface ProgramIndex {
-  types: Map<Str, TypeAliasDecl>;
-  functions: Map<Str, FunctionDecl>;
-}
-
 export function selectDependencyClosure(program: Program, rootTypes: Str[], rootFunctions: Str[]): Program {
-  const index = indexProgram(program);
+  const index = indexProgramDependencies(program);
   const selected = createDependencySet(rootTypes, rootFunctions);
   collectClosure(selected, index);
-  return filterProgram(program, selected);
+  return filterProgramDependencies(program, selected);
 }
 
-function indexProgram(program: Program): ProgramIndex {
-  return {
-    types: new Map(program.typeAliases.map((typeAlias) => [typeAlias.name, typeAlias])),
-    functions: new Map(program.functions.map((fn) => [fn.name, fn])),
-  };
-}
-
-function createDependencySet(types: Str[], functions: Str[]): DependencySet {
-  return { types: new Set(types), functions: new Set(functions) };
-}
-
-function collectClosure(selected: DependencySet, index: ProgramIndex): void {
+function collectClosure(selected: DependencySet, index: ProgramDependencyIndex): void {
   let changed = true;
   while (changed) changed = collectPass(selected, index);
 }
 
-function collectPass(selected: DependencySet, index: ProgramIndex): b8 {
+function collectPass(selected: DependencySet, index: ProgramDependencyIndex): b8 {
   const before = dependencyCount(selected);
   for (const name of [...selected.types]) collectTypeAliasDeps(index.types.get(name), selected);
   for (const name of [...selected.functions]) collectFunctionDeps(index.functions.get(name), selected);
@@ -137,12 +117,3 @@ function collectTypeDeps(type: TypeRef, selected: DependencySet): void {
   }
 }
 
-function filterProgram(program: Program, selected: DependencySet): Program {
-  return {
-    kind: "Program",
-    imports: [],
-    typeAliases: program.typeAliases.filter((typeAlias) => selected.types.has(typeAlias.name)),
-    functions: program.functions.filter((fn) => selected.functions.has(fn.name)),
-    span: program.span,
-  };
-}
