@@ -70,7 +70,7 @@ function emitParams(fn: FunctionDecl): Str {
 function emitStatement(stmt: Statement, returnType: Str, typeAliases: Map<Str, TypeAliasDecl>): Str {
   switch (stmt.kind) {
     case "ReturnStmt":
-      return `return ${emitExpressionExpected(stmt.expression, returnType, typeAliases)};`;
+      return stmt.expression ? `return ${emitExpressionExpected(stmt.expression, returnType, typeAliases)};` : "return;";
     case "VarDeclStmt":
       return emitVarDecl(stmt, typeAliases);
     case "AssignmentStmt":

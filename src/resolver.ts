@@ -44,7 +44,7 @@ class Resolver {
   private resolveStatement(statement: Statement, scope: Scope): void {
     switch (statement.kind) {
       case "ReturnStmt":
-        this.resolveExpression(statement.expression, scope);
+        if (statement.expression) this.resolveExpression(statement.expression, scope);
         return;
       case "VarDeclStmt":
         this.resolveExpression(statement.initializer, scope);

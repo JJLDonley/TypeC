@@ -165,7 +165,7 @@ function lowerBlockStmt(block: CastBlockStmt): BlockStmt {
 function lowerStatement(statement: CastStatement): Statement {
   switch (statement.kind) {
     case "ReturnStmt":
-      return { kind: "ReturnStmt", expression: lowerExpression(statement.expression), span: statement.span };
+      return { kind: "ReturnStmt", expression: statement.expression ? lowerExpression(statement.expression) : null, span: statement.span };
     case "VarDeclStmt":
       return lowerVarDeclStmt(statement);
     case "AssignmentStmt":

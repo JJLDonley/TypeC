@@ -88,7 +88,11 @@ class Checker {
     }
   }
 
-  private checkReturn(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
+  private checkReturn(expr: Expression | null, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
+    if (!expr) {
+      if (expected !== "void") this.error(`Function must return '${expected}'`, span);
+      return;
+    }
     if (expected === "void") {
       this.error("Void function cannot return a value", span);
       return;

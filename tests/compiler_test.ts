@@ -33,6 +33,12 @@ Deno.test("emits prototypes for forward calls", () => {
   assertOrdered(c, "static i32 helper(void);", "i32 main(void) {");
 });
 
+Deno.test("emits C for bare returns", () => {
+  const source = `function done(): void { return; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return;");
+});
+
 Deno.test("emits C for minimal main", () => {
   const source = `function main(): i32 {\n  return 0;\n}\n`;
   const c = emitC(check(resolve(parse(lex(source)))));

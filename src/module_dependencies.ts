@@ -67,7 +67,7 @@ function collectBlockDeps(block: BlockStmt, selected: DependencySet): void {
 function collectStatementDeps(statement: Statement, selected: DependencySet): void {
   switch (statement.kind) {
     case "ReturnStmt":
-      collectExpressionDeps(statement.expression, selected);
+      if (statement.expression) collectExpressionDeps(statement.expression, selected);
       return;
     case "VarDeclStmt":
       collectTypeDeps(statement.type, selected);

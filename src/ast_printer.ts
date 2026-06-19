@@ -52,7 +52,10 @@ class AstPrinter {
     switch (statement.kind) {
       case "ReturnStmt":
         this.line("ReturnStmt");
-        this.indented(() => this.expression(statement.expression));
+        if (statement.expression) {
+          const expression = statement.expression;
+          this.indented(() => this.expression(expression));
+        }
         return;
       case "VarDeclStmt":
         this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`);

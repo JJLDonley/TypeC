@@ -365,6 +365,7 @@ TAST means Typed AST.
 - TAST node definitions
 - assignment checking
 - return checking
+- bare `return;` for `void` functions
 - function call checking
 - binary operator checking
 - pointer/reference checking

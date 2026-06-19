@@ -46,7 +46,7 @@ Deno.test("parses postfix pointer expressions", () => {
   const program = parse(lex(`function f(p: i32*): i32 { return p.*; }`));
   const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (statement.expression.kind !== "PostfixPointerExpr") throw new Error("Expected postfix pointer expression");
+  if (!statement.expression || statement.expression.kind !== "PostfixPointerExpr") throw new Error("Expected postfix pointer expression");
   if (statement.expression.operator !== ".*") throw new Error("Expected .* operator");
 });
 
@@ -54,7 +54,7 @@ Deno.test("parses array literals and indexing", () => {
   const program = parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`));
   const returnStatement = requireBody(program.functions[0].body).statements[1];
   if (returnStatement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
+  if (!returnStatement.expression || returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
 });
 
 Deno.test("parses while and assignment statements", () => {
@@ -67,7 +67,14 @@ Deno.test("parses bool literals", () => {
   const program = parse(lex(`function flag(): bool { return true; }`));
   const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
+  if (!statement.expression || statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
+});
+
+Deno.test("parses bare returns", () => {
+  const program = parse(lex(`function done(): void { return; }`));
+  const statement = requireBody(program.functions[0].body).statements[0];
+  if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
+  if (statement.expression) throw new Error("Expected bare return");
 });
 
 Deno.test("parses if else statements", () => {

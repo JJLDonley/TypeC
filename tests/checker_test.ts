@@ -44,8 +44,16 @@ Deno.test("rejects inferred array record fields", () => {
   assertCheckError(`type Bad = { xs: i32[]; }; function main(): i32 { return 0; }`, "Field 'xs' cannot have inferred array type");
 });
 
+Deno.test("checks bare returns from void functions", () => {
+  check(resolve(parse(lex(`function done(): void { return; } function main(): i32 { return 0; }`))));
+});
+
 Deno.test("rejects returning values from void functions", () => {
   assertCheckError(`function bad(): void { return 0; } function main(): i32 { return 0; }`, "Void function cannot return a value");
+});
+
+Deno.test("rejects bare returns from value functions", () => {
+  assertCheckError(`function main(): i32 { return; }`, "Function must return 'i32'");
 });
 
 Deno.test("records typed expression information", () => {

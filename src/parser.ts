@@ -214,7 +214,7 @@ class Parser {
 
   private parseReturn(): CastStatement {
     const start = this.expectText("return");
-    const expression = this.parseExpression();
+    const expression = this.checkText(";") ? null : this.parseExpression();
     const semi = this.expectText(";");
     return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
   }

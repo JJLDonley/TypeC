@@ -106,7 +106,7 @@ export type CastStatement = CastReturnStmt | CastVarDeclStmt | CastAssignmentStm
 
 export interface CastReturnStmt {
   kind: "ReturnStmt";
-  expression: CastExpression;
+  expression: CastExpression | null;
   span: SourceSpan;
 }
 

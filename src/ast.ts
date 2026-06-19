@@ -106,7 +106,7 @@ export type Statement = ReturnStmt | VarDeclStmt | AssignmentStmt | WhileStmt | 
 
 export interface ReturnStmt {
   kind: "ReturnStmt";
-  expression: Expression;
+  expression: Expression | null;
   span: SourceSpan;
 }
 
