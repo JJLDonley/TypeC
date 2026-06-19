@@ -16,6 +16,7 @@ interface CFunction {
   functionType: Str;
   returnType: Str;
   params: CParam[];
+  sourceFile: Str | null;
 }
 
 const typeMap = new Map<Str, Str>([
@@ -46,15 +47,15 @@ const typeMap = new Map<Str, Str>([
   ["size_t", "usize"],
 ]);
 
-export function generateExternsFromClangAst(ast: unknown): Str {
-  const functions = uniqueFunctions(collectFunctions(ast)).flatMap(formatSupportedFunction);
+export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null = null): Str {
+  const functions = uniqueFunctions(collectFunctions(ast)).filter((fn) => isIncludedHeaderFunction(fn, includeDir)).flatMap(formatSupportedFunction);
   return `${functions.join("\n")}${functions.length > 0 ? "\n" : ""}`;
 }
 
 export async function generateExternsFromHeader(headerPath: Str, compilerFlags: Str[] = [], projectDir: Str = Deno.cwd()): Promise<Str> {
   const output = await runClangAstDump(headerPath, headerCompilerFlags(compilerFlags, projectDir));
   if (!output.ok) throw new TypeCError([{ message: `clang failed while reading '${headerPath}': ${output.stderr}` }]);
-  return generateExternsFromClangAst(parseClangJson(output.stdout));
+  return generateExternsFromClangAst(parseClangJson(output.stdout), directoryOf(headerPath));
 }
 
 async function runClangAstDump(headerPath: Str, compilerFlags: Str[]): Promise<{ ok: b8; stdout: Str; stderr: Str }> {
@@ -115,6 +116,16 @@ function uniqueFunctions(functions: CFunction[]): CFunction[] {
   return unique;
 }
 
+function isIncludedHeaderFunction(fn: CFunction, includeDir: Str | null): b8 {
+  if (includeDir === null) return true;
+  if (fn.sourceFile === null) return false;
+  return isPathWithinDir(fn.sourceFile, includeDir);
+}
+
+function isPathWithinDir(path: Str, dir: Str): b8 {
+  return path === dir || path.startsWith(`${dir}/`);
+}
+
 function functionKey(fn: CFunction): Str {
   return `${fn.name}:${fn.functionType}`;
 }
@@ -122,17 +133,27 @@ function functionKey(fn: CFunction): Str {
 function collectFunctionsInto(value: unknown, functions: CFunction[]): void {
   if (!isRecord(value)) return;
   if (value.kind === "FunctionDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)) {
-    functions.push(readFunction(value));
+    const fn = readSupportedFunction(value);
+    if (fn) functions.push(fn);
   }
   const inner = value.inner;
   if (Array.isArray(inner)) for (const child of inner) collectFunctionsInto(child, functions);
+}
+
+function readSupportedFunction(value: JsonRecord): CFunction | null {
+  try {
+    return readFunction(value);
+  } catch (error) {
+    if (error instanceof TypeCError) return null;
+    throw error;
+  }
 }
 
 function readFunction(value: JsonRecord): CFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
   const functionType = readText(type.qualType, `Function '${value.name}' has no type`);
   const params = readParams(value.inner);
-  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params };
+  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value) };
 }
 
 function readParams(value: unknown): CParam[] {
@@ -150,6 +171,16 @@ function readParam(value: JsonRecord, index: usize): CParam {
 function readParamName(value: JsonRecord, index: usize): Str {
   if (typeof value.name === "string" && value.name.length > 0) return value.name;
   return `arg${index}`;
+}
+
+function readSourceFile(value: JsonRecord): Str | null {
+  const loc = value.loc;
+  if (!isRecord(loc)) return null;
+  if (typeof loc.file === "string") return loc.file;
+  const includedFrom = loc.includedFrom;
+  if (!isRecord(includedFrom)) return null;
+  if (typeof includedFrom.file === "string") return includedFrom.file;
+  return null;
 }
 
 function readReturnType(type: Str): Str {
@@ -218,6 +249,12 @@ function requireRecord(value: unknown, message: Str): JsonRecord {
 function readText(value: unknown, message: Str): Str {
   if (typeof value === "string") return value;
   throw new TypeCError([{ message }]);
+}
+
+function directoryOf(path: Str): Str {
+  const index = path.lastIndexOf("/");
+  if (index <= 0) return "/";
+  return path.slice(0, index);
 }
 
 function isRecord(value: unknown): value is JsonRecord {

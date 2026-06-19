@@ -92,10 +92,12 @@ Deno.test("loads relative project dependency imports", async () => {
 
 Deno.test("loads relative C header imports", async () => {
   const dir = await Deno.makeTempDir();
-  await writeText(`${dir}/math.h`, `#include <stdint.h>\nint32_t add_i32(int32_t left, int32_t right);`);
+  await writeText(`${dir}/math.h`, `#include <stdint.h>\n#include <string.h>\nint32_t add_i32(int32_t left, int32_t right);`);
   await writeText(`${dir}/main.tc`, `import { add_i32 } from "./math.h"; function main(): i32 { return 0; }`);
   const program = await loadProgram(`${dir}/main.tc`);
-  assertIncludes(program.functions.map((fn) => fn.name), "add_i32");
+  const names = program.functions.map((fn) => fn.name);
+  assertIncludes(names, "add_i32");
+  assertExcludes(names, "strlen");
 });
 
 Deno.test("loads C header project dependency imports", async () => {
@@ -197,4 +199,8 @@ function assertSame(actual: usize, expected: usize): void {
 
 function assertIncludes(values: Str[], expected: Str): void {
   if (!values.includes(expected)) throw new Error(`Expected ${JSON.stringify(values)} to include ${expected}`);
+}
+
+function assertExcludes(values: Str[], expected: Str): void {
+  if (values.includes(expected)) throw new Error(`Expected ${JSON.stringify(values)} to exclude ${expected}`);
 }
