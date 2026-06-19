@@ -137,7 +137,7 @@ function functionSignatures(functions: CFunction[]): Map<Str, Set<Str>> {
   const signatures = new Map<Str, Set<Str>>();
   for (const fn of functions) {
     const types = signatures.get(fn.name) ?? new Set<Str>();
-    types.add(fn.functionType);
+    types.add(functionTypeCSignature(fn));
     signatures.set(fn.name, types);
   }
   return signatures;
@@ -154,7 +154,17 @@ function isPathWithinDir(path: Str, dir: Str): b8 {
 }
 
 function functionKey(fn: CFunction): Str {
-  return `${fn.name}:${fn.functionType}`;
+  return `${fn.name}:${functionTypeCSignature(fn)}`;
+}
+
+function functionTypeCSignature(fn: CFunction): Str {
+  try {
+    const params = fn.params.map((param) => mapCType(param.type)).join(",");
+    return `${mapCType(fn.returnType)}(${params})`;
+  } catch (error) {
+    if (error instanceof TypeCError) return `unsupported:${fn.functionType}`;
+    throw error;
+  }
 }
 
 function collectFunctionsInto(value: unknown, functions: CFunction[]): void {
