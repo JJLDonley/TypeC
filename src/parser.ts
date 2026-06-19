@@ -17,6 +17,7 @@ import { lowerCast } from "./lower.ts";
 import type { Token, TokenKind } from "./token.ts";
 
 type i32 = number;
+type f64 = number;
 type Str = string;
 type b8 = boolean;
 type usize = number;
@@ -314,7 +315,9 @@ class Parser {
     }
     if (this.check("float")) {
       const token = this.advance();
-      return { kind: "FloatLiteral", value: Number(token.text), text: token.text, span: token.span };
+      const value = parseFloatLiteral(token.text);
+      if (!Number.isFinite(value)) this.error(token, `Float literal '${token.text}' is out of range for 'f64'`);
+      return { kind: "FloatLiteral", value, text: token.text, span: token.span };
     }
     if (this.checkText("true") || this.checkText("false")) {
       const token = this.advance();
@@ -421,6 +424,10 @@ class Parser {
   private error(token: Token, message: Str): void {
     this.diagnostics.push({ message, span: token.span });
   }
+}
+
+function parseFloatLiteral(text: Str): f64 {
+  return Number(text);
 }
 
 function precedence(op: Str): i32 {
