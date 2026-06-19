@@ -154,8 +154,9 @@ function emitExpression(expr: Expression, context: EmitContext): Str {
 }
 
 function emitExpressionExpected(expr: Expression, expectedType: Str, context: EmitContext): Str {
+  if (expr.kind === "IntegerLiteral") return emitIntegerLiteralExpression(expr, expectedType);
   if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType, context);
-  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, context);
+  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, context, expectedType);
   return emitExpression(expr, context);
 }
 
@@ -177,8 +178,15 @@ function emitCTypeName(type: TypeAliasDecl["type"]): Str {
   return emitCType(type);
 }
 
-function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, context: EmitContext): Str {
-  return `{ ${expr.elements.map((element) => emitExpression(element, context)).join(", ")} }`;
+function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, context: EmitContext, expectedType: Str | null = null): Str {
+  const elementType = expectedType ? cArrayElementType(expectedType) : null;
+  const elements = expr.elements.map((element) => elementType ? emitExpressionExpected(element, elementType, context) : emitExpression(element, context));
+  return `{ ${elements.join(", ")} }`;
+}
+
+function cArrayElementType(type: Str): Str | null {
+  const match = type.match(/^(.+)\[\d+\]$/);
+  return match?.[1] ?? null;
 }
 
 function emitCallExpression(expr: Extract<Expression, { kind: "CallExpr" }>, context: EmitContext): Str {
@@ -195,7 +203,14 @@ function emitCallArg(arg: Expression, param: FunctionDecl["params"][usize] | und
 }
 
 function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
-  return `(${expectedType})${emitArrayLiteralExpression(expr, context)}`;
+  return `(${expectedType})${emitArrayLiteralExpression(expr, context, expectedType)}`;
+}
+
+function emitIntegerLiteralExpression(expr: Extract<Expression, { kind: "IntegerLiteral" }>, expectedType: Str): Str {
+  if (expectedType === "u64" && expr.value > 9223372036854775807n) return `UINT64_C(${expr.text})`;
+  if (expectedType === "i64" && expr.value > 2147483647n) return `INT64_C(${expr.text})`;
+  if (expectedType === "u32" && expr.value > 2147483647n) return `UINT32_C(${expr.text})`;
+  return expr.text;
 }
 
 function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {

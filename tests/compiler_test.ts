@@ -181,6 +181,12 @@ Deno.test("emits C for bool literals", () => {
   assertIncludes(c, "const b8 ok = false;");
 });
 
+Deno.test("emits C macros for wide integer literals", () => {
+  const source = `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return UINT64_C(18446744073709551615);");
+});
+
 Deno.test("emits C for if else statements", () => {
   const source = `function main(): i32 { if (true) { return 1; } else { return 0; } }`;
   const c = emitC(check(resolve(parse(lex(source)))));
