@@ -2,6 +2,7 @@ import { TypeCError } from "../src/diagnostics.ts";
 import { loadProgram } from "../src/module_loader.ts";
 
 type Str = string;
+type usize = number;
 
 Deno.test("loads imported exports", async () => {
   const program = await loadProgram("examples/import_main.tc");
@@ -24,6 +25,14 @@ Deno.test("loads dependencies of imported functions", async () => {
   const program = await loadProgram(`${dir}/main.tc`);
   assertIncludes(program.functions.map((fn) => fn.name), "inc");
   assertIncludes(program.functions.map((fn) => fn.name), "answer");
+});
+
+Deno.test("merges repeated imports from one module", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/ops.tc`, `function inc(x: i32): i32 { return x + 1; } export function one(): i32 { return inc(0); } export function two(): i32 { return inc(1); }`);
+  await writeText(`${dir}/main.tc`, `import { one } from "./ops.tc"; import { two } from "./ops.tc"; function main(): i32 { return one() + two(); }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
 });
 
 Deno.test("rejects missing exports", async () => {
@@ -51,6 +60,14 @@ async function assertLoadError(path: Str, message: Str): Promise<void> {
 
 async function writeText(path: Str, content: Str): Promise<void> {
   await Deno.writeTextFile(path, content);
+}
+
+function countFunctions(names: Str[], expected: Str): usize {
+  return names.filter((name) => name === expected).length;
+}
+
+function assertSame(actual: usize, expected: usize): void {
+  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }
 
 function assertIncludes(values: Str[], expected: Str): void {

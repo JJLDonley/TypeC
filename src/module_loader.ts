@@ -12,6 +12,12 @@ interface LoadState {
   loading: Set<Str>;
 }
 
+interface ImportRequest {
+  path: Str;
+  names: Set<Str>;
+  span: Diagnostic["span"];
+}
+
 export async function loadProgram(entryPath: Str): Promise<Program> {
   const state = { loaded: new Map<Str, Program>(), loading: new Set<Str>() };
   return await loadModule(normalizePath(entryPath), state);
@@ -34,12 +40,26 @@ async function loadModule(path: Str, state: LoadState): Promise<Program> {
 
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {
   const programs: Program[] = [];
-  for (const importDecl of program.imports) {
-    const importedPath = resolveImportPath(path, importDecl.path);
-    const imported = await loadModule(importedPath, state);
-    programs.push(selectImports(imported, importDecl.names, importDecl.span));
+  for (const request of collectImportRequests(path, program)) {
+    const imported = await loadModule(request.path, state);
+    programs.push(selectImports(imported, [...request.names], request.span));
   }
   return programs;
+}
+
+function collectImportRequests(path: Str, program: Program): ImportRequest[] {
+  const requests = new Map<Str, ImportRequest>();
+  for (const importDecl of program.imports) {
+    const importedPath = resolveImportPath(path, importDecl.path);
+    const request = requests.get(importedPath) ?? createImportRequest(importedPath, importDecl.span);
+    for (const name of importDecl.names) request.names.add(name);
+    requests.set(importedPath, request);
+  }
+  return [...requests.values()];
+}
+
+function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest {
+  return { path, names: new Set<Str>(), span };
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {
