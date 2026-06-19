@@ -2,6 +2,7 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl 
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
 import { emitCDeclarator, emitCType } from "./c_type.ts";
+import { emitFunctionPrototype, emitFunctionSignature } from "./emitter_functions.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "./emitter_helpers.ts";
 
 type Str = string;
@@ -50,10 +51,6 @@ function emitRecordTypeAlias(name: Str, type: RecordTypeRef): Str {
   return out.join("\n");
 }
 
-function emitFunctionPrototype(fn: FunctionDecl): Str {
-  return `${emitFunctionSignature(fn)};`;
-}
-
 function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): Str {
   if (!fn.body) throw new Error("Function definition requires a body");
   const out: Str[] = [];
@@ -61,20 +58,6 @@ function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): Str {
   for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType), context)}`);
   out.push("}");
   return out.join("\n");
-}
-
-function emitFunctionSignature(fn: FunctionDecl): Str {
-  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${fn.name}(${emitParams(fn)})`;
-}
-
-function emitFunctionStorage(fn: FunctionDecl): Str {
-  if (fn.external || fn.exported || fn.name === "main") return "";
-  return "static ";
-}
-
-function emitParams(fn: FunctionDecl): Str {
-  if (fn.params.length === 0) return "void";
-  return fn.params.map((param) => emitCDeclarator(param.type, param.name)).join(", ");
 }
 
 function emitStatement(stmt: Statement, returnType: Str, context: EmitContext): Str {
