@@ -1,6 +1,7 @@
 import type { BlockStmt, Expression, FunctionDecl, Program, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 
 type Str = string;
+type b8 = boolean;
 type usize = number;
 
 interface DependencySet {
@@ -36,7 +37,7 @@ function collectClosure(selected: DependencySet, index: ProgramIndex): void {
   while (changed) changed = collectPass(selected, index);
 }
 
-function collectPass(selected: DependencySet, index: ProgramIndex): boolean {
+function collectPass(selected: DependencySet, index: ProgramIndex): b8 {
   const before = dependencyCount(selected);
   for (const name of [...selected.types]) collectTypeAliasDeps(index.types.get(name), selected);
   for (const name of [...selected.functions]) collectFunctionDeps(index.functions.get(name), selected);

@@ -1,7 +1,10 @@
+type Str = string;
+type usize = number;
+
 export interface SourcePos {
-  offset: number;
-  line: number;
-  column: number;
+  offset: usize;
+  line: usize;
+  column: usize;
 }
 
 export interface SourceSpan {
@@ -10,7 +13,7 @@ export interface SourceSpan {
 }
 
 export interface Diagnostic {
-  message: string;
+  message: Str;
   span?: SourceSpan;
 }
 
@@ -20,7 +23,7 @@ export class TypeCError extends Error {
   }
 }
 
-export function formatDiagnostic(fileName: string, source: string, diagnostic: Diagnostic): string {
+export function formatDiagnostic(fileName: Str, source: Str, diagnostic: Diagnostic): Str {
   if (!diagnostic.span) return `${fileName}: ${diagnostic.message}`;
 
   const { line, column } = diagnostic.span.start;
