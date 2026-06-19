@@ -3,7 +3,7 @@ import { headerCompilerFlags } from "./c_header_flags.ts";
 import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { mapCHeaderType } from "./c_header_types.ts";
 import { TypeCError } from "./diagnostics.ts";
-import { directoryOf, stripTrailingSlash } from "./path.ts";
+import { directoryOf, isPathWithinDir } from "./path.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -78,11 +78,6 @@ function isIncludedHeaderFunction(fn: CFunction, includeDir: Str | null): b8 {
   if (includeDir === null) return true;
   if (fn.sourceFile === null) return false;
   return isPathWithinDir(fn.sourceFile, includeDir);
-}
-
-function isPathWithinDir(path: Str, dir: Str): b8 {
-  const normalizedDir = stripTrailingSlash(dir);
-  return path === normalizedDir || path.startsWith(`${normalizedDir}/`);
 }
 
 function functionKey(fn: CFunction): Str {

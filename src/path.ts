@@ -1,4 +1,5 @@
 type Str = string;
+type b8 = boolean;
 
 export function basenameNoExt(path: Str): Str {
   const file = path.split(/[\\/]/).pop() ?? "out";
@@ -20,4 +21,9 @@ export function directoryOf(path: Str): Str {
 export function stripTrailingSlash(path: Str): Str {
   if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
   return path;
+}
+
+export function isPathWithinDir(path: Str, dir: Str): b8 {
+  const normalizedDir = stripTrailingSlash(dir);
+  return path === normalizedDir || path.startsWith(`${normalizedDir}/`);
 }

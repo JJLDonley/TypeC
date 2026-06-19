@@ -1,6 +1,7 @@
-import { basenameNoExt, buildOutputPaths, directoryOf, stripTrailingSlash } from "../src/path.ts";
+import { basenameNoExt, buildOutputPaths, directoryOf, isPathWithinDir, stripTrailingSlash } from "../src/path.ts";
 
 type Str = string;
+type b8 = boolean;
 
 Deno.test("gets basename without extension", () => {
   assertEquals(basenameNoExt("examples/main.tc"), "main");
@@ -25,6 +26,16 @@ Deno.test("strips trailing slashes", () => {
   assertEquals(stripTrailingSlash("main.tc"), "main.tc");
 });
 
+Deno.test("checks directory containment", () => {
+  assertBool(isPathWithinDir("/project/include", "/project/include/"), true);
+  assertBool(isPathWithinDir("/project/include/math.h", "/project/include"), true);
+  assertBool(isPathWithinDir("/project/included/math.h", "/project/include"), false);
+});
+
 function assertEquals(actual: Str, expected: Str): void {
+  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+}
+
+function assertBool(actual: b8, expected: b8): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }
