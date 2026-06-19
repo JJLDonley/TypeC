@@ -1,14 +1,13 @@
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl } from "./ast.ts";
+import type { FunctionDecl, Statement } from "./ast.ts";
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
 import { emitCType } from "./c_type.ts";
 import { createEmitContext, type EmitContext } from "./emitter_context.ts";
+import { emitExpression, emitExpressionExpected } from "./emitter_expressions.ts";
 import { emitFunctionPrototype, emitFunctionSignature } from "./emitter_functions.ts";
-import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "./emitter_helpers.ts";
 import { emitTypeAlias } from "./emitter_type_aliases.ts";
 
 type Str = string;
-type usize = number;
 
 export function emitC(program: CheckedProgram): Str {
   const out: Str[] = [];
@@ -87,106 +86,4 @@ function emitArrayVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, con
   return `${stmt.mutable ? "" : "const "}${declarator} = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`, context)};`;
 }
 
-function emitExpression(expr: Expression, context: EmitContext): Str {
-  switch (expr.kind) {
-    case "IntegerLiteral":
-      return expr.text;
-    case "FloatLiteral":
-      return expr.text;
-    case "BoolLiteral":
-      return expr.text;
-    case "IdentifierExpr":
-      return expr.name;
-    case "BinaryExpr":
-      return emitBinaryExpression(expr, context);
-    case "CallExpr":
-      return emitCallExpression(expr, context);
-    case "PostfixPointerExpr":
-      return emitPostfixPointerExpression(expr, context);
-    case "FieldAccessExpr":
-      return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
-    case "RecordLiteralExpr":
-      throw new Error("Record literals require an expected C type");
-    case "ArrayLiteralExpr":
-      throw new Error("Array literals require an expected C type");
-    case "IndexExpr":
-      return `${emitMemberOperand(expr.operand, context)}[${emitExpression(expr.index, context)}]`;
-  }
-}
-
-function emitExpressionExpected(expr: Expression, expectedType: Str, context: EmitContext): Str {
-  if (expr.kind === "IntegerLiteral") return emitIntegerLiteralExpression(expr, expectedType);
-  if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType, context);
-  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, context, expectedType);
-  return emitExpression(expr, context);
-}
-
-function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
-  const record = context.typeAliases.get(expectedType)?.type;
-  const fields = expr.fields.map((field) => emitRecordLiteralField(field, record?.kind === "RecordTypeRef" ? record : null, context)).join(", ");
-  return `(${expectedType}){ ${fields} }`;
-}
-
-function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize], record: RecordTypeRef | null, context: EmitContext): Str {
-  const expected = record?.fields.find((candidate) => candidate.name === field.name);
-  const value = expected ? emitExpressionExpected(field.expression, emitCTypeName(expected.type), context) : emitExpression(field.expression, context);
-  return `.${field.name} = ${value}`;
-}
-
-function emitCTypeName(type: TypeAliasDecl["type"]): Str {
-  if (type.kind === "FixedArrayTypeRef") return `${emitCType(type.element)}[${type.sizeText}]`;
-  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element)}[]`;
-  return emitCType(type);
-}
-
-function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, context: EmitContext, expectedType: Str | null = null): Str {
-  const elementType = expectedType ? cArrayElementType(expectedType) : null;
-  const elements = expr.elements.map((element) => elementType ? emitExpressionExpected(element, elementType, context) : emitExpression(element, context));
-  return `{ ${elements.join(", ")} }`;
-}
-
-function emitCallExpression(expr: Extract<Expression, { kind: "CallExpr" }>, context: EmitContext): Str {
-  const fn = context.functions.get(expr.callee);
-  const args = expr.args.map((arg, index) => emitCallArg(arg, fn?.params[index], context));
-  return `${expr.callee}(${args.join(", ")})`;
-}
-
-function emitCallArg(arg: Expression, param: FunctionDecl["params"][usize] | undefined, context: EmitContext): Str {
-  if (!param) return emitExpression(arg, context);
-  const expectedType = emitCTypeName(param.type);
-  if (arg.kind === "ArrayLiteralExpr") return emitArrayCompoundLiteral(arg, expectedType, context);
-  return emitExpressionExpected(arg, expectedType, context);
-}
-
-function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
-  return `(${expectedType})${emitArrayLiteralExpression(expr, context, expectedType)}`;
-}
-
-function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {
-  const left = emitBinaryOperand(expr.left, expr.operator, "left", context);
-  const right = emitBinaryOperand(expr.right, expr.operator, "right", context);
-  return `${left} ${expr.operator} ${right}`;
-}
-
-function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" | "right", context: EmitContext): Str {
-  const operand = emitExpression(expr, context);
-  if (expr.kind !== "BinaryExpr") return operand;
-  const parent = cPrecedence(parentOperator);
-  const child = cPrecedence(expr.operator);
-  if (child < parent) return `(${operand})`;
-  if (side === "right" && child === parent) return `(${operand})`;
-  return operand;
-}
-
-function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, context: EmitContext): Str {
-  const operand = emitExpression(expr.operand, context);
-  if (expr.operator === ".&") return `&${operand}`;
-  return `*${operand}`;
-}
-
-function emitMemberOperand(expr: Expression, context: EmitContext): Str {
-  const operand = emitExpression(expr, context);
-  if (expr.kind === "PostfixPointerExpr" && expr.operator === ".*") return `(${operand})`;
-  return operand;
-}
 
