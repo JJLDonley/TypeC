@@ -1,5 +1,6 @@
 import { TypeCError } from "./diagnostics.ts";
 import { type JsonRecord, isJsonRecord } from "./json_record.ts";
+import { decodedPathSegment, hasBackslash, hasEncodedSeparator } from "./path_encoding.ts";
 import { hasParentTraversal } from "./path_security.ts";
 
 type Str = string;
@@ -36,23 +37,11 @@ function isValidAliasSegment(segment: Str): b8 {
 }
 
 function decodedAliasSegment(segment: Str): Str | null {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return null;
-  }
+  return decodedPathSegment(segment);
 }
 
 function isAliasFilePath(path: Str): b8 {
   return path.endsWith(".tc") || path.endsWith(".h");
-}
-
-function hasBackslash(path: Str): b8 {
-  return path.includes("\\");
-}
-
-function hasEncodedSeparator(path: Str): b8 {
-  return /%(2f|5c)/i.test(path);
 }
 
 function validateDependencyTarget(name: Str, path: Str): void {

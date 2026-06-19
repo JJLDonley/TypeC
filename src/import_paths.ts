@@ -1,5 +1,6 @@
 import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { hasBackslash, hasEncodedDotSegment, hasEncodedSeparator, hasMalformedEncoding } from "./path_encoding.ts";
 import { hasParentTraversal } from "./path_security.ts";
 import type { ProjectConfig } from "./project_config.ts";
 
@@ -32,35 +33,6 @@ function importPathError(path: Str, reason: Str, span: Diagnostic["span"]): Type
 
 function isSupportedImportFile(path: Str): b8 {
   return path.endsWith(".tc") || path.endsWith(".h");
-}
-
-function hasBackslash(path: Str): b8 {
-  return path.includes("\\");
-}
-
-function hasEncodedSeparator(path: Str): b8 {
-  return /%(2f|5c)/i.test(path);
-}
-
-function hasMalformedEncoding(path: Str): b8 {
-  return path.split("/").some((segment) => decodedSegment(segment) === null);
-}
-
-function hasEncodedDotSegment(path: Str): b8 {
-  return path.split("/").some(isEncodedDotSegment);
-}
-
-function isEncodedDotSegment(segment: Str): b8 {
-  const decoded = decodedSegment(segment);
-  return decoded !== null && decoded !== segment && (decoded === "." || decoded === "..");
-}
-
-function decodedSegment(segment: Str): Str | null {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return null;
-  }
 }
 
 function isRelativeImportPath(path: Str): b8 {
