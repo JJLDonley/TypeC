@@ -5,12 +5,12 @@ import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
 import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
-import { isStdImportPath, validateImportPath } from "./import_paths.ts";
-import { fileDirectoryUrl, fileUrlPath, normalizePath } from "./path.ts";
+import { validateImportPath } from "./import_paths.ts";
+import { normalizePath } from "./path.ts";
+import { canonicalModulePath, isCHeaderPath, resolveModuleImportPath } from "./module_paths.ts";
 import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
-type b8 = boolean;
 
 interface LoadState {
   loaded: Map<Str, Program>;
@@ -60,10 +60,6 @@ function exportAll(program: Program): Program {
   return { ...program, functions: program.functions.map((fn) => ({ ...fn, exported: true })) };
 }
 
-function isCHeaderPath(path: Str): b8 {
-  return path.endsWith(".h");
-}
-
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {
   const programs: Program[] = [];
   for (const request of collectImportRequests(path, program, state.config)) {
@@ -77,7 +73,7 @@ function collectImportRequests(path: Str, program: Program, config: ProjectConfi
   const requests = new Map<Str, ImportRequest>();
   for (const importDecl of program.imports) {
     validateImportPath(importDecl.path, importDecl.span, config);
-    const importedPath = resolveImportPath(path, importDecl.path, config);
+    const importedPath = resolveModuleImportPath(path, importDecl.path, config);
     const request = requests.get(importedPath) ?? createImportRequest(importedPath, importDecl.span);
     for (const name of importDecl.names) request.names.add(name);
     requests.set(importedPath, request);
@@ -120,30 +116,4 @@ function selectFunction(functions: FunctionDecl[], name: Str): FunctionDecl[] {
   return functions.filter((fn) => fn.exported && fn.name === name);
 }
 
-function resolveImportPath(fromPath: Str, importPath: Str, config: ProjectConfig): Str {
-  const dependencyPath = config.dependencies.get(importPath);
-  if (dependencyPath) return projectImportPath(config.projectDir, dependencyPath);
-  if (isStdImportPath(importPath)) return stdImportPath(importPath);
-  return normalizePath(new URL(importPath, fileDirectoryUrl(fromPath)).pathname);
-}
-
-function projectImportPath(projectDir: Str, importPath: Str): Str {
-  if (importPath.startsWith("/")) return importPath;
-  if (isStdImportPath(importPath)) return stdImportPath(importPath);
-  return normalizePath(new URL(importPath, fileDirectoryUrl(`${projectDir}/project.json`)).pathname);
-}
-
-function stdImportPath(importPath: Str): Str {
-  const modulePath = importPath.slice("std/".length);
-  return fileUrlPath(new URL(`../std/${modulePath}`, import.meta.url));
-}
-
-async function canonicalModulePath(path: Str): Promise<Str> {
-  try {
-    return await Deno.realPath(path);
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) throw new TypeCError([{ message: `Module not found '${path}'` }]);
-    throw error;
-  }
-}
 
