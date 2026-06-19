@@ -2,7 +2,11 @@ type Str = string;
 type b8 = boolean;
 
 export function hasParentTraversal(path: Str): b8 {
-  return decodedPath(path).split("/").some(isParentSegment);
+  return normalizedPathSeparators(decodedPath(path)).split("/").some(isParentSegment);
+}
+
+function normalizedPathSeparators(path: Str): Str {
+  return path.replaceAll("\\", "/");
 }
 
 function decodedPath(path: Str): Str {
