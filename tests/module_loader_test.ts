@@ -60,12 +60,22 @@ Deno.test("loads std imports", async () => {
   assertIncludes(program.functions.map((fn) => fn.name), "clamp_i32");
 });
 
-Deno.test("loads project dependency imports", async () => {
+Deno.test("loads std project dependency imports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/project.json`, `{"dependencies":{"basic/math.tc":"std/math.tc"}}`);
   await writeText(`${dir}/main.tc`, `import { abs_i32 } from "basic/math.tc"; function main(): i32 { return abs_i32(0 - 1); }`);
   const program = await loadProgram(`${dir}/main.tc`);
   assertIncludes(program.functions.map((fn) => fn.name), "abs_i32");
+});
+
+Deno.test("loads relative project dependency imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/lib`);
+  await writeText(`${dir}/project.json`, `{"dependencies":{"basic/math.tc":"lib/math.tc"}}`);
+  await writeText(`${dir}/lib/math.tc`, `export function answer(): i32 { return 42; }`);
+  await writeText(`${dir}/main.tc`, `import { answer } from "basic/math.tc"; function main(): i32 { return answer(); }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "answer");
 });
 
 Deno.test("rejects missing exports", async () => {
