@@ -1,4 +1,5 @@
 import { TypeCError } from "./diagnostics.ts";
+import { hasParentTraversal } from "./path_security.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -74,7 +75,6 @@ function readDependencies(value: unknown): Map<Str, Str> {
 }
 
 function validateDependencyAlias(name: Str): void {
-  if (!name.endsWith(".tc")) throw configError(`Dependency alias '${name}' must target a .tc import path`);
   if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
   if (isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
 }
@@ -92,18 +92,6 @@ function isProjectRelativeTarget(path: Str): b8 {
 
 function isAbsolutePath(path: Str): b8 {
   return path.startsWith("/");
-}
-
-function hasParentTraversal(path: Str): b8 {
-  return decodedPath(path).split("/").some((part) => part === "..");
-}
-
-function decodedPath(path: Str): Str {
-  try {
-    return decodeURIComponent(path);
-  } catch {
-    return "..";
-  }
 }
 
 function hasUrlScheme(path: Str): b8 {

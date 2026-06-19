@@ -4,6 +4,7 @@ import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
 import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
+import { hasParentTraversal } from "./path_security.ts";
 import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
@@ -69,10 +70,11 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
 }
 
 function validateImportPath(path: Str, span: Diagnostic["span"], config: ProjectConfig): void {
-  if (!isRelativeImportPath(path) && !isStdImportPath(path) && !isDependencyImportPath(path, config)) {
+  const dependency = isDependencyImportPath(path, config);
+  if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
   }
-  if (!path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
+  if (!dependency && !path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
   if (isStdImportPath(path) && hasParentTraversal(path)) throw new TypeCError([{ message: `Std import path '${path}' must stay within std`, span }]);
 }
 
@@ -86,18 +88,6 @@ function isStdImportPath(path: Str): b8 {
 
 function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
   return config.dependencies.has(path);
-}
-
-function hasParentTraversal(path: Str): b8 {
-  return decodedPath(path).split("/").some((part) => part === "..");
-}
-
-function decodedPath(path: Str): Str {
-  try {
-    return decodeURIComponent(path);
-  } catch {
-    return "..";
-  }
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {

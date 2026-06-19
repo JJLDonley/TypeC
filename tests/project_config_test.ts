@@ -4,9 +4,9 @@ import { TypeCError } from "../src/diagnostics.ts";
 type Str = string;
 
 Deno.test("parses project dependencies and compiler flags", () => {
-  const config = parseProjectConfig(`{"dependencies":{"basic/math.tc":"std/math.tc"},"compiler":{"flags":["-O2"]}}`, "/project");
+  const config = parseProjectConfig(`{"dependencies":{"basic/math":"std/math.tc"},"compiler":{"flags":["-O2"]}}`, "/project");
   assertSame(config.projectDir, "/project");
-  assertSame(config.dependencies.get("basic/math.tc"), "std/math.tc");
+  assertSame(config.dependencies.get("basic/math"), "std/math.tc");
   assertEqualText(config.compilerFlags, ["-O2"]);
 });
 
@@ -36,7 +36,6 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");
-  assertConfigError(`{"dependencies":{"basic/math":"std/math.tc"}}`, "Dependency alias 'basic/math' must target a .tc import path");
   assertConfigError(`{"dependencies":{"./math.tc":"std/math.tc"}}`, "Dependency alias './math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"std/math.tc":"std/math.tc"}}`, "Dependency alias 'std/math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"/math.tc":"std/math.tc"}}`, "Dependency alias '/math.tc' must be a project dependency import path");

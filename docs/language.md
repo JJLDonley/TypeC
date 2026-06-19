@@ -48,7 +48,7 @@ import { abs_i32 } from "std/math.tc";
 ```json
 {
   "dependencies": {
-    "basic/math.tc": "std/math.tc"
+    "basic/math": "std/math.tc"
   },
   "compiler": {
     "flags": ["-O2"]
@@ -73,7 +73,7 @@ Compiler flags are appended to the native C compiler invocation. Entries must be
 Then source can import through the alias:
 
 ```ts
-import { abs_i32 } from "basic/math.tc";
+import { abs_i32 } from "basic/math";
 ```
 
 ## Standard Library

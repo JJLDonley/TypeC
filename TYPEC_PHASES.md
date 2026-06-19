@@ -679,7 +679,7 @@ Support multi-file TypeC projects and standard-library imports.
 ```json
 {
   "dependencies": {
-    "basic/math.tc": "std/math.tc"
+    "basic/math": "std/math.tc"
   },
   "compiler": {
     "flags": ["-O2"]
@@ -690,7 +690,7 @@ Support multi-file TypeC projects and standard-library imports.
 ```ts
 import { add } from "./math.tc";
 import { abs_i32 } from "std/math.tc";
-import { max_i32 } from "basic/math.tc";
+import { max_i32 } from "basic/math";
 
 function main(): i32 {
   return add(abs_i32(1), max_i32(1, 2));

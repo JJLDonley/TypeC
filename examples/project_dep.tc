@@ -1,4 +1,4 @@
-import { max_i32 } from "basic/math.tc";
+import { max_i32 } from "basic/math";
 
 function main(): i32 {
   return max_i32(21, 42);

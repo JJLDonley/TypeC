@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "basic/math.tc": "std/math.tc"
+    "basic/math": "std/math.tc"
   },
   "compiler": {
     "flags": []
