@@ -4,7 +4,7 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
-import { isCAbiType } from "./checker_c_abi.ts";
+import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
@@ -400,10 +400,7 @@ class Checker {
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
-    if (!isCAbiType(fn.returnType, this.typeAliases)) this.error(`${label} function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
-    for (const param of fn.params) {
-      if (!isCAbiType(param.type, this.typeAliases)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
-    }
+    this.diagnostics.push(...collectCAbiFunctionDiagnostics(fn, label, this.typeAliases));
   }
 
   private checkMainFunction(fn: FunctionDecl, returnType: TypeName): void {
