@@ -151,7 +151,7 @@ Convert `.tc` source text into tokens.
 - keywords
 - integer literals
 - float literals
-- string literals, later
+- string literals for NUL-terminated `u8[]` C strings
 - operators
 - punctuation
 - comments
@@ -251,9 +251,9 @@ let fixedArray: i32[16] = values;
 
 Parser rules:
 
-- `T[]` means array of `T` with length inferred from initializer.
+- `T[]` means unsized array syntax. In local variables it means size inferred from the initializer. In function parameter and C ABI positions it decays to `T*`.
 - `T[N]` means fixed-size array of `T` with compile-time length `N`.
-- Slice syntax is still TBD; do not use `T[]` for slices.
+- Slice syntax is separate from raw array decay and is not part of this phase.
 - `T*` means pointer to `T`.
 - `T&` means reference to `T`.
 - Pointer/reference operators are postfix only.
@@ -388,7 +388,7 @@ Rules:
 - no implicit `any`
 - no implicit nullable values
 - no implicit numeric widening unless explicitly allowed
-- `T*`, `T&`, `T[]`, and `T[N]` are distinct static types
+- `T*`, `T&`, local `T[]`, and `T[N]` are distinct static types; parameter/C ABI `T[]` lowers to `T*`
 - `expr.*` requires pointer-like input and produces the pointee type
 - `expr.&` produces pointer/reference type according to context
 - prefix pointer operators are rejected
@@ -584,11 +584,11 @@ TypeC uses postfix, C-adjacent low-level type syntax instead of generic wrapper 
 ```ts
 T*          // pointer to T
 T&          // reference to T
-T[]         // array of T, length inferred from initializer
+T[]         // unsized array syntax: inferred-size local array, pointer-decayed parameter/C ABI array
 T[N]        // fixed-size array of T with compile-time length N
 ```
 
-Slice syntax is intentionally unresolved for now. `T[]` is reserved for inferred-size arrays, not slices.
+Slice syntax is separate and not part of this phase. `T[]` is raw unsized array syntax, not a length-carrying slice.
 
 Examples:
 
@@ -653,6 +653,7 @@ Rationale:
 - Make pointer/slice behavior clear.
 - Prefer safe defaults where possible.
 - Use `T[]` and `T[N]` for arrays.
+- Lower array parameters and C ABI array declarations as pointers (`T[]` -> `T*`).
 - Use `T*` and `T&` for pointer and reference types.
 - Use postfix `expr.*` and `expr.&` for pointer/reference expressions.
 - Reject prefix `*expr` and `&expr`.
@@ -662,6 +663,7 @@ Rationale:
 - Do not add a garbage collector.
 - Do not hide heap allocation behind normal object literals.
 - Do not make arrays secretly dynamic JS arrays.
+- Do not treat raw `T[]` as a safe slice; it carries no length after pointer decay.
 - Do not use `ptr<T>`, `slice<T>`, or `array<T, N>` as the primary surface syntax.
 - Do not support prefix pointer operators.
 - Do not allow unchecked pointer behavior in safe code without a clear escape hatch.
@@ -755,15 +757,46 @@ Feature phases must include stdlib impact checks:
 
 Allow TypeC to call C and expose C-compatible functions.
 
-## Possible Syntax
+## Syntax
 
 ```ts
 extern function puts(s: u8*): i32;
+extern function read_bytes(dst: u8[], count: usize): usize;
 
 export function main(): i32 {
   return 0;
 }
 ```
+
+C string literals use ordinary string token syntax and have TypeC type `u8[]` with a trailing NUL byte. They are only valid where a `u8[]`, `u8*`, or C-compatible pointer-decayed argument is expected.
+
+```ts
+extern function puts(s: u8*): i32;
+
+function main(): i32 {
+  return puts("hello");
+}
+```
+
+## C ABI Array and String Rules
+
+- `T[]` in local variable position is an inferred-size static array.
+- `T[]` in function parameter position is an unsized array parameter and lowers to `T*`.
+- `T[N]` in function parameter position lowers as a C array parameter, which is ABI-equivalent to `T*`; the declared `N` is documentation/checking metadata, not passed at runtime.
+- Passing an array expression to a function expecting `T*` or `T[]` decays to a pointer to its first element.
+- `u8[]` is the TypeC spelling for C byte/string buffers. In C header interop, `char*`, `const char*`, and `unsigned char*` map to `u8*`; array forms map to `u8[]` when preserved by the header AST and to `u8*` after ABI decay.
+- TypeC string literals are NUL-terminated `u8[]` values and can decay to `u8*` for C calls.
+- Raw `T[]`/`T*` carries no length; APIs needing length must pass an explicit `usize`.
+- Array return types remain invalid; return `T*` for C pointer-return APIs.
+
+## C Header Import Rules
+
+- Header-generated extern declarations must come from compiler AST output.
+- Supported C scalar types map to fixed-width TypeC names.
+- Pointer types map recursively to TypeC `T*`.
+- C array parameters map to TypeC `T[]` or `T*` and lower to C pointers.
+- Unsupported signatures are skipped safely.
+- Struct typedef import, macros/constants, function pointers, variadics, and callbacks require later explicit phases unless already specified elsewhere in this document.
 
 ## Do
 
@@ -773,12 +806,15 @@ export function main(): i32 {
 - Allow header-generated extern declarations only when derived from compiler AST output.
 - Keep name mangling predictable.
 - Use existing postfix pointer type syntax (`T*`) in extern declarations.
+- Allow `T[]` as pointer-decayed syntax for C ABI parameter arrays.
+- Treat `u8[]`/`u8*` as the TypeC representation for C byte strings and `char*` interop.
 
 ## Do Not
 
 - Do not guess C signatures.
 - Do not silently change layout.
 - Do not expose non-C-compatible features through C ABI.
+- Do not treat raw pointer-decayed arrays as safe length-carrying slices.
 
 ---
 
@@ -790,7 +826,7 @@ Allow named values that are evaluated by the compiler and emitted as C constants
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -815,7 +851,7 @@ Allow explicit scope-exit cleanup without hidden ownership semantics.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -840,7 +876,7 @@ Add simple closed sets of named integer values.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -865,7 +901,7 @@ Add static-layout data types with associated functions, lowered predictably to r
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -891,7 +927,7 @@ Add stricter pointer categories or annotations that improve safety while preserv
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -916,7 +952,7 @@ Add explicit region-style allocation as a standard memory-management pattern.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -941,7 +977,7 @@ Add compile-time constraints for generic or static-dispatch code.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -966,7 +1002,7 @@ Allow reusable typed functions and data structures through compile-time instanti
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -991,7 +1027,7 @@ Add sum types with explicit variants and payloads.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -1016,7 +1052,7 @@ Add exhaustive branching over enums and tagged unions.
 
 ## Syntax
 
-TBD before implementation.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
