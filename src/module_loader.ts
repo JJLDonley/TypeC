@@ -43,15 +43,15 @@ async function loadModule(path: Str, state: LoadState): Promise<Program> {
 }
 
 async function loadCanonicalModule(path: Str, state: LoadState): Promise<Program> {
-  if (isCHeaderPath(path)) return await loadHeaderModule(path);
+  if (isCHeaderPath(path)) return await loadHeaderModule(path, state.config);
   const source = await Deno.readTextFile(path);
   const local = parse(lex(source));
   const imported = await collectImports(path, local, state);
   return mergeProgram(local, imported);
 }
 
-async function loadHeaderModule(path: Str): Promise<Program> {
-  const source = await generateExternsFromHeader(path);
+async function loadHeaderModule(path: Str, config: ProjectConfig): Promise<Program> {
+  const source = await generateExternsFromHeader(path, config.compilerFlags, config.projectDir);
   return exportAll(parse(lex(source)));
 }
 

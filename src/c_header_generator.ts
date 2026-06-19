@@ -47,21 +47,36 @@ export function generateExternsFromClangAst(ast: unknown): Str {
   return `${functions.join("\n")}${functions.length > 0 ? "\n" : ""}`;
 }
 
-export async function generateExternsFromHeader(headerPath: Str): Promise<Str> {
-  const output = await runClangAstDump(headerPath);
+export async function generateExternsFromHeader(headerPath: Str, compilerFlags: Str[] = [], projectDir: Str = Deno.cwd()): Promise<Str> {
+  const output = await runClangAstDump(headerPath, headerCompilerFlags(compilerFlags, projectDir));
   if (!output.ok) throw new TypeCError([{ message: `clang failed while reading '${headerPath}': ${output.stderr}` }]);
   return generateExternsFromClangAst(parseClangJson(output.stdout));
 }
 
-async function runClangAstDump(headerPath: Str): Promise<{ ok: b8; stdout: Str; stderr: Str }> {
+async function runClangAstDump(headerPath: Str, compilerFlags: Str[]): Promise<{ ok: b8; stdout: Str; stderr: Str }> {
   const command = new Deno.Command("clang", {
-    args: ["-x", "c", "-Xclang", "-ast-dump=json", "-fsyntax-only", headerPath],
+    args: ["-x", "c", "-Xclang", "-ast-dump=json", "-fsyntax-only", ...compilerFlags, headerPath],
     stdout: "piped",
     stderr: "piped",
   });
   const output = await command.output();
   const decoder = new TextDecoder();
   return { ok: output.success, stdout: decoder.decode(output.stdout), stderr: decoder.decode(output.stderr).trim() };
+}
+
+function headerCompilerFlags(flags: Str[], projectDir: Str): Str[] {
+  return flags.filter(isHeaderCompilerFlag).map((flag) => normalizeHeaderCompilerFlag(flag, projectDir));
+}
+
+function isHeaderCompilerFlag(flag: Str): b8 {
+  return flag.startsWith("-I") || flag.startsWith("-D") || flag.startsWith("-U");
+}
+
+function normalizeHeaderCompilerFlag(flag: Str, projectDir: Str): Str {
+  if (!flag.startsWith("-I") || flag.length <= 2) return flag;
+  const path = flag.slice(2);
+  if (path.startsWith("/")) return flag;
+  return `-I${projectDir}/${path}`;
 }
 
 function parseClangJson(text: Str): unknown {
