@@ -27,7 +27,7 @@ import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
   checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
 } from "checker/literal_ranges.ts";
-import { localDeclaredType } from "checker/local_types.ts";
+import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
@@ -40,8 +40,6 @@ import {
 import { blockReturns } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
-import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
-import { checkTypeRef as collectTypeRefDiagnostics } from "checker/type_validation.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -125,13 +123,9 @@ class Checker {
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
-    this.diagnostics.push(...collectTypeRefDiagnostics(stmt.type, this.typeAliases));
-    this.diagnostics.push(...collectValueTypeDiagnostics(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span));
-    const expected = typeName(stmt.type);
-    this.diagnostics.push(...collectArrayInitializerDiagnostics(stmt.initializer, expected, stmt.span));
-    const actual = this.typeOfExpected(stmt.initializer, locals, expected);
-    if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
-    locals.set(stmt.name, { type: localDeclaredType(expected, actual), mutable: stmt.mutable });
+    const result = checkLocalDeclaration(stmt, this.typeAliases, (expr, expected) => this.typeOfExpected(expr, locals, expected));
+    this.diagnostics.push(...result.diagnostics);
+    locals.set(stmt.name, { type: result.type, mutable: stmt.mutable });
   }
 
   private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
