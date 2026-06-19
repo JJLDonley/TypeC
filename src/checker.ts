@@ -234,6 +234,7 @@ class Checker {
     }
     if (!numericTypes.has(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
     if (expr.operator === "%" && !isIntegerType(hinted.left)) this.error("Operator '%' requires integer operands", expr.span);
+    if ((expr.operator === "/" || expr.operator === "%") && isIntegerType(hinted.left) && isIntegerZeroLiteral(expr.right)) this.error(`Operator '${expr.operator}' cannot divide by zero`, expr.span);
     if (isComparisonOperator(expr.operator)) return "bool";
     return hinted.left;
   }
@@ -522,6 +523,10 @@ function parseArrayType(type: TypeName): { element: TypeName; length: i32 | null
 
 function isIntegerType(type: TypeName): b8 {
   return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" || type === "u16" || type === "u32" || type === "u64" || type === "usize";
+}
+
+function isIntegerZeroLiteral(expr: Expression): b8 {
+  return expr.kind === "IntegerLiteral" && expr.value === 0n;
 }
 
 function isFloatType(type: TypeName): b8 {

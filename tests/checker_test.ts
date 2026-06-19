@@ -192,6 +192,11 @@ Deno.test("rejects modulo on floats", () => {
   assertCheckError(`function main(): i32 { const x: f64 = 7.0 % 2.0; return 0; }`, "Operator '%' requires integer operands");
 });
 
+Deno.test("rejects integer divide by zero literals", () => {
+  assertCheckError(`function main(): i32 { return 1 / 0; }`, "Operator '/' cannot divide by zero");
+  assertCheckError(`function main(): i32 { return 1 % 0; }`, "Operator '%' cannot divide by zero");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });
