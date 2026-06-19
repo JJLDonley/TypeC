@@ -346,7 +346,10 @@ class Checker {
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    if (expr.operator === ".&") return `${operand}&`;
+    if (expr.operator === ".&") {
+      if (!isAddressable(expr.operand)) this.error("Cannot take address of non-addressable expression", expr.span);
+      return `${operand}&`;
+    }
     if (isPointerLikeType(operand)) return operand.slice(0, -1);
     this.error(`Cannot dereference non-pointer-like type '${operand}'`, expr.span);
     return "<error>";
@@ -516,6 +519,26 @@ function isReferenceType(type: TypeName): b8 {
 
 function pointeeType(type: TypeName): TypeName {
   return type.slice(0, -1);
+}
+
+function isAddressable(expr: Expression): b8 {
+  switch (expr.kind) {
+    case "IdentifierExpr":
+    case "IndexExpr":
+      return true;
+    case "FieldAccessExpr":
+      return isAddressable(expr.operand);
+    case "PostfixPointerExpr":
+      return expr.operator === ".*";
+    case "IntegerLiteral":
+    case "FloatLiteral":
+    case "BoolLiteral":
+    case "BinaryExpr":
+    case "CallExpr":
+    case "RecordLiteralExpr":
+    case "ArrayLiteralExpr":
+      return false;
+  }
 }
 
 function spanKey(span: SourceSpan): Str {

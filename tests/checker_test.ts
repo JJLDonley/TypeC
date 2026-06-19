@@ -88,6 +88,11 @@ Deno.test("checks postfix address assigned to reference", () => {
   check(resolve(parse(lex(`function main(): i32 { const x: i32 = 1; const r: i32& = x.&; return r.*; }`))));
 });
 
+Deno.test("rejects address of non-addressable expressions", () => {
+  assertCheckError(`function value(): i32 { return 1; } function main(): i32 { const p: i32* = value().&; return 0; }`, "Cannot take address of non-addressable expression");
+  assertCheckError(`function main(): i32 { const p: i32* = (1 + 2).&; return 0; }`, "Cannot take address of non-addressable expression");
+});
+
 Deno.test("rejects invalid dereference", () => {
   assertCheckError(`function main(): i32 { const x: i32 = 1; return x.*; }`, "Cannot dereference non-pointer-like type 'i32'");
 });
