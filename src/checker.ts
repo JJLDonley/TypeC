@@ -3,6 +3,7 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { primitiveTypes } from "./token.ts";
@@ -504,35 +505,3 @@ function statementReturns(statement: Statement): b8 {
   return blockReturns(statement.thenBody.statements) && blockReturns(statement.elseBody.statements);
 }
 
-function isComparisonOperator(operator: Str): b8 {
-  return operator === "<" || operator === "<=" || operator === ">" || operator === ">=" || operator === "==" || operator === "!=";
-}
-
-function isIntegerZeroLiteral(expr: Expression): b8 {
-  return expr.kind === "IntegerLiteral" && expr.value === 0n;
-}
-
-
-function isAddressable(expr: Expression): b8 {
-  switch (expr.kind) {
-    case "IdentifierExpr":
-    case "IndexExpr":
-      return true;
-    case "FieldAccessExpr":
-      return isAddressable(expr.operand);
-    case "PostfixPointerExpr":
-      return expr.operator === ".*";
-    case "IntegerLiteral":
-    case "FloatLiteral":
-    case "BoolLiteral":
-    case "BinaryExpr":
-    case "CallExpr":
-    case "RecordLiteralExpr":
-    case "ArrayLiteralExpr":
-      return false;
-  }
-}
-
-function spanKey(span: SourceSpan): Str {
-  return `${span.start.offset}:${span.end.offset}`;
-}
