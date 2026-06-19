@@ -49,6 +49,14 @@ class Resolver {
         this.resolveExpression(statement.initializer, scope);
         this.declare(scope, statement.name, "local", statement.span);
         return;
+      case "AssignmentStmt":
+        this.requireSymbol(scope, statement.name, statement.span);
+        this.resolveExpression(statement.expression, scope);
+        return;
+      case "WhileStmt":
+        this.resolveExpression(statement.condition, scope);
+        for (const child of statement.body.statements) this.resolveStatement(child, scope);
+        return;
     }
   }
 

@@ -31,6 +31,12 @@ Deno.test("parses array literals and indexing", () => {
   if (returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
 });
 
+Deno.test("parses while and assignment statements", () => {
+  const program = parse(lex(`function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`));
+  const statement = program.functions[0].body.statements[1];
+  if (statement.kind !== "WhileStmt") throw new Error("Expected while statement");
+});
+
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);

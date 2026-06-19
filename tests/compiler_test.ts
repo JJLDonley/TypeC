@@ -66,6 +66,13 @@ Deno.test("emits C for fixed array parameters", () => {
   assertIncludes(c, "return first(xs);");
 });
 
+Deno.test("emits C for while and assignment", () => {
+  const source = `function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "while (x < 3) {");
+  assertIncludes(c, "x = x + 1;");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

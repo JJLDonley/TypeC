@@ -10,6 +10,11 @@ type Str = string;
 type i32 = number;
 type b8 = boolean;
 
+interface LocalInfo {
+  type: TypeName;
+  mutable: b8;
+}
+
 export type CheckedProgram = TypedProgram;
 
 const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64"]);
@@ -45,8 +50,8 @@ class Checker {
   }
 
   private checkFunction(fn: FunctionDecl): void {
-    const locals = new Map<Str, TypeName>();
-    for (const param of fn.params) locals.set(param.name, typeName(param.type));
+    const locals = new Map<Str, LocalInfo>();
+    for (const param of fn.params) locals.set(param.name, { type: typeName(param.type), mutable: false });
 
     let hasReturn = false;
     const returnType = typeName(fn.returnType);
@@ -58,7 +63,7 @@ class Checker {
     if (returnType !== "void" && !hasReturn) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
   }
 
-  private checkStatement(stmt: Statement, locals: Map<Str, TypeName>, returnType: TypeName): void {
+  private checkStatement(stmt: Statement, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
     switch (stmt.kind) {
       case "ReturnStmt":
         this.checkReturn(stmt.expression, locals, returnType, stmt.span);
@@ -66,29 +71,49 @@ class Checker {
       case "VarDeclStmt":
         this.checkVarDecl(stmt, locals);
         return;
+      case "AssignmentStmt":
+        this.checkAssignment(stmt, locals);
+        return;
+      case "WhileStmt":
+        this.checkWhile(stmt, locals, returnType);
+        return;
     }
   }
 
-  private checkReturn(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName, span: SourceSpan): void {
+  private checkReturn(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
     const actual = this.typeOfExpected(expr, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
   }
 
-  private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, TypeName>): void {
+  private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
     this.checkType(stmt.type);
     const expected = typeName(stmt.type);
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
-    locals.set(stmt.name, actual);
+    locals.set(stmt.name, { type: actual, mutable: stmt.mutable });
   }
 
-  private typeOf(expr: Expression, locals: Map<Str, TypeName>): TypeName {
+  private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
+    const local = locals.get(stmt.name);
+    if (!local) return;
+    if (!local.mutable) this.error(`Cannot assign to const '${stmt.name}'`, stmt.span);
+    const actual = this.typeOfExpected(stmt.expression, locals, local.type);
+    if (!isAssignable(actual, local.type)) this.error(`Assignment type '${actual}' is not assignable to '${local.type}'`, stmt.span);
+  }
+
+  private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
+    const condition = this.typeOf(stmt.condition, locals);
+    if (condition !== "bool") this.error(`While condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
+    for (const child of stmt.body.statements) this.checkStatement(child, locals, returnType);
+  }
+
+  private typeOf(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     const type = this.computeType(expr, locals);
     this.expressionTypes.set(spanKey(expr.span), { type });
     return type;
   }
 
-  private typeOfExpected(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+  private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     if (expr.kind === "RecordLiteralExpr") {
       const type = this.recordLiteralType(expr, locals, expected);
       this.expressionTypes.set(spanKey(expr.span), { type });
@@ -102,7 +127,7 @@ class Checker {
     return this.typeOf(expr, locals);
   }
 
-  private computeType(expr: Expression, locals: Map<Str, TypeName>): TypeName {
+  private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     switch (expr.kind) {
       case "IntegerLiteral":
         return "i32";
@@ -129,14 +154,14 @@ class Checker {
     }
   }
 
-  private identifierType(name: Str, locals: Map<Str, TypeName>, span: SourceSpan): TypeName {
-    const type = locals.get(name);
-    if (type) return type;
+  private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
+    const local = locals.get(name);
+    if (local) return local.type;
     this.error(`Unknown identifier '${name}'`, span);
     return "<error>";
   }
 
-  private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, TypeName>): TypeName {
+  private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const left = this.typeOf(expr.left, locals);
     const right = this.typeOf(expr.right, locals);
     if (left !== right) {
@@ -144,10 +169,11 @@ class Checker {
       return "<error>";
     }
     if (!numericTypes.has(left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
+    if (isComparisonOperator(expr.operator)) return "bool";
     return left;
   }
 
-  private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, TypeName>): TypeName {
+  private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const fn = this.functions.get(expr.callee);
     if (!fn) {
       this.error(`Unknown function '${expr.callee}'`, expr.span);
@@ -158,19 +184,19 @@ class Checker {
     return typeName(fn.returnType);
   }
 
-  private checkCallArgs(args: Expression[], fn: FunctionDecl, locals: Map<Str, TypeName>, span: SourceSpan): void {
+  private checkCallArgs(args: Expression[], fn: FunctionDecl, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
     if (args.length !== fn.params.length) this.error(`Function '${fn.name}' expects ${fn.params.length} arguments, got ${args.length}`, span);
     const count = Math.min(args.length, fn.params.length) as i32;
     for (let index = 0; index < count; index++) this.checkCallArg(args[index]!, fn, locals, index);
   }
 
-  private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, TypeName>, index: i32): void {
+  private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, LocalInfo>, index: i32): void {
     const expected = typeName(fn.params[index]!.type);
     const actual = this.typeOfExpected(arg, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
   }
 
-  private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, TypeName>): TypeName {
+  private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const record = this.recordAlias(operand);
     if (!record) {
@@ -185,7 +211,7 @@ class Checker {
     return typeName(field.type);
   }
 
-  private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+  private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     const record = this.recordAlias(expected);
     if (!record) {
       this.error(`Record literal is not assignable to non-record type '${expected}'`, expr.span);
@@ -195,7 +221,7 @@ class Checker {
     return expected;
   }
 
-  private checkRecordLiteralFields(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName, record: RecordTypeRef): void {
+  private checkRecordLiteralFields(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName, record: RecordTypeRef): void {
     const seen = new Set<Str>();
     for (const field of expr.fields) {
       if (seen.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
@@ -220,7 +246,7 @@ class Checker {
     return null;
   }
 
-  private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+  private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     const array = parseArrayType(expected);
     if (!array) {
       this.error(`Array literal is not assignable to non-array type '${expected}'`, expr.span);
@@ -234,7 +260,7 @@ class Checker {
     return `${array.element}[${expr.elements.length}]`;
   }
 
-  private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, TypeName>): TypeName {
+  private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const array = parseArrayType(operand);
     if (!array) {
@@ -246,7 +272,7 @@ class Checker {
     return array.element;
   }
 
-  private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, TypeName>): TypeName {
+  private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     if (expr.operator === ".&") return `${operand}&`;
     if (isPointerLikeType(operand)) return operand.slice(0, -1);
@@ -293,6 +319,10 @@ class Checker {
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
   }
+}
+
+function isComparisonOperator(operator: Str): b8 {
+  return operator === "<" || operator === "<=" || operator === ">" || operator === ">=" || operator === "==" || operator === "!=";
 }
 
 function isAssignable(actual: TypeName, expected: TypeName): b8 {

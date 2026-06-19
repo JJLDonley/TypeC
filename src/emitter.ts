@@ -52,7 +52,19 @@ function emitStatement(stmt: Statement, returnType: Str): Str {
       return `return ${emitExpressionExpected(stmt.expression, returnType)};`;
     case "VarDeclStmt":
       return emitVarDecl(stmt);
+    case "AssignmentStmt":
+      return `${stmt.name} = ${emitExpression(stmt.expression)};`;
+    case "WhileStmt":
+      return emitWhile(stmt);
   }
+}
+
+function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>): Str {
+  const out: Str[] = [];
+  out.push(`while (${emitExpression(stmt.condition)}) {`);
+  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, "void")}`);
+  out.push("}");
+  return out.join("\n  ");
 }
 
 function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): Str {

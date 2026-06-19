@@ -1,5 +1,6 @@
 import type {
   ArrayLiteralExpr,
+  AssignmentStmt,
   BinaryExpr,
   BlockStmt,
   CallExpr,
@@ -24,9 +25,11 @@ import type {
   TypeAliasDecl,
   TypeRef,
   VarDeclStmt,
+  WhileStmt,
 } from "./ast.ts";
 import type {
   CastArrayLiteralExpr,
+  CastAssignmentStmt,
   CastBinaryExpr,
   CastBlockStmt,
   CastCallExpr,
@@ -51,6 +54,7 @@ import type {
   CastTypeAliasDecl,
   CastTypeRef,
   CastVarDeclStmt,
+  CastWhileStmt,
 } from "./cast.ts";
 
 export function lowerCast(program: CastProgram): Program {
@@ -150,7 +154,19 @@ function lowerStatement(statement: CastStatement): Statement {
       return { kind: "ReturnStmt", expression: lowerExpression(statement.expression), span: statement.span };
     case "VarDeclStmt":
       return lowerVarDeclStmt(statement);
+    case "AssignmentStmt":
+      return lowerAssignmentStmt(statement);
+    case "WhileStmt":
+      return lowerWhileStmt(statement);
   }
+}
+
+function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
+  return { kind: "AssignmentStmt", name: statement.name, expression: lowerExpression(statement.expression), span: statement.span };
+}
+
+function lowerWhileStmt(statement: CastWhileStmt): WhileStmt {
+  return { kind: "WhileStmt", condition: lowerExpression(statement.condition), body: lowerBlockStmt(statement.body), span: statement.span };
 }
 
 function lowerVarDeclStmt(statement: CastVarDeclStmt): VarDeclStmt {

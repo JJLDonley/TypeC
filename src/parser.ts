@@ -152,7 +152,9 @@ class Parser {
 
   private parseStatement(): CastStatement {
     if (this.checkText("return")) return this.parseReturn();
+    if (this.checkText("while")) return this.parseWhile();
     if (this.checkText("let") || this.checkText("const")) return this.parseVarDecl();
+    if (this.check("identifier") && this.peek(1).text === "=") return this.parseAssignment();
     const token = this.peek();
     this.error(token, "Expected statement");
     throw new TypeCError(this.diagnostics);
@@ -163,6 +165,23 @@ class Parser {
     const expression = this.parseExpression();
     const semi = this.expectText(";");
     return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
+  }
+
+  private parseWhile(): CastStatement {
+    const start = this.expectText("while");
+    this.expectText("(");
+    const condition = this.parseExpression();
+    this.expectText(")");
+    const body = this.parseBlock();
+    return { kind: "WhileStmt", condition, body, span: span(start.span.start, body.span.end) };
+  }
+
+  private parseAssignment(): CastStatement {
+    const name = this.expectKind("identifier", "Expected assignment target");
+    this.expectText("=");
+    const expression = this.parseExpression();
+    const semi = this.expectText(";");
+    return { kind: "AssignmentStmt", name: name.text, expression, span: span(name.span.start, semi.span.end) };
   }
 
   private parseVarDecl(): CastStatement {
@@ -327,8 +346,8 @@ class Parser {
     return this.tokens[this.current - 1]!;
   }
 
-  private peek(): Token {
-    return this.tokens[this.current]!;
+  private peek(offset: i32 = 0): Token {
+    return this.tokens[this.current + offset]!;
   }
 
   private error(token: Token, message: Str): void {
@@ -345,6 +364,13 @@ function precedence(op: Str): i32 {
     case "+":
     case "-":
       return 10;
+    case "<":
+    case "<=":
+    case ">":
+    case ">=":
+    case "==":
+    case "!=":
+      return 5;
     default:
       return -1;
   }

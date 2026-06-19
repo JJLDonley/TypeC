@@ -58,6 +58,17 @@ class AstPrinter {
         this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`);
         this.indented(() => this.expression(statement.initializer));
         return;
+      case "AssignmentStmt":
+        this.line(`AssignmentStmt ${statement.name}`);
+        this.indented(() => this.expression(statement.expression));
+        return;
+      case "WhileStmt":
+        this.line("WhileStmt");
+        this.indented(() => {
+          this.expression(statement.condition);
+          this.block(statement.body);
+        });
+        return;
     }
   }
 

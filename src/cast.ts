@@ -91,7 +91,7 @@ export interface CastBlockStmt {
   span: SourceSpan;
 }
 
-export type CastStatement = CastReturnStmt | CastVarDeclStmt;
+export type CastStatement = CastReturnStmt | CastVarDeclStmt | CastAssignmentStmt | CastWhileStmt;
 
 export interface CastReturnStmt {
   kind: "ReturnStmt";
@@ -105,6 +105,20 @@ export interface CastVarDeclStmt {
   name: Str;
   type: CastTypeRef;
   initializer: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastAssignmentStmt {
+  kind: "AssignmentStmt";
+  name: Str;
+  expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastWhileStmt {
+  kind: "WhileStmt";
+  condition: CastExpression;
+  body: CastBlockStmt;
   span: SourceSpan;
 }
 

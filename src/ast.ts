@@ -91,7 +91,7 @@ export interface BlockStmt {
   span: SourceSpan;
 }
 
-export type Statement = ReturnStmt | VarDeclStmt;
+export type Statement = ReturnStmt | VarDeclStmt | AssignmentStmt | WhileStmt;
 
 export interface ReturnStmt {
   kind: "ReturnStmt";
@@ -105,6 +105,20 @@ export interface VarDeclStmt {
   name: Str;
   type: TypeRef;
   initializer: Expression;
+  span: SourceSpan;
+}
+
+export interface AssignmentStmt {
+  kind: "AssignmentStmt";
+  name: Str;
+  expression: Expression;
+  span: SourceSpan;
+}
+
+export interface WhileStmt {
+  kind: "WhileStmt";
+  condition: Expression;
+  body: BlockStmt;
   span: SourceSpan;
 }
 
