@@ -1,6 +1,7 @@
 import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
 import { hasBackslash, hasEncodedDotSegment, hasEncodedSeparator, hasMalformedEncoding } from "./path_encoding.ts";
+import { isRelativeImportPath, isStdImportPath, isTypeCImportFile } from "./import_path_kinds.ts";
 import { hasParentTraversal } from "./path_security.ts";
 import type { ProjectConfig } from "./project_config.ts";
 
@@ -15,13 +16,11 @@ export function validateImportPath(path: Str, span: Diagnostic["span"], config: 
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw importPathError(path, "must be relative, std, or a project dependency", span);
   }
-  if (!dependency && !isSupportedImportFile(path)) throw importPathError(path, "must target a .tc or .h file", span);
+  if (!dependency && !isTypeCImportFile(path)) throw importPathError(path, "must target a .tc or .h file", span);
   if (isStdImportPath(path) && hasParentTraversal(path)) throw new TypeCError([{ message: `Std import path '${path}' must stay within std`, span }]);
 }
 
-export function isStdImportPath(path: Str): b8 {
-  return path.startsWith("std/");
-}
+export { isStdImportPath } from "./import_path_kinds.ts";
 
 export function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
   return config.dependencies.has(path);
@@ -31,10 +30,3 @@ function importPathError(path: Str, reason: Str, span: Diagnostic["span"]): Type
   return new TypeCError([{ message: `Import path '${path}' ${reason}`, span }]);
 }
 
-function isSupportedImportFile(path: Str): b8 {
-  return path.endsWith(".tc") || path.endsWith(".h");
-}
-
-function isRelativeImportPath(path: Str): b8 {
-  return path.startsWith("./") || path.startsWith("../");
-}

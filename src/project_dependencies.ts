@@ -1,4 +1,5 @@
 import { TypeCError } from "./diagnostics.ts";
+import { isAbsolutePosixPath, hasUrlScheme, isImportAliasFilePath, isRelativeImportPath, isStdImportPath, isTypeCImportFile } from "./import_path_kinds.ts";
 import { type JsonRecord, isJsonRecord } from "./json_record.ts";
 import { decodedPathSegment, hasBackslash, hasEncodedSeparator } from "./path_encoding.ts";
 import { hasParentTraversal } from "./path_security.ts";
@@ -23,8 +24,8 @@ function addDependency(dependencies: Map<Str, Str>, name: Str, path: unknown): v
 
 function validateDependencyAlias(name: Str): void {
   if (isRelativeImportPath(name) || isStdImportPath(name)) throw dependencyError(`Dependency alias '${name}' must not be relative or std`);
-  if (!hasValidAliasSegments(name) || hasBackslash(name) || isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw dependencyError(`Dependency alias '${name}' must be a project dependency import path`);
-  if (isAliasFilePath(name)) throw dependencyError(`Dependency alias '${name}' must not include a file extension`);
+  if (!hasValidAliasSegments(name) || hasBackslash(name) || isAbsolutePosixPath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw dependencyError(`Dependency alias '${name}' must be a project dependency import path`);
+  if (isImportAliasFilePath(name)) throw dependencyError(`Dependency alias '${name}' must not include a file extension`);
 }
 
 function hasValidAliasSegments(path: Str): b8 {
@@ -40,39 +41,15 @@ function decodedAliasSegment(segment: Str): Str | null {
   return decodedPathSegment(segment);
 }
 
-function isAliasFilePath(path: Str): b8 {
-  return path.endsWith(".tc") || path.endsWith(".h");
-}
-
 function validateDependencyTarget(name: Str, path: Str): void {
-  if (!isDependencyTargetFile(path)) throw dependencyError(`Dependency '${name}' target must be a .tc or .h file`);
+  if (!isTypeCImportFile(path)) throw dependencyError(`Dependency '${name}' target must be a .tc or .h file`);
   if (hasUrlScheme(path) || hasBackslash(path) || hasEncodedSeparator(path)) throw dependencyError(`Dependency '${name}' target must be a local dependency path`);
   if (isStdImportPath(path) && hasParentTraversal(path)) throw dependencyError(`Dependency '${name}' std target must stay within std`);
   if (isProjectRelativeTarget(path) && hasParentTraversal(path)) throw dependencyError(`Dependency '${name}' target must stay within the project`);
 }
 
-function isDependencyTargetFile(path: Str): b8 {
-  return path.endsWith(".tc") || path.endsWith(".h");
-}
-
 function isProjectRelativeTarget(path: Str): b8 {
-  return !isAbsolutePath(path) && !isStdImportPath(path);
-}
-
-function isAbsolutePath(path: Str): b8 {
-  return path.startsWith("/");
-}
-
-function hasUrlScheme(path: Str): b8 {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(path);
-}
-
-function isRelativeImportPath(path: Str): b8 {
-  return path.startsWith("./") || path.startsWith("../");
-}
-
-function isStdImportPath(path: Str): b8 {
-  return path.startsWith("std/");
+  return !isAbsolutePosixPath(path) && !isStdImportPath(path);
 }
 
 function dependencyError(message: Str): TypeCError {
