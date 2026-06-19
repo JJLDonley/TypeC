@@ -28,7 +28,7 @@ import {
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
-import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
+import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { checkRecordLiteralFields as collectRecordLiteralFieldDiagnostics } from "checker/record_literal_fields.ts";
 import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } from "checker/record_literals.ts";
@@ -258,7 +258,7 @@ class Checker {
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    const result = checkPostfixPointerOperation(expr, operand);
+    const result = checkPostfixPointerExpression(expr, operand);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
