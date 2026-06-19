@@ -14,7 +14,8 @@ import type {
 import { lowerCast } from "lower";
 import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
 import { parseDeclarationWith, type DeclarationParser } from "parser/declarations.ts";
-import { precedence, span } from "parser/helpers.ts";
+import { parseExpressionWith, type ExpressionParser } from "parser/expressions.ts";
+import { span } from "parser/helpers.ts";
 import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
 import { parseStatementWith, type StatementParser } from "parser/statements.ts";
@@ -109,13 +110,16 @@ class Parser {
   }
 
   private parseExpression(minPrecedence: i32 = 0): CastExpression {
-    let expr = this.parsePostfixExpression();
-    while (this.check("operator") && precedence(this.peek().text) >= minPrecedence) {
-      const op = this.advance();
-      const rhs = this.parseExpression(precedence(op.text) + 1);
-      expr = { kind: "BinaryExpr", operator: op.text, left: expr, right: rhs, span: span(expr.span.start, rhs.span.end) };
-    }
-    return expr;
+    return parseExpressionWith(this.expressionParser(), minPrecedence);
+  }
+
+  private expressionParser(): ExpressionParser {
+    return {
+      check: (kind) => this.check(kind),
+      peek: () => this.peek(),
+      advance: () => this.advance(),
+      parsePostfixExpression: () => this.parsePostfixExpression(),
+    };
   }
 
   private parsePostfixExpression(): CastExpression {
