@@ -53,12 +53,31 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "set_callback");
 });
 
+Deno.test("filters generated externs to requested header directory", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      locatedFunctionDecl("local_add", "int32_t (int32_t)", [param("value", "int32_t")], "/project/include/math.h"),
+      locatedFunctionDecl("system_add", "int32_t (int32_t)", [param("value", "int32_t")], "/usr/include/math.h"),
+      functionDecl("unknown_add", "int32_t (int32_t)", [param("value", "int32_t")]),
+    ],
+  }, "/project/include");
+
+  assertIncludes(output, "extern function local_add(value: i32): i32;");
+  assertExcludes(output, "system_add");
+  assertExcludes(output, "unknown_add");
+});
+
 function functionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
   return { kind: "FunctionDecl", name, type: { qualType }, inner };
 }
 
 function staticFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
   return { kind: "FunctionDecl", name, type: { qualType }, storageClass: "static", inner };
+}
+
+function locatedFunctionDecl(name: Str, qualType: Str, inner: unknown[], file: Str): unknown {
+  return { kind: "FunctionDecl", name, type: { qualType }, loc: { file }, inner };
 }
 
 function definedFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
