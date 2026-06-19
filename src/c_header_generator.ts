@@ -178,7 +178,7 @@ function readParamName(value: JsonRecord, index: usize, names: Set<Str>): Str {
 function sanitizeParamName(name: Str): Str {
   const replaced = name.replace(/[^A-Za-z0-9_]/g, "_");
   const prefixed = /^[A-Za-z_]/.test(replaced) ? replaced : `arg_${replaced}`;
-  if (keywords.has(prefixed)) return `arg_${prefixed}`;
+  if (!isTypeCIdentifier(prefixed)) return `arg_${prefixed}`;
   return prefixed;
 }
 
@@ -212,7 +212,7 @@ function readReturnType(type: Str): Str {
 
 function formatSupportedFunction(fn: CFunction): Str[] {
   try {
-    if (isVariadicFunction(fn)) return [];
+    if (isVariadicFunction(fn) || !isTypeCIdentifier(fn.name)) return [];
     return [formatFunction(fn)];
   } catch (error) {
     if (error instanceof TypeCError) return [];
@@ -222,6 +222,10 @@ function formatSupportedFunction(fn: CFunction): Str[] {
 
 function isVariadicFunction(fn: CFunction): b8 {
   return fn.functionType.includes("...");
+}
+
+function isTypeCIdentifier(name: Str): b8 {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !keywords.has(name);
 }
 
 function formatFunction(fn: CFunction): Str {
