@@ -3,48 +3,44 @@ import { formatDiagnostic, TypeCError } from "./diagnostics.ts";
 import { emitC } from "./emitter.ts";
 import { lex } from "./lexer.ts";
 import { parse } from "./parser.ts";
+import { buildOutputPaths } from "./path.ts";
 import { resolve } from "./resolver.ts";
 
+type Str = string;
+
 export interface CompileResult {
-  cPath: string;
-  exePath: string;
-  cSource: string;
+  cPath: Str;
+  exePath: Str;
+  cSource: Str;
 }
 
-export async function compileFile(inputPath: string, buildDir = "build"): Promise<CompileResult> {
+export async function compileFile(inputPath: Str, buildDir: Str = "build"): Promise<CompileResult> {
   const source = await Deno.readTextFile(inputPath);
   try {
-    const tokens = lex(source);
-    const ast = parse(tokens);
-    const resolved = resolve(ast);
-    const checked = check(resolved);
-    const cSource = emitC(checked);
-
-    await Deno.mkdir(buildDir, { recursive: true });
-    const base = basenameNoExt(inputPath);
-    const cPath = `${buildDir}/${base}.c`;
-    const exePath = `${buildDir}/${base}`;
-    await Deno.writeTextFile(cPath, cSource);
-    return { cPath, exePath, cSource };
+    return await compileSourceFile(inputPath, buildDir, source);
   } catch (err) {
-    if (err instanceof TypeCError) {
-      console.error(err.diagnostics.map((d) => formatDiagnostic(inputPath, source, d)).join("\n"));
-      Deno.exit(1);
-    }
+    if (err instanceof TypeCError) exitWithDiagnostics(inputPath, source, err);
     throw err;
   }
 }
 
-export async function buildNative(result: CompileResult): Promise<void> {
-  const command = new Deno.Command("cc", { args: [result.cPath, "-o", result.exePath] });
-  const output = await command.output();
-  if (!output.success) {
-    console.error(new TextDecoder().decode(output.stderr));
-    Deno.exit(output.code);
-  }
+async function compileSourceFile(inputPath: Str, buildDir: Str, source: Str): Promise<CompileResult> {
+  const cSource = compileSource(source);
+  await Deno.mkdir(buildDir, { recursive: true });
+  const paths = buildOutputPaths(inputPath, buildDir);
+  await Deno.writeTextFile(paths.cPath, cSource);
+  return { ...paths, cSource };
 }
 
-function basenameNoExt(path: string): string {
-  const file = path.split(/[\\/]/).pop() ?? "out";
-  return file.replace(/\.[^.]+$/, "");
+function compileSource(source: Str): Str {
+  const tokens = lex(source);
+  const ast = parse(tokens);
+  const resolved = resolve(ast);
+  const checked = check(resolved);
+  return emitC(checked);
+}
+
+function exitWithDiagnostics(inputPath: Str, source: Str, err: TypeCError): never {
+  console.error(err.diagnostics.map((diagnostic) => formatDiagnostic(inputPath, source, diagnostic)).join("\n"));
+  Deno.exit(1);
 }

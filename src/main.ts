@@ -1,5 +1,6 @@
 import { printAst } from "./ast_printer.ts";
-import { buildNative, compileFile } from "./compiler.ts";
+import { buildNative } from "./c_compiler.ts";
+import { compileFile } from "./compiler.ts";
 import { lex } from "./lexer.ts";
 import { parse } from "./parser.ts";
 
