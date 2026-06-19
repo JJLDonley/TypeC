@@ -140,14 +140,19 @@ class Checker {
   private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
     const condition = this.typeOf(stmt.condition, locals);
     if (condition !== "bool") this.error(`While condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
-    for (const child of stmt.body.statements) this.checkStatement(child, locals, returnType);
+    this.checkBlock(stmt.body.statements, locals, returnType);
   }
 
   private checkIf(stmt: Extract<Statement, { kind: "IfStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
     const condition = this.typeOf(stmt.condition, locals);
     if (condition !== "bool") this.error(`If condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
-    for (const child of stmt.thenBody.statements) this.checkStatement(child, locals, returnType);
-    for (const child of stmt.elseBody?.statements ?? []) this.checkStatement(child, locals, returnType);
+    this.checkBlock(stmt.thenBody.statements, locals, returnType);
+    if (stmt.elseBody) this.checkBlock(stmt.elseBody.statements, locals, returnType);
+  }
+
+  private checkBlock(statements: Statement[], parentLocals: Map<Str, LocalInfo>, returnType: TypeName): void {
+    const locals = new Map<Str, LocalInfo>(parentLocals);
+    for (const child of statements) this.checkStatement(child, locals, returnType);
   }
 
   private typeOf(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {

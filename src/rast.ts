@@ -4,7 +4,7 @@ type Str = string;
 type u32 = number;
 
 export type SymbolKind = "function" | "type" | "parameter" | "local";
-export type ScopeKind = "global" | "function";
+export type ScopeKind = "global" | "function" | "block";
 
 export interface SymbolInfo {
   id: u32;

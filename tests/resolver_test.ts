@@ -42,6 +42,15 @@ Deno.test("rejects unknown identifiers", () => {
   assertResolveError(`function main(): i32 { return x; }`, "Unknown identifier 'x'");
 });
 
+Deno.test("allows block-local shadowing", () => {
+  resolve(parse(lex(`function main(): i32 { const x: i32 = 1; if (true) { const x: i32 = 2; } else { const x: i32 = 3; } return x; }`)));
+});
+
+Deno.test("rejects use of block locals outside block", () => {
+  assertResolveError(`function main(): i32 { if (true) { const x: i32 = 1; } return x; }`, "Unknown identifier 'x'");
+  assertResolveError(`function main(): i32 { while (true) { const x: i32 = 1; } return x; }`, "Unknown identifier 'x'");
+});
+
 Deno.test("rejects unknown functions", () => {
   assertResolveError(`function main(): i32 { return missing(); }`, "Unknown identifier 'missing'");
 });

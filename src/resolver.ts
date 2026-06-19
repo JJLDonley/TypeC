@@ -56,14 +56,19 @@ class Resolver {
         return;
       case "WhileStmt":
         this.resolveExpression(statement.condition, scope);
-        for (const child of statement.body.statements) this.resolveStatement(child, scope);
+        this.resolveBlock(statement.body.statements, scope);
         return;
       case "IfStmt":
         this.resolveExpression(statement.condition, scope);
-        for (const child of statement.thenBody.statements) this.resolveStatement(child, scope);
-        for (const child of statement.elseBody?.statements ?? []) this.resolveStatement(child, scope);
+        this.resolveBlock(statement.thenBody.statements, scope);
+        if (statement.elseBody) this.resolveBlock(statement.elseBody.statements, scope);
         return;
     }
+  }
+
+  private resolveBlock(statements: Statement[], parent: Scope): void {
+    const scope = this.scopeTable.createScope("block", parent);
+    for (const statement of statements) this.resolveStatement(statement, scope);
   }
 
   private resolveExpression(expression: Expression, scope: Scope): void {
