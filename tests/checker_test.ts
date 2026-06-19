@@ -30,6 +30,16 @@ Deno.test("rejects non-record type aliases", () => {
   assertCheckError(`type Count = i32; function main(): i32 { return 0; }`, "Type alias 'Count' must name a record type");
 });
 
+Deno.test("rejects void value types", () => {
+  assertCheckError(`function bad(x: void): i32 { return 0; } function main(): i32 { return 0; }`, "Parameter 'x' cannot have type 'void'");
+  assertCheckError(`function main(): i32 { const x: void = 0; return 0; }`, "Variable 'x' cannot have type 'void'");
+  assertCheckError(`type Bad = { x: void; }; function main(): i32 { return 0; }`, "Field 'x' cannot have type 'void'");
+});
+
+Deno.test("rejects returning values from void functions", () => {
+  assertCheckError(`function bad(): void { return 0; } function main(): i32 { return 0; }`, "Void function cannot return a value");
+});
+
 Deno.test("records typed expression information", () => {
   const program = check(resolve(parse(lex(`function main(): i32 { return 0; }`))));
   const types = [...program.expressionTypes.values()].map((entry) => entry.type);

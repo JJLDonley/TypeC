@@ -48,7 +48,10 @@ class Checker {
     for (const fn of this.program.functions) {
       this.functions.set(fn.name, fn);
       this.checkType(fn.returnType);
-      for (const param of fn.params) this.checkType(param.type);
+      for (const param of fn.params) {
+        this.checkType(param.type);
+        this.checkValueType(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span);
+      }
     }
   }
 
@@ -86,12 +89,17 @@ class Checker {
   }
 
   private checkReturn(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
+    if (expected === "void") {
+      this.error("Void function cannot return a value", span);
+      return;
+    }
     const actual = this.typeOfExpected(expr, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
     this.checkType(stmt.type);
+    this.checkValueType(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span);
     const expected = typeName(stmt.type);
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
@@ -367,7 +375,12 @@ class Checker {
       if (fields.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
       fields.add(field.name);
       this.checkType(field.type);
+      this.checkValueType(field.type, `Field '${field.name}' cannot have type 'void'`, field.span);
     }
+  }
+
+  private checkValueType(type: TypeRef, message: Str, span: SourceSpan): void {
+    if (type.kind === "NamedTypeRef" && type.name === "void") this.error(message, span);
   }
 
   private checkArraySize(sizeText: Str, span: SourceSpan): void {
