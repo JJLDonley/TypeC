@@ -8,6 +8,7 @@ import { runExecutable } from "./runner.ts";
 import { watchFile } from "./watch.ts";
 
 type Str = string;
+type b8 = boolean;
 
 async function main(args: Str[]): Promise<void> {
   const request = parseCliArgs(args);
@@ -46,15 +47,23 @@ async function emitC(inputPath: Str): Promise<void> {
 
 async function build(inputPath: Str): Promise<void> {
   const result = await compileFile(inputPath);
+  requireMain(result.hasMain);
   await buildNative(result);
   console.log(`Built ${result.exePath}`);
 }
 
 async function run(inputPath: Str): Promise<never> {
   const result = await compileFile(inputPath);
+  requireMain(result.hasMain);
   await buildNative(result);
   console.log(`Built ${result.exePath}`);
   await runExecutable(result.exePath);
+}
+
+function requireMain(hasMain: b8): void {
+  if (hasMain) return;
+  console.error("Program entrypoint 'main' not found");
+  Deno.exit(1);
 }
 
 function usage(): never {

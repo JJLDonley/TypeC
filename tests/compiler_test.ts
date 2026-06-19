@@ -1,10 +1,21 @@
 import { check } from "../src/checker.ts";
+import { compileFile } from "../src/compiler.ts";
 import { emitC } from "../src/emitter.ts";
 import { lex } from "../src/lexer.ts";
 import { parse } from "../src/parser.ts";
 import { resolve } from "../src/resolver.ts";
 
 type Str = string;
+
+Deno.test("tracks whether compiled source has main", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/lib.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await Deno.writeTextFile(`${dir}/main.tc`, `function main(): i32 { return 0; }`);
+  const lib = await compileFile(`${dir}/lib.tc`, `${dir}/build`);
+  const main = await compileFile(`${dir}/main.tc`, `${dir}/build`);
+  if (lib.hasMain) throw new Error("Expected library file without main");
+  if (!main.hasMain) throw new Error("Expected main file with main");
+});
 
 Deno.test("emits C prototypes for extern functions", () => {
   const source = `extern function puts(s: u8*): i32; function main(): i32 { return 0; }`;

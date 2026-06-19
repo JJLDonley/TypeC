@@ -1,16 +1,19 @@
 import { check } from "./checker.ts";
 import { formatDiagnostic, TypeCError } from "./diagnostics.ts";
 import { emitC } from "./emitter.ts";
+import { hasMain } from "./entrypoint.ts";
 import { loadProgram } from "./module_loader.ts";
 import { buildOutputPaths } from "./path.ts";
 import { resolve } from "./resolver.ts";
 
 type Str = string;
+type b8 = boolean;
 
 export interface CompileResult {
   cPath: Str;
   exePath: Str;
   cSource: Str;
+  hasMain: b8;
 }
 
 export async function compileFile(inputPath: Str, buildDir: Str = "build"): Promise<CompileResult> {
@@ -24,18 +27,18 @@ export async function compileFile(inputPath: Str, buildDir: Str = "build"): Prom
 }
 
 async function compileSourceFile(inputPath: Str, buildDir: Str, _source: Str): Promise<CompileResult> {
-  const cSource = await compileSource(inputPath);
+  const compiled = await compileSource(inputPath);
   await Deno.mkdir(buildDir, { recursive: true });
   const paths = buildOutputPaths(inputPath, buildDir);
-  await Deno.writeTextFile(paths.cPath, cSource);
-  return { ...paths, cSource };
+  await Deno.writeTextFile(paths.cPath, compiled.cSource);
+  return { ...paths, ...compiled };
 }
 
-async function compileSource(inputPath: Str): Promise<Str> {
+async function compileSource(inputPath: Str): Promise<{ cSource: Str; hasMain: b8 }> {
   const ast = await loadProgram(inputPath);
   const resolved = resolve(ast);
   const checked = check(resolved);
-  return emitC(checked);
+  return { cSource: emitC(checked), hasMain: hasMain(checked) };
 }
 
 function exitWithDiagnostics(inputPath: Str, source: Str, err: TypeCError): never {
