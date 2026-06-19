@@ -4,6 +4,7 @@ type Str = string;
 
 Deno.test("builds portable C compiler args", () => {
   assertEqualText(nativeCompileArgs({ cPath: "build/main.c", exePath: "build/main" }), [
+    "-std=c99",
     "build/main.c",
     "-o",
     "build/main",

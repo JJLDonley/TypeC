@@ -6,7 +6,7 @@ export interface NativeBuildInput {
 }
 
 export function nativeCompileArgs(input: NativeBuildInput): Str[] {
-  return [input.cPath, "-o", input.exePath];
+  return ["-std=c99", input.cPath, "-o", input.exePath];
 }
 
 export async function buildNative(input: NativeBuildInput): Promise<void> {
