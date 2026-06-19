@@ -90,6 +90,7 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
 
 function validateImportPath(path: Str, span: Diagnostic["span"], config: ProjectConfig): void {
   if (hasBackslash(path) || hasEncodedSeparator(path)) throw new TypeCError([{ message: `Import path '${path}' must use / separators`, span }]);
+  if (hasMalformedEncoding(path)) throw new TypeCError([{ message: `Import path '${path}' contains invalid percent encoding`, span }]);
   if (hasEncodedDotSegment(path)) throw new TypeCError([{ message: `Import path '${path}' must not contain encoded path segments`, span }]);
   const dependency = isDependencyImportPath(path, config);
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
@@ -109,6 +110,10 @@ function hasBackslash(path: Str): b8 {
 
 function hasEncodedSeparator(path: Str): b8 {
   return /%(2f|5c)/i.test(path);
+}
+
+function hasMalformedEncoding(path: Str): b8 {
+  return path.split("/").some((segment) => decodedSegment(segment) === null);
 }
 
 function hasEncodedDotSegment(path: Str): b8 {

@@ -184,6 +184,12 @@ Deno.test("rejects encoded dot import segments", async () => {
   await assertLoadError(`${dir}/dot.tc`, "Import path './%2e/math.tc' must not contain encoded path segments");
 });
 
+Deno.test("rejects malformed encoded import paths", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { add } from "./math%zz.tc"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/main.tc`, "Import path './math%zz.tc' contains invalid percent encoding");
+});
+
 Deno.test("rejects non-TypeC import paths", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/main.tc`, `import { add } from "./math"; function main(): i32 { return 0; }`);
