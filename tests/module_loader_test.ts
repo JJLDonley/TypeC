@@ -111,6 +111,17 @@ Deno.test("loads C headers with project include flags", async () => {
   assertIncludes(program.functions.map((fn) => fn.name), "add_i32");
 });
 
+Deno.test("loads C headers with project system include flags", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/include`);
+  await writeText(`${dir}/project.json`, `{"dependencies":{"basic/math":"include/math.h"},"compiler":{"flags":["-isysteminclude"]}}`);
+  await writeText(`${dir}/include/types.h`, `#include <stdint.h>`);
+  await writeText(`${dir}/include/math.h`, `#include <types.h>\nint32_t add_i32(int32_t left, int32_t right);`);
+  await writeText(`${dir}/main.tc`, `import { add_i32 } from "basic/math"; function main(): i32 { return 0; }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "add_i32");
+});
+
 Deno.test("rejects missing exports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);

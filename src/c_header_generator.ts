@@ -69,14 +69,20 @@ function headerCompilerFlags(flags: Str[], projectDir: Str): Str[] {
 }
 
 function isHeaderCompilerFlag(flag: Str): b8 {
-  return flag.startsWith("-I") || flag.startsWith("-D") || flag.startsWith("-U");
+  return flag.startsWith("-I") || flag.startsWith("-D") || flag.startsWith("-U") || flag.startsWith("-isystem");
 }
 
 function normalizeHeaderCompilerFlag(flag: Str, projectDir: Str): Str {
-  if (!flag.startsWith("-I") || flag.length <= 2) return flag;
-  const path = flag.slice(2);
+  if (flag.startsWith("-I")) return normalizeJoinedPathFlag(flag, "-I", projectDir);
+  if (flag.startsWith("-isystem")) return normalizeJoinedPathFlag(flag, "-isystem", projectDir);
+  return flag;
+}
+
+function normalizeJoinedPathFlag(flag: Str, prefix: Str, projectDir: Str): Str {
+  if (flag.length <= prefix.length) return flag;
+  const path = flag.slice(prefix.length);
   if (path.startsWith("/")) return flag;
-  return `-I${projectDir}/${path}`;
+  return `${prefix}${projectDir}/${path}`;
 }
 
 function parseClangJson(text: Str): unknown {
