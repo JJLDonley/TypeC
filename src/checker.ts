@@ -7,6 +7,10 @@ import { checkArrayIndex as collectArrayIndexDiagnostics } from "./checker_array
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
 import { checkBinaryOperation } from "./checker_binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
+import {
+  checkIfCondition as collectIfConditionDiagnostics,
+  checkWhileCondition as collectWhileConditionDiagnostics,
+} from "./checker_conditions.ts";
 import { isAddressable, spanKey } from "./checker_exprs.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
@@ -144,13 +148,13 @@ class Checker {
 
   private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
     const condition = this.typeOf(stmt.condition, locals);
-    if (condition !== "bool") this.error(`While condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
+    this.diagnostics.push(...collectWhileConditionDiagnostics(condition, stmt.condition.span));
     this.checkBlock(stmt.body.statements, locals, returnType);
   }
 
   private checkIf(stmt: Extract<Statement, { kind: "IfStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
     const condition = this.typeOf(stmt.condition, locals);
-    if (condition !== "bool") this.error(`If condition type '${condition}' is not assignable to 'bool'`, stmt.condition.span);
+    this.diagnostics.push(...collectIfConditionDiagnostics(condition, stmt.condition.span));
     this.checkBlock(stmt.thenBody.statements, locals, returnType);
     if (stmt.elseBody) this.checkBlock(stmt.elseBody.statements, locals, returnType);
   }
