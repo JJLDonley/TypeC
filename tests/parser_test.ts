@@ -37,7 +37,7 @@ Deno.test("parses record type alias", () => {
 });
 
 Deno.test("parses pointer reference and array type syntax", () => {
-  const program = parse(lex(`function f(a: i32*, b: i32&, c: i32[], d: i32[16]): void { return 0; }`));
+  const program = parse(lex(`function f(a: i32*, b: i32&, c: i32[], d: i32[16]): void { return; }`));
   const types = program.functions[0].params.map((param) => typeName(param.type));
   assertEqualText(types, ["i32*", "i32&", "i32[]", "i32[16]"]);
 });

@@ -90,6 +90,12 @@ Deno.test("emits C for record literals and field access", () => {
   assertIncludes(c, "const Vec2 v = (Vec2){ .x = 1.5, .y = 2.5 };");
 });
 
+Deno.test("emits C for nested record literals", () => {
+  const source = `type Inner = { x: i32; }; type Outer = { inner: Inner; }; function main(): i32 { const o: Outer = { inner: { x: 42 } }; return o.inner.x; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const Outer o = (Outer){ .inner = (Inner){ .x = 42 } };");
+});
+
 Deno.test("emits C for functions returning records", () => {
   const source = `type Vec2 = { x: f64; y: f64; }; function add(a: Vec2, b: Vec2): Vec2 { return { x: a.x + b.x, y: a.y + b.y }; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
