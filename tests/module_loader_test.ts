@@ -85,6 +85,12 @@ Deno.test("rejects missing exports", async () => {
   await assertLoadError(`${dir}/main.tc`, "Module does not export 'hidden'");
 });
 
+Deno.test("rejects missing modules", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { answer } from "./missing.tc"; function main(): i32 { return answer(); }`);
+  await assertLoadError(`${dir}/main.tc`, `Module not found '${dir}/missing.tc'`);
+});
+
 Deno.test("rejects unsupported import paths", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/main.tc`, `import { add } from "math.tc"; function main(): i32 { return 0; }`);

@@ -141,7 +141,12 @@ function fileDirectoryUrl(path: Str): URL {
 }
 
 async function canonicalModulePath(path: Str): Promise<Str> {
-  return await Deno.realPath(path);
+  try {
+    return await Deno.realPath(path);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) throw new TypeCError([{ message: `Module not found '${path}'` }]);
+    throw error;
+  }
 }
 
 function normalizePath(path: Str): Str {
