@@ -13,6 +13,7 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("conflict", "int64_t (int64_t)", [param("value", "int64_t")]),
       functionDecl("set_name", "void (const char *)", [param("name", "const char *")]),
       functionDecl("copy_ptr", "void *(void *, const void *)", [param("dst", "void *"), param("src", "const void *")]),
+      functionDecl("copy_text", "void (char *restrict, const char *restrict)", [param("dst", "char *restrict"), param("src", "const char *restrict")]),
       functionDecl("use_keyword", "void (int32_t, int32_t)", [param("function", "int32_t"), param("function", "int32_t")]),
       functionDecl("export", "void (void)", []),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
@@ -27,6 +28,7 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "extern function conflict");
   assertIncludes(output, "extern function set_name(name: u8*): void;");
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
+  assertIncludes(output, "extern function copy_text(dst: u8*, src: u8*): void;");
   assertIncludes(output, "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;");
   assertExcludes(output, "extern function export");
   assertExcludes(output, "extern function helper");

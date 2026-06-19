@@ -278,7 +278,7 @@ function mapCType(type: Str): Str {
 }
 
 function normalizeCType(type: Str): Str {
-  return type.replace(/\bconst\b/g, "").replace(/\bvolatile\b/g, "").replace(/\s*\*\s*/g, "*").replace(/\s+/g, " ").trim();
+  return type.replace(/\bconst\b/g, "").replace(/\bvolatile\b/g, "").replace(/\brestrict\b/g, "").replace(/\b__restrict\b/g, "").replace(/\b__restrict__\b/g, "").replace(/\s*\*\s*/g, "*").replace(/\s+/g, " ").trim();
 }
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
