@@ -1,6 +1,7 @@
 import { sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { TypeCError } from "./diagnostics.ts";
 import { type JsonRecord, isJsonRecord } from "./json_record.ts";
+import { isFalseJsonFlag, isJsonArray, isJsonText, isNonEmptyJsonText, isTruthyJsonFlag, readJsonText } from "./json_values.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -34,7 +35,7 @@ function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]
     if (fn) functions.push(fn);
   }
   const inner = value.inner;
-  if (Array.isArray(inner)) for (const child of inner) collectHeaderFunctionsInto(child, functions);
+  if (isJsonArray(inner)) for (const child of inner) collectHeaderFunctionsInto(child, functions);
 }
 
 function readSupportedFunction(value: JsonRecord): CHeaderFunction | null {
@@ -48,13 +49,13 @@ function readSupportedFunction(value: JsonRecord): CHeaderFunction | null {
 
 function readFunction(value: JsonRecord): CHeaderFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
-  const functionType = readText(type.qualType, `Function '${value.name}' has no type`);
+  const functionType = readJsonText(type.qualType, `Function '${value.name}' has no type`);
   const params = readParams(value.inner);
   return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value), storageClass: readStorageClass(value), hasBody: hasFunctionBody(value) };
 }
 
 function readParams(value: unknown): CHeaderParam[] {
-  if (!Array.isArray(value)) return [];
+  if (!isJsonArray(value)) return [];
   const params: CHeaderParam[] = [];
   const names = new Set<Str>();
   for (const child of value) if (isParam(child)) params.push(readParam(child, params.length, names));
@@ -63,11 +64,11 @@ function readParams(value: unknown): CHeaderParam[] {
 
 function readParam(value: JsonRecord, index: usize, names: Set<Str>): CHeaderParam {
   const type = requireRecord(value.type, "Parameter has no type");
-  return { name: readParamName(value, index, names), type: readText(type.qualType, "Parameter has no type") };
+  return { name: readParamName(value, index, names), type: readJsonText(type.qualType, "Parameter has no type") };
 }
 
 function readParamName(value: JsonRecord, index: usize, names: Set<Str>): Str {
-  const candidate = typeof value.name === "string" && value.name.length > 0 ? sanitizeHeaderParamName(value.name) : `arg${index}`;
+  const candidate = isNonEmptyJsonText(value.name) ? sanitizeHeaderParamName(value.name) : `arg${index}`;
   return uniqueHeaderParamName(candidate, names);
 }
 
@@ -80,25 +81,25 @@ function readReturnType(type: Str): Str {
 function readSourceFile(value: JsonRecord): Str | null {
   const loc = value.loc;
   if (!isJsonRecord(loc)) return null;
-  if (typeof loc.file === "string") return loc.file;
+  if (isJsonText(loc.file)) return loc.file;
   const includedFrom = loc.includedFrom;
   if (!isJsonRecord(includedFrom)) return null;
-  if (typeof includedFrom.file === "string") return includedFrom.file;
+  if (isJsonText(includedFrom.file)) return includedFrom.file;
   return null;
 }
 
 function readStorageClass(value: JsonRecord): Str | null {
-  if (typeof value.storageClass === "string") return value.storageClass;
+  if (isJsonText(value.storageClass)) return value.storageClass;
   return null;
 }
 
 function hasFunctionBody(value: JsonRecord): b8 {
   const inner = value.inner;
-  return Array.isArray(inner) && inner.some(isCompoundStmt);
+  return isJsonArray(inner) && inner.some(isCompoundStmt);
 }
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
-  return value.isImplicit !== true && value.isUsed !== false;
+  return !isTruthyJsonFlag(value.isImplicit) && !isFalseJsonFlag(value.isUsed);
 }
 
 function isParam(value: unknown): value is JsonRecord {
@@ -110,11 +111,11 @@ function isCompoundStmt(value: unknown): b8 {
 }
 
 function hasName(value: JsonRecord): b8 {
-  return typeof value.name === "string" && value.name.length > 0;
+  return isNonEmptyJsonText(value.name);
 }
 
 function hasType(value: JsonRecord): b8 {
-  return isJsonRecord(value.type) && typeof value.type.qualType === "string";
+  return isJsonRecord(value.type) && isJsonText(value.type.qualType);
 }
 
 function requireRecord(value: unknown, message: Str): JsonRecord {
@@ -122,8 +123,4 @@ function requireRecord(value: unknown, message: Str): JsonRecord {
   throw new TypeCError([{ message }]);
 }
 
-function readText(value: unknown, message: Str): Str {
-  if (typeof value === "string") return value;
-  throw new TypeCError([{ message }]);
-}
 
