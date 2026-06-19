@@ -59,7 +59,7 @@ function emitFunctionSignature(fn: FunctionDecl): Str {
 }
 
 function emitFunctionStorage(fn: FunctionDecl): Str {
-  if (fn.exported || fn.name === "main") return "";
+  if (fn.external || fn.exported || fn.name === "main") return "";
   return "static ";
 }
 

@@ -21,6 +21,7 @@ Deno.test("emits C prototypes for extern functions", () => {
   const source = `extern function puts(s: u8*): i32; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "i32 puts(u8* s);");
+  assertNotIncludes(c, "static i32 puts(u8* s);");
   assertIncludes(c, "i32 main(void)");
 });
 
@@ -171,6 +172,10 @@ Deno.test("emits C for if else statements", () => {
 
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
+}
+
+function assertNotIncludes(haystack: Str, needle: Str): void {
+  if (haystack.includes(needle)) throw new Error(`Expected output not to include ${needle}`);
 }
 
 function assertOrdered(haystack: Str, first: Str, second: Str): void {
