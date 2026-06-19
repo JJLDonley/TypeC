@@ -6,6 +6,10 @@ import type { TypedProgram, TypeName } from "./tast.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
+import {
+  checkFunctionParamType as collectFunctionParamTypeDiagnostics,
+  checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
+} from "./checker_function_signatures.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
@@ -60,7 +64,7 @@ class Checker {
       for (const param of fn.params) {
         this.checkType(param.type);
         this.checkValueType(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span);
-        this.checkParamType(param, fn.name);
+        this.diagnostics.push(...collectFunctionParamTypeDiagnostics(param, fn.name));
       }
     }
   }
@@ -72,7 +76,7 @@ class Checker {
   private checkFunction(fn: FunctionDecl): void {
     const locals = createFunctionLocals(fn);
     const returnType = typeName(fn.returnType);
-    if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
+    this.diagnostics.push(...collectFunctionReturnTypeDiagnostics(fn, returnType));
     if (fn.external) this.checkCAbiFunction(fn, "Extern");
     else if (fn.exported) this.checkCAbiFunction(fn, "Exported");
     if (fn.name === "main") this.checkMainFunction(fn, returnType);
@@ -420,10 +424,6 @@ class Checker {
 
   private checkValueType(type: TypeRef, message: Str, span: SourceSpan): void {
     if (isVoidValueType(type)) this.error(message, span);
-  }
-
-  private checkParamType(param: FunctionDecl["params"][usize], functionName: Str): void {
-    if (param.type.kind === "InferredArrayTypeRef") this.error(`Parameter '${param.name}' of function '${functionName}' cannot have inferred array type`, param.span);
   }
 
   private error(message: Str, span: Diagnostic["span"]): void {
