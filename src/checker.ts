@@ -357,7 +357,7 @@ class Checker {
       const actual = this.typeOfExpected(element, locals, array.element);
       if (!isAssignable(actual, array.element)) this.error(`Array element type '${actual}' is not assignable to '${array.element}'`, element.span);
     }
-    if (array.length !== null && array.length !== expr.elements.length) this.error(`Array length ${expr.elements.length} is not assignable to '${expected}'`, expr.span);
+    if (array.length !== null && array.length !== BigInt(expr.elements.length)) this.error(`Array length ${expr.elements.length} is not assignable to '${expected}'`, expr.span);
     return `${array.element}[${expr.elements.length}]`;
   }
 
@@ -374,10 +374,10 @@ class Checker {
     return array.element;
   }
 
-  private checkArrayIndexBounds(index: Expression, length: i32 | null): void {
+  private checkArrayIndexBounds(index: Expression, length: IntLiteralValue | null): void {
     if (length === null) return;
     if (index.kind !== "IntegerLiteral") return;
-    if (index.value < BigInt(length)) return;
+    if (index.value < length) return;
     this.error(`Array index ${index.text} is out of bounds for length ${length}`, index.span);
   }
 
@@ -548,10 +548,10 @@ function isAssignable(actual: TypeName, expected: TypeName): b8 {
   return pointeeType(actual) === pointeeType(expected);
 }
 
-function parseArrayType(type: TypeName): { element: TypeName; length: i32 | null } | null {
+function parseArrayType(type: TypeName): { element: TypeName; length: IntLiteralValue | null } | null {
   const match = type.match(/^(.+)\[(\d*)\]$/);
   if (!match) return null;
-  return { element: match[1], length: match[2] ? Number(match[2]) as i32 : null };
+  return { element: match[1], length: match[2] ? BigInt(match[2]) : null };
 }
 
 function isIntegerType(type: TypeName): b8 {
