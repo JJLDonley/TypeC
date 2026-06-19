@@ -72,6 +72,12 @@ Deno.test("emits C for postfix pointer expressions", () => {
   assertIncludes(c, "return *p;");
 });
 
+Deno.test("emits C for field access through dereference", () => {
+  const source = `type Vec2 = { x: i32; y: i32; }; function main(): i32 { const v: Vec2 = { x: 1, y: 2 }; const p: Vec2* = v.&; return p.*.x; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return (*p).x;");
+});
+
 Deno.test("emits C typedef for record aliases", () => {
   const source = `type Vec2 = { x: f32; y: f32; }; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));

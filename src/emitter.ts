@@ -135,13 +135,13 @@ function emitExpression(expr: Expression, typeAliases: Map<Str, TypeAliasDecl>):
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, typeAliases);
     case "FieldAccessExpr":
-      return `${emitExpression(expr.operand, typeAliases)}.${expr.field}`;
+      return `${emitMemberOperand(expr.operand, typeAliases)}.${expr.field}`;
     case "RecordLiteralExpr":
       throw new Error("Record literals require an expected C type");
     case "ArrayLiteralExpr":
       throw new Error("Array literals require an expected C type");
     case "IndexExpr":
-      return `${emitExpression(expr.operand, typeAliases)}[${emitExpression(expr.index, typeAliases)}]`;
+      return `${emitMemberOperand(expr.operand, typeAliases)}[${emitExpression(expr.index, typeAliases)}]`;
   }
 }
 
@@ -177,5 +177,11 @@ function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "Postfix
   const operand = emitExpression(expr.operand, typeAliases);
   if (expr.operator === ".&") return `&${operand}`;
   return `*${operand}`;
+}
+
+function emitMemberOperand(expr: Expression, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const operand = emitExpression(expr, typeAliases);
+  if (expr.kind === "PostfixPointerExpr" && expr.operator === ".*") return `(${operand})`;
+  return operand;
 }
 
