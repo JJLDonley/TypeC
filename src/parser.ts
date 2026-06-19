@@ -1,4 +1,4 @@
-import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
+import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
 import type { Program } from "./ast.ts";
 import type {
@@ -14,10 +14,10 @@ import type {
   CastTypeRef,
 } from "./cast.ts";
 import { lowerCast } from "./lower.ts";
+import { parseFloatLiteral, precedence, span } from "./parser_helpers.ts";
 import type { Token, TokenKind } from "./token.ts";
 
 type i32 = number;
-type f64 = number;
 type Str = string;
 type b8 = boolean;
 type usize = number;
@@ -435,33 +435,4 @@ class Parser {
   private error(token: Token, message: Str): void {
     this.diagnostics.push({ message, span: token.span });
   }
-}
-
-function parseFloatLiteral(text: Str): f64 {
-  return Number(text);
-}
-
-function precedence(op: Str): i32 {
-  switch (op) {
-    case "*":
-    case "/":
-    case "%":
-      return 20;
-    case "+":
-    case "-":
-      return 10;
-    case "<":
-    case "<=":
-    case ">":
-    case ">=":
-    case "==":
-    case "!=":
-      return 5;
-    default:
-      return -1;
-  }
-}
-
-function span(start: SourceSpan["start"], end: SourceSpan["end"]): SourceSpan {
-  return { start, end };
 }
