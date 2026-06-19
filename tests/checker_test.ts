@@ -142,6 +142,10 @@ Deno.test("rejects non-literal array initializers", () => {
   assertCheckError(`function main(): i32 { const xs: i32[] = [1]; const ys: i32[1] = xs; return ys[0]; }`, "Array variable initializer must be an array literal");
 });
 
+Deno.test("rejects non-literal array field initializers", () => {
+  assertCheckError(`type Block = { values: i32[1]; }; function main(): i32 { const xs: i32[] = [1]; const b: Block = { values: xs }; return b.values[0]; }`, "Array variable initializer must be an array literal");
+});
+
 Deno.test("rejects array return types", () => {
   assertCheckError(`function values(): i32[3] { return [1, 2, 3]; } function main(): i32 { return 0; }`, "Function 'values' cannot return array type 'i32[3]'");
 });

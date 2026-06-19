@@ -303,8 +303,9 @@ class Checker {
         this.error(`Unknown field '${field.name}' on type '${expected}'`, field.span);
         continue;
       }
-      const actual = this.typeOfExpected(field.expression, locals, typeName(expectedField.type));
       const expectedType = typeName(expectedField.type);
+      this.checkArrayInitializer(field.expression, expectedType, field.span);
+      const actual = this.typeOfExpected(field.expression, locals, expectedType);
       if (!isAssignable(actual, expectedType)) this.error(`Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`, field.span);
     }
     for (const field of record.fields) {
