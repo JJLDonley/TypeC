@@ -22,6 +22,14 @@ Deno.test("rejects non-C ABI exported parameter types", () => {
   assertCheckError(`export function bad(x: i32&): void { return 0; } function main(): i32 { return 0; }`, "Exported function 'bad' parameter 'x' type 'i32&' is not C ABI compatible");
 });
 
+Deno.test("checks exported record aliases as C ABI types", () => {
+  check(resolve(parse(lex(`type Vec2 = { x: f64; y: f64; }; export function len(v: Vec2): f64 { return v.x + v.y; } function main(): i32 { return 0; }`))));
+});
+
+Deno.test("rejects non-record type aliases", () => {
+  assertCheckError(`type Count = i32; function main(): i32 { return 0; }`, "Type alias 'Count' must name a record type");
+});
+
 Deno.test("records typed expression information", () => {
   const program = check(resolve(parse(lex(`function main(): i32 { return 0; }`))));
   const types = [...program.expressionTypes.values()].map((entry) => entry.type);

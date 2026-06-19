@@ -41,7 +41,10 @@ class Checker {
 
   private collectFunctions(): void {
     for (const typeAlias of this.program.typeAliases) this.typeAliases.set(typeAlias.name, typeAlias.type);
-    for (const typeAlias of this.program.typeAliases) this.checkType(typeAlias.type);
+    for (const typeAlias of this.program.typeAliases) {
+      if (typeAlias.type.kind !== "RecordTypeRef") this.error(`Type alias '${typeAlias.name}' must name a record type`, typeAlias.span);
+      this.checkType(typeAlias.type);
+    }
     for (const fn of this.program.functions) {
       this.functions.set(fn.name, fn);
       this.checkType(fn.returnType);
@@ -329,10 +332,33 @@ class Checker {
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
-    if (!isCAbiType(fn.returnType)) this.error(`${label} function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
+    if (!this.isCAbiType(fn.returnType)) this.error(`${label} function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
     for (const param of fn.params) {
-      if (!isCAbiType(param.type)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
+      if (!this.isCAbiType(param.type)) this.error(`${label} function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
     }
+  }
+
+  private isCAbiType(type: TypeRef, seen: Set<Str> = new Set<Str>()): b8 {
+    switch (type.kind) {
+      case "NamedTypeRef":
+        return this.isCAbiNamedType(type.name, seen);
+      case "PointerTypeRef":
+        return this.isCAbiType(type.element, seen);
+      case "RecordTypeRef":
+        return type.fields.every((field) => this.isCAbiType(field.type, seen));
+      case "ReferenceTypeRef":
+      case "InferredArrayTypeRef":
+      case "FixedArrayTypeRef":
+        return false;
+    }
+  }
+
+  private isCAbiNamedType(name: Str, seen: Set<Str>): b8 {
+    const alias = this.typeAliases.get(name);
+    if (!alias) return primitiveTypes.has(name);
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return this.isCAbiType(alias, seen);
   }
 
   private checkRecordType(type: RecordTypeRef): void {
@@ -351,20 +377,6 @@ class Checker {
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
-  }
-}
-
-function isCAbiType(type: TypeRef): b8 {
-  switch (type.kind) {
-    case "NamedTypeRef":
-      return true;
-    case "PointerTypeRef":
-      return isCAbiType(type.element);
-    case "ReferenceTypeRef":
-    case "InferredArrayTypeRef":
-    case "FixedArrayTypeRef":
-    case "RecordTypeRef":
-      return false;
   }
 }
 
