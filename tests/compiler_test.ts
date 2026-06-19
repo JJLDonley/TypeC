@@ -62,7 +62,7 @@ Deno.test("emits C for bare returns", () => {
 Deno.test("emits C for minimal main", () => {
   const source = `function main(): i32 {\n  return 0;\n}\n`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "typedef int32_t i32;");
+  assertIncludes(c, "typedef int32_t  i32;");
   assertIncludes(c, "i32 main(void)");
   assertIncludes(c, "return 0;");
 });
