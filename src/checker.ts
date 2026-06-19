@@ -5,6 +5,7 @@ import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { isCAbiType } from "./checker_c_abi.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
+import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
@@ -12,14 +13,8 @@ import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
 type Str = string;
-type b8 = boolean;
 type usize = number;
 type IntLiteralValue = bigint;
-
-interface LocalInfo {
-  type: TypeName;
-  mutable: b8;
-}
 
 export type CheckedProgram = TypedProgram;
 
@@ -76,9 +71,7 @@ class Checker {
   }
 
   private checkFunction(fn: FunctionDecl): void {
-    const locals = new Map<Str, LocalInfo>();
-    for (const param of fn.params) locals.set(param.name, { type: typeName(param.type), mutable: false });
-
+    const locals = createFunctionLocals(fn);
     const returnType = typeName(fn.returnType);
     if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
     if (fn.external) this.checkCAbiFunction(fn, "Extern");
