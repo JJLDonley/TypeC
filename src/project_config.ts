@@ -95,7 +95,12 @@ function readCompilerFlags(value: unknown): Str[] {
   const flags = value.flags;
   if (flags === undefined) return [];
   if (!Array.isArray(flags) || !flags.every((flag) => typeof flag === "string")) throw configError("project.json compiler.flags must be a string array");
+  for (const flag of flags) validateCompilerFlag(flag);
   return flags;
+}
+
+function validateCompilerFlag(flag: Str): void {
+  if (flag === "-std" || flag.startsWith("-std=")) throw configError("project.json compiler.flags cannot override the C standard");
 }
 
 function isRecord(value: unknown): value is JsonRecord {
