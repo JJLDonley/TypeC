@@ -86,7 +86,7 @@ function hasValidAliasSegments(path: Str): b8 {
 
 function isValidAliasSegment(segment: Str): b8 {
   const decoded = decodedAliasSegment(segment);
-  return segment.length > 0 && decoded !== null && decoded.length > 0 && decoded !== "." && !decoded.includes("/");
+  return segment.length > 0 && decoded !== null && decoded.length > 0 && decoded !== "." && !decoded.includes("/") && !decoded.includes("\\");
 }
 
 function decodedAliasSegment(segment: Str): Str | null {
@@ -105,9 +105,13 @@ function hasBackslash(path: Str): b8 {
   return path.includes("\\");
 }
 
+function hasEncodedSeparator(path: Str): b8 {
+  return /%(2f|5c)/i.test(path);
+}
+
 function validateDependencyTarget(name: Str, path: Str): void {
   if (!isDependencyTargetFile(path)) throw configError(`Dependency '${name}' target must be a .tc or .h file`);
-  if (hasUrlScheme(path) || hasBackslash(path)) throw configError(`Dependency '${name}' target must be a local dependency path`);
+  if (hasUrlScheme(path) || hasBackslash(path) || hasEncodedSeparator(path)) throw configError(`Dependency '${name}' target must be a local dependency path`);
   if (isStdImportPath(path) && hasParentTraversal(path)) throw configError(`Dependency '${name}' std target must stay within std`);
   if (isProjectRelativeTarget(path) && hasParentTraversal(path)) throw configError(`Dependency '${name}' target must stay within the project`);
 }

@@ -49,12 +49,15 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"dependencies":{"basic/./math":"std/math.tc"}}`, "Dependency alias 'basic/./math' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic/%2e/math":"std/math.tc"}}`, "Dependency alias 'basic/%2e/math' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic%2fmath":"std/math.tc"}}`, "Dependency alias 'basic%2fmath' must be a project dependency import path");
+  assertConfigError(`{"dependencies":{"basic%5cmath":"std/math.tc"}}`, "Dependency alias 'basic%5cmath' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic\\\\math":"std/math.tc"}}`, "Dependency alias 'basic\\math' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic/math.tc":"std/math.tc"}}`, "Dependency alias 'basic/math.tc' must not include a file extension");
   assertConfigError(`{"dependencies":{"raylib.h":"vendor/raylib.h"}}`, "Dependency alias 'raylib.h' must not include a file extension");
   assertConfigError(`{"dependencies":{"basic/math":"std/math"}}`, "Dependency 'basic/math' target must be a .tc or .h file");
   assertConfigError(`{"dependencies":{"basic/math":"https://example.test/math.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
   assertConfigError(`{"dependencies":{"basic/math":"vendor\\\\math.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
+  assertConfigError(`{"dependencies":{"basic/math":"vendor%2fmath.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
+  assertConfigError(`{"dependencies":{"basic/math":"vendor%5cmath.tc"}}`, "Dependency 'basic/math' target must be a local dependency path");
   assertConfigError(`{"dependencies":{"basic/math":"std/../math.tc"}}`, "Dependency 'basic/math' std target must stay within std");
   assertConfigError(`{"dependencies":{"basic/math":"std/%2e%2e/math.tc"}}`, "Dependency 'basic/math' std target must stay within std");
   assertConfigError(`{"dependencies":{"basic/math":"../math.tc"}}`, "Dependency 'basic/math' target must stay within the project");
