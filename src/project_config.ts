@@ -1,5 +1,4 @@
-import { TypeCError } from "./diagnostics.ts";
-import { type JsonRecord, isJsonRecord } from "./json_record.ts";
+import { parseJsonRecord, rejectUnknownJsonKeys } from "./json_config.ts";
 import { directoryOf, normalizePath } from "./path.ts";
 import { readProjectCompilerFlags } from "./project_compiler.ts";
 import { readProjectDependencies } from "./project_dependencies.ts";
@@ -21,9 +20,8 @@ export async function loadProjectConfig(entryPath: Str): Promise<ProjectConfig> 
 }
 
 export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
-  const value = parseJson(text);
-  if (!isJsonRecord(value)) throw configError("project.json must contain an object");
-  rejectUnknownKeys("project.json", value, ["dependencies", "compiler"]);
+  const value = parseJsonRecord(text, "project.json is not valid JSON", "project.json must contain an object");
+  rejectUnknownJsonKeys("project.json", value, ["dependencies", "compiler"]);
   return {
     projectDir,
     dependencies: readProjectDependencies(value.dependencies),
@@ -54,22 +52,4 @@ async function fileExists(path: Str): Promise<b8> {
   }
 }
 
-function parseJson(text: Str): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw configError("project.json is not valid JSON");
-  }
-}
-
-function rejectUnknownKeys(scope: Str, value: JsonRecord, knownKeys: Str[]): void {
-  const known = new Set<Str>(knownKeys);
-  for (const key of Object.keys(value)) {
-    if (!known.has(key)) throw configError(`${scope} has unknown key '${key}'`);
-  }
-}
-
-function configError(message: Str): TypeCError {
-  return new TypeCError([{ message }]);
-}
 
