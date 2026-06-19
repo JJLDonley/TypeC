@@ -123,9 +123,16 @@ class Checker {
     this.checkType(stmt.type);
     this.checkValueType(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span);
     const expected = typeName(stmt.type);
+    this.checkArrayInitializer(stmt.initializer, expected, stmt.span);
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
     locals.set(stmt.name, { type: actual, mutable: stmt.mutable });
+  }
+
+  private checkArrayInitializer(initializer: Expression, expected: TypeName, span: SourceSpan): void {
+    if (!parseArrayType(expected)) return;
+    if (initializer.kind === "ArrayLiteralExpr") return;
+    this.error(`Array variable initializer must be an array literal`, span);
   }
 
   private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
