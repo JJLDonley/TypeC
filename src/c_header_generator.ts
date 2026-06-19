@@ -184,10 +184,9 @@ function readSourceFile(value: JsonRecord): Str | null {
 }
 
 function readReturnType(type: Str): Str {
-  const marker = " (";
-  const index = type.indexOf(marker);
+  const index = type.indexOf("(");
   if (index < 0) throw new TypeCError([{ message: `Unsupported function type '${type}'` }]);
-  return type.slice(0, index);
+  return type.slice(0, index).trim();
 }
 
 function formatSupportedFunction(fn: CFunction): Str[] {
