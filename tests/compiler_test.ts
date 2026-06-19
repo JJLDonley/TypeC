@@ -21,6 +21,13 @@ Deno.test("emits C for const and function call", () => {
   assertIncludes(c, "const i32 x = add(20, 22);");
 });
 
+Deno.test("emits C for postfix pointer expressions", () => {
+  const source = `function main(): i32 { let x: i32 = 1; const p: i32* = x.&; return p.*; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32* p = &x;");
+  assertIncludes(c, "return *p;");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

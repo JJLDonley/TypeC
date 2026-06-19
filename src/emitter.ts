@@ -1,25 +1,11 @@
-import type { CheckedProgram } from "./checker.ts";
 import type { Expression, FunctionDecl, Statement, TypeRef } from "./ast.ts";
+import type { CheckedProgram } from "./checker.ts";
 
-export function emitC(program: CheckedProgram): string {
-  const out: string[] = [];
-  out.push("#include <stdint.h>");
-  out.push("#include <stdbool.h>");
-  out.push("#include <stddef.h>");
-  out.push("");
-  out.push("typedef uint8_t u8;");
-  out.push("typedef uint16_t u16;");
-  out.push("typedef uint32_t u32;");
-  out.push("typedef uint64_t u64;");
-  out.push("typedef int8_t i8;");
-  out.push("typedef int16_t i16;");
-  out.push("typedef int32_t i32;");
-  out.push("typedef int64_t i64;");
-  out.push("typedef float f32;");
-  out.push("typedef double f64;");
-  out.push("typedef bool b8;");
-  out.push("typedef size_t usize;");
-  out.push("");
+type Str = string;
+
+export function emitC(program: CheckedProgram): Str {
+  const out: Str[] = [];
+  out.push(...emitPrelude());
   for (const fn of program.functions) {
     out.push(emitFunction(fn));
     out.push("");
@@ -27,18 +13,43 @@ export function emitC(program: CheckedProgram): string {
   return out.join("\n");
 }
 
-function emitFunction(fn: FunctionDecl): string {
-  const params = fn.params.length === 0
-    ? "void"
-    : fn.params.map((p) => `${emitType(p.type)} ${p.name}`).join(", ");
-  const out: string[] = [];
+function emitPrelude(): Str[] {
+  return [
+    "#include <stdint.h>",
+    "#include <stdbool.h>",
+    "#include <stddef.h>",
+    "",
+    "typedef uint8_t u8;",
+    "typedef uint16_t u16;",
+    "typedef uint32_t u32;",
+    "typedef uint64_t u64;",
+    "typedef int8_t i8;",
+    "typedef int16_t i16;",
+    "typedef int32_t i32;",
+    "typedef int64_t i64;",
+    "typedef float f32;",
+    "typedef double f64;",
+    "typedef bool b8;",
+    "typedef size_t usize;",
+    "",
+  ];
+}
+
+function emitFunction(fn: FunctionDecl): Str {
+  const params = emitParams(fn);
+  const out: Str[] = [];
   out.push(`${emitType(fn.returnType)} ${fn.name}(${params}) {`);
   for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt)}`);
   out.push("}");
   return out.join("\n");
 }
 
-function emitStatement(stmt: Statement): string {
+function emitParams(fn: FunctionDecl): Str {
+  if (fn.params.length === 0) return "void";
+  return fn.params.map((param) => `${emitType(param.type)} ${param.name}`).join(", ");
+}
+
+function emitStatement(stmt: Statement): Str {
   switch (stmt.kind) {
     case "ReturnStmt":
       return `return ${emitExpression(stmt.expression)};`;
@@ -47,7 +58,7 @@ function emitStatement(stmt: Statement): string {
   }
 }
 
-function emitExpression(expr: Expression): string {
+function emitExpression(expr: Expression): Str {
   switch (expr.kind) {
     case "IntegerLiteral":
       return expr.text;
@@ -60,16 +71,21 @@ function emitExpression(expr: Expression): string {
     case "CallExpr":
       return `${expr.callee}(${expr.args.map(emitExpression).join(", ")})`;
     case "PostfixPointerExpr":
-      throw new Error(`Cannot emit pointer operator '${expr.operator}' before pointer checking`);
+      return emitPostfixPointerExpression(expr);
   }
 }
 
-function emitType(type: TypeRef): string {
+function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): Str {
+  const operand = emitExpression(expr.operand);
+  if (expr.operator === ".&") return `&${operand}`;
+  return `*${operand}`;
+}
+
+function emitType(type: TypeRef): Str {
   switch (type.kind) {
     case "NamedTypeRef":
       return emitNamedType(type.name);
     case "PointerTypeRef":
-      return `${emitType(type.element)}*`;
     case "ReferenceTypeRef":
       return `${emitType(type.element)}*`;
     case "InferredArrayTypeRef":
@@ -79,6 +95,6 @@ function emitType(type: TypeRef): string {
   }
 }
 
-function emitNamedType(name: string): string {
+function emitNamedType(name: Str): Str {
   return name === "bool" ? "b8" : name;
 }
