@@ -19,10 +19,11 @@ import {
   typeAliasModifierDiagnostics,
 } from "parser/declaration_modifiers.ts";
 import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
-import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
+import { precedence, span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
 import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
+import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
 import { parseTypeRefWith } from "parser/type_refs.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
@@ -253,35 +254,23 @@ class Parser {
   }
 
   private parsePrimary(): CastExpression {
-    if (this.check("integer")) {
-      const token = this.advance();
-      return { kind: "IntegerLiteral", value: BigInt(token.text), text: token.text, span: token.span };
-    }
-    if (this.check("float")) {
-      const token = this.advance();
-      const value = parseFloatLiteral(token.text);
-      if (!Number.isFinite(value)) this.error(token, `Float literal '${token.text}' is out of range for 'f64'`);
-      return { kind: "FloatLiteral", value, text: token.text, span: token.span };
-    }
-    if (this.checkText("true") || this.checkText("false")) {
-      const token = this.advance();
-      return { kind: "BoolLiteral", value: token.text === "true", text: token.text as "true" | "false", span: token.span };
-    }
-    if (this.check("string")) {
-      const token = this.advance();
-      return { kind: "StringLiteral", text: token.text, span: token.span };
-    }
-    if (this.check("identifier")) return this.parseIdentifierExpression();
-    if (this.checkText("{")) return this.parseRecordLiteral();
-    if (this.checkText("[")) return this.parseArrayLiteral();
-    if (this.matchText("(")) {
-      const expr = this.parseExpression();
-      this.expectText(")");
-      return expr;
-    }
-    const token = this.peek();
-    this.error(token, "Expected expression");
-    throw new TypeCError(this.diagnostics);
+    return parsePrimaryWith(this.primaryExpressionParser());
+  }
+
+  private primaryExpressionParser(): PrimaryExpressionParser {
+    return {
+      diagnostics: () => this.diagnostics,
+      check: (kind) => this.check(kind),
+      checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
+      advance: () => this.advance(),
+      expectText: (text) => this.expectText(text),
+      peek: () => this.peek(),
+      error: (token, message) => this.error(token, message),
+      parseExpression: () => this.parseExpression(),
+      parseArrayLiteral: () => this.parseArrayLiteral(),
+      parseRecordLiteral: () => this.parseRecordLiteral(),
+    };
   }
 
   private parseArrayLiteral(): CastExpression {
@@ -302,18 +291,6 @@ class Parser {
     };
   }
 
-  private parseIdentifierExpression(): CastExpression {
-    const ident = this.advance();
-    if (!this.matchText("(")) return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
-
-    const args: CastExpression[] = [];
-    if (!this.checkText(")")) {
-      do args.push(this.parseExpression());
-      while (this.matchText(","));
-    }
-    const close = this.expectText(")");
-    return { kind: "CallExpr", callee: ident.text, args, span: span(ident.span.start, close.span.end) };
-  }
 
   private expectKind(kind: TokenKind, message: Str): Token {
     if (this.check(kind)) return this.advance();
