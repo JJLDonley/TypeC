@@ -1,6 +1,7 @@
 export * from "core/ast.ts";
 export * from "core/ast_printer.ts";
 export * from "core/cast.ts";
+export * from "core/c_strings.ts";
 export * from "core/diagnostics.ts";
 export * from "core/entrypoint.ts";
 export * from "core/lexer.ts";

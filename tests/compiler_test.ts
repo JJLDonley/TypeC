@@ -208,6 +208,12 @@ Deno.test("emits C string literals for u8 pointer calls", () => {
   assertIncludes(c, "return puts((u8*)\"hello\");");
 });
 
+Deno.test("emits local C string arrays", () => {
+  const source = `function main(): i32 { const text: u8[] = "hi"; return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const u8 text[3] = \"hi\";");
+});
+
 Deno.test("emits inferred array parameters as C pointers", () => {
   const source = `function first(values: i32[]): i32 { return values[0]; } function main(): i32 { const values: i32[] = [1, 2]; return first(values); }`;
   const c = emitC(check(resolve(parse(lex(source)))));

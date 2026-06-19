@@ -10,8 +10,9 @@ const span: SourceSpan = {
   end: { offset: 0, line: 1, column: 1 },
 };
 
-Deno.test("accepts array literal array initializers", () => {
+Deno.test("accepts array-compatible initializers", () => {
   assertLen(checkArrayInitializer(arrayLiteral(), "i32[2]", span).length, 0);
+  assertLen(checkArrayInitializer(stringLiteral("hi"), "u8[]", span).length, 0);
 });
 
 Deno.test("rejects non-literal array initializers", () => {
@@ -30,6 +31,10 @@ function arrayLiteral(): Expression {
 
 function identifier(name: Str): Expression {
   return { kind: "IdentifierExpr", name, span };
+}
+
+function stringLiteral(text: Str): Expression {
+  return { kind: "StringLiteral", text, span };
 }
 
 function assertText(actual: Str, expected: Str): void {
