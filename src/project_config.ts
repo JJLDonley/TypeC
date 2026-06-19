@@ -1,5 +1,6 @@
 import { compilerFlagError } from "./compiler_flags.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { directoryOf } from "./path.ts";
 import { readProjectDependencies } from "./project_dependencies.ts";
 
 type Str = string;
@@ -99,14 +100,3 @@ function normalizePath(path: Str): Str {
   return path.startsWith("/") ? path : `${Deno.cwd()}/${path}`;
 }
 
-function directoryOf(path: Str): Str {
-  const normalized = stripTrailingSlash(path);
-  const index = normalized.lastIndexOf("/");
-  if (index <= 0) return "/";
-  return normalized.slice(0, index);
-}
-
-function stripTrailingSlash(path: Str): Str {
-  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
-  return path;
-}

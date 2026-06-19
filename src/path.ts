@@ -9,3 +9,15 @@ export function buildOutputPaths(inputPath: Str, buildDir: Str): { cPath: Str; e
   const base = basenameNoExt(inputPath);
   return { cPath: `${buildDir}/${base}.c`, exePath: `${buildDir}/${base}` };
 }
+
+export function directoryOf(path: Str): Str {
+  const normalized = stripTrailingSlash(path);
+  const index = normalized.lastIndexOf("/");
+  if (index <= 0) return "/";
+  return normalized.slice(0, index);
+}
+
+export function stripTrailingSlash(path: Str): Str {
+  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
+  return path;
+}

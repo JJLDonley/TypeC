@@ -3,6 +3,7 @@ import { headerCompilerFlags } from "./c_header_flags.ts";
 import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { mapCHeaderType } from "./c_header_types.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { directoryOf, stripTrailingSlash } from "./path.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -82,11 +83,6 @@ function isIncludedHeaderFunction(fn: CFunction, includeDir: Str | null): b8 {
 function isPathWithinDir(path: Str, dir: Str): b8 {
   const normalizedDir = stripTrailingSlash(dir);
   return path === normalizedDir || path.startsWith(`${normalizedDir}/`);
-}
-
-function stripTrailingSlash(path: Str): Str {
-  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
-  return path;
 }
 
 function functionKey(fn: CFunction): Str {
@@ -236,12 +232,6 @@ function requireRecord(value: unknown, message: Str): JsonRecord {
 function readText(value: unknown, message: Str): Str {
   if (typeof value === "string") return value;
   throw new TypeCError([{ message }]);
-}
-
-function directoryOf(path: Str): Str {
-  const index = path.lastIndexOf("/");
-  if (index <= 0) return "/";
-  return path.slice(0, index);
 }
 
 function isRecord(value: unknown): value is JsonRecord {
