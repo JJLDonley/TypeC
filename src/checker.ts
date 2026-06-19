@@ -3,6 +3,7 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { checkArrayIndex as collectArrayIndexDiagnostics } from "./checker_array_indexes.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
 import { checkBinaryOperation } from "./checker_binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
@@ -32,7 +33,6 @@ import { typeName } from "./type_ref.ts";
 
 type Str = string;
 type usize = number;
-type IntLiteralValue = bigint;
 
 export type CheckedProgram = TypedProgram;
 
@@ -338,16 +338,8 @@ class Checker {
       return "<error>";
     }
     const index = this.typeOf(expr.index, locals);
-    if (!isIntegerType(index)) this.error(`Array index type '${index}' is not an integer`, expr.index.span);
-    this.checkArrayIndexBounds(expr.index, array.length);
+    this.diagnostics.push(...collectArrayIndexDiagnostics(expr.index, index, array.length));
     return array.element;
-  }
-
-  private checkArrayIndexBounds(index: Expression, length: IntLiteralValue | null): void {
-    if (length === null) return;
-    if (index.kind !== "IntegerLiteral") return;
-    if (index.value < length) return;
-    this.error(`Array index ${index.text} is out of bounds for length ${length}`, index.span);
   }
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
