@@ -708,6 +708,8 @@ Supported fields:
 
 Dependency targets may be relative project paths, absolute paths, or `std/` paths.
 
+Compiler flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode.
+
 ## Standard Library Policy
 
 The standard library is normal TypeC code. It should use the strongest completed language features available.

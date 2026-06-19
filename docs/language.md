@@ -56,6 +56,16 @@ import { abs_i32 } from "std/math.tc";
 }
 ```
 
+Compiler flags are appended to the native C compiler invocation. Flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode.
+
+```json
+{
+  "compiler": {
+    "flags": ["-O2", "-Wall"]
+  }
+}
+```
+
 Then source can import through the alias:
 
 ```ts
