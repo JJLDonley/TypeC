@@ -364,8 +364,12 @@ class Checker {
         if (!primitiveTypes.has(type.name) && !this.typeAliases.has(type.name)) this.error(`Unknown type '${type.name}'`, type.span);
         return;
       case "PointerTypeRef":
+        this.checkType(type.element);
+        this.checkPointerElementType(type);
+        return;
       case "ReferenceTypeRef":
         this.checkType(type.element);
+        this.checkReferenceElementType(type);
         return;
       case "FixedArrayTypeRef":
         this.checkType(type.element);
@@ -378,6 +382,14 @@ class Checker {
         this.checkRecordType(type);
         return;
     }
+  }
+
+  private checkPointerElementType(type: Extract<TypeRef, { kind: "PointerTypeRef" }>): void {
+    if (isArrayTypeRef(type.element)) this.error("Pointer type cannot target array type", type.span);
+  }
+
+  private checkReferenceElementType(type: Extract<TypeRef, { kind: "ReferenceTypeRef" }>): void {
+    if (isArrayTypeRef(type.element)) this.error("Reference type cannot target array type", type.span);
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
@@ -448,6 +460,10 @@ class Checker {
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
   }
+}
+
+function isArrayTypeRef(type: TypeRef): b8 {
+  return type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef";
 }
 
 function collectTypeAliasRefs(type: TypeRef): Set<Str> {

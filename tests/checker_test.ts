@@ -62,6 +62,11 @@ Deno.test("rejects inferred array parameters", () => {
   assertCheckError(`function first(values: i32[]): i32 { return values[0]; } function main(): i32 { return 0; }`, "Parameter 'values' of function 'first' cannot have inferred array type");
 });
 
+Deno.test("rejects pointer-like array targets", () => {
+  assertCheckError(`function main(): i32 { const p: i32[3]* = 0; return 0; }`, "Pointer type cannot target array type");
+  assertCheckError(`function main(): i32 { const r: i32[3]& = 0; return 0; }`, "Reference type cannot target array type");
+});
+
 Deno.test("checks bare returns from void functions", () => {
   check(resolve(parse(lex(`function done(): void { return; } function main(): i32 { return 0; }`))));
 });
