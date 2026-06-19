@@ -1,0 +1,259 @@
+import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
+import { TypeCError } from "./diagnostics.ts";
+import type { Program } from "./ast.ts";
+import type { CastBlockStmt, CastExpression, CastFunctionDecl, CastParam, CastProgram, CastStatement, CastTypeRef } from "./cast.ts";
+import { lowerCast } from "./lower.ts";
+import type { Token, TokenKind } from "./token.ts";
+
+type i32 = number;
+type Str = string;
+type b8 = boolean;
+
+export function parse(tokens: Token[]): Program {
+  return lowerCast(parseCast(tokens));
+}
+
+export function parseCast(tokens: Token[]): CastProgram {
+  return new Parser(tokens).parseProgram();
+}
+
+class Parser {
+  private current: i32 = 0;
+  private diagnostics: Diagnostic[] = [];
+
+  constructor(private tokens: Token[]) {}
+
+  parseProgram(): CastProgram {
+    const start = this.peek().span.start;
+    const functions: CastFunctionDecl[] = [];
+    while (!this.check("eof")) functions.push(this.parseFunction());
+    const end = this.peek().span.end;
+    if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
+    return { kind: "Program", functions, span: { start, end } };
+  }
+
+  private parseFunction(): CastFunctionDecl {
+    const functionToken = this.expectText("function");
+    const name = this.expectKind("identifier", "Expected function name");
+    this.expectText("(");
+    const params = this.parseParams();
+    this.expectText(")");
+    this.expectText(":");
+    const returnType = this.parseTypeRef();
+    const body = this.parseBlock();
+    return {
+      kind: "FunctionDecl",
+      name: name.text,
+      params,
+      returnType,
+      body,
+      span: span(functionToken.span.start, body.span.end),
+    };
+  }
+
+  private parseParams(): CastParam[] {
+    const params: CastParam[] = [];
+    if (this.checkText(")")) return params;
+
+    do {
+      const name = this.expectKind("identifier", "Expected parameter name");
+      this.expectText(":");
+      const type = this.parseTypeRef();
+      params.push({ name: name.text, type, span: span(name.span.start, type.span.end) });
+    } while (this.matchText(","));
+
+    return params;
+  }
+
+  private parseTypeRef(): CastTypeRef {
+    let type: CastTypeRef = this.parseNamedTypeRef();
+
+    while (this.isTypePostfixStart()) {
+      if (this.matchText("*")) {
+        type = { kind: "PointerTypeRef", element: type, span: span(type.span.start, this.previous().span.end) };
+        continue;
+      }
+      if (this.matchText("&")) {
+        type = { kind: "ReferenceTypeRef", element: type, span: span(type.span.start, this.previous().span.end) };
+        continue;
+      }
+      type = this.parseArrayTypeRef(type);
+    }
+
+    return type;
+  }
+
+  private parseNamedTypeRef(): CastTypeRef {
+    const token = this.expectKind("identifier", "Expected type name");
+    return { kind: "NamedTypeRef", name: token.text, span: token.span };
+  }
+
+  private parseArrayTypeRef(element: CastTypeRef): CastTypeRef {
+    this.expectText("[");
+    if (this.matchText("]")) {
+      return { kind: "InferredArrayTypeRef", element, span: span(element.span.start, this.previous().span.end) };
+    }
+
+    const size = this.expectKind("integer", "Expected array size");
+    const close = this.expectText("]");
+    return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(element.span.start, close.span.end) };
+  }
+
+  private isTypePostfixStart(): b8 {
+    return this.checkText("*") || this.checkText("&") || this.checkText("[");
+  }
+
+  private parseBlock(): CastBlockStmt {
+    const open = this.expectText("{");
+    const statements: CastStatement[] = [];
+    while (!this.checkText("}") && !this.check("eof")) statements.push(this.parseStatement());
+    const close = this.expectText("}");
+    return { kind: "BlockStmt", statements, span: span(open.span.start, close.span.end) };
+  }
+
+  private parseStatement(): CastStatement {
+    if (this.checkText("return")) return this.parseReturn();
+    if (this.checkText("let") || this.checkText("const")) return this.parseVarDecl();
+    const token = this.peek();
+    this.error(token, "Expected statement");
+    throw new TypeCError(this.diagnostics);
+  }
+
+  private parseReturn(): CastStatement {
+    const start = this.expectText("return");
+    const expression = this.parseExpression();
+    const semi = this.expectText(";");
+    return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
+  }
+
+  private parseVarDecl(): CastStatement {
+    const keyword = this.advance();
+    const name = this.expectKind("identifier", "Expected variable name");
+    this.expectText(":");
+    const type = this.parseTypeRef();
+    this.expectText("=");
+    const initializer = this.parseExpression();
+    const semi = this.expectText(";");
+    return {
+      kind: "VarDeclStmt",
+      mutable: keyword.text === "let",
+      name: name.text,
+      type,
+      initializer,
+      span: span(keyword.span.start, semi.span.end),
+    };
+  }
+
+  private parseExpression(minPrecedence: i32 = 0): CastExpression {
+    let expr = this.parsePostfixExpression();
+    while (this.check("operator") && precedence(this.peek().text) >= minPrecedence) {
+      const op = this.advance();
+      const rhs = this.parseExpression(precedence(op.text) + 1);
+      expr = { kind: "BinaryExpr", operator: op.text, left: expr, right: rhs, span: span(expr.span.start, rhs.span.end) };
+    }
+    return expr;
+  }
+
+  private parsePostfixExpression(): CastExpression {
+    let expr = this.parsePrimary();
+    while (this.checkText(".*") || this.checkText(".&")) {
+      const op = this.advance();
+      expr = { kind: "PostfixPointerExpr", operator: op.text as ".*" | ".&", operand: expr, span: span(expr.span.start, op.span.end) };
+    }
+    return expr;
+  }
+
+  private parsePrimary(): CastExpression {
+    if (this.check("integer")) {
+      const token = this.advance();
+      return { kind: "IntegerLiteral", value: BigInt(token.text), text: token.text, span: token.span };
+    }
+    if (this.check("float")) {
+      const token = this.advance();
+      return { kind: "FloatLiteral", value: Number(token.text), text: token.text, span: token.span };
+    }
+    if (this.check("identifier")) return this.parseIdentifierExpression();
+    if (this.matchText("(")) {
+      const expr = this.parseExpression();
+      this.expectText(")");
+      return expr;
+    }
+    const token = this.peek();
+    this.error(token, "Expected expression");
+    throw new TypeCError(this.diagnostics);
+  }
+
+  private parseIdentifierExpression(): CastExpression {
+    const ident = this.advance();
+    if (!this.matchText("(")) return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
+
+    const args: CastExpression[] = [];
+    if (!this.checkText(")")) {
+      do args.push(this.parseExpression());
+      while (this.matchText(","));
+    }
+    const close = this.expectText(")");
+    return { kind: "CallExpr", callee: ident.text, args, span: span(ident.span.start, close.span.end) };
+  }
+
+  private expectKind(kind: TokenKind, message: Str): Token {
+    if (this.check(kind)) return this.advance();
+    this.error(this.peek(), message);
+    throw new TypeCError(this.diagnostics);
+  }
+
+  private expectText(text: Str): Token {
+    if (this.checkText(text)) return this.advance();
+    this.error(this.peek(), `Expected '${text}'`);
+    throw new TypeCError(this.diagnostics);
+  }
+
+  private matchText(text: Str): b8 {
+    if (!this.checkText(text)) return false;
+    this.advance();
+    return true;
+  }
+
+  private check(kind: TokenKind): b8 {
+    return this.peek().kind === kind;
+  }
+
+  private checkText(text: Str): b8 {
+    return this.peek().text === text;
+  }
+
+  private advance(): Token {
+    if (!this.check("eof")) this.current++;
+    return this.previous();
+  }
+
+  private previous(): Token {
+    return this.tokens[this.current - 1]!;
+  }
+
+  private peek(): Token {
+    return this.tokens[this.current]!;
+  }
+
+  private error(token: Token, message: Str): void {
+    this.diagnostics.push({ message, span: token.span });
+  }
+}
+
+function precedence(op: Str): i32 {
+  switch (op) {
+    case "*":
+    case "/":
+    case "%":
+      return 20;
+    case "+":
+    case "-":
+      return 10;
+    default:
+      return -1;
+  }
+}
+
+function span(start: SourceSpan["start"], end: SourceSpan["end"]): SourceSpan {
+  return { start, end };
+}

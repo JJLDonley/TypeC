@@ -1,0 +1,188 @@
+import type {
+  BinaryExpr,
+  BlockStmt,
+  CallExpr,
+  Expression,
+  FixedArrayTypeRef,
+  FloatLiteral,
+  FunctionDecl,
+  IdentifierExpr,
+  InferredArrayTypeRef,
+  IntegerLiteral,
+  Param,
+  PointerTypeRef,
+  PostfixPointerExpr,
+  Program,
+  ReferenceTypeRef,
+  Statement,
+  TypeRef,
+  VarDeclStmt,
+} from "./ast.ts";
+import type {
+  CastBinaryExpr,
+  CastBlockStmt,
+  CastCallExpr,
+  CastExpression,
+  CastFixedArrayTypeRef,
+  CastFloatLiteral,
+  CastFunctionDecl,
+  CastIdentifierExpr,
+  CastInferredArrayTypeRef,
+  CastIntegerLiteral,
+  CastParam,
+  CastPointerTypeRef,
+  CastPostfixPointerExpr,
+  CastProgram,
+  CastReferenceTypeRef,
+  CastStatement,
+  CastTypeRef,
+  CastVarDeclStmt,
+} from "./cast.ts";
+
+export function lowerCast(program: CastProgram): Program {
+  return {
+    kind: "Program",
+    functions: program.functions.map(lowerFunctionDecl),
+    span: program.span,
+  };
+}
+
+function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
+  return {
+    kind: "FunctionDecl",
+    name: fn.name,
+    params: fn.params.map(lowerParam),
+    returnType: lowerTypeRef(fn.returnType),
+    body: lowerBlockStmt(fn.body),
+    span: fn.span,
+  };
+}
+
+function lowerParam(param: CastParam): Param {
+  return {
+    name: param.name,
+    type: lowerTypeRef(param.type),
+    span: param.span,
+  };
+}
+
+function lowerTypeRef(type: CastTypeRef): TypeRef {
+  switch (type.kind) {
+    case "NamedTypeRef":
+      return { kind: "NamedTypeRef", name: type.name, span: type.span };
+    case "PointerTypeRef":
+      return lowerPointerTypeRef(type);
+    case "ReferenceTypeRef":
+      return lowerReferenceTypeRef(type);
+    case "InferredArrayTypeRef":
+      return lowerInferredArrayTypeRef(type);
+    case "FixedArrayTypeRef":
+      return lowerFixedArrayTypeRef(type);
+  }
+}
+
+function lowerPointerTypeRef(type: CastPointerTypeRef): PointerTypeRef {
+  return { kind: "PointerTypeRef", element: lowerTypeRef(type.element), span: type.span };
+}
+
+function lowerReferenceTypeRef(type: CastReferenceTypeRef): ReferenceTypeRef {
+  return { kind: "ReferenceTypeRef", element: lowerTypeRef(type.element), span: type.span };
+}
+
+function lowerInferredArrayTypeRef(type: CastInferredArrayTypeRef): InferredArrayTypeRef {
+  return { kind: "InferredArrayTypeRef", element: lowerTypeRef(type.element), span: type.span };
+}
+
+function lowerFixedArrayTypeRef(type: CastFixedArrayTypeRef): FixedArrayTypeRef {
+  return {
+    kind: "FixedArrayTypeRef",
+    element: lowerTypeRef(type.element),
+    sizeText: type.sizeText,
+    span: type.span,
+  };
+}
+
+function lowerBlockStmt(block: CastBlockStmt): BlockStmt {
+  return {
+    kind: "BlockStmt",
+    statements: block.statements.map(lowerStatement),
+    span: block.span,
+  };
+}
+
+function lowerStatement(statement: CastStatement): Statement {
+  switch (statement.kind) {
+    case "ReturnStmt":
+      return { kind: "ReturnStmt", expression: lowerExpression(statement.expression), span: statement.span };
+    case "VarDeclStmt":
+      return lowerVarDeclStmt(statement);
+  }
+}
+
+function lowerVarDeclStmt(statement: CastVarDeclStmt): VarDeclStmt {
+  return {
+    kind: "VarDeclStmt",
+    mutable: statement.mutable,
+    name: statement.name,
+    type: lowerTypeRef(statement.type),
+    initializer: lowerExpression(statement.initializer),
+    span: statement.span,
+  };
+}
+
+function lowerExpression(expression: CastExpression): Expression {
+  switch (expression.kind) {
+    case "IntegerLiteral":
+      return lowerIntegerLiteral(expression);
+    case "FloatLiteral":
+      return lowerFloatLiteral(expression);
+    case "IdentifierExpr":
+      return lowerIdentifierExpr(expression);
+    case "BinaryExpr":
+      return lowerBinaryExpr(expression);
+    case "CallExpr":
+      return lowerCallExpr(expression);
+    case "PostfixPointerExpr":
+      return lowerPostfixPointerExpr(expression);
+  }
+}
+
+function lowerIntegerLiteral(expression: CastIntegerLiteral): IntegerLiteral {
+  return { kind: "IntegerLiteral", value: expression.value, text: expression.text, span: expression.span };
+}
+
+function lowerFloatLiteral(expression: CastFloatLiteral): FloatLiteral {
+  return { kind: "FloatLiteral", value: expression.value, text: expression.text, span: expression.span };
+}
+
+function lowerIdentifierExpr(expression: CastIdentifierExpr): IdentifierExpr {
+  return { kind: "IdentifierExpr", name: expression.name, span: expression.span };
+}
+
+function lowerBinaryExpr(expression: CastBinaryExpr): BinaryExpr {
+  return {
+    kind: "BinaryExpr",
+    operator: expression.operator,
+    left: lowerExpression(expression.left),
+    right: lowerExpression(expression.right),
+    span: expression.span,
+  };
+}
+
+function lowerCallExpr(expression: CastCallExpr): CallExpr {
+  return {
+    kind: "CallExpr",
+    callee: expression.callee,
+    args: expression.args.map(lowerExpression),
+    span: expression.span,
+  };
+}
+
+function lowerPostfixPointerExpr(expression: CastPostfixPointerExpr): PostfixPointerExpr {
+  return {
+    kind: "PostfixPointerExpr",
+    operator: expression.operator,
+    operand: lowerExpression(expression.operand),
+    span: expression.span,
+  };
+}

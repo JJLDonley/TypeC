@@ -1,0 +1,107 @@
+import type { BlockStmt, Expression, FunctionDecl, Param, Program, Statement, TypeRef } from "./ast.ts";
+import { typeName } from "./type_ref.ts";
+
+type Str = string;
+type usize = number;
+
+export function printAst(program: Program): Str {
+  const printer = new AstPrinter();
+  printer.program(program);
+  return printer.finish();
+}
+
+class AstPrinter {
+  private lines: Str[] = [];
+  private depth: usize = 0;
+
+  program(program: Program): void {
+    this.line("Program");
+    this.indented(() => {
+      for (const fn of program.functions) this.functionDecl(fn);
+    });
+  }
+
+  private functionDecl(fn: FunctionDecl): void {
+    this.line(`FunctionDecl ${fn.name} -> ${this.type(fn.returnType)}`);
+    this.indented(() => {
+      this.params(fn.params);
+      this.block(fn.body);
+    });
+  }
+
+  private params(params: Param[]): void {
+    this.line("Params");
+    this.indented(() => {
+      for (const param of params) this.line(`Param ${param.name}: ${this.type(param.type)}`);
+    });
+  }
+
+  private block(block: BlockStmt): void {
+    this.line("BlockStmt");
+    this.indented(() => {
+      for (const statement of block.statements) this.statement(statement);
+    });
+  }
+
+  private statement(statement: Statement): void {
+    switch (statement.kind) {
+      case "ReturnStmt":
+        this.line("ReturnStmt");
+        this.indented(() => this.expression(statement.expression));
+        return;
+      case "VarDeclStmt":
+        this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`);
+        this.indented(() => this.expression(statement.initializer));
+        return;
+    }
+  }
+
+  private expression(expression: Expression): void {
+    switch (expression.kind) {
+      case "IntegerLiteral":
+        this.line(`IntegerLiteral ${expression.text}`);
+        return;
+      case "FloatLiteral":
+        this.line(`FloatLiteral ${expression.text}`);
+        return;
+      case "IdentifierExpr":
+        this.line(`IdentifierExpr ${expression.name}`);
+        return;
+      case "BinaryExpr":
+        this.line(`BinaryExpr ${expression.operator}`);
+        this.indented(() => {
+          this.expression(expression.left);
+          this.expression(expression.right);
+        });
+        return;
+      case "CallExpr":
+        this.line(`CallExpr ${expression.callee}`);
+        this.indented(() => {
+          for (const arg of expression.args) this.expression(arg);
+        });
+        return;
+      case "PostfixPointerExpr":
+        this.line(`PostfixPointerExpr ${expression.operator}`);
+        this.indented(() => this.expression(expression.operand));
+        return;
+    }
+  }
+
+  private type(type: TypeRef): Str {
+    return typeName(type);
+  }
+
+  private indented(action: () => void): void {
+    this.depth++;
+    action();
+    this.depth--;
+  }
+
+  private line(text: Str): void {
+    this.lines.push(`${"  ".repeat(this.depth)}${text}`);
+  }
+
+  finish(): Str {
+    return this.lines.join("\n");
+  }
+}
