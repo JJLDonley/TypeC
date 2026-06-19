@@ -3,7 +3,6 @@ import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
-import { checkArrayIndex as collectArrayIndexDiagnostics } from "checker/array_indexes.ts";
 import {
   checkArrayLiteralElementType as collectArrayLiteralElementTypeDiagnostics,
   checkArrayLiteralLength as collectArrayLiteralLengthDiagnostics,
@@ -20,6 +19,7 @@ import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
 import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
+import { checkIndexExpression } from "checker/index_expressions.ts";
 import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
   checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
@@ -33,7 +33,7 @@ import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } fro
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
-import { isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
+import { isFloatType, isIntegerType } from "checker/types.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -270,14 +270,9 @@ class Checker {
 
   private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    const array = parseArrayType(operand);
-    if (!array) {
-      this.error(`Cannot index non-array type '${operand}'`, expr.span);
-      return "<error>";
-    }
-    const index = this.typeOf(expr.index, locals);
-    this.diagnostics.push(...collectArrayIndexDiagnostics(expr.index, index, array.length));
-    return array.element;
+    const result = checkIndexExpression(expr, operand, (index) => this.typeOf(index, locals));
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
