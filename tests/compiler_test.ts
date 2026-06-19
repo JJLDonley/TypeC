@@ -27,6 +27,12 @@ Deno.test("emits non-exported helpers with internal linkage", () => {
   assertIncludes(c, "i32 main(void)");
 });
 
+Deno.test("emits prototypes for forward calls", () => {
+  const source = `function main(): i32 { return helper(); } function helper(): i32 { return 42; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertOrdered(c, "static i32 helper(void);", "i32 main(void) {");
+});
+
 Deno.test("emits C for minimal main", () => {
   const source = `function main(): i32 {\n  return 0;\n}\n`;
   const c = emitC(check(resolve(parse(lex(source)))));

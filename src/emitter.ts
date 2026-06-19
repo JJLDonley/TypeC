@@ -12,12 +12,11 @@ export function emitC(program: CheckedProgram): Str {
     out.push(emitTypeAlias(typeAlias));
     out.push("");
   }
-  for (const fn of program.functions.filter((fn) => fn.external)) {
-    out.push(emitFunction(fn));
-    out.push("");
-  }
-  for (const fn of program.functions.filter((fn) => !fn.external)) {
-    out.push(emitFunction(fn));
+  for (const fn of program.functions.filter((fn) => fn.external)) out.push(emitFunctionPrototype(fn));
+  for (const fn of program.functions.filter((fn) => !fn.external)) out.push(emitFunctionPrototype(fn));
+  out.push("");
+  for (const fn of program.functions.filter((fn) => fn.body)) {
+    out.push(emitFunctionDefinition(fn));
     out.push("");
   }
   return out.join("\n");
@@ -36,14 +35,21 @@ function emitRecordTypeAlias(name: Str, type: RecordTypeRef): Str {
   return out.join("\n");
 }
 
-function emitFunction(fn: FunctionDecl): Str {
-  const params = emitParams(fn);
-  if (!fn.body) return `${emitCType(fn.returnType)} ${fn.name}(${params});`;
+function emitFunctionPrototype(fn: FunctionDecl): Str {
+  return `${emitFunctionSignature(fn)};`;
+}
+
+function emitFunctionDefinition(fn: FunctionDecl): Str {
+  if (!fn.body) throw new Error("Function definition requires a body");
   const out: Str[] = [];
-  out.push(`${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${fn.name}(${params}) {`);
+  out.push(`${emitFunctionSignature(fn)} {`);
   for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType))}`);
   out.push("}");
   return out.join("\n");
+}
+
+function emitFunctionSignature(fn: FunctionDecl): Str {
+  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${fn.name}(${emitParams(fn)})`;
 }
 
 function emitFunctionStorage(fn: FunctionDecl): Str {
