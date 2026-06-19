@@ -65,7 +65,7 @@ Deno.test("filters generated externs to requested header directory", () => {
       locatedFunctionDecl("system_add", "int32_t (int32_t)", [param("value", "int32_t")], "/usr/include/math.h"),
       functionDecl("unknown_add", "int32_t (int32_t)", [param("value", "int32_t")]),
     ],
-  }, "/project/include");
+  }, "/project/include/");
 
   assertIncludes(output, "extern function local_add(value: i32): i32;");
   assertExcludes(output, "system_add");

@@ -99,7 +99,13 @@ function isIncludedHeaderFunction(fn: CFunction, includeDir: Str | null): b8 {
 }
 
 function isPathWithinDir(path: Str, dir: Str): b8 {
-  return path === dir || path.startsWith(`${dir}/`);
+  const normalizedDir = stripTrailingSlash(dir);
+  return path === normalizedDir || path.startsWith(`${normalizedDir}/`);
+}
+
+function stripTrailingSlash(path: Str): Str {
+  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
+  return path;
 }
 
 function functionKey(fn: CFunction): Str {
