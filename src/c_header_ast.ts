@@ -1,11 +1,10 @@
-import { sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
+import { readHeaderParams } from "./c_header_params.ts";
 import { TypeCError } from "./diagnostics.ts";
 import { type JsonRecord, isJsonRecord } from "./json_record.ts";
 import { isFalseJsonFlag, isJsonArray, isJsonText, isNonEmptyJsonText, isTruthyJsonFlag, readJsonText } from "./json_values.ts";
 
 type Str = string;
 type b8 = boolean;
-type usize = number;
 
 export interface CHeaderParam {
   name: Str;
@@ -50,27 +49,10 @@ function readSupportedFunction(value: JsonRecord): CHeaderFunction | null {
 function readFunction(value: JsonRecord): CHeaderFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
   const functionType = readJsonText(type.qualType, `Function '${value.name}' has no type`);
-  const params = readParams(value.inner);
+  const params = readHeaderParams(value.inner);
   return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value), storageClass: readStorageClass(value), hasBody: hasFunctionBody(value) };
 }
 
-function readParams(value: unknown): CHeaderParam[] {
-  if (!isJsonArray(value)) return [];
-  const params: CHeaderParam[] = [];
-  const names = new Set<Str>();
-  for (const child of value) if (isParam(child)) params.push(readParam(child, params.length, names));
-  return params;
-}
-
-function readParam(value: JsonRecord, index: usize, names: Set<Str>): CHeaderParam {
-  const type = requireRecord(value.type, "Parameter has no type");
-  return { name: readParamName(value, index, names), type: readJsonText(type.qualType, "Parameter has no type") };
-}
-
-function readParamName(value: JsonRecord, index: usize, names: Set<Str>): Str {
-  const candidate = isNonEmptyJsonText(value.name) ? sanitizeHeaderParamName(value.name) : `arg${index}`;
-  return uniqueHeaderParamName(candidate, names);
-}
 
 function readReturnType(type: Str): Str {
   const index = type.indexOf("(");
@@ -100,10 +82,6 @@ function hasFunctionBody(value: JsonRecord): b8 {
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
   return !isTruthyJsonFlag(value.isImplicit) && !isFalseJsonFlag(value.isUsed);
-}
-
-function isParam(value: unknown): value is JsonRecord {
-  return isJsonRecord(value) && value.kind === "ParmVarDecl";
 }
 
 function isCompoundStmt(value: unknown): b8 {
