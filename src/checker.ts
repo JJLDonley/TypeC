@@ -5,6 +5,12 @@ import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { checkArrayIndex as collectArrayIndexDiagnostics } from "./checker_array_indexes.ts";
 import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "./checker_array_initializers.ts";
+import {
+  checkArrayLiteralElementType as collectArrayLiteralElementTypeDiagnostics,
+  checkArrayLiteralLength as collectArrayLiteralLengthDiagnostics,
+  checkArrayLiteralTarget as collectArrayLiteralTargetDiagnostics,
+  checkInferredArrayLiteral as collectInferredArrayLiteralDiagnostics,
+} from "./checker_array_literals.ts";
 import { checkBinaryOperation } from "./checker_binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "./checker_c_abi_diagnostics.ts";
 import {
@@ -314,18 +320,16 @@ class Checker {
   }
 
   private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const array = parseArrayType(expected);
-    if (!array) {
-      this.error(`Array literal is not assignable to non-array type '${expected}'`, expr.span);
-      return "<error>";
-    }
-    if (array.length === null && expr.elements.length === 0) this.error("Cannot infer empty array type", expr.span);
+    const target = collectArrayLiteralTargetDiagnostics(expected, expr);
+    this.diagnostics.push(...target.diagnostics);
+    if (!target.array) return "<error>";
+    this.diagnostics.push(...collectInferredArrayLiteralDiagnostics(expr, target.array));
     for (const element of expr.elements) {
-      const actual = this.typeOfExpected(element, locals, array.element);
-      if (!isAssignable(actual, array.element)) this.error(`Array element type '${actual}' is not assignable to '${array.element}'`, element.span);
+      const actual = this.typeOfExpected(element, locals, target.array.element);
+      this.diagnostics.push(...collectArrayLiteralElementTypeDiagnostics(actual, target.array.element, element));
     }
-    if (array.length !== null && array.length !== BigInt(expr.elements.length)) this.error(`Array length ${expr.elements.length} is not assignable to '${expected}'`, expr.span);
-    return `${array.element}[${expr.elements.length}]`;
+    this.diagnostics.push(...collectArrayLiteralLengthDiagnostics(expr.elements.length, target.array, expected, expr));
+    return `${target.array.element}[${expr.elements.length}]`;
   }
 
   private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
