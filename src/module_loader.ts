@@ -89,6 +89,7 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
 }
 
 function validateImportPath(path: Str, span: Diagnostic["span"], config: ProjectConfig): void {
+  if (hasBackslash(path)) throw new TypeCError([{ message: `Import path '${path}' must use / separators`, span }]);
   const dependency = isDependencyImportPath(path, config);
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
@@ -99,6 +100,10 @@ function validateImportPath(path: Str, span: Diagnostic["span"], config: Project
 
 function isSupportedImportFile(path: Str): b8 {
   return path.endsWith(".tc") || path.endsWith(".h");
+}
+
+function hasBackslash(path: Str): b8 {
+  return path.includes("\\");
 }
 
 function isRelativeImportPath(path: Str): b8 {
