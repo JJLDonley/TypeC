@@ -20,6 +20,7 @@ import {
   typeAliasModifierDiagnostics,
 } from "parser/declaration_modifiers.ts";
 import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
+import { parseImportNamesWith } from "parser/imports.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
 type i32 = number;
@@ -70,7 +71,13 @@ class Parser {
   private parseImport(): CastImportDecl {
     const start = this.expectText("import");
     this.expectText("{");
-    const names = this.parseImportNames();
+    const names = parseImportNamesWith({
+      checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
+      expectKind: (kind, message) => this.expectKind(kind, message),
+      peek: () => this.peek(),
+      error: (token, message) => this.error(token, message),
+    });
     this.expectText("}");
     this.expectText("from");
     const path = this.expectKind("string", "Expected import path");
@@ -78,24 +85,6 @@ class Parser {
     return { kind: "ImportDecl", names, path: path.text, span: span(start.span.start, semi.span.end) };
   }
 
-  private parseImportNames(): Str[] {
-    const names: Str[] = [];
-    const seen = new Set<Str>();
-    if (this.checkText("}")) {
-      this.error(this.peek(), "Import must name at least one symbol");
-      return names;
-    }
-    do this.parseImportName(names, seen);
-    while (this.matchText(","));
-    return names;
-  }
-
-  private parseImportName(names: Str[], seen: Set<Str>): void {
-    const name = this.expectKind("identifier", "Expected imported name");
-    if (seen.has(name.text)) this.error(name, `Duplicate imported name '${name.text}'`);
-    seen.add(name.text);
-    names.push(name.text);
-  }
 
   private parseTypeAlias(exported: b8): CastTypeAliasDecl {
     const start = this.expectText("type");
