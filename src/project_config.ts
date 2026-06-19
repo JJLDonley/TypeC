@@ -95,7 +95,15 @@ function isAbsolutePath(path: Str): b8 {
 }
 
 function hasParentTraversal(path: Str): b8 {
-  return path.split("/").some((part) => part === "..");
+  return decodedPath(path).split("/").some((part) => part === "..");
+}
+
+function decodedPath(path: Str): Str {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return "..";
+  }
 }
 
 function hasUrlScheme(path: Str): b8 {

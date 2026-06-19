@@ -89,7 +89,15 @@ function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
 }
 
 function hasParentTraversal(path: Str): b8 {
-  return path.split("/").some((part) => part === "..");
+  return decodedPath(path).split("/").some((part) => part === "..");
+}
+
+function decodedPath(path: Str): Str {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return "..";
+  }
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {
