@@ -70,6 +70,11 @@ Deno.test("rejects pointer-like array targets", () => {
   assertCheckError(`function main(): i32 { const r: i32[3]& = 0; return 0; }`, "Reference type cannot target array type");
 });
 
+Deno.test("rejects nested array types", () => {
+  assertCheckError(`function main(): i32 { const xs: i32[2][1] = [[1, 2]]; return 0; }`, "Array type cannot target array type");
+  assertCheckError(`function main(): i32 { const xs: i32[][] = [[1]]; return 0; }`, "Array type cannot target array type");
+});
+
 Deno.test("rejects void references", () => {
   assertCheckError(`function main(): i32 { const r: void& = 0; return 0; }`, "Reference type cannot target void type");
 });

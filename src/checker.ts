@@ -414,10 +414,12 @@ class Checker {
         return;
       case "FixedArrayTypeRef":
         this.checkType(type.element);
+        this.checkArrayElementType(type);
         this.checkArraySize(type.sizeText, type.span);
         return;
       case "InferredArrayTypeRef":
         this.checkType(type.element);
+        this.checkArrayElementType(type);
         return;
       case "RecordTypeRef":
         this.checkRecordType(type);
@@ -432,6 +434,10 @@ class Checker {
   private checkReferenceElementType(type: Extract<TypeRef, { kind: "ReferenceTypeRef" }>): void {
     if (isArrayTypeRef(type.element)) this.error("Reference type cannot target array type", type.span);
     if (isVoidNamedType(type.element)) this.error("Reference type cannot target void type", type.span);
+  }
+
+  private checkArrayElementType(type: Extract<TypeRef, { kind: "FixedArrayTypeRef" | "InferredArrayTypeRef" }>): void {
+    if (isArrayTypeRef(type.element)) this.error("Array type cannot target array type", type.span);
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
