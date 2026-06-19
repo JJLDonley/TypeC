@@ -93,8 +93,12 @@ function validateImportPath(path: Str, span: Diagnostic["span"], config: Project
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
   }
-  if (!dependency && !path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
+  if (!dependency && !isSupportedImportFile(path)) throw new TypeCError([{ message: `Import path '${path}' must target a .tc or .h file`, span }]);
   if (isStdImportPath(path) && hasParentTraversal(path)) throw new TypeCError([{ message: `Std import path '${path}' must stay within std`, span }]);
+}
+
+function isSupportedImportFile(path: Str): b8 {
+  return path.endsWith(".tc") || path.endsWith(".h");
 }
 
 function isRelativeImportPath(path: Str): b8 {
