@@ -1,3 +1,4 @@
+import { readClangHeaderAst } from "./c_header_clang.ts";
 import { headerCompilerFlags } from "./c_header_flags.ts";
 import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { mapCHeaderType } from "./c_header_types.ts";
@@ -33,28 +34,8 @@ export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null
 }
 
 export async function generateExternsFromHeader(headerPath: Str, compilerFlags: Str[] = [], projectDir: Str = Deno.cwd()): Promise<Str> {
-  const output = await runClangAstDump(headerPath, headerCompilerFlags(compilerFlags, projectDir));
-  if (!output.ok) throw new TypeCError([{ message: `clang failed while reading '${headerPath}': ${output.stderr}` }]);
-  return generateExternsFromClangAst(parseClangJson(output.stdout), directoryOf(headerPath));
-}
-
-async function runClangAstDump(headerPath: Str, compilerFlags: Str[]): Promise<{ ok: b8; stdout: Str; stderr: Str }> {
-  const command = new Deno.Command("clang", {
-    args: ["-x", "c", "-Xclang", "-ast-dump=json", "-fsyntax-only", ...compilerFlags, headerPath],
-    stdout: "piped",
-    stderr: "piped",
-  });
-  const output = await command.output();
-  const decoder = new TextDecoder();
-  return { ok: output.success, stdout: decoder.decode(output.stdout), stderr: decoder.decode(output.stderr).trim() };
-}
-
-function parseClangJson(text: Str): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new TypeCError([{ message: "clang did not emit valid JSON" }]);
-  }
+  const ast = await readClangHeaderAst(headerPath, headerCompilerFlags(compilerFlags, projectDir));
+  return generateExternsFromClangAst(ast, directoryOf(headerPath));
 }
 
 function collectFunctions(value: unknown): CFunction[] {
