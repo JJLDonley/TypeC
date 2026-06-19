@@ -13,7 +13,7 @@ import {
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
-import { isVoidValueType } from "./checker_type_refs.ts";
+import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
 import {
@@ -63,7 +63,7 @@ class Checker {
       this.checkType(fn.returnType);
       for (const param of fn.params) {
         this.checkType(param.type);
-        this.checkValueType(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span);
+        this.diagnostics.push(...collectValueTypeDiagnostics(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span));
         this.diagnostics.push(...collectFunctionParamTypeDiagnostics(param, fn.name));
       }
     }
@@ -120,7 +120,7 @@ class Checker {
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
     this.checkType(stmt.type);
-    this.checkValueType(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span);
+    this.diagnostics.push(...collectValueTypeDiagnostics(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span));
     const expected = typeName(stmt.type);
     this.diagnostics.push(...collectArrayInitializerDiagnostics(stmt.initializer, expected, stmt.span));
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
@@ -417,13 +417,9 @@ class Checker {
       if (fields.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
       fields.add(field.name);
       this.checkType(field.type);
-      this.checkValueType(field.type, `Field '${field.name}' cannot have type 'void'`, field.span);
+      this.diagnostics.push(...collectValueTypeDiagnostics(field.type, `Field '${field.name}' cannot have type 'void'`, field.span));
       if (field.type.kind === "InferredArrayTypeRef") this.error(`Field '${field.name}' cannot have inferred array type`, field.span);
     }
-  }
-
-  private checkValueType(type: TypeRef, message: Str, span: SourceSpan): void {
-    if (isVoidValueType(type)) this.error(message, span);
   }
 
   private error(message: Str, span: Diagnostic["span"]): void {
