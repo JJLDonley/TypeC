@@ -1,14 +1,15 @@
 import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
+import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { isCAbiType } from "./checker_c_abi.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { blockReturns } from "./checker_returns.ts";
-import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
+import { isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
+import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
 import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
@@ -57,17 +58,7 @@ class Checker {
   }
 
   private checkTypeAliasOrder(): void {
-    const indexes = new Map<Str, usize>();
-    for (let index: usize = 0; index < this.program.typeAliases.length; index++) indexes.set(this.program.typeAliases[index]!.name, index);
-    for (let index: usize = 0; index < this.program.typeAliases.length; index++) this.checkTypeAliasDeps(this.program.typeAliases[index]!, index, indexes);
-  }
-
-  private checkTypeAliasDeps(typeAlias: TypeAliasDecl, index: usize, indexes: Map<Str, usize>): void {
-    for (const name of collectTypeAliasRefs(typeAlias.type)) {
-      const refIndex = indexes.get(name);
-      if (refIndex === undefined || refIndex < index) continue;
-      this.error(`Type alias '${typeAlias.name}' cannot depend on '${name}' before it is declared`, typeAlias.span);
-    }
+    this.diagnostics.push(...collectTypeAliasOrderDiagnostics(this.program.typeAliases));
   }
 
   private checkFunction(fn: FunctionDecl): void {
