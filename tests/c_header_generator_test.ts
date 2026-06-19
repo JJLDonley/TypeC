@@ -9,6 +9,8 @@ Deno.test("generates externs from clang AST", () => {
     inner: [
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
+      functionDecl("conflict", "int32_t (int32_t)", [param("value", "int32_t")]),
+      functionDecl("conflict", "int64_t (int64_t)", [param("value", "int64_t")]),
       functionDecl("set_name", "void (const char *)", [param("name", "const char *")]),
       functionDecl("copy_ptr", "void *(void *, const void *)", [param("dst", "void *"), param("src", "const void *")]),
       functionDecl("use_keyword", "void (int32_t, int32_t)", [param("function", "int32_t"), param("function", "int32_t")]),
@@ -21,6 +23,7 @@ Deno.test("generates externs from clang AST", () => {
 
   assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
+  assertExcludes(output, "extern function conflict");
   assertIncludes(output, "extern function set_name(name: u8*): void;");
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;");

@@ -50,7 +50,8 @@ const typeMap = new Map<Str, Str>([
 ]);
 
 export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null = null): Str {
-  const functions = uniqueFunctions(collectFunctions(ast)).filter((fn) => isIncludedHeaderFunction(fn, includeDir)).flatMap(formatSupportedFunction);
+  const candidates = collectFunctions(ast).filter((fn) => isIncludedHeaderFunction(fn, includeDir));
+  const functions = uniqueFunctions(unambiguousFunctions(candidates)).flatMap(formatSupportedFunction);
   return `${functions.join("\n")}${functions.length > 0 ? "\n" : ""}`;
 }
 
@@ -116,6 +117,21 @@ function uniqueFunctions(functions: CFunction[]): CFunction[] {
     unique.push(fn);
   }
   return unique;
+}
+
+function unambiguousFunctions(functions: CFunction[]): CFunction[] {
+  const signatures = functionSignatures(functions);
+  return functions.filter((fn) => signatures.get(fn.name)?.size === 1);
+}
+
+function functionSignatures(functions: CFunction[]): Map<Str, Set<Str>> {
+  const signatures = new Map<Str, Set<Str>>();
+  for (const fn of functions) {
+    const types = signatures.get(fn.name) ?? new Set<Str>();
+    types.add(fn.functionType);
+    signatures.set(fn.name, types);
+  }
+  return signatures;
 }
 
 function isIncludedHeaderFunction(fn: CFunction, includeDir: Str | null): b8 {
