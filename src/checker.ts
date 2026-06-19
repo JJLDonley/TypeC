@@ -477,7 +477,7 @@ class Checker {
   }
 
   private checkValueType(type: TypeRef, message: Str, span: SourceSpan): void {
-    if (type.kind === "NamedTypeRef" && type.name === "void") this.error(message, span);
+    if (isVoidValueType(type)) this.error(message, span);
   }
 
   private checkParamType(param: FunctionDecl["params"][usize], functionName: Str): void {
@@ -496,6 +496,12 @@ class Checker {
 
 function isArrayTypeRef(type: TypeRef): b8 {
   return type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef";
+}
+
+function isVoidValueType(type: TypeRef): b8 {
+  if (type.kind === "NamedTypeRef") return type.name === "void";
+  if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef") return isVoidValueType(type.element);
+  return false;
 }
 
 function collectTypeAliasRefs(type: TypeRef): Set<Str> {

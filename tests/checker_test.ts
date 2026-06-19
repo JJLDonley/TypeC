@@ -50,8 +50,11 @@ Deno.test("rejects recursive record aliases", () => {
 
 Deno.test("rejects void value types", () => {
   assertCheckError(`function bad(x: void): i32 { return 0; } function main(): i32 { return 0; }`, "Parameter 'x' cannot have type 'void'");
+  assertCheckError(`function bad(x: void[1]): i32 { return 0; } function main(): i32 { return 0; }`, "Parameter 'x' cannot have type 'void'");
   assertCheckError(`function main(): i32 { const x: void = 0; return 0; }`, "Variable 'x' cannot have type 'void'");
+  assertCheckError(`function main(): i32 { const x: void[1] = []; return 0; }`, "Variable 'x' cannot have type 'void'");
   assertCheckError(`type Bad = { x: void; }; function main(): i32 { return 0; }`, "Field 'x' cannot have type 'void'");
+  assertCheckError(`type Bad = { x: void[1]; }; function main(): i32 { return 0; }`, "Field 'x' cannot have type 'void'");
 });
 
 Deno.test("rejects inferred array record fields", () => {
