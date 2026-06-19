@@ -1,4 +1,5 @@
 import type { TypeName } from "core/tast.ts";
+import { isArrayPointerAssignable, isPointerAssignable } from "checker/pointer_compatibility.ts";
 
 type Str = string;
 type f64 = number;
@@ -45,10 +46,8 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   const expectedArray = parseArrayType(expected);
   const actualArray = parseArrayType(actual);
   if (expectedArray && actualArray) return expectedArray.element === actualArray.element && (expectedArray.length === null || expectedArray.length === actualArray.length);
-  if (actualArray && expected.endsWith("*")) return actualArray.element === pointeeType(expected);
-  if (!isReferenceType(actual)) return false;
-  if (!isPointerLikeType(expected)) return false;
-  return pointeeType(actual) === pointeeType(expected);
+  if (isArrayPointerAssignable(actual, expected)) return true;
+  return isPointerAssignable(actual, expected);
 }
 
 export function parseArrayType(type: TypeName): { element: TypeName; length: IntLiteralValue | null } | null {
@@ -61,10 +60,3 @@ export function isPointerLikeType(type: TypeName): b8 {
   return type.endsWith("*") || type.endsWith("&");
 }
 
-function isReferenceType(type: TypeName): b8 {
-  return type.endsWith("&");
-}
-
-function pointeeType(type: TypeName): TypeName {
-  return type.slice(0, -1);
-}

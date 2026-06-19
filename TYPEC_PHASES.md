@@ -785,7 +785,7 @@ function main(): i32 {
 - `T[]` in local variable position is an inferred-size static array.
 - `T[]` in function parameter position is an unsized array parameter and lowers to `T*`.
 - `T[N]` in function parameter position lowers as a C array parameter, which is ABI-equivalent to `T*`; the declared `N` is documentation/checking metadata, not passed at runtime.
-- Passing an array expression to a function expecting `T*` or `T[]` decays to a pointer to its first element.
+- Passing an array expression to a function expecting `T*`, `T[]`, or `void*` decays to a pointer to its first element.
 - `u8[]` is the TypeC spelling for C byte/string buffers. In C header interop, `char*`, `const char*`, and `unsigned char*` map to `u8*`; array forms map to `u8[]` when preserved by the header AST and to `u8*` after ABI decay.
 - TypeC string literals are NUL-terminated `u8[]` values and can decay to `u8*` for C calls.
 - Raw `T[]`/`T*` carries no length; APIs needing length must pass an explicit `usize`.
@@ -796,6 +796,7 @@ function main(): i32 {
 - Header-generated extern declarations must come from compiler AST output.
 - Supported C scalar types map to fixed-width TypeC names.
 - Pointer types map recursively to TypeC `T*`.
+- `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type information.
 - C array parameters map to TypeC `T[]` or `T*` and lower to C pointers.
 - Unsupported signatures are skipped safely.
 - Struct typedef import, macros/constants, function pointers, variadics, and callbacks require later explicit phases unless already specified elsewhere in this document.

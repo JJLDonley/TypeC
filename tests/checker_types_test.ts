@@ -39,6 +39,9 @@ Deno.test("checks assignability", () => {
   assertSame(isAssignable("i32[3]", "i32[2]"), false);
   assertSame(isAssignable("Vec&", "Vec*"), true);
   assertSame(isAssignable("Vec*", "Vec&"), false);
+  assertSame(isAssignable("u8*", "void*"), true);
+  assertSame(isAssignable("u8[4]", "void*"), true);
+  assertSame(isAssignable("void*", "u8*"), false);
 });
 
 function assertSame(actual: b8, expected: b8): void {

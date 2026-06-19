@@ -36,6 +36,10 @@ Deno.test("checks exported fixed-array record fields as C ABI types", () => {
   check(resolve(parse(lex(`type Block = { values: i32[3]; }; export function use_block(b: Block): i32 { return b.values[0]; } function main(): i32 { return 0; }`))));
 });
 
+Deno.test("checks void pointer C interop arguments", () => {
+  check(resolve(parse(lex(`extern function consume(data: void*): void; function main(): i32 { const bytes: u8[] = [1, 2, 3]; consume(bytes); return 0; }`))));
+});
+
 Deno.test("rejects non-record type aliases", () => {
   assertCheckError(`type Count = i32; function main(): i32 { return 0; }`, "Type alias 'Count' must name a record type");
 });
