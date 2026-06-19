@@ -1,6 +1,6 @@
 import { compilerFlagError } from "./compiler_flags.ts";
 import { TypeCError } from "./diagnostics.ts";
-import { hasParentTraversal } from "./path_security.ts";
+import { readProjectDependencies } from "./project_dependencies.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -28,7 +28,7 @@ export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
   rejectUnknownKeys("project.json", value, ["dependencies", "compiler"]);
   return {
     projectDir,
-    dependencies: readDependencies(value.dependencies),
+    dependencies: readProjectDependencies(value.dependencies),
     compilerFlags: readCompilerFlags(value.compiler),
   };
 }
@@ -62,85 +62,6 @@ function parseJson(text: Str): unknown {
   } catch {
     throw configError("project.json is not valid JSON");
   }
-}
-
-function readDependencies(value: unknown): Map<Str, Str> {
-  const dependencies = new Map<Str, Str>();
-  if (value === undefined) return dependencies;
-  if (!isRecord(value)) throw configError("project.json dependencies must be an object");
-  for (const [name, path] of Object.entries(value)) {
-    validateDependencyAlias(name);
-    if (typeof path !== "string") throw configError(`Dependency '${name}' must map to a string path`);
-    validateDependencyTarget(name, path);
-    dependencies.set(name, path);
-  }
-  return dependencies;
-}
-
-function validateDependencyAlias(name: Str): void {
-  if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
-  if (!hasValidAliasSegments(name) || hasBackslash(name) || isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
-  if (isAliasFilePath(name)) throw configError(`Dependency alias '${name}' must not include a file extension`);
-}
-
-function hasValidAliasSegments(path: Str): b8 {
-  return path.length > 0 && path.split("/").every(isValidAliasSegment);
-}
-
-function isValidAliasSegment(segment: Str): b8 {
-  const decoded = decodedAliasSegment(segment);
-  return segment.length > 0 && decoded !== null && decoded.length > 0 && decoded !== "." && !decoded.includes("/") && !decoded.includes("\\");
-}
-
-function decodedAliasSegment(segment: Str): Str | null {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return null;
-  }
-}
-
-function isAliasFilePath(path: Str): b8 {
-  return path.endsWith(".tc") || path.endsWith(".h");
-}
-
-function hasBackslash(path: Str): b8 {
-  return path.includes("\\");
-}
-
-function hasEncodedSeparator(path: Str): b8 {
-  return /%(2f|5c)/i.test(path);
-}
-
-function validateDependencyTarget(name: Str, path: Str): void {
-  if (!isDependencyTargetFile(path)) throw configError(`Dependency '${name}' target must be a .tc or .h file`);
-  if (hasUrlScheme(path) || hasBackslash(path) || hasEncodedSeparator(path)) throw configError(`Dependency '${name}' target must be a local dependency path`);
-  if (isStdImportPath(path) && hasParentTraversal(path)) throw configError(`Dependency '${name}' std target must stay within std`);
-  if (isProjectRelativeTarget(path) && hasParentTraversal(path)) throw configError(`Dependency '${name}' target must stay within the project`);
-}
-
-function isDependencyTargetFile(path: Str): b8 {
-  return path.endsWith(".tc") || path.endsWith(".h");
-}
-
-function isProjectRelativeTarget(path: Str): b8 {
-  return !isAbsolutePath(path) && !isStdImportPath(path);
-}
-
-function isAbsolutePath(path: Str): b8 {
-  return path.startsWith("/");
-}
-
-function hasUrlScheme(path: Str): b8 {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(path);
-}
-
-function isRelativeImportPath(path: Str): b8 {
-  return path.startsWith("./") || path.startsWith("../");
-}
-
-function isStdImportPath(path: Str): b8 {
-  return path.startsWith("std/");
 }
 
 function readCompilerFlags(value: unknown): Str[] {
