@@ -1,7 +1,7 @@
 import { headerCompilerFlags } from "./c_header_flags.ts";
+import { isTypeCIdentifier, sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { mapCHeaderType } from "./c_header_types.ts";
 import { TypeCError } from "./diagnostics.ts";
-import { keywords, primitiveTypes } from "./token.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -167,27 +167,8 @@ function readParam(value: JsonRecord, index: usize, names: Set<Str>): CParam {
 }
 
 function readParamName(value: JsonRecord, index: usize, names: Set<Str>): Str {
-  const candidate = typeof value.name === "string" && value.name.length > 0 ? sanitizeParamName(value.name) : `arg${index}`;
-  return uniqueParamName(candidate, names);
-}
-
-function sanitizeParamName(name: Str): Str {
-  const replaced = name.replace(/[^A-Za-z0-9_]/g, "_");
-  const prefixed = /^[A-Za-z_]/.test(replaced) ? replaced : `arg_${replaced}`;
-  if (!isTypeCIdentifier(prefixed)) return `arg_${prefixed}`;
-  return prefixed;
-}
-
-function uniqueParamName(name: Str, names: Set<Str>): Str {
-  if (!names.has(name)) {
-    names.add(name);
-    return name;
-  }
-  let index: usize = 1;
-  while (names.has(`${name}_${index}`)) index += 1;
-  const unique = `${name}_${index}`;
-  names.add(unique);
-  return unique;
+  const candidate = typeof value.name === "string" && value.name.length > 0 ? sanitizeHeaderParamName(value.name) : `arg${index}`;
+  return uniqueHeaderParamName(candidate, names);
 }
 
 function readSourceFile(value: JsonRecord): Str | null {
@@ -235,10 +216,6 @@ function hasFunctionPointerType(fn: CFunction): b8 {
 
 function isStaticFunction(fn: CFunction): b8 {
   return fn.storageClass === "static";
-}
-
-function isTypeCIdentifier(name: Str): b8 {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !keywords.has(name) && !primitiveTypes.has(name);
 }
 
 function formatFunction(fn: CFunction): Str {
