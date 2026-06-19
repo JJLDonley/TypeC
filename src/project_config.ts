@@ -64,12 +64,29 @@ function readDependencies(value: unknown): Map<Str, Str> {
   if (value === undefined) return dependencies;
   if (!isRecord(value)) throw configError("project.json dependencies must be an object");
   for (const [name, path] of Object.entries(value)) {
-    if (!name.endsWith(".tc")) throw configError(`Dependency alias '${name}' must target a .tc import path`);
+    validateDependencyAlias(name);
     if (typeof path !== "string") throw configError(`Dependency '${name}' must map to a string path`);
-    if (!path.endsWith(".tc")) throw configError(`Dependency '${name}' target must be a .tc file`);
+    validateDependencyTarget(name, path);
     dependencies.set(name, path);
   }
   return dependencies;
+}
+
+function validateDependencyAlias(name: Str): void {
+  if (!name.endsWith(".tc")) throw configError(`Dependency alias '${name}' must target a .tc import path`);
+  if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
+}
+
+function validateDependencyTarget(name: Str, path: Str): void {
+  if (!path.endsWith(".tc")) throw configError(`Dependency '${name}' target must be a .tc file`);
+}
+
+function isRelativeImportPath(path: Str): b8 {
+  return path.startsWith("./") || path.startsWith("../");
+}
+
+function isStdImportPath(path: Str): b8 {
+  return path.startsWith("std/");
 }
 
 function readCompilerFlags(value: unknown): Str[] {
