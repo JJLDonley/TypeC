@@ -18,6 +18,7 @@ import {
   checkIfCondition as collectIfConditionDiagnostics,
   checkWhileCondition as collectWhileConditionDiagnostics,
 } from "checker/conditions.ts";
+import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
@@ -38,9 +39,8 @@ import {
 } from "checker/record_literals.ts";
 import { blockReturns } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
-import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
-import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "checker/type_alias_order.ts";
+import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
 import { checkTypeRef as collectTypeRefDiagnostics } from "checker/type_validation.ts";
 import { typeName } from "core/type_ref.ts";
 
@@ -69,24 +69,10 @@ class Checker {
   }
 
   private collectFunctions(): void {
-    for (const typeAlias of this.program.typeAliases) this.typeAliases.set(typeAlias.name, typeAlias.type);
-    for (const typeAlias of this.program.typeAliases) {
-      if (typeAlias.type.kind !== "RecordTypeRef") this.error(`Type alias '${typeAlias.name}' must name a record type`, typeAlias.span);
-      this.checkType(typeAlias.type);
-    }
-    this.checkTypeAliasOrder();
-    for (const fn of this.program.functions) {
-      this.functions.set(fn.name, fn);
-      this.checkType(fn.returnType);
-      for (const param of fn.params) {
-        this.checkType(param.type);
-        this.diagnostics.push(...collectValueTypeDiagnostics(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span));
-      }
-    }
-  }
-
-  private checkTypeAliasOrder(): void {
-    this.diagnostics.push(...collectTypeAliasOrderDiagnostics(this.program.typeAliases));
+    const declarations = collectDeclarationDiagnostics(this.program);
+    this.functions = declarations.functions;
+    this.typeAliases = declarations.typeAliases;
+    this.diagnostics.push(...declarations.diagnostics);
   }
 
   private checkFunction(fn: FunctionDecl): void {
@@ -139,7 +125,7 @@ class Checker {
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
-    this.checkType(stmt.type);
+    this.diagnostics.push(...collectTypeRefDiagnostics(stmt.type, this.typeAliases));
     this.diagnostics.push(...collectValueTypeDiagnostics(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span));
     const expected = typeName(stmt.type);
     this.diagnostics.push(...collectArrayInitializerDiagnostics(stmt.initializer, expected, stmt.span));
@@ -342,10 +328,6 @@ class Checker {
     const result = checkPostfixPointerOperation(expr, operand);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
-  }
-
-  private checkType(type: TypeRef): void {
-    this.diagnostics.push(...collectTypeRefDiagnostics(type, this.typeAliases));
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
