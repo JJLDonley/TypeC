@@ -18,6 +18,10 @@ Deno.test("rejects non-C ABI extern return types", () => {
   assertCheckError(`extern function values(): i32[3]; function main(): i32 { return 0; }`, "Extern function 'values' return type 'i32[3]' is not C ABI compatible");
 });
 
+Deno.test("rejects non-C ABI exported parameter types", () => {
+  assertCheckError(`export function bad(x: i32&): void { return 0; } function main(): i32 { return 0; }`, "Exported function 'bad' parameter 'x' type 'i32&' is not C ABI compatible");
+});
+
 Deno.test("records typed expression information", () => {
   const program = check(resolve(parse(lex(`function main(): i32 { return 0; }`))));
   const types = [...program.expressionTypes.values()].map((entry) => entry.type);

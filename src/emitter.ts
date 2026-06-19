@@ -40,10 +40,15 @@ function emitFunction(fn: FunctionDecl): Str {
   const params = emitParams(fn);
   if (!fn.body) return `${emitCType(fn.returnType)} ${fn.name}(${params});`;
   const out: Str[] = [];
-  out.push(`${emitCType(fn.returnType)} ${fn.name}(${params}) {`);
+  out.push(`${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${fn.name}(${params}) {`);
   for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType))}`);
   out.push("}");
   return out.join("\n");
+}
+
+function emitFunctionStorage(fn: FunctionDecl): Str {
+  if (fn.exported || fn.name === "main") return "";
+  return "static ";
 }
 
 function emitParams(fn: FunctionDecl): Str {
