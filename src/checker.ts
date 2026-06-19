@@ -3,11 +3,11 @@ import { TypeCError } from "./diagnostics.ts";
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
+import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
 type Str = string;
-type f64 = number;
 type b8 = boolean;
 type usize = number;
 type IntLiteralValue = bigint;
@@ -17,25 +17,7 @@ interface LocalInfo {
   mutable: b8;
 }
 
-interface IntegerRange {
-  min: IntLiteralValue;
-  max: IntLiteralValue;
-}
-
 export type CheckedProgram = TypedProgram;
-
-const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64"]);
-const integerRanges = new Map<Str, IntegerRange>([
-  ["i8", { min: -128n, max: 127n }],
-  ["i16", { min: -32768n, max: 32767n }],
-  ["i32", { min: -2147483648n, max: 2147483647n }],
-  ["i64", { min: -9223372036854775808n, max: 9223372036854775807n }],
-  ["u8", { min: 0n, max: 255n }],
-  ["u16", { min: 0n, max: 65535n }],
-  ["u32", { min: 0n, max: 4294967295n }],
-  ["u64", { min: 0n, max: 18446744073709551615n }],
-]);
-const maxF32: f64 = 3.4028234663852886e38;
 
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
@@ -240,7 +222,7 @@ class Checker {
   }
 
   private checkIntegerLiteralRange(expr: Extract<Expression, { kind: "IntegerLiteral" }>, type: TypeName): void {
-    const range = integerRanges.get(type);
+    const range = integerRange(type);
     if (!range) return;
     if (expr.value >= range.min && expr.value <= range.max) return;
     this.error(`Integer literal '${expr.text}' is out of range for '${type}'`, expr.span);
@@ -265,7 +247,7 @@ class Checker {
       this.error(`Cannot apply '${expr.operator}' to '${hinted.left}' and '${hinted.right}'`, expr.span);
       return "<error>";
     }
-    if (!numericTypes.has(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
+    if (!isNumericType(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
     if (expr.operator === "%" && !isIntegerType(hinted.left)) this.error("Operator '%' requires integer operands", expr.span);
     if ((expr.operator === "/" || expr.operator === "%") && isIntegerType(hinted.left) && isIntegerZeroLiteral(expr.right)) this.error(`Operator '${expr.operator}' cannot divide by zero`, expr.span);
     if (isComparisonOperator(expr.operator)) return "bool";
@@ -562,45 +544,10 @@ function isComparisonOperator(operator: Str): b8 {
   return operator === "<" || operator === "<=" || operator === ">" || operator === ">=" || operator === "==" || operator === "!=";
 }
 
-function isAssignable(actual: TypeName, expected: TypeName): b8 {
-  if (actual === expected) return true;
-  const expectedArray = parseArrayType(expected);
-  const actualArray = parseArrayType(actual);
-  if (expectedArray && actualArray) return expectedArray.element === actualArray.element && (expectedArray.length === null || expectedArray.length === actualArray.length);
-  if (!isReferenceType(actual)) return false;
-  if (!isPointerLikeType(expected)) return false;
-  return pointeeType(actual) === pointeeType(expected);
-}
-
-function parseArrayType(type: TypeName): { element: TypeName; length: IntLiteralValue | null } | null {
-  const match = type.match(/^(.+)\[(\d*)\]$/);
-  if (!match) return null;
-  return { element: match[1], length: match[2] ? BigInt(match[2]) : null };
-}
-
-function isIntegerType(type: TypeName): b8 {
-  return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" || type === "u16" || type === "u32" || type === "u64" || type === "usize";
-}
-
 function isIntegerZeroLiteral(expr: Expression): b8 {
   return expr.kind === "IntegerLiteral" && expr.value === 0n;
 }
 
-function isFloatType(type: TypeName): b8 {
-  return type === "f32" || type === "f64";
-}
-
-function isPointerLikeType(type: TypeName): b8 {
-  return type.endsWith("*") || type.endsWith("&");
-}
-
-function isReferenceType(type: TypeName): b8 {
-  return type.endsWith("&");
-}
-
-function pointeeType(type: TypeName): TypeName {
-  return type.slice(0, -1);
-}
 
 function isAddressable(expr: Expression): b8 {
   switch (expr.kind) {
