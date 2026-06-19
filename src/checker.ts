@@ -69,20 +69,27 @@ class Checker {
   }
 
   private checkReturn(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName, span: SourceSpan): void {
-    const actual = this.typeOf(expr, locals);
+    const actual = this.typeOfExpected(expr, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, TypeName>): void {
     this.checkType(stmt.type);
-    const actual = this.typeOf(stmt.initializer, locals);
     const expected = typeName(stmt.type);
+    const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
     locals.set(stmt.name, expected);
   }
 
   private typeOf(expr: Expression, locals: Map<Str, TypeName>): TypeName {
     const type = this.computeType(expr, locals);
+    this.expressionTypes.set(spanKey(expr.span), { type });
+    return type;
+  }
+
+  private typeOfExpected(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+    if (expr.kind !== "RecordLiteralExpr") return this.typeOf(expr, locals);
+    const type = this.recordLiteralType(expr, locals, expected);
     this.expressionTypes.set(spanKey(expr.span), { type });
     return type;
   }
@@ -101,6 +108,11 @@ class Checker {
         return this.callType(expr, locals);
       case "PostfixPointerExpr":
         return this.postfixPointerType(expr, locals);
+      case "FieldAccessExpr":
+        return this.fieldAccessType(expr, locals);
+      case "RecordLiteralExpr":
+        this.error("Record literals require an expected record type", expr.span);
+        return "<error>";
     }
   }
 
@@ -140,9 +152,59 @@ class Checker {
   }
 
   private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, TypeName>, index: i32): void {
-    const actual = this.typeOf(arg, locals);
     const expected = typeName(fn.params[index]!.type);
+    const actual = this.typeOfExpected(arg, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
+  }
+
+  private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, TypeName>): TypeName {
+    const operand = this.typeOf(expr.operand, locals);
+    const record = this.recordAlias(operand);
+    if (!record) {
+      this.error(`Cannot access field '${expr.field}' on non-record type '${operand}'`, expr.span);
+      return "<error>";
+    }
+    const field = record.fields.find((candidate) => candidate.name === expr.field);
+    if (!field) {
+      this.error(`Unknown field '${expr.field}' on type '${operand}'`, expr.span);
+      return "<error>";
+    }
+    return typeName(field.type);
+  }
+
+  private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+    const record = this.recordAlias(expected);
+    if (!record) {
+      this.error(`Record literal is not assignable to non-record type '${expected}'`, expr.span);
+      return "<error>";
+    }
+    this.checkRecordLiteralFields(expr, locals, expected, record);
+    return expected;
+  }
+
+  private checkRecordLiteralFields(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName, record: RecordTypeRef): void {
+    const seen = new Set<Str>();
+    for (const field of expr.fields) {
+      if (seen.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
+      seen.add(field.name);
+      const expectedField = record.fields.find((candidate) => candidate.name === field.name);
+      if (!expectedField) {
+        this.error(`Unknown field '${field.name}' on type '${expected}'`, field.span);
+        continue;
+      }
+      const actual = this.typeOfExpected(field.expression, locals, typeName(expectedField.type));
+      const expectedType = typeName(expectedField.type);
+      if (!isAssignable(actual, expectedType)) this.error(`Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`, field.span);
+    }
+    for (const field of record.fields) {
+      if (!seen.has(field.name)) this.error(`Missing field '${field.name}' on type '${expected}'`, expr.span);
+    }
+  }
+
+  private recordAlias(name: TypeName): RecordTypeRef | null {
+    const type = this.typeAliases.get(name);
+    if (type?.kind === "RecordTypeRef") return type;
+    return null;
   }
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, TypeName>): TypeName {

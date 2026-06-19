@@ -69,7 +69,11 @@ class Resolver {
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "PostfixPointerExpr":
+      case "FieldAccessExpr":
         this.resolveExpression(expression.operand, scope);
+        return;
+      case "RecordLiteralExpr":
+        for (const field of expression.fields) this.resolveExpression(field.expression, scope);
         return;
     }
   }

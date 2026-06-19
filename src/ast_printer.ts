@@ -89,6 +89,19 @@ class AstPrinter {
         this.line(`PostfixPointerExpr ${expression.operator}`);
         this.indented(() => this.expression(expression.operand));
         return;
+      case "FieldAccessExpr":
+        this.line(`FieldAccessExpr ${expression.field}`);
+        this.indented(() => this.expression(expression.operand));
+        return;
+      case "RecordLiteralExpr":
+        this.line("RecordLiteralExpr");
+        this.indented(() => {
+          for (const field of expression.fields) {
+            this.line(`Field ${field.name}`);
+            this.indented(() => this.expression(field.expression));
+          }
+        });
+        return;
     }
   }
 

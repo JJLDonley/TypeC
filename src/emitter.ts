@@ -36,7 +36,7 @@ function emitFunction(fn: FunctionDecl): Str {
   const params = emitParams(fn);
   const out: Str[] = [];
   out.push(`${emitCType(fn.returnType)} ${fn.name}(${params}) {`);
-  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt)}`);
+  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType))}`);
   out.push("}");
   return out.join("\n");
 }
@@ -46,12 +46,12 @@ function emitParams(fn: FunctionDecl): Str {
   return fn.params.map((param) => `${emitCType(param.type)} ${param.name}`).join(", ");
 }
 
-function emitStatement(stmt: Statement): Str {
+function emitStatement(stmt: Statement, returnType: Str): Str {
   switch (stmt.kind) {
     case "ReturnStmt":
-      return `return ${emitExpression(stmt.expression)};`;
+      return `return ${emitExpressionExpected(stmt.expression, returnType)};`;
     case "VarDeclStmt":
-      return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpression(stmt.initializer)};`;
+      return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpressionExpected(stmt.initializer, emitCType(stmt.type))};`;
   }
 }
 
@@ -69,7 +69,21 @@ function emitExpression(expr: Expression): Str {
       return `${expr.callee}(${expr.args.map(emitExpression).join(", ")})`;
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr);
+    case "FieldAccessExpr":
+      return `${emitExpression(expr.operand)}.${expr.field}`;
+    case "RecordLiteralExpr":
+      throw new Error("Record literals require an expected C type");
   }
+}
+
+function emitExpressionExpected(expr: Expression, expectedType: Str): Str {
+  if (expr.kind !== "RecordLiteralExpr") return emitExpression(expr);
+  return emitRecordLiteralExpression(expr, expectedType);
+}
+
+function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str): Str {
+  const fields = expr.fields.map((field) => `.${field.name} = ${emitExpression(field.expression)}`).join(", ");
+  return `(${expectedType}){ ${fields} }`;
 }
 
 function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): Str {

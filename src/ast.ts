@@ -108,7 +108,15 @@ export interface VarDeclStmt {
   span: SourceSpan;
 }
 
-export type Expression = IntegerLiteral | FloatLiteral | IdentifierExpr | BinaryExpr | CallExpr | PostfixPointerExpr;
+export type Expression =
+  | IntegerLiteral
+  | FloatLiteral
+  | IdentifierExpr
+  | BinaryExpr
+  | CallExpr
+  | PostfixPointerExpr
+  | FieldAccessExpr
+  | RecordLiteralExpr;
 
 export interface IntegerLiteral {
   kind: "IntegerLiteral";
@@ -149,5 +157,24 @@ export interface PostfixPointerExpr {
   kind: "PostfixPointerExpr";
   operator: ".*" | ".&";
   operand: Expression;
+  span: SourceSpan;
+}
+
+export interface FieldAccessExpr {
+  kind: "FieldAccessExpr";
+  operand: Expression;
+  field: Str;
+  span: SourceSpan;
+}
+
+export interface RecordLiteralExpr {
+  kind: "RecordLiteralExpr";
+  fields: RecordLiteralField[];
+  span: SourceSpan;
+}
+
+export interface RecordLiteralField {
+  name: Str;
+  expression: Expression;
   span: SourceSpan;
 }

@@ -3,6 +3,7 @@ import type {
   BlockStmt,
   CallExpr,
   Expression,
+  FieldAccessExpr,
   FixedArrayTypeRef,
   FloatLiteral,
   FunctionDecl,
@@ -12,6 +13,7 @@ import type {
   Param,
   PointerTypeRef,
   RecordField,
+  RecordLiteralExpr,
   RecordTypeRef,
   PostfixPointerExpr,
   Program,
@@ -26,6 +28,7 @@ import type {
   CastBlockStmt,
   CastCallExpr,
   CastExpression,
+  CastFieldAccessExpr,
   CastFixedArrayTypeRef,
   CastFloatLiteral,
   CastFunctionDecl,
@@ -35,6 +38,7 @@ import type {
   CastParam,
   CastPointerTypeRef,
   CastRecordField,
+  CastRecordLiteralExpr,
   CastRecordTypeRef,
   CastPostfixPointerExpr,
   CastProgram,
@@ -170,6 +174,10 @@ function lowerExpression(expression: CastExpression): Expression {
       return lowerCallExpr(expression);
     case "PostfixPointerExpr":
       return lowerPostfixPointerExpr(expression);
+    case "FieldAccessExpr":
+      return lowerFieldAccessExpr(expression);
+    case "RecordLiteralExpr":
+      return lowerRecordLiteralExpr(expression);
   }
 }
 
@@ -209,6 +217,27 @@ function lowerPostfixPointerExpr(expression: CastPostfixPointerExpr): PostfixPoi
     kind: "PostfixPointerExpr",
     operator: expression.operator,
     operand: lowerExpression(expression.operand),
+    span: expression.span,
+  };
+}
+
+function lowerFieldAccessExpr(expression: CastFieldAccessExpr): FieldAccessExpr {
+  return {
+    kind: "FieldAccessExpr",
+    operand: lowerExpression(expression.operand),
+    field: expression.field,
+    span: expression.span,
+  };
+}
+
+function lowerRecordLiteralExpr(expression: CastRecordLiteralExpr): RecordLiteralExpr {
+  return {
+    kind: "RecordLiteralExpr",
+    fields: expression.fields.map((field) => ({
+      name: field.name,
+      expression: lowerExpression(field.expression),
+      span: field.span,
+    })),
     span: expression.span,
   };
 }

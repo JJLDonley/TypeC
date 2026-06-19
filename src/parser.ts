@@ -195,11 +195,21 @@ class Parser {
 
   private parsePostfixExpression(): CastExpression {
     let expr = this.parsePrimary();
-    while (this.checkText(".*") || this.checkText(".&")) {
+    while (this.checkText(".*") || this.checkText(".&") || this.checkText(".")) {
+      if (this.checkText(".")) {
+        const field = this.parseFieldAccessName();
+        expr = { kind: "FieldAccessExpr", operand: expr, field: field.text, span: span(expr.span.start, field.span.end) };
+        continue;
+      }
       const op = this.advance();
       expr = { kind: "PostfixPointerExpr", operator: op.text as ".*" | ".&", operand: expr, span: span(expr.span.start, op.span.end) };
     }
     return expr;
+  }
+
+  private parseFieldAccessName(): Token {
+    this.expectText(".");
+    return this.expectKind("identifier", "Expected field name");
   }
 
   private parsePrimary(): CastExpression {
@@ -212,6 +222,7 @@ class Parser {
       return { kind: "FloatLiteral", value: Number(token.text), text: token.text, span: token.span };
     }
     if (this.check("identifier")) return this.parseIdentifierExpression();
+    if (this.checkText("{")) return this.parseRecordLiteral();
     if (this.matchText("(")) {
       const expr = this.parseExpression();
       this.expectText(")");
@@ -220,6 +231,26 @@ class Parser {
     const token = this.peek();
     this.error(token, "Expected expression");
     throw new TypeCError(this.diagnostics);
+  }
+
+  private parseRecordLiteral(): CastExpression {
+    const open = this.expectText("{");
+    const fields = [];
+    if (!this.checkText("}")) {
+      do {
+        if (this.checkText("}")) break;
+        fields.push(this.parseRecordLiteralField());
+      } while (this.matchText(","));
+    }
+    const close = this.expectText("}");
+    return { kind: "RecordLiteralExpr", fields, span: span(open.span.start, close.span.end) };
+  }
+
+  private parseRecordLiteralField(): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][number] {
+    const name = this.expectKind("identifier", "Expected field name");
+    this.expectText(":");
+    const expression = this.parseExpression();
+    return { name: name.text, expression, span: span(name.span.start, expression.span.end) };
   }
 
   private parseIdentifierExpression(): CastExpression {
