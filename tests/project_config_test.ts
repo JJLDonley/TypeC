@@ -22,6 +22,8 @@ Deno.test("loads nearest project config", async () => {
 
 Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":[1]}}`, "project.json compiler.flags must be a string array");
+  assertConfigError(`{"dependencies":{"basic/math":"std/math.tc"}}`, "Dependency alias 'basic/math' must target a .tc import path");
+  assertConfigError(`{"dependencies":{"basic/math.tc":"std/math"}}`, "Dependency 'basic/math.tc' target must be a .tc file");
 });
 
 function assertConfigError(text: Str, message: Str): void {

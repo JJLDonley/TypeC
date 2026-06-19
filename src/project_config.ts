@@ -64,7 +64,9 @@ function readDependencies(value: unknown): Map<Str, Str> {
   if (value === undefined) return dependencies;
   if (!isRecord(value)) throw configError("project.json dependencies must be an object");
   for (const [name, path] of Object.entries(value)) {
+    if (!name.endsWith(".tc")) throw configError(`Dependency alias '${name}' must target a .tc import path`);
     if (typeof path !== "string") throw configError(`Dependency '${name}' must map to a string path`);
+    if (!path.endsWith(".tc")) throw configError(`Dependency '${name}' target must be a .tc file`);
     dependencies.set(name, path);
   }
   return dependencies;
