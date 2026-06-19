@@ -438,9 +438,13 @@ Output C:
 
 ```c
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-int32_t main(void) {
-  const int32_t x = 40 + 2;
+typedef int32_t i32;
+
+i32 main(void) {
+  const i32 x = 40 + 2;
   return x;
 }
 ```
@@ -449,7 +453,7 @@ int32_t main(void) {
 
 - Emit simple readable C.
 - Include required C headers.
-- Use fixed-width integer types from `<stdint.h>`.
+- Use TypeC fixed-width typedef names (`i32`, `usize`, `b8`, etc.) backed by standard C headers.
 - Generate deterministic output.
 - Keep emitter dependent on TAST, not raw AST.
 
@@ -544,8 +548,8 @@ function add(a: Vec2, b: Vec2): Vec2 {
 
 ```c
 typedef struct {
-  float x;
-  float y;
+  f32 x;
+  f32 y;
 } Vec2;
 ```
 
@@ -834,8 +838,12 @@ Generated C:
 
 ```c
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-int32_t main(void) {
+typedef int32_t i32;
+
+i32 main(void) {
   return 0;
 }
 ```
