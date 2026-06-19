@@ -1,0 +1,25 @@
+type Vec2 = {
+  x: f64;
+  y: f64;
+};
+
+function makeVec2(x: f64, y: f64): Vec2 {
+  return {
+    x: x,
+    y: y,
+  };
+}
+
+function add(a: Vec2, b: Vec2): Vec2 {
+  return {
+    x: a.x + b.x,
+    y: a.y + b.y,
+  };
+}
+
+function main(): i32 {
+  const a: Vec2 = makeVec2(1.5, 2.5);
+  const b: Vec2 = makeVec2(3.5, 4.5);
+  const c: Vec2 = add(a, b);
+  return 0;
+}

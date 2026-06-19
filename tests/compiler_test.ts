@@ -44,6 +44,13 @@ Deno.test("emits C for record literals and field access", () => {
   assertIncludes(c, "const Vec2 v = (Vec2){ .x = 1.5, .y = 2.5 };");
 });
 
+Deno.test("emits C for functions returning records", () => {
+  const source = `type Vec2 = { x: f64; y: f64; }; function add(a: Vec2, b: Vec2): Vec2 { return { x: a.x + b.x, y: a.y + b.y }; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "Vec2 add(Vec2 a, Vec2 b)");
+  assertIncludes(c, "return (Vec2){ .x = a.x + b.x, .y = a.y + b.y };");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

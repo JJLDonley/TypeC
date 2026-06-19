@@ -32,6 +32,18 @@ Deno.test("rejects missing record fields", () => {
   assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): i32 { const v: Vec2 = { x: 1.5 }; return 0; }`, "Missing field 'y' on type 'Vec2'");
 });
 
+Deno.test("rejects unknown record fields", () => {
+  assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): i32 { const v: Vec2 = { x: 1.5, y: 2.5, z: 3.5 }; return 0; }`, "Unknown field 'z' on type 'Vec2'");
+});
+
+Deno.test("rejects duplicate record literal fields", () => {
+  assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): i32 { const v: Vec2 = { x: 1.5, x: 2.5, y: 3.5 }; return 0; }`, "Duplicate field 'x'");
+});
+
+Deno.test("rejects unknown field access", () => {
+  assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): f64 { const v: Vec2 = { x: 1.5, y: 2.5 }; return v.z; }`, "Unknown field 'z' on type 'Vec2'");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });
