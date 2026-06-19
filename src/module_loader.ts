@@ -6,6 +6,7 @@ import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
 
 type Str = string;
+type b8 = boolean;
 
 interface LoadState {
   loaded: Map<Str, Program>;
@@ -50,6 +51,7 @@ async function collectImports(path: Str, program: Program, state: LoadState): Pr
 function collectImportRequests(path: Str, program: Program): ImportRequest[] {
   const requests = new Map<Str, ImportRequest>();
   for (const importDecl of program.imports) {
+    validateImportPath(importDecl.path, importDecl.span);
     const importedPath = resolveImportPath(path, importDecl.path);
     const request = requests.get(importedPath) ?? createImportRequest(importedPath, importDecl.span);
     for (const name of importDecl.names) request.names.add(name);
@@ -60,6 +62,15 @@ function collectImportRequests(path: Str, program: Program): ImportRequest[] {
 
 function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest {
   return { path, names: new Set<Str>(), span };
+}
+
+function validateImportPath(path: Str, span: Diagnostic["span"]): void {
+  if (!isRelativeImportPath(path)) throw new TypeCError([{ message: `Import path '${path}' must be relative`, span }]);
+  if (!path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
+}
+
+function isRelativeImportPath(path: Str): b8 {
+  return path.startsWith("./") || path.startsWith("../");
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {

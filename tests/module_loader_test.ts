@@ -52,6 +52,18 @@ Deno.test("rejects missing exports", async () => {
   await assertLoadError(`${dir}/main.tc`, "Module does not export 'hidden'");
 });
 
+Deno.test("rejects non-relative import paths", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { add } from "math.tc"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/main.tc`, "Import path 'math.tc' must be relative");
+});
+
+Deno.test("rejects non-TypeC import paths", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { add } from "./math"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/main.tc`, "Import path './math' must target a .tc file");
+});
+
 Deno.test("rejects import cycles", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/a.tc`, `import { b } from "./b.tc"; export function a(): i32 { return b(); }`);
