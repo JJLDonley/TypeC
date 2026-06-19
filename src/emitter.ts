@@ -4,6 +4,7 @@ import { emitCPrelude } from "./c_prelude.ts";
 import { emitCDeclarator, emitCType } from "./c_type.ts";
 
 type Str = string;
+type usize = number;
 
 export function emitC(program: CheckedProgram): Str {
   const out: Str[] = [];
@@ -156,7 +157,7 @@ function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLi
   return `(${expectedType}){ ${fields} }`;
 }
 
-function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][number], record: RecordTypeRef | null, typeAliases: Map<Str, TypeAliasDecl>): Str {
+function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize], record: RecordTypeRef | null, typeAliases: Map<Str, TypeAliasDecl>): Str {
   const expected = record?.fields.find((candidate) => candidate.name === field.name);
   const value = expected ? emitExpressionExpected(field.expression, emitCTypeName(expected.type), typeAliases) : emitExpression(field.expression, typeAliases);
   return `.${field.name} = ${value}`;

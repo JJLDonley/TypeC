@@ -19,6 +19,7 @@ import type { Token, TokenKind } from "./token.ts";
 type i32 = number;
 type Str = string;
 type b8 = boolean;
+type usize = number;
 
 export function parse(tokens: Token[]): Program {
   return lowerCast(parseCast(tokens));
@@ -358,7 +359,7 @@ class Parser {
     return { kind: "RecordLiteralExpr", fields, span: span(open.span.start, close.span.end) };
   }
 
-  private parseRecordLiteralField(): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][number] {
+  private parseRecordLiteralField(): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
     const name = this.expectKind("identifier", "Expected field name");
     this.expectText(":");
     const expression = this.parseExpression();
