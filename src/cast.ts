@@ -1,7 +1,7 @@
 import type { SourceSpan } from "./diagnostics.ts";
 
 type Str = string;
-type i64 = bigint;
+type IntLiteralValue = bigint;
 type f64 = number;
 type b8 = boolean;
 
@@ -156,7 +156,7 @@ export type CastExpression =
 
 export interface CastIntegerLiteral {
   kind: "IntegerLiteral";
-  value: i64;
+  value: IntLiteralValue;
   text: Str;
   span: SourceSpan;
 }
