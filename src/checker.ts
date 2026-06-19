@@ -11,11 +11,15 @@ import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
   checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
 } from "./checker_function_signatures.ts";
+import {
+  checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
+  checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
+} from "./checker_literal_ranges.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
-import { integerRange, isAssignable, isFloatType, isIntegerType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
+import { isAssignable, isFloatType, isIntegerType, isPointerLikeType, parseArrayType } from "./checker_types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
 import {
   checkArrayElementType as collectArrayElementTypeDiagnostics,
@@ -164,12 +168,12 @@ class Checker {
 
   private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
     if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
-      this.checkIntegerLiteralRange(expr, expected);
+      this.diagnostics.push(...collectIntegerLiteralRangeDiagnostics(expr, expected));
       this.expressionTypes.set(spanKey(expr.span), { type: expected });
       return expected;
     }
     if (expr.kind === "FloatLiteral" && isFloatType(expected)) {
-      this.checkFloatLiteralRange(expr, expected);
+      this.diagnostics.push(...collectFloatLiteralRangeDiagnostics(expr, expected));
       this.expressionTypes.set(spanKey(expr.span), { type: expected });
       return expected;
     }
@@ -189,7 +193,7 @@ class Checker {
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     switch (expr.kind) {
       case "IntegerLiteral":
-        this.checkIntegerLiteralRange(expr, "i32");
+        this.diagnostics.push(...collectIntegerLiteralRangeDiagnostics(expr, "i32"));
         return "i32";
       case "FloatLiteral":
         return "f64";
@@ -214,19 +218,6 @@ class Checker {
       case "IndexExpr":
         return this.indexType(expr, locals);
     }
-  }
-
-  private checkIntegerLiteralRange(expr: Extract<Expression, { kind: "IntegerLiteral" }>, type: TypeName): void {
-    const range = integerRange(type);
-    if (!range) return;
-    if (expr.value >= range.min && expr.value <= range.max) return;
-    this.error(`Integer literal '${expr.text}' is out of range for '${type}'`, expr.span);
-  }
-
-  private checkFloatLiteralRange(expr: Extract<Expression, { kind: "FloatLiteral" }>, type: TypeName): void {
-    if (type !== "f32") return;
-    if (Math.abs(expr.value) <= maxF32) return;
-    this.error(`Float literal '${expr.text}' is out of range for 'f32'`, expr.span);
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
