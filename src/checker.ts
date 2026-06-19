@@ -325,6 +325,7 @@ class Checker {
       this.error(`Array literal is not assignable to non-array type '${expected}'`, expr.span);
       return "<error>";
     }
+    if (array.length === null && expr.elements.length === 0) this.error("Cannot infer empty array type", expr.span);
     for (const element of expr.elements) {
       const actual = this.typeOfExpected(element, locals, array.element);
       if (!isAssignable(actual, array.element)) this.error(`Array element type '${actual}' is not assignable to '${array.element}'`, element.span);

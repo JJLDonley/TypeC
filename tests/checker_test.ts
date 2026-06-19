@@ -125,6 +125,10 @@ Deno.test("checks inferred array literals and indexing", () => {
   check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`))));
 });
 
+Deno.test("rejects empty inferred arrays", () => {
+  assertCheckError(`function main(): i32 { const xs: i32[] = []; return 0; }`, "Cannot infer empty array type");
+});
+
 Deno.test("checks usize array indexes", () => {
   check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; const i: usize = 0; return xs[i]; }`))));
 });
