@@ -676,14 +676,37 @@ Support multi-file TypeC projects and simple standard-library imports.
 
 ## Example
 
+```json
+{
+  "dependencies": {
+    "basic/math.tc": "std/math.tc"
+  },
+  "compiler": {
+    "flags": ["-O2"]
+  }
+}
+```
+
 ```ts
 import { add } from "./math.tc";
 import { abs_i32 } from "std/math.tc";
+import { max_i32 } from "basic/math.tc";
 
 function main(): i32 {
-  return add(abs_i32(1), 2);
+  return add(abs_i32(1), max_i32(1, 2));
 }
 ```
+
+## `project.json`
+
+`project.json` is optional. When present, it is searched from the input file directory upward.
+
+Supported fields:
+
+- `dependencies`: maps import aliases to `.tc` files.
+- `compiler.flags`: extra native C compiler flags.
+
+Dependency targets may be relative project paths, absolute paths, or `std/` paths.
 
 ## Do
 
