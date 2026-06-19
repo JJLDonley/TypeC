@@ -6,6 +6,7 @@ import type { TypedProgram, TypeName } from "./tast.ts";
 import { isCAbiType } from "./checker_c_abi.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
+import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
@@ -418,9 +419,7 @@ class Checker {
   }
 
   private checkMainFunction(fn: FunctionDecl, returnType: TypeName): void {
-    if (fn.external) this.error("Function 'main' cannot be extern", fn.span);
-    if (fn.params.length !== 0) this.error("Function 'main' cannot have parameters", fn.span);
-    if (returnType !== "i32") this.error(`Function 'main' must return 'i32'`, fn.returnType.span);
+    this.diagnostics.push(...collectMainFunctionDiagnostics(fn, returnType));
   }
 
   private checkRecordType(type: RecordTypeRef): void {
