@@ -90,6 +90,7 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
 
 function validateImportPath(path: Str, span: Diagnostic["span"], config: ProjectConfig): void {
   if (hasBackslash(path) || hasEncodedSeparator(path)) throw new TypeCError([{ message: `Import path '${path}' must use / separators`, span }]);
+  if (hasEncodedDotSegment(path)) throw new TypeCError([{ message: `Import path '${path}' must not contain encoded path segments`, span }]);
   const dependency = isDependencyImportPath(path, config);
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
@@ -108,6 +109,23 @@ function hasBackslash(path: Str): b8 {
 
 function hasEncodedSeparator(path: Str): b8 {
   return /%(2f|5c)/i.test(path);
+}
+
+function hasEncodedDotSegment(path: Str): b8 {
+  return path.split("/").some(isEncodedDotSegment);
+}
+
+function isEncodedDotSegment(segment: Str): b8 {
+  const decoded = decodedSegment(segment);
+  return decoded !== null && decoded !== segment && (decoded === "." || decoded === "..");
+}
+
+function decodedSegment(segment: Str): Str | null {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return null;
+  }
 }
 
 function isRelativeImportPath(path: Str): b8 {

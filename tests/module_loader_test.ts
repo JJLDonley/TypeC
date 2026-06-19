@@ -160,7 +160,7 @@ Deno.test("rejects std imports escaping std", async () => {
 Deno.test("rejects encoded std imports escaping std", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/main.tc`, `import { add } from "std/%2e%2e/math.tc"; function main(): i32 { return 0; }`);
-  await assertLoadError(`${dir}/main.tc`, "Std import path 'std/%2e%2e/math.tc' must stay within std");
+  await assertLoadError(`${dir}/main.tc`, "Import path 'std/%2e%2e/math.tc' must not contain encoded path segments");
 });
 
 Deno.test("rejects encoded and backslash import separators", async () => {
@@ -173,6 +173,15 @@ Deno.test("rejects encoded and backslash import separators", async () => {
 
   await writeText(`${dir}/encoded.tc`, `import { add } from "./math%2fops.tc"; function main(): i32 { return 0; }`);
   await assertLoadError(`${dir}/encoded.tc`, "Import path './math%2fops.tc' must use / separators");
+});
+
+Deno.test("rejects encoded dot import segments", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { add } from "./%2e%2e/math.tc"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/main.tc`, "Import path './%2e%2e/math.tc' must not contain encoded path segments");
+
+  await writeText(`${dir}/dot.tc`, `import { add } from "./%2e/math.tc"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/dot.tc`, "Import path './%2e/math.tc' must not contain encoded path segments");
 });
 
 Deno.test("rejects non-TypeC import paths", async () => {
