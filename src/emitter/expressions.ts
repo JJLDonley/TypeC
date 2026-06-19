@@ -2,7 +2,7 @@ import type { Expression, FunctionDecl, RecordTypeRef, TypeAliasDecl } from "cor
 import { emitCType } from "c/type.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
-import { emitCStringLiteral, emitCStringPointer } from "emitter/strings.ts";
+import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
 
 type Str = string;
 type usize = number;
@@ -41,6 +41,7 @@ export function emitExpressionExpected(expr: Expression, expectedType: Str, cont
   if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType, context);
   if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, context, expectedType);
   if (expr.kind === "StringLiteral" && expectedType === "u8*") return emitCStringPointer(expr.text);
+  if (expr.kind === "StringLiteral" && expectedType === "void*") return emitCStringVoidPointer(expr.text);
   return emitExpression(expr, context);
 }
 

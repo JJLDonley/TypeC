@@ -9,6 +9,10 @@ export function emitCStringPointer(text: Str): Str {
   return `(u8*)${emitCStringLiteral(text)}`;
 }
 
+export function emitCStringVoidPointer(text: Str): Str {
+  return `(void*)${emitCStringLiteral(text)}`;
+}
+
 function escapeCStringText(text: Str): Str {
   let escaped = "";
   for (const ch of text) escaped += escapeCStringChar(ch);

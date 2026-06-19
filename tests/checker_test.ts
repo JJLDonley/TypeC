@@ -37,7 +37,7 @@ Deno.test("checks exported fixed-array record fields as C ABI types", () => {
 });
 
 Deno.test("checks void pointer C interop arguments", () => {
-  check(resolve(parse(lex(`extern function consume(data: void*): void; function main(): i32 { const bytes: u8[] = [1, 2, 3]; consume(bytes); return 0; }`))));
+  check(resolve(parse(lex(`extern function consume(data: void*): void; function main(): i32 { const bytes: u8[] = [1, 2, 3]; consume(bytes); consume("abc"); return 0; }`))));
 });
 
 Deno.test("rejects non-record type aliases", () => {

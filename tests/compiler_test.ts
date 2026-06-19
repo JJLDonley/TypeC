@@ -214,6 +214,12 @@ Deno.test("emits C expression statements", () => {
   assertIncludes(c, "tick();");
 });
 
+Deno.test("emits C string literals for void pointer calls", () => {
+  const source = `extern function consume(data: void*): void; function main(): i32 { consume("hello"); return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "consume((void*)\"hello\");");
+});
+
 Deno.test("emits local C string arrays", () => {
   const source = `function main(): i32 { const text: u8[] = "hi"; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));

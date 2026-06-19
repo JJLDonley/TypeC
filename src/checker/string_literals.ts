@@ -16,7 +16,7 @@ export function isStringLiteralArrayInitializer(initializer: Expression, expecte
 }
 
 export function checkStringLiteralTarget(actual: TypeName, expected: TypeName, expr: StringLiteral): Diagnostic[] {
-  if (expected === "u8*" || expected === "u8[]") return [];
+  if (expected === "u8*" || expected === "u8[]" || expected === "void*") return [];
   const array = parseArrayType(expected);
   if (array?.element !== "u8") return [{ message: `String literal is not assignable to '${expected}'`, span: expr.span }];
   const actualLength = parseArrayType(actual)?.length ?? null;

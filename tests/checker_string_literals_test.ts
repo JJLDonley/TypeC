@@ -16,6 +16,7 @@ Deno.test("checks C string literal types", () => {
 
   assertText(stringLiteralType(literal), "u8[6]");
   assertLen(checkStringLiteralTarget("u8[6]", "u8*", literal).length, 0);
+  assertLen(checkStringLiteralTarget("u8[6]", "void*", literal).length, 0);
   assertLen(checkStringLiteralTarget("u8[6]", "u8[]", literal).length, 0);
   assertLen(checkStringLiteralTarget("u8[6]", "u8[6]", literal).length, 0);
   assertSame(isStringLiteralArrayInitializer(literal, "u8[]"), true);
