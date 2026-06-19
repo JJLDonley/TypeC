@@ -195,10 +195,15 @@ class Parser {
 
   private parsePostfixExpression(): CastExpression {
     let expr = this.parsePrimary();
-    while (this.checkText(".*") || this.checkText(".&") || this.checkText(".")) {
+    while (this.checkText(".*") || this.checkText(".&") || this.checkText(".") || this.checkText("[")) {
       if (this.checkText(".")) {
         const field = this.parseFieldAccessName();
         expr = { kind: "FieldAccessExpr", operand: expr, field: field.text, span: span(expr.span.start, field.span.end) };
+        continue;
+      }
+      if (this.checkText("[")) {
+        const close = this.parseIndexClose();
+        expr = { kind: "IndexExpr", operand: expr, index: close.index, span: span(expr.span.start, close.end.span.end) };
         continue;
       }
       const op = this.advance();
@@ -212,6 +217,13 @@ class Parser {
     return this.expectKind("identifier", "Expected field name");
   }
 
+  private parseIndexClose(): { index: CastExpression; end: Token } {
+    this.expectText("[");
+    const index = this.parseExpression();
+    const end = this.expectText("]");
+    return { index, end };
+  }
+
   private parsePrimary(): CastExpression {
     if (this.check("integer")) {
       const token = this.advance();
@@ -223,6 +235,7 @@ class Parser {
     }
     if (this.check("identifier")) return this.parseIdentifierExpression();
     if (this.checkText("{")) return this.parseRecordLiteral();
+    if (this.checkText("[")) return this.parseArrayLiteral();
     if (this.matchText("(")) {
       const expr = this.parseExpression();
       this.expectText(")");
@@ -231,6 +244,19 @@ class Parser {
     const token = this.peek();
     this.error(token, "Expected expression");
     throw new TypeCError(this.diagnostics);
+  }
+
+  private parseArrayLiteral(): CastExpression {
+    const open = this.expectText("[");
+    const elements = [];
+    if (!this.checkText("]")) {
+      do {
+        if (this.checkText("]")) break;
+        elements.push(this.parseExpression());
+      } while (this.matchText(","));
+    }
+    const close = this.expectText("]");
+    return { kind: "ArrayLiteralExpr", elements, span: span(open.span.start, close.span.end) };
   }
 
   private parseRecordLiteral(): CastExpression {

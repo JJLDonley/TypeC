@@ -24,6 +24,13 @@ Deno.test("parses postfix pointer expressions", () => {
   if (statement.expression.operator !== ".*") throw new Error("Expected .* operator");
 });
 
+Deno.test("parses array literals and indexing", () => {
+  const program = parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`));
+  const returnStatement = program.functions[0].body.statements[1];
+  if (returnStatement.kind !== "ReturnStmt") throw new Error("Expected return statement");
+  if (returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
+});
+
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);

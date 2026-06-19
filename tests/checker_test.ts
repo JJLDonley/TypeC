@@ -48,6 +48,18 @@ Deno.test("rejects unknown field access", () => {
   assertCheckError(`type Vec2 = { x: f64; y: f64; }; function main(): f64 { const v: Vec2 = { x: 1.5, y: 2.5 }; return v.z; }`, "Unknown field 'z' on type 'Vec2'");
 });
 
+Deno.test("checks inferred array literals and indexing", () => {
+  check(resolve(parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`))));
+});
+
+Deno.test("rejects array element mismatch", () => {
+  assertCheckError(`function main(): i32 { const xs: i32[] = [1, 2.5]; return 0; }`, "Array element type 'f64' is not assignable to 'i32'");
+});
+
+Deno.test("rejects fixed array length mismatch", () => {
+  assertCheckError(`function main(): i32 { const xs: i32[2] = [1, 2, 3]; return 0; }`, "Array length 3 is not assignable to 'i32[2]'");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });

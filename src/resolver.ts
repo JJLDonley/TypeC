@@ -75,6 +75,13 @@ class Resolver {
       case "RecordLiteralExpr":
         for (const field of expression.fields) this.resolveExpression(field.expression, scope);
         return;
+      case "ArrayLiteralExpr":
+        for (const element of expression.elements) this.resolveExpression(element, scope);
+        return;
+      case "IndexExpr":
+        this.resolveExpression(expression.operand, scope);
+        this.resolveExpression(expression.index, scope);
+        return;
     }
   }
 

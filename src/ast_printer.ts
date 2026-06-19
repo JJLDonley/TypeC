@@ -102,6 +102,19 @@ class AstPrinter {
           }
         });
         return;
+      case "ArrayLiteralExpr":
+        this.line("ArrayLiteralExpr");
+        this.indented(() => {
+          for (const element of expression.elements) this.expression(element);
+        });
+        return;
+      case "IndexExpr":
+        this.line("IndexExpr");
+        this.indented(() => {
+          this.expression(expression.operand);
+          this.expression(expression.index);
+        });
+        return;
     }
   }
 

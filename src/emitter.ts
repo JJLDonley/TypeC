@@ -51,8 +51,20 @@ function emitStatement(stmt: Statement, returnType: Str): Str {
     case "ReturnStmt":
       return `return ${emitExpressionExpected(stmt.expression, returnType)};`;
     case "VarDeclStmt":
-      return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpressionExpected(stmt.initializer, emitCType(stmt.type))};`;
+      return emitVarDecl(stmt);
   }
+}
+
+function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): Str {
+  if (stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef") return emitArrayVarDecl(stmt);
+  return `${stmt.mutable ? "" : "const "}${emitCType(stmt.type)} ${stmt.name} = ${emitExpressionExpected(stmt.initializer, emitCType(stmt.type))};`;
+}
+
+function emitArrayVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): Str {
+  if (stmt.initializer.kind !== "ArrayLiteralExpr") throw new Error("Array declarations require array literals");
+  const element = stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef" ? emitCType(stmt.type.element) : "";
+  const length = stmt.type.kind === "FixedArrayTypeRef" ? stmt.type.sizeText : String(stmt.initializer.elements.length);
+  return `${stmt.mutable ? "" : "const "}${element} ${stmt.name}[${length}] = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`)};`;
 }
 
 function emitExpression(expr: Expression): Str {
@@ -73,17 +85,26 @@ function emitExpression(expr: Expression): Str {
       return `${emitExpression(expr.operand)}.${expr.field}`;
     case "RecordLiteralExpr":
       throw new Error("Record literals require an expected C type");
+    case "ArrayLiteralExpr":
+      throw new Error("Array literals require an expected C type");
+    case "IndexExpr":
+      return `${emitExpression(expr.operand)}[${emitExpression(expr.index)}]`;
   }
 }
 
 function emitExpressionExpected(expr: Expression, expectedType: Str): Str {
-  if (expr.kind !== "RecordLiteralExpr") return emitExpression(expr);
-  return emitRecordLiteralExpression(expr, expectedType);
+  if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType);
+  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr);
+  return emitExpression(expr);
 }
 
 function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str): Str {
   const fields = expr.fields.map((field) => `.${field.name} = ${emitExpression(field.expression)}`).join(", ");
   return `(${expectedType}){ ${fields} }`;
+}
+
+function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>): Str {
+  return `{ ${expr.elements.map(emitExpression).join(", ")} }`;
 }
 
 function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): Str {

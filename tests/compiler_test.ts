@@ -52,6 +52,13 @@ Deno.test("emits C for functions returning records", () => {
   assertIncludes(c, "return (Vec2){ .x = a.x + b.x, .y = a.y + b.y };");
 });
 
+Deno.test("emits C for inferred arrays and indexing", () => {
+  const source = `function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const i32 xs[3] = { 1, 2, 3 };");
+  assertIncludes(c, "return xs[0];");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

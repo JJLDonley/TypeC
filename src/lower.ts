@@ -1,4 +1,5 @@
 import type {
+  ArrayLiteralExpr,
   BinaryExpr,
   BlockStmt,
   CallExpr,
@@ -8,6 +9,7 @@ import type {
   FloatLiteral,
   FunctionDecl,
   IdentifierExpr,
+  IndexExpr,
   InferredArrayTypeRef,
   IntegerLiteral,
   Param,
@@ -24,6 +26,7 @@ import type {
   VarDeclStmt,
 } from "./ast.ts";
 import type {
+  CastArrayLiteralExpr,
   CastBinaryExpr,
   CastBlockStmt,
   CastCallExpr,
@@ -33,6 +36,7 @@ import type {
   CastFloatLiteral,
   CastFunctionDecl,
   CastIdentifierExpr,
+  CastIndexExpr,
   CastInferredArrayTypeRef,
   CastIntegerLiteral,
   CastParam,
@@ -178,6 +182,10 @@ function lowerExpression(expression: CastExpression): Expression {
       return lowerFieldAccessExpr(expression);
     case "RecordLiteralExpr":
       return lowerRecordLiteralExpr(expression);
+    case "ArrayLiteralExpr":
+      return lowerArrayLiteralExpr(expression);
+    case "IndexExpr":
+      return lowerIndexExpr(expression);
   }
 }
 
@@ -238,6 +246,19 @@ function lowerRecordLiteralExpr(expression: CastRecordLiteralExpr): RecordLitera
       expression: lowerExpression(field.expression),
       span: field.span,
     })),
+    span: expression.span,
+  };
+}
+
+function lowerArrayLiteralExpr(expression: CastArrayLiteralExpr): ArrayLiteralExpr {
+  return { kind: "ArrayLiteralExpr", elements: expression.elements.map(lowerExpression), span: expression.span };
+}
+
+function lowerIndexExpr(expression: CastIndexExpr): IndexExpr {
+  return {
+    kind: "IndexExpr",
+    operand: lowerExpression(expression.operand),
+    index: lowerExpression(expression.index),
     span: expression.span,
   };
 }

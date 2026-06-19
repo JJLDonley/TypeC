@@ -78,7 +78,7 @@ class Checker {
     const expected = typeName(stmt.type);
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
-    locals.set(stmt.name, expected);
+    locals.set(stmt.name, actual);
   }
 
   private typeOf(expr: Expression, locals: Map<Str, TypeName>): TypeName {
@@ -88,10 +88,17 @@ class Checker {
   }
 
   private typeOfExpected(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
-    if (expr.kind !== "RecordLiteralExpr") return this.typeOf(expr, locals);
-    const type = this.recordLiteralType(expr, locals, expected);
-    this.expressionTypes.set(spanKey(expr.span), { type });
-    return type;
+    if (expr.kind === "RecordLiteralExpr") {
+      const type = this.recordLiteralType(expr, locals, expected);
+      this.expressionTypes.set(spanKey(expr.span), { type });
+      return type;
+    }
+    if (expr.kind === "ArrayLiteralExpr") {
+      const type = this.arrayLiteralType(expr, locals, expected);
+      this.expressionTypes.set(spanKey(expr.span), { type });
+      return type;
+    }
+    return this.typeOf(expr, locals);
   }
 
   private computeType(expr: Expression, locals: Map<Str, TypeName>): TypeName {
@@ -113,6 +120,11 @@ class Checker {
       case "RecordLiteralExpr":
         this.error("Record literals require an expected record type", expr.span);
         return "<error>";
+      case "ArrayLiteralExpr":
+        this.error("Array literals require an expected array type", expr.span);
+        return "<error>";
+      case "IndexExpr":
+        return this.indexType(expr, locals);
     }
   }
 
@@ -207,6 +219,32 @@ class Checker {
     return null;
   }
 
+  private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, TypeName>, expected: TypeName): TypeName {
+    const array = parseArrayType(expected);
+    if (!array) {
+      this.error(`Array literal is not assignable to non-array type '${expected}'`, expr.span);
+      return "<error>";
+    }
+    for (const element of expr.elements) {
+      const actual = this.typeOfExpected(element, locals, array.element);
+      if (!isAssignable(actual, array.element)) this.error(`Array element type '${actual}' is not assignable to '${array.element}'`, element.span);
+    }
+    if (array.length !== null && array.length !== expr.elements.length) this.error(`Array length ${expr.elements.length} is not assignable to '${expected}'`, expr.span);
+    return `${array.element}[${expr.elements.length}]`;
+  }
+
+  private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, TypeName>): TypeName {
+    const operand = this.typeOf(expr.operand, locals);
+    const array = parseArrayType(operand);
+    if (!array) {
+      this.error(`Cannot index non-array type '${operand}'`, expr.span);
+      return "<error>";
+    }
+    const index = this.typeOf(expr.index, locals);
+    if (!isIntegerType(index)) this.error(`Array index type '${index}' is not an integer`, expr.index.span);
+    return array.element;
+  }
+
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, TypeName>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     if (expr.operator === ".&") return `${operand}&`;
@@ -230,7 +268,6 @@ class Checker {
         return;
       case "InferredArrayTypeRef":
         this.checkType(type.element);
-        this.error("Inferred array types require array initializers", type.span);
         return;
       case "RecordTypeRef":
         this.checkRecordType(type);
@@ -259,9 +296,22 @@ class Checker {
 
 function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (actual === expected) return true;
+  const expectedArray = parseArrayType(expected);
+  const actualArray = parseArrayType(actual);
+  if (expectedArray && actualArray) return expectedArray.element === actualArray.element && (expectedArray.length === null || expectedArray.length === actualArray.length);
   if (!isReferenceType(actual)) return false;
   if (!isPointerLikeType(expected)) return false;
   return pointeeType(actual) === pointeeType(expected);
+}
+
+function parseArrayType(type: TypeName): { element: TypeName; length: i32 | null } | null {
+  const match = type.match(/^(.+)\[(\d*)\]$/);
+  if (!match) return null;
+  return { element: match[1], length: match[2] ? Number(match[2]) as i32 : null };
+}
+
+function isIntegerType(type: TypeName): b8 {
+  return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" || type === "u16" || type === "u32" || type === "u64" || type === "usize";
 }
 
 function isPointerLikeType(type: TypeName): b8 {

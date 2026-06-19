@@ -116,7 +116,9 @@ export type Expression =
   | CallExpr
   | PostfixPointerExpr
   | FieldAccessExpr
-  | RecordLiteralExpr;
+  | RecordLiteralExpr
+  | ArrayLiteralExpr
+  | IndexExpr;
 
 export interface IntegerLiteral {
   kind: "IntegerLiteral";
@@ -176,5 +178,18 @@ export interface RecordLiteralExpr {
 export interface RecordLiteralField {
   name: Str;
   expression: Expression;
+  span: SourceSpan;
+}
+
+export interface ArrayLiteralExpr {
+  kind: "ArrayLiteralExpr";
+  elements: Expression[];
+  span: SourceSpan;
+}
+
+export interface IndexExpr {
+  kind: "IndexExpr";
+  operand: Expression;
+  index: Expression;
   span: SourceSpan;
 }

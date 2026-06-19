@@ -116,7 +116,9 @@ export type CastExpression =
   | CastCallExpr
   | CastPostfixPointerExpr
   | CastFieldAccessExpr
-  | CastRecordLiteralExpr;
+  | CastRecordLiteralExpr
+  | CastArrayLiteralExpr
+  | CastIndexExpr;
 
 export interface CastIntegerLiteral {
   kind: "IntegerLiteral";
@@ -176,5 +178,18 @@ export interface CastRecordLiteralExpr {
 export interface CastRecordLiteralField {
   name: Str;
   expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastArrayLiteralExpr {
+  kind: "ArrayLiteralExpr";
+  elements: CastExpression[];
+  span: SourceSpan;
+}
+
+export interface CastIndexExpr {
+  kind: "IndexExpr";
+  operand: CastExpression;
+  index: CastExpression;
   span: SourceSpan;
 }
