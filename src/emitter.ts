@@ -1,10 +1,11 @@
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl } from "./ast.ts";
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
-import { emitCDeclarator, emitCType } from "./c_type.ts";
+import { emitCType } from "./c_type.ts";
 import { createEmitContext, type EmitContext } from "./emitter_context.ts";
 import { emitFunctionPrototype, emitFunctionSignature } from "./emitter_functions.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "./emitter_helpers.ts";
+import { emitTypeAlias } from "./emitter_type_aliases.ts";
 
 type Str = string;
 type usize = number;
@@ -24,19 +25,6 @@ export function emitC(program: CheckedProgram): Str {
     out.push(emitFunctionDefinition(fn, context));
     out.push("");
   }
-  return out.join("\n");
-}
-
-function emitTypeAlias(typeAlias: TypeAliasDecl): Str {
-  if (typeAlias.type.kind !== "RecordTypeRef") throw new Error("Only record type aliases can be emitted");
-  return emitRecordTypeAlias(typeAlias.name, typeAlias.type);
-}
-
-function emitRecordTypeAlias(name: Str, type: RecordTypeRef): Str {
-  const out: Str[] = [];
-  out.push("typedef struct {");
-  for (const field of type.fields) out.push(`  ${emitCDeclarator(field.type, field.name)};`);
-  out.push(`} ${name};`);
   return out.join("\n");
 }
 
