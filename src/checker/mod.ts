@@ -43,13 +43,7 @@ import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stri
 import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "checker/type_alias_order.ts";
-import {
-  checkArrayElementType as collectArrayElementTypeDiagnostics,
-  checkArraySize as collectArraySizeDiagnostics,
-  checkPointerElementType as collectPointerElementTypeDiagnostics,
-  checkReferenceElementType as collectReferenceElementTypeDiagnostics,
-} from "checker/type_shapes.ts";
-import { primitiveTypes } from "core/token.ts";
+import { checkTypeRef as collectTypeRefDiagnostics } from "checker/type_validation.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -354,31 +348,7 @@ class Checker {
   }
 
   private checkType(type: TypeRef): void {
-    switch (type.kind) {
-      case "NamedTypeRef":
-        if (!primitiveTypes.has(type.name) && !this.typeAliases.has(type.name)) this.error(`Unknown type '${type.name}'`, type.span);
-        return;
-      case "PointerTypeRef":
-        this.checkType(type.element);
-        this.diagnostics.push(...collectPointerElementTypeDiagnostics(type));
-        return;
-      case "ReferenceTypeRef":
-        this.checkType(type.element);
-        this.diagnostics.push(...collectReferenceElementTypeDiagnostics(type));
-        return;
-      case "FixedArrayTypeRef":
-        this.checkType(type.element);
-        this.diagnostics.push(...collectArrayElementTypeDiagnostics(type));
-        this.diagnostics.push(...collectArraySizeDiagnostics(type.sizeText, type));
-        return;
-      case "InferredArrayTypeRef":
-        this.checkType(type.element);
-        this.diagnostics.push(...collectArrayElementTypeDiagnostics(type));
-        return;
-      case "RecordTypeRef":
-        this.checkRecordType(type);
-        return;
-    }
+    this.diagnostics.push(...collectTypeRefDiagnostics(type, this.typeAliases));
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
@@ -389,16 +359,6 @@ class Checker {
     this.diagnostics.push(...collectMainFunctionDiagnostics(fn, returnType));
   }
 
-  private checkRecordType(type: RecordTypeRef): void {
-    const fields = new Set<Str>();
-    for (const field of type.fields) {
-      if (fields.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
-      fields.add(field.name);
-      this.checkType(field.type);
-      this.diagnostics.push(...collectValueTypeDiagnostics(field.type, `Field '${field.name}' cannot have type 'void'`, field.span));
-      if (field.type.kind === "InferredArrayTypeRef") this.error(`Field '${field.name}' cannot have inferred array type`, field.span);
-    }
-  }
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
