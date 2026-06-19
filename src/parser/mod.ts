@@ -4,20 +4,18 @@ import type { Program } from "core/ast.ts";
 import type {
   CastBlockStmt,
   CastExpression,
-  CastFunctionDecl,
-  CastImportDecl,
   CastProgram,
   CastStatement,
-  CastTypeAliasDecl,
   CastTypeRef,
 } from "core/cast.ts";
 import { lowerCast } from "lower";
 import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
-import { parseDeclarationWith, type DeclarationParser } from "parser/declarations.ts";
+import type { DeclarationParser } from "parser/declarations.ts";
 import { parseExpressionWith, type ExpressionParser } from "parser/expressions.ts";
 import { span } from "parser/helpers.ts";
 import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
+import { parseProgramWith, type ProgramParser } from "parser/programs.ts";
 import { parseStatementWith, type StatementParser } from "parser/statements.ts";
 import { parseTypeRefWith } from "parser/type_refs.ts";
 import type { Token, TokenKind } from "core/token.ts";
@@ -41,19 +39,16 @@ class Parser {
   constructor(private tokens: Token[]) {}
 
   parseProgram(): CastProgram {
-    const start = this.peek().span.start;
-    const imports: CastImportDecl[] = [];
-    const typeAliases: CastTypeAliasDecl[] = [];
-    const functions: CastFunctionDecl[] = [];
-    while (!this.check("eof")) {
-      const declaration = parseDeclarationWith(this.declarationParser());
-      if (declaration.kind === "ImportDecl") imports.push(declaration);
-      if (declaration.kind === "TypeAliasDecl") typeAliases.push(declaration);
-      if (declaration.kind === "FunctionDecl") functions.push(declaration);
-    }
-    const end = this.peek().span.end;
-    if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
-    return { kind: "Program", imports, typeAliases, functions, span: { start, end } };
+    return parseProgramWith(this.programParser());
+  }
+
+  private programParser(): ProgramParser {
+    return {
+      diagnostics: () => this.diagnostics,
+      peek: () => this.peek(),
+      checkEof: () => this.check("eof"),
+      declarationParser: () => this.declarationParser(),
+    };
   }
 
   private declarationParser(): DeclarationParser {
