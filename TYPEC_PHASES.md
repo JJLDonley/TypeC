@@ -711,7 +711,7 @@ Dependency aliases are extensionless virtual import paths. They cannot be empty,
 
 Imports may target relative `.tc` files or relative `.h` headers. Dependency targets may be relative project paths, absolute paths, or `std/` paths. Dependency targets must use `/` separators and cannot contain encoded separators. TypeC dependency targets use `.tc`; C header dependency targets use `.h` and are converted to explicit extern declarations through compiler AST output. Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and `-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
-Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form.
+Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, program entrypoint, hosted C environment, or artifact mode. Flags that need operands must use single-argument form.
 
 ## Standard Library Policy
 

@@ -41,6 +41,11 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-e"]}}`, "project.json compiler.flags cannot override the program entrypoint");
   assertConfigError(`{"compiler":{"flags":["-Wl,-e,custom_start"]}}`, "project.json compiler.flags cannot override the program entrypoint");
   assertConfigError(`{"compiler":{"flags":["-Wl,--entry=custom_start"]}}`, "project.json compiler.flags cannot override the program entrypoint");
+  assertConfigError(`{"compiler":{"flags":["-nostdlib"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
+  assertConfigError(`{"compiler":{"flags":["-nodefaultlibs"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
+  assertConfigError(`{"compiler":{"flags":["-nostartfiles"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
+  assertConfigError(`{"compiler":{"flags":["-nostdinc"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
+  assertConfigError(`{"compiler":{"flags":["-ffreestanding"]}}`, "project.json compiler.flags cannot remove the hosted C environment");
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");

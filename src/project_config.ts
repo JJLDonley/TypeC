@@ -157,6 +157,7 @@ function validateCompilerFlag(flag: Str): void {
   if (flag === "-o" || flag.startsWith("-o") || isLinkerOutputFlag(flag)) throw configError("project.json compiler.flags cannot override output paths");
   if (isArtifactModeFlag(flag)) throw configError("project.json compiler.flags cannot change build artifact mode");
   if (isEntrypointFlag(flag)) throw configError("project.json compiler.flags cannot override the program entrypoint");
+  if (isHostedEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot remove the hosted C environment");
   if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
   if (flag.startsWith("-x")) throw configError("project.json compiler.flags cannot override input language");
 }
@@ -175,6 +176,10 @@ function isLinkerArtifactModeFlag(flag: Str): b8 {
 
 function isEntrypointFlag(flag: Str): b8 {
   return flag === "-e" || flag === "-Wl,-e" || flag.startsWith("-Wl,-e,") || flag.startsWith("-Wl,--entry");
+}
+
+function isHostedEnvironmentFlag(flag: Str): b8 {
+  return flag === "-nostdlib" || flag === "-nodefaultlibs" || flag === "-nostartfiles" || flag === "-nostdinc" || flag === "-ffreestanding";
 }
 
 function isSeparateOperandFlag(flag: Str): b8 {
