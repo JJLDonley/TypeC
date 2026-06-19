@@ -431,6 +431,7 @@ class Checker {
 
   private checkReferenceElementType(type: Extract<TypeRef, { kind: "ReferenceTypeRef" }>): void {
     if (isArrayTypeRef(type.element)) this.error("Reference type cannot target array type", type.span);
+    if (isVoidNamedType(type.element)) this.error("Reference type cannot target void type", type.span);
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
@@ -508,9 +509,13 @@ function isArrayTypeRef(type: TypeRef): b8 {
 }
 
 function isVoidValueType(type: TypeRef): b8 {
-  if (type.kind === "NamedTypeRef") return type.name === "void";
+  if (isVoidNamedType(type)) return true;
   if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef") return isVoidValueType(type.element);
   return false;
+}
+
+function isVoidNamedType(type: TypeRef): b8 {
+  return type.kind === "NamedTypeRef" && type.name === "void";
 }
 
 function collectTypeAliasRefs(type: TypeRef): Set<Str> {
