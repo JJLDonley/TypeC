@@ -35,6 +35,9 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-c"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-E"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-S"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-M"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-MM"]}}`, "project.json compiler.flags cannot change build artifact mode");
+  assertConfigError(`{"compiler":{"flags":["-fsyntax-only"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-shared"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-Wl,-shared"]}}`, "project.json compiler.flags cannot change build artifact mode");
   assertConfigError(`{"compiler":{"flags":["-Wl,-r"]}}`, "project.json compiler.flags cannot change build artifact mode");

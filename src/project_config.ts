@@ -174,7 +174,7 @@ function isLinkerOutputOperand(operand: Str): b8 {
 }
 
 function isArtifactModeFlag(flag: Str): b8 {
-  return flag === "-c" || flag === "-E" || flag === "-S" || flag === "-shared" || isLinkerArtifactModeFlag(flag);
+  return flag === "-c" || flag === "-E" || flag === "-S" || flag === "-M" || flag === "-MM" || flag === "-fsyntax-only" || flag === "-shared" || isLinkerArtifactModeFlag(flag);
 }
 
 function isLinkerArtifactModeFlag(flag: Str): b8 {
