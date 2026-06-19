@@ -109,6 +109,12 @@ Deno.test("rejects unsupported import paths", async () => {
   await assertLoadError(`${dir}/main.tc`, "Import path 'math.tc' must be relative, std, or a project dependency");
 });
 
+Deno.test("rejects std imports escaping std", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/main.tc`, `import { add } from "std/../math.tc"; function main(): i32 { return 0; }`);
+  await assertLoadError(`${dir}/main.tc`, "Std import path 'std/../math.tc' must stay within std");
+});
+
 Deno.test("rejects non-TypeC import paths", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/main.tc`, `import { add } from "./math"; function main(): i32 { return 0; }`);

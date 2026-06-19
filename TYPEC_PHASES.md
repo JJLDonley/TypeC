@@ -708,7 +708,7 @@ Supported fields:
 
 Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, URL-like paths, `std/` paths, or contain `..` segments.
 
-Dependency targets may be relative project paths, absolute paths, or `std/` paths. Project-relative dependency targets cannot escape the project with `..` segments.
+Dependency targets may be relative project paths, absolute paths, or `std/` paths. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
 Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form.
 

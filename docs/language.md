@@ -58,7 +58,7 @@ import { abs_i32 } from "std/math.tc";
 
 Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, URL-like paths, `std/` paths, or contain `..` segments.
 
-Dependency targets may be `std/` modules, absolute `.tc` paths, or project-relative `.tc` paths. Project-relative dependency targets cannot escape the project with `..` segments.
+Dependency targets may be `std/` modules, absolute `.tc` paths, or project-relative `.tc` paths. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
 Compiler flags are appended to the native C compiler invocation. Entries must be flags, not extra source files. Flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, or artifact mode. Flags that need operands must use single-argument form such as `-Iinclude` or `-DNAME=VALUE`.
 

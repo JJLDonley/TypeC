@@ -73,6 +73,7 @@ function validateImportPath(path: Str, span: Diagnostic["span"], config: Project
     throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
   }
   if (!path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
+  if (isStdImportPath(path) && hasParentTraversal(path)) throw new TypeCError([{ message: `Std import path '${path}' must stay within std`, span }]);
 }
 
 function isRelativeImportPath(path: Str): b8 {
@@ -85,6 +86,10 @@ function isStdImportPath(path: Str): b8 {
 
 function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
   return config.dependencies.has(path);
+}
+
+function hasParentTraversal(path: Str): b8 {
+  return path.split("/").some((part) => part === "..");
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {
