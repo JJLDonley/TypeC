@@ -4,7 +4,6 @@ import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
-import { checkBasicExpression } from "checker/basic_expressions.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
@@ -12,6 +11,7 @@ import { checkDeclarations as collectDeclarationDiagnostics } from "checker/decl
 import { spanKey } from "checker/exprs.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
+import { computeExpressionType } from "checker/expression_types.ts";
 import { checkFieldAccessExpression } from "checker/field_access_expressions.ts";
 import { checkFunctionHeader as collectFunctionHeaderDiagnostics } from "checker/function_checks.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
@@ -131,32 +131,16 @@ class Checker {
   }
 
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
-    const basic = checkBasicExpression(expr);
-    if (basic.handled) {
-      this.diagnostics.push(...basic.diagnostics);
-      return basic.type;
-    }
-    switch (expr.kind) {
-      case "IdentifierExpr":
-        return this.identifierType(expr.name, locals, expr.span);
-      case "BinaryExpr":
-        return this.binaryType(expr, locals);
-      case "CallExpr":
-        return this.callType(expr, locals);
-      case "PostfixPointerExpr":
-        return this.postfixPointerType(expr, locals);
-      case "FieldAccessExpr":
-        return this.fieldAccessType(expr, locals);
-      case "RecordLiteralExpr":
-        this.error("Record literals require an expected record type", expr.span);
-        return "<error>";
-      case "ArrayLiteralExpr":
-        this.error("Array literals require an expected array type", expr.span);
-        return "<error>";
-      case "IndexExpr":
-        return this.indexType(expr, locals);
-    }
-    return basic.type;
+    const result = computeExpressionType(expr, {
+      identifier: (name, span) => this.identifierType(name, locals, span),
+      binary: (value) => this.binaryType(value, locals),
+      call: (value) => this.callType(value, locals),
+      pointer: (value) => this.postfixPointerType(value, locals),
+      fieldAccess: (value) => this.fieldAccessType(value, locals),
+      index: (value) => this.indexType(value, locals),
+    });
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
@@ -198,8 +182,5 @@ class Checker {
     return result.type;
   }
 
-  private error(message: Str, span: Diagnostic["span"]): void {
-    this.diagnostics.push({ message, span });
-  }
 }
 
