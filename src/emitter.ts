@@ -86,6 +86,8 @@ function emitExpression(expr: Expression): Str {
       return expr.text;
     case "FloatLiteral":
       return expr.text;
+    case "BoolLiteral":
+      return expr.text;
     case "IdentifierExpr":
       return expr.name;
     case "BinaryExpr":

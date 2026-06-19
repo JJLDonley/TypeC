@@ -64,6 +64,7 @@ class Resolver {
     switch (expression.kind) {
       case "IntegerLiteral":
       case "FloatLiteral":
+      case "BoolLiteral":
         return;
       case "IdentifierExpr":
         this.requireSymbol(scope, expression.name, expression.span);

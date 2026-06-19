@@ -125,6 +125,7 @@ export interface WhileStmt {
 export type Expression =
   | IntegerLiteral
   | FloatLiteral
+  | BoolLiteral
   | IdentifierExpr
   | BinaryExpr
   | CallExpr
@@ -145,6 +146,13 @@ export interface FloatLiteral {
   kind: "FloatLiteral";
   value: f64;
   text: Str;
+  span: SourceSpan;
+}
+
+export interface BoolLiteral {
+  kind: "BoolLiteral";
+  value: b8;
+  text: "true" | "false";
   span: SourceSpan;
 }
 

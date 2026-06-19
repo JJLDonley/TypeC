@@ -141,6 +141,8 @@ class Checker {
         return "i32";
       case "FloatLiteral":
         return "f64";
+      case "BoolLiteral":
+        return "bool";
       case "IdentifierExpr":
         return this.identifierType(expr.name, locals, expr.span);
       case "BinaryExpr":

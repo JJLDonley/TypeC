@@ -252,6 +252,10 @@ class Parser {
       const token = this.advance();
       return { kind: "FloatLiteral", value: Number(token.text), text: token.text, span: token.span };
     }
+    if (this.checkText("true") || this.checkText("false")) {
+      const token = this.advance();
+      return { kind: "BoolLiteral", value: token.text === "true", text: token.text as "true" | "false", span: token.span };
+    }
     if (this.check("identifier")) return this.parseIdentifierExpression();
     if (this.checkText("{")) return this.parseRecordLiteral();
     if (this.checkText("[")) return this.parseArrayLiteral();

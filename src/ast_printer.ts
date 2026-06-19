@@ -80,6 +80,9 @@ class AstPrinter {
       case "FloatLiteral":
         this.line(`FloatLiteral ${expression.text}`);
         return;
+      case "BoolLiteral":
+        this.line(`BoolLiteral ${expression.text}`);
+        return;
       case "IdentifierExpr":
         this.line(`IdentifierExpr ${expression.name}`);
         return;

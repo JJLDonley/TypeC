@@ -125,6 +125,7 @@ export interface CastWhileStmt {
 export type CastExpression =
   | CastIntegerLiteral
   | CastFloatLiteral
+  | CastBoolLiteral
   | CastIdentifierExpr
   | CastBinaryExpr
   | CastCallExpr
@@ -145,6 +146,13 @@ export interface CastFloatLiteral {
   kind: "FloatLiteral";
   value: f64;
   text: Str;
+  span: SourceSpan;
+}
+
+export interface CastBoolLiteral {
+  kind: "BoolLiteral";
+  value: b8;
+  text: "true" | "false";
   span: SourceSpan;
 }
 

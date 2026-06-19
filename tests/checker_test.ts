@@ -76,6 +76,10 @@ Deno.test("rejects assignment to const", () => {
   assertCheckError(`function main(): i32 { const x: i32 = 0; x = 1; return x; }`, "Cannot assign to const 'x'");
 });
 
+Deno.test("checks bool literals", () => {
+  check(resolve(parse(lex(`function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`))));
+});
+
 Deno.test("rejects non-bool while conditions", () => {
   assertCheckError(`function main(): i32 { while (1) { return 0; } return 0; }`, "While condition type 'i32' is not assignable to 'bool'");
 });

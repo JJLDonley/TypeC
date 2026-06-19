@@ -73,6 +73,14 @@ Deno.test("emits C for while and assignment", () => {
   assertIncludes(c, "x = x + 1;");
 });
 
+Deno.test("emits C for bool literals", () => {
+  const source = `function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "b8 flag(void)");
+  assertIncludes(c, "return true;");
+  assertIncludes(c, "const b8 ok = false;");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

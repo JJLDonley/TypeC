@@ -37,6 +37,13 @@ Deno.test("parses while and assignment statements", () => {
   if (statement.kind !== "WhileStmt") throw new Error("Expected while statement");
 });
 
+Deno.test("parses bool literals", () => {
+  const program = parse(lex(`function flag(): bool { return true; }`));
+  const statement = program.functions[0].body.statements[0];
+  if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
+  if (statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
+});
+
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);
