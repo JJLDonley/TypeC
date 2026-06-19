@@ -19,6 +19,7 @@ import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
 import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
+import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
 import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
@@ -202,10 +203,9 @@ class Checker {
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
-    const local = locals.get(name);
-    if (local) return local.type;
-    this.error(`Unknown identifier '${name}'`, span);
-    return "<error>";
+    const result = checkIdentifierType(name, locals.get(name), span);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
