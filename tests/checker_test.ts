@@ -12,12 +12,16 @@ Deno.test("records typed expression information", () => {
   assertIncludes(types, "i32");
 });
 
-Deno.test("checks postfix address and dereference", () => {
+Deno.test("checks postfix address assigned to pointer", () => {
   check(resolve(parse(lex(`function main(): i32 { const x: i32 = 1; const p: i32* = x.&; return p.*; }`))));
 });
 
+Deno.test("checks postfix address assigned to reference", () => {
+  check(resolve(parse(lex(`function main(): i32 { const x: i32 = 1; const r: i32& = x.&; return r.*; }`))));
+});
+
 Deno.test("rejects invalid dereference", () => {
-  assertCheckError(`function main(): i32 { const x: i32 = 1; return x.*; }`, "Cannot dereference non-pointer type 'i32'");
+  assertCheckError(`function main(): i32 { const x: i32 = 1; return x.*; }`, "Cannot dereference non-pointer-like type 'i32'");
 });
 
 Deno.test("rejects return mismatch", () => {

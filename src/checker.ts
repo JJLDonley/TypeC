@@ -67,14 +67,14 @@ class Checker {
 
   private checkReturn(expr: Expression, locals: Map<Str, TypeName>, expected: TypeName, span: SourceSpan): void {
     const actual = this.typeOf(expr, locals);
-    if (actual !== expected) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
+    if (!isAssignable(actual, expected)) this.error(`Return type '${actual}' is not assignable to '${expected}'`, span);
   }
 
   private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, TypeName>): void {
     this.checkType(stmt.type);
     const actual = this.typeOf(stmt.initializer, locals);
     const expected = typeName(stmt.type);
-    if (actual !== expected) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
+    if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
     locals.set(stmt.name, expected);
   }
 
@@ -139,14 +139,14 @@ class Checker {
   private checkCallArg(arg: Expression, fn: FunctionDecl, locals: Map<Str, TypeName>, index: i32): void {
     const actual = this.typeOf(arg, locals);
     const expected = typeName(fn.params[index]!.type);
-    if (actual !== expected) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
+    if (!isAssignable(actual, expected)) this.error(`Argument ${index + 1} type '${actual}' is not assignable to '${expected}'`, arg.span);
   }
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, TypeName>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    if (expr.operator === ".&") return `${operand}*`;
-    if (isPointerType(operand)) return operand.slice(0, -1);
-    this.error(`Cannot dereference non-pointer type '${operand}'`, expr.span);
+    if (expr.operator === ".&") return `${operand}&`;
+    if (isPointerLikeType(operand)) return operand.slice(0, -1);
+    this.error(`Cannot dereference non-pointer-like type '${operand}'`, expr.span);
     return "<error>";
   }
 
@@ -180,8 +180,23 @@ class Checker {
   }
 }
 
-function isPointerType(type: TypeName): b8 {
-  return type.endsWith("*");
+function isAssignable(actual: TypeName, expected: TypeName): b8 {
+  if (actual === expected) return true;
+  if (!isReferenceType(actual)) return false;
+  if (!isPointerLikeType(expected)) return false;
+  return pointeeType(actual) === pointeeType(expected);
+}
+
+function isPointerLikeType(type: TypeName): b8 {
+  return type.endsWith("*") || type.endsWith("&");
+}
+
+function isReferenceType(type: TypeName): b8 {
+  return type.endsWith("&");
+}
+
+function pointeeType(type: TypeName): TypeName {
+  return type.slice(0, -1);
 }
 
 function spanKey(span: SourceSpan): Str {
