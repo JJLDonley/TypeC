@@ -6,7 +6,7 @@ import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
 import { isStdImportPath, validateImportPath } from "./import_paths.ts";
-import { normalizePath } from "./path.ts";
+import { fileDirectoryUrl, fileUrlPath, normalizePath } from "./path.ts";
 import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
@@ -136,15 +136,6 @@ function projectImportPath(projectDir: Str, importPath: Str): Str {
 function stdImportPath(importPath: Str): Str {
   const modulePath = importPath.slice("std/".length);
   return fileUrlPath(new URL(`../std/${modulePath}`, import.meta.url));
-}
-
-function fileUrlPath(url: URL): Str {
-  return decodeURIComponent(url.pathname);
-}
-
-function fileDirectoryUrl(path: Str): URL {
-  const url = new URL(`file://${normalizePath(path)}`);
-  return new URL("./", url);
 }
 
 async function canonicalModulePath(path: Str): Promise<Str> {

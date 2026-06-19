@@ -5,6 +5,15 @@ export function normalizePath(path: Str): Str {
   return path.startsWith("/") ? path : `${Deno.cwd()}/${path}`;
 }
 
+export function fileDirectoryUrl(path: Str): URL {
+  const url = new URL(`file://${normalizePath(path)}`);
+  return new URL("./", url);
+}
+
+export function fileUrlPath(url: URL): Str {
+  return decodeURIComponent(url.pathname);
+}
+
 export function basenameNoExt(path: Str): Str {
   const file = path.split(/[\\/]/).pop() ?? "out";
   return file.replace(/\.[^.]+$/, "");
