@@ -9,9 +9,15 @@ import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } fr
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
 import { blockReturns } from "./checker_returns.ts";
-import { isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
+import { isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
+import {
+  checkArrayElementType as collectArrayElementTypeDiagnostics,
+  checkArraySize as collectArraySizeDiagnostics,
+  checkPointerElementType as collectPointerElementTypeDiagnostics,
+  checkReferenceElementType as collectReferenceElementTypeDiagnostics,
+} from "./checker_type_shapes.ts";
 import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
@@ -372,38 +378,25 @@ class Checker {
         return;
       case "PointerTypeRef":
         this.checkType(type.element);
-        this.checkPointerElementType(type);
+        this.diagnostics.push(...collectPointerElementTypeDiagnostics(type));
         return;
       case "ReferenceTypeRef":
         this.checkType(type.element);
-        this.checkReferenceElementType(type);
+        this.diagnostics.push(...collectReferenceElementTypeDiagnostics(type));
         return;
       case "FixedArrayTypeRef":
         this.checkType(type.element);
-        this.checkArrayElementType(type);
-        this.checkArraySize(type.sizeText, type.span);
+        this.diagnostics.push(...collectArrayElementTypeDiagnostics(type));
+        this.diagnostics.push(...collectArraySizeDiagnostics(type.sizeText, type));
         return;
       case "InferredArrayTypeRef":
         this.checkType(type.element);
-        this.checkArrayElementType(type);
+        this.diagnostics.push(...collectArrayElementTypeDiagnostics(type));
         return;
       case "RecordTypeRef":
         this.checkRecordType(type);
         return;
     }
-  }
-
-  private checkPointerElementType(type: Extract<TypeRef, { kind: "PointerTypeRef" }>): void {
-    if (isArrayTypeRef(type.element)) this.error("Pointer type cannot target array type", type.span);
-  }
-
-  private checkReferenceElementType(type: Extract<TypeRef, { kind: "ReferenceTypeRef" }>): void {
-    if (isArrayTypeRef(type.element)) this.error("Reference type cannot target array type", type.span);
-    if (isVoidNamedType(type.element)) this.error("Reference type cannot target void type", type.span);
-  }
-
-  private checkArrayElementType(type: Extract<TypeRef, { kind: "FixedArrayTypeRef" | "InferredArrayTypeRef" }>): void {
-    if (isArrayTypeRef(type.element)) this.error("Array type cannot target array type", type.span);
   }
 
   private checkCAbiFunction(fn: FunctionDecl, label: Str): void {
@@ -434,11 +427,6 @@ class Checker {
 
   private checkParamType(param: FunctionDecl["params"][usize], functionName: Str): void {
     if (param.type.kind === "InferredArrayTypeRef") this.error(`Parameter '${param.name}' of function '${functionName}' cannot have inferred array type`, param.span);
-  }
-
-  private checkArraySize(sizeText: Str, span: SourceSpan): void {
-    if (BigInt(sizeText) > 0n) return;
-    this.error(`Array size must be greater than zero`, span);
   }
 
   private error(message: Str, span: Diagnostic["span"]): void {
