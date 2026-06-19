@@ -93,7 +93,7 @@ extern function puts(text: u8*): i32;
 
 function main(): i32 {
   const text: u8[] = "hello";
-  const ignored: i32 = puts(text);
+  puts(text);
   return 0;
 }
 ```
