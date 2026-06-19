@@ -183,6 +183,10 @@ Deno.test("rejects non-bool while conditions", () => {
   assertCheckError(`function main(): i32 { while (1) { return 0; } return 0; }`, "While condition type 'i32' is not assignable to 'bool'");
 });
 
+Deno.test("rejects modulo on floats", () => {
+  assertCheckError(`function main(): i32 { const x: f64 = 7.0 % 2.0; return 0; }`, "Operator '%' requires integer operands");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });

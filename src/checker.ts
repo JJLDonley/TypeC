@@ -233,6 +233,7 @@ class Checker {
       return "<error>";
     }
     if (!numericTypes.has(hinted.left)) this.error(`Operator '${expr.operator}' requires numeric operands`, expr.span);
+    if (expr.operator === "%" && !isIntegerType(hinted.left)) this.error("Operator '%' requires integer operands", expr.span);
     if (isComparisonOperator(expr.operator)) return "bool";
     return hinted.left;
   }

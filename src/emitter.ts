@@ -190,7 +190,7 @@ function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" |
 }
 
 function cPrecedence(operator: Str): usize {
-  if (operator === "*" || operator === "/") return 3;
+  if (operator === "*" || operator === "/" || operator === "%") return 3;
   if (operator === "+" || operator === "-") return 2;
   if (operator === "<" || operator === "<=" || operator === ">" || operator === ">=") return 1;
   return 0;
