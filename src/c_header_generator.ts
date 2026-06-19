@@ -18,6 +18,7 @@ interface CFunction {
   returnType: Str;
   params: CParam[];
   sourceFile: Str | null;
+  storageClass: Str | null;
 }
 
 const typeMap = new Map<Str, Str>([
@@ -154,7 +155,7 @@ function readFunction(value: JsonRecord): CFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
   const functionType = readText(type.qualType, `Function '${value.name}' has no type`);
   const params = readParams(value.inner);
-  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value) };
+  return { name: value.name as Str, functionType, returnType: readReturnType(functionType), params, sourceFile: readSourceFile(value), storageClass: readStorageClass(value) };
 }
 
 function readParams(value: unknown): CParam[] {
@@ -204,6 +205,11 @@ function readSourceFile(value: JsonRecord): Str | null {
   return null;
 }
 
+function readStorageClass(value: JsonRecord): Str | null {
+  if (typeof value.storageClass === "string") return value.storageClass;
+  return null;
+}
+
 function readReturnType(type: Str): Str {
   const index = type.indexOf("(");
   if (index < 0) throw new TypeCError([{ message: `Unsupported function type '${type}'` }]);
@@ -212,7 +218,7 @@ function readReturnType(type: Str): Str {
 
 function formatSupportedFunction(fn: CFunction): Str[] {
   try {
-    if (isVariadicFunction(fn) || !isTypeCIdentifier(fn.name)) return [];
+    if (isVariadicFunction(fn) || isStaticFunction(fn) || !isTypeCIdentifier(fn.name)) return [];
     return [formatFunction(fn)];
   } catch (error) {
     if (error instanceof TypeCError) return [];
@@ -222,6 +228,10 @@ function formatSupportedFunction(fn: CFunction): Str[] {
 
 function isVariadicFunction(fn: CFunction): b8 {
   return fn.functionType.includes("...");
+}
+
+function isStaticFunction(fn: CFunction): b8 {
+  return fn.storageClass === "static";
 }
 
 function isTypeCIdentifier(name: Str): b8 {
