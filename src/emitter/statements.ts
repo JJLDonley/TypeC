@@ -4,46 +4,58 @@ import { emitCType } from "c/type.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 import { emitCStringLiteral } from "emitter/strings.ts";
+import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
+type LocalTypes = Map<Str, Str>;
 
-export function emitStatement(stmt: Statement, returnType: Str, context: EmitContext): Str {
+export function emitStatement(stmt: Statement, returnType: Str, context: EmitContext, locals: LocalTypes = new Map()): Str {
   switch (stmt.kind) {
     case "ReturnStmt":
       return stmt.expression ? `return ${emitExpressionExpected(stmt.expression, returnType, context)};` : "return;";
     case "ExpressionStmt":
       return `${emitExpression(stmt.expression, context)};`;
     case "VarDeclStmt":
+      locals.set(stmt.name, emitCTypeName(stmt.type));
       return emitVarDecl(stmt, context);
     case "AssignmentStmt":
-      return `${stmt.name} = ${emitExpression(stmt.expression, context)};`;
+      return emitAssignment(stmt, context, locals);
     case "WhileStmt":
-      return emitWhile(stmt, returnType, context);
+      return emitWhile(stmt, returnType, context, locals);
     case "IfStmt":
-      return emitIf(stmt, returnType, context);
+      return emitIf(stmt, returnType, context, locals);
   }
 }
 
-function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>, returnType: Str, context: EmitContext): Str {
+function emitIf(stmt: Extract<Statement, { kind: "IfStmt" }>, returnType: Str, context: EmitContext, locals: LocalTypes): Str {
   const out: Str[] = [];
   out.push(`if (${emitExpression(stmt.condition, context)}) {`);
-  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, returnType, context)}`);
+  const thenLocals = new Map(locals);
+  for (const child of stmt.thenBody.statements) out.push(`  ${emitStatement(child, returnType, context, thenLocals)}`);
   if (!stmt.elseBody) {
     out.push("}");
     return out.join("\n  ");
   }
   out.push("} else {");
-  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, returnType, context)}`);
+  const elseLocals = new Map(locals);
+  for (const child of stmt.elseBody.statements) out.push(`  ${emitStatement(child, returnType, context, elseLocals)}`);
   out.push("}");
   return out.join("\n  ");
 }
 
-function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, returnType: Str, context: EmitContext): Str {
+function emitWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, returnType: Str, context: EmitContext, locals: LocalTypes): Str {
   const out: Str[] = [];
   out.push(`while (${emitExpression(stmt.condition, context)}) {`);
-  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, returnType, context)}`);
+  const bodyLocals = new Map(locals);
+  for (const child of stmt.body.statements) out.push(`  ${emitStatement(child, returnType, context, bodyLocals)}`);
   out.push("}");
   return out.join("\n  ");
+}
+
+function emitAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, context: EmitContext, locals: LocalTypes): Str {
+  const targetType = locals.get(stmt.name);
+  const expression = targetType ? emitExpressionExpected(stmt.expression, targetType, context) : emitExpression(stmt.expression, context);
+  return `${stmt.name} = ${expression};`;
 }
 
 function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, context: EmitContext): Str {

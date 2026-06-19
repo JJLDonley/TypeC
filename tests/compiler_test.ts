@@ -226,6 +226,13 @@ Deno.test("emits C string literals for fixed u8 array calls", () => {
   assertIncludes(c, "consume((u8*)\"hello\");");
 });
 
+Deno.test("emits expected C string assignment expressions", () => {
+  const source = `function main(): i32 { let data: void* = "one"; data = "two"; return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "void* data = (void*)\"one\";");
+  assertIncludes(c, "data = (void*)\"two\";");
+});
+
 Deno.test("emits local C string arrays", () => {
   const source = `function main(): i32 { const text: u8[] = "hi"; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));

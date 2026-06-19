@@ -55,6 +55,11 @@ export function check(program: ResolvedProgram): CheckedProgram {
   return checker.check();
 }
 
+function localDeclaredType(expected: TypeName, actual: TypeName): TypeName {
+  if (parseArrayType(expected)?.length === null) return actual;
+  return expected;
+}
+
 class Checker {
   private diagnostics: Diagnostic[] = [];
   private functions = new Map<Str, FunctionDecl>();
@@ -148,7 +153,7 @@ class Checker {
     this.diagnostics.push(...collectArrayInitializerDiagnostics(stmt.initializer, expected, stmt.span));
     const actual = this.typeOfExpected(stmt.initializer, locals, expected);
     if (!isAssignable(actual, expected)) this.error(`Initializer type '${actual}' is not assignable to '${expected}'`, stmt.span);
-    locals.set(stmt.name, { type: actual, mutable: stmt.mutable });
+    locals.set(stmt.name, { type: localDeclaredType(expected, actual), mutable: stmt.mutable });
   }
 
   private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {

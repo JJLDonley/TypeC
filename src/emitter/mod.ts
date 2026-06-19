@@ -5,6 +5,7 @@ import { emitCType } from "c/type.ts";
 import { createEmitContext, type EmitContext } from "emitter/context.ts";
 import { emitFunctionPrototype, emitFunctionSignature } from "emitter/functions.ts";
 import { emitStatement } from "emitter/statements.ts";
+import { emitCTypeName } from "emitter/type_names.ts";
 import { emitTypeAlias } from "emitter/type_aliases.ts";
 
 type Str = string;
@@ -31,7 +32,8 @@ function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): Str {
   if (!fn.body) throw new Error("Function definition requires a body");
   const out: Str[] = [];
   out.push(`${emitFunctionSignature(fn)} {`);
-  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType), context)}`);
+  const locals = new Map<Str, Str>(fn.params.map((param) => [param.name, emitCTypeName(param.type)]));
+  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType), context, locals)}`);
   out.push("}");
   return out.join("\n");
 }
