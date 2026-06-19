@@ -21,6 +21,7 @@ import {
 } from "parser/declaration_modifiers.ts";
 import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
+import { parseParamsWith } from "parser/params.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
 type i32 = number;
@@ -99,7 +100,13 @@ class Parser {
     const functionToken = this.expectText("function");
     const name = this.expectKind("identifier", "Expected function name");
     this.expectText("(");
-    const params = this.parseParams();
+    const params = parseParamsWith({
+      checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
+      expectKind: (kind, message) => this.expectKind(kind, message),
+      expectText: (text) => this.expectText(text),
+      parseTypeRef: () => this.parseTypeRef(),
+    });
     this.expectText(")");
     this.expectText(":");
     const returnType = this.parseTypeRef();
@@ -131,19 +138,6 @@ class Parser {
     };
   }
 
-  private parseParams(): CastParam[] {
-    const params: CastParam[] = [];
-    if (this.checkText(")")) return params;
-
-    do {
-      const name = this.expectKind("identifier", "Expected parameter name");
-      this.expectText(":");
-      const type = this.parseTypeRef();
-      params.push({ name: name.text, type, span: span(name.span.start, type.span.end) });
-    } while (this.matchText(","));
-
-    return params;
-  }
 
   private parseTypeRef(): CastTypeRef {
     let type: CastTypeRef = this.checkText("{") ? this.parseRecordTypeRef() : this.parseNamedTypeRef();
