@@ -24,9 +24,7 @@ import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
-import { lookupRecordAlias } from "checker/record_aliases.ts";
-import { checkRecordLiteralFields as collectRecordLiteralFieldDiagnostics } from "checker/record_literal_fields.ts";
-import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } from "checker/record_literals.ts";
+import { checkRecordLiteralExpression } from "checker/record_literal_expressions.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
@@ -224,11 +222,9 @@ class Checker {
   }
 
   private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const record = lookupRecordAlias(expected, this.typeAliases);
-    this.diagnostics.push(...collectRecordLiteralTargetDiagnostics(record, expected, expr));
-    if (!record) return "<error>";
-    this.diagnostics.push(...collectRecordLiteralFieldDiagnostics(expr, record, expected, (fieldExpr, target) => this.typeOfExpected(fieldExpr, locals, target)));
-    return expected;
+    const result = checkRecordLiteralExpression(expr, expected, this.typeAliases, (fieldExpr, target) => this.typeOfExpected(fieldExpr, locals, target));
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
