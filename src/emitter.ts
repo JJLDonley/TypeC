@@ -2,16 +2,12 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl 
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
 import { emitCDeclarator, emitCType } from "./c_type.ts";
+import { createEmitContext, type EmitContext } from "./emitter_context.ts";
 import { emitFunctionPrototype, emitFunctionSignature } from "./emitter_functions.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "./emitter_helpers.ts";
 
 type Str = string;
 type usize = number;
-
-interface EmitContext {
-  typeAliases: Map<Str, TypeAliasDecl>;
-  functions: Map<Str, FunctionDecl>;
-}
 
 export function emitC(program: CheckedProgram): Str {
   const out: Str[] = [];
@@ -29,13 +25,6 @@ export function emitC(program: CheckedProgram): Str {
     out.push("");
   }
   return out.join("\n");
-}
-
-function createEmitContext(program: CheckedProgram): EmitContext {
-  return {
-    typeAliases: new Map(program.typeAliases.map((typeAlias) => [typeAlias.name, typeAlias])),
-    functions: new Map(program.functions.map((fn) => [fn.name, fn])),
-  };
 }
 
 function emitTypeAlias(typeAlias: TypeAliasDecl): Str {
