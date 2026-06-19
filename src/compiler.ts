@@ -21,14 +21,14 @@ export interface CompileResult {
 export async function compileFile(inputPath: Str, buildDir: Str = "build"): Promise<CompileResult> {
   const source = await Deno.readTextFile(inputPath);
   try {
-    return await compileSourceFile(inputPath, buildDir, source);
+    return await compileSourceFile(inputPath, buildDir);
   } catch (err) {
     if (err instanceof TypeCError) exitWithDiagnostics(inputPath, source, err);
     throw err;
   }
 }
 
-async function compileSourceFile(inputPath: Str, buildDir: Str, _source: Str): Promise<CompileResult> {
+async function compileSourceFile(inputPath: Str, buildDir: Str): Promise<CompileResult> {
   const compiled = await compileSource(inputPath);
   await Deno.mkdir(buildDir, { recursive: true });
   const paths = buildOutputPaths(inputPath, buildDir);
