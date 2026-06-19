@@ -376,6 +376,7 @@ class Checker {
       fields.add(field.name);
       this.checkType(field.type);
       this.checkValueType(field.type, `Field '${field.name}' cannot have type 'void'`, field.span);
+      if (field.type.kind === "InferredArrayTypeRef") this.error(`Field '${field.name}' cannot have inferred array type`, field.span);
     }
   }
 

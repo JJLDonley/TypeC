@@ -30,7 +30,7 @@ function emitTypeAlias(typeAlias: TypeAliasDecl): Str {
 function emitRecordTypeAlias(name: Str, type: RecordTypeRef): Str {
   const out: Str[] = [];
   out.push("typedef struct {");
-  for (const field of type.fields) out.push(`  ${emitCType(field.type)} ${field.name};`);
+  for (const field of type.fields) out.push(`  ${emitCDeclarator(field.type, field.name)};`);
   out.push(`} ${name};`);
   return out.join("\n");
 }

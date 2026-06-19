@@ -36,6 +36,10 @@ Deno.test("rejects void value types", () => {
   assertCheckError(`type Bad = { x: void; }; function main(): i32 { return 0; }`, "Field 'x' cannot have type 'void'");
 });
 
+Deno.test("rejects inferred array record fields", () => {
+  assertCheckError(`type Bad = { xs: i32[]; }; function main(): i32 { return 0; }`, "Field 'xs' cannot have inferred array type");
+});
+
 Deno.test("rejects returning values from void functions", () => {
   assertCheckError(`function bad(): void { return 0; } function main(): i32 { return 0; }`, "Void function cannot return a value");
 });
