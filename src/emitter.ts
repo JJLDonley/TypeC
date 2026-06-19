@@ -189,7 +189,13 @@ function emitCallExpression(expr: Extract<Expression, { kind: "CallExpr" }>, con
 
 function emitCallArg(arg: Expression, param: FunctionDecl["params"][usize] | undefined, context: EmitContext): Str {
   if (!param) return emitExpression(arg, context);
-  return emitExpressionExpected(arg, emitCTypeName(param.type), context);
+  const expectedType = emitCTypeName(param.type);
+  if (arg.kind === "ArrayLiteralExpr") return emitArrayCompoundLiteral(arg, expectedType, context);
+  return emitExpressionExpected(arg, expectedType, context);
+}
+
+function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
+  return `(${expectedType})${emitArrayLiteralExpression(expr, context)}`;
 }
 
 function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {

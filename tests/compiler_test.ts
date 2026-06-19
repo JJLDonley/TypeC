@@ -160,6 +160,12 @@ Deno.test("emits C for fixed array parameters", () => {
   assertIncludes(c, "return first(xs);");
 });
 
+Deno.test("emits C for array literal arguments", () => {
+  const source = `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { return first([1, 2, 3]); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return first((i32[3]){ 1, 2, 3 });");
+});
+
 Deno.test("emits C for while and assignment", () => {
   const source = `function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
