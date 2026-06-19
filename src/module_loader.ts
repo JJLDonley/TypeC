@@ -25,17 +25,18 @@ export async function loadProgram(entryPath: Str): Promise<Program> {
 }
 
 async function loadModule(path: Str, state: LoadState): Promise<Program> {
-  const loaded = state.loaded.get(path);
+  const canonicalPath = await canonicalModulePath(path);
+  const loaded = state.loaded.get(canonicalPath);
   if (loaded) return loaded;
-  if (state.loading.has(path)) throw new TypeCError([{ message: `Import cycle involving '${path}'` }]);
+  if (state.loading.has(canonicalPath)) throw new TypeCError([{ message: `Import cycle involving '${canonicalPath}'` }]);
 
-  state.loading.add(path);
-  const source = await Deno.readTextFile(path);
+  state.loading.add(canonicalPath);
+  const source = await Deno.readTextFile(canonicalPath);
   const local = parse(lex(source));
-  const imported = await collectImports(path, local, state);
+  const imported = await collectImports(canonicalPath, local, state);
   const merged = mergeProgram(local, imported);
-  state.loading.delete(path);
-  state.loaded.set(path, merged);
+  state.loading.delete(canonicalPath);
+  state.loaded.set(canonicalPath, merged);
   return merged;
 }
 
@@ -111,6 +112,10 @@ function resolveImportPath(fromPath: Str, importPath: Str): Str {
 function fileDirectoryUrl(path: Str): URL {
   const url = new URL(`file://${normalizePath(path)}`);
   return new URL("./", url);
+}
+
+async function canonicalModulePath(path: Str): Promise<Str> {
+  return await Deno.realPath(path);
 }
 
 function normalizePath(path: Str): Str {

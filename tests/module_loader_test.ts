@@ -35,6 +35,15 @@ Deno.test("merges repeated imports from one module", async () => {
   assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
 });
 
+Deno.test("deduplicates canonical module paths", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/ops.tc`, `function inc(x: i32): i32 { return x + 1; } export function one(): i32 { return inc(0); } export function two(): i32 { return inc(1); }`);
+  await Deno.symlink(`${dir}/ops.tc`, `${dir}/alias.tc`);
+  await writeText(`${dir}/main.tc`, `import { one } from "./ops.tc"; import { two } from "./alias.tc"; function main(): i32 { return one() + two(); }`);
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
+});
+
 Deno.test("deduplicates shared transitive imports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/util.tc`, `export function inc(x: i32): i32 { return x + 1; }`);
