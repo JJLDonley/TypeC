@@ -1,4 +1,5 @@
 import type { BlockStmt } from "../src/ast.ts";
+import { TypeCError } from "../src/diagnostics.ts";
 import { lex } from "../src/lexer.ts";
 import { parse } from "../src/parser.ts";
 import { typeName } from "../src/type_ref.ts";
@@ -10,6 +11,12 @@ Deno.test("parses extern functions", () => {
   const fn = program.functions[0];
   if (!fn.external) throw new Error("Expected extern function");
   if (fn.body) throw new Error("Expected no extern body");
+});
+
+Deno.test("rejects invalid declaration modifiers", () => {
+  assertParseError(`export import { add } from "./math.tc";`, "Imports cannot be exported");
+  assertParseError(`extern type Vec2 = { x: f32; };`, "Type aliases cannot be extern");
+  assertParseError(`export extern function add(a: i32, b: i32): i32;`, "Extern functions cannot be exported");
 });
 
 Deno.test("parses imports", () => {
@@ -69,6 +76,15 @@ Deno.test("parses if else statements", () => {
   if (statement.kind !== "IfStmt") throw new Error("Expected if statement");
   if (!statement.elseBody) throw new Error("Expected else body");
 });
+
+function assertParseError(source: Str, message: Str): void {
+  try {
+    parse(lex(source));
+  } catch (error) {
+    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === message)) return;
+  }
+  throw new Error(`Expected parser error: ${message}`);
+}
 
 function requireBody(body: BlockStmt | null): BlockStmt {
   if (!body) throw new Error("Expected function body");

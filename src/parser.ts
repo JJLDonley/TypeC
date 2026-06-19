@@ -41,10 +41,20 @@ class Parser {
     const functions: CastFunctionDecl[] = [];
     while (!this.check("eof")) {
       const exported = this.matchText("export");
+      const exportToken = exported ? this.previous() : null;
       const external = this.matchText("extern");
-      if (this.checkText("import")) imports.push(this.parseImport());
-      else if (this.checkText("type")) typeAliases.push(this.parseTypeAlias(exported));
-      else functions.push(this.parseFunction(exported, external));
+      const externToken = external ? this.previous() : null;
+      if (this.checkText("import")) {
+        if (exportToken) this.error(exportToken, "Imports cannot be exported");
+        if (externToken) this.error(externToken, "Imports cannot be extern");
+        imports.push(this.parseImport());
+      } else if (this.checkText("type")) {
+        if (externToken) this.error(externToken, "Type aliases cannot be extern");
+        typeAliases.push(this.parseTypeAlias(exported));
+      } else {
+        if (exportToken && externToken) this.error(externToken, "Extern functions cannot be exported");
+        functions.push(this.parseFunction(exported, external));
+      }
     }
     const end = this.peek().span.end;
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
