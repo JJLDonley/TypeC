@@ -76,13 +76,21 @@ class Parser {
 
   private parseImportNames(): Str[] {
     const names: Str[] = [];
+    const seen = new Set<Str>();
     if (this.checkText("}")) {
       this.error(this.peek(), "Import must name at least one symbol");
       return names;
     }
-    do names.push(this.expectKind("identifier", "Expected imported name").text);
+    do this.parseImportName(names, seen);
     while (this.matchText(","));
     return names;
+  }
+
+  private parseImportName(names: Str[], seen: Set<Str>): void {
+    const name = this.expectKind("identifier", "Expected imported name");
+    if (seen.has(name.text)) this.error(name, `Duplicate imported name '${name.text}'`);
+    seen.add(name.text);
+    names.push(name.text);
   }
 
   private parseTypeAlias(exported: b8): CastTypeAliasDecl {
