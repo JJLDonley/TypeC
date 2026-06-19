@@ -11,6 +11,16 @@ Deno.test("builds portable C compiler args", () => {
   ]);
 });
 
+Deno.test("adds project compiler flags", () => {
+  assertEqualText(nativeCompileArgs({ cPath: "build/main.c", exePath: "build/main", compilerFlags: ["-O2"] }), [
+    "-std=c99",
+    "-O2",
+    "build/main.c",
+    "-o",
+    "build/main",
+  ]);
+});
+
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);

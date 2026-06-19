@@ -43,6 +43,25 @@ Standard-library imports use `std/` paths:
 import { abs_i32 } from "std/math.tc";
 ```
 
+`project.json` can define dependency aliases and compiler flags:
+
+```json
+{
+  "dependencies": {
+    "basic/math.tc": "std/math.tc"
+  },
+  "compiler": {
+    "flags": ["-O2"]
+  }
+}
+```
+
+Then source can import through the alias:
+
+```ts
+import { abs_i32 } from "basic/math.tc";
+```
+
 ## Run
 
 ```bash

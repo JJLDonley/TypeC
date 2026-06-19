@@ -4,6 +4,7 @@ import { emitC } from "./emitter.ts";
 import { hasMain } from "./entrypoint.ts";
 import { loadProgram } from "./module_loader.ts";
 import { buildOutputPaths } from "./path.ts";
+import { loadProjectConfig } from "./project_config.ts";
 import { resolve } from "./resolver.ts";
 
 type Str = string;
@@ -14,6 +15,7 @@ export interface CompileResult {
   exePath: Str;
   cSource: Str;
   hasMain: b8;
+  compilerFlags: Str[];
 }
 
 export async function compileFile(inputPath: Str, buildDir: Str = "build"): Promise<CompileResult> {
@@ -34,11 +36,12 @@ async function compileSourceFile(inputPath: Str, buildDir: Str, _source: Str): P
   return { ...paths, ...compiled };
 }
 
-async function compileSource(inputPath: Str): Promise<{ cSource: Str; hasMain: b8 }> {
-  const ast = await loadProgram(inputPath);
+async function compileSource(inputPath: Str): Promise<{ cSource: Str; hasMain: b8; compilerFlags: Str[] }> {
+  const config = await loadProjectConfig(inputPath);
+  const ast = await loadProgram(inputPath, config);
   const resolved = resolve(ast);
   const checked = check(resolved);
-  return { cSource: emitC(checked), hasMain: hasMain(checked) };
+  return { cSource: emitC(checked), hasMain: hasMain(checked), compilerFlags: config.compilerFlags };
 }
 
 function exitWithDiagnostics(inputPath: Str, source: Str, err: TypeCError): never {

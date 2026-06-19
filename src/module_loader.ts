@@ -4,6 +4,7 @@ import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
 import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
+import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -11,6 +12,7 @@ type b8 = boolean;
 interface LoadState {
   loaded: Map<Str, Program>;
   loading: Set<Str>;
+  config: ProjectConfig;
 }
 
 interface ImportRequest {
@@ -19,8 +21,9 @@ interface ImportRequest {
   span: Diagnostic["span"];
 }
 
-export async function loadProgram(entryPath: Str): Promise<Program> {
-  const state = { loaded: new Map<Str, Program>(), loading: new Set<Str>() };
+export async function loadProgram(entryPath: Str, config: ProjectConfig | null = null): Promise<Program> {
+  const resolvedConfig = config ?? await loadProjectConfig(entryPath);
+  const state = { loaded: new Map<Str, Program>(), loading: new Set<Str>(), config: resolvedConfig };
   return await loadModule(normalizePath(entryPath), state);
 }
 
@@ -42,18 +45,18 @@ async function loadModule(path: Str, state: LoadState): Promise<Program> {
 
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {
   const programs: Program[] = [];
-  for (const request of collectImportRequests(path, program)) {
+  for (const request of collectImportRequests(path, program, state.config)) {
     const imported = await loadModule(request.path, state);
     programs.push(selectImports(imported, [...request.names], request.span));
   }
   return programs;
 }
 
-function collectImportRequests(path: Str, program: Program): ImportRequest[] {
+function collectImportRequests(path: Str, program: Program, config: ProjectConfig): ImportRequest[] {
   const requests = new Map<Str, ImportRequest>();
   for (const importDecl of program.imports) {
-    validateImportPath(importDecl.path, importDecl.span);
-    const importedPath = resolveImportPath(path, importDecl.path);
+    validateImportPath(importDecl.path, importDecl.span, config);
+    const importedPath = resolveImportPath(path, importDecl.path, config);
     const request = requests.get(importedPath) ?? createImportRequest(importedPath, importDecl.span);
     for (const name of importDecl.names) request.names.add(name);
     requests.set(importedPath, request);
@@ -65,8 +68,10 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
   return { path, names: new Set<Str>(), span };
 }
 
-function validateImportPath(path: Str, span: Diagnostic["span"]): void {
-  if (!isRelativeImportPath(path) && !isStdImportPath(path)) throw new TypeCError([{ message: `Import path '${path}' must be relative or std`, span }]);
+function validateImportPath(path: Str, span: Diagnostic["span"], config: ProjectConfig): void {
+  if (!isRelativeImportPath(path) && !isStdImportPath(path) && !isDependencyImportPath(path, config)) {
+    throw new TypeCError([{ message: `Import path '${path}' must be relative, std, or a project dependency`, span }]);
+  }
   if (!path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
 }
 
@@ -76,6 +81,10 @@ function isRelativeImportPath(path: Str): b8 {
 
 function isStdImportPath(path: Str): b8 {
   return path.startsWith("std/");
+}
+
+function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
+  return config.dependencies.has(path);
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {
@@ -109,9 +118,17 @@ function selectFunction(functions: FunctionDecl[], name: Str): FunctionDecl[] {
   return functions.filter((fn) => fn.exported && fn.name === name);
 }
 
-function resolveImportPath(fromPath: Str, importPath: Str): Str {
+function resolveImportPath(fromPath: Str, importPath: Str, config: ProjectConfig): Str {
+  const dependencyPath = config.dependencies.get(importPath);
+  if (dependencyPath) return projectImportPath(config.projectDir, dependencyPath);
   if (isStdImportPath(importPath)) return stdImportPath(importPath);
   return normalizePath(new URL(importPath, fileDirectoryUrl(fromPath)).pathname);
+}
+
+function projectImportPath(projectDir: Str, importPath: Str): Str {
+  if (importPath.startsWith("/")) return importPath;
+  if (isStdImportPath(importPath)) return stdImportPath(importPath);
+  return normalizePath(new URL(importPath, fileDirectoryUrl(`${projectDir}/project.json`)).pathname);
 }
 
 function stdImportPath(importPath: Str): Str {

@@ -3,10 +3,11 @@ type Str = string;
 export interface NativeBuildInput {
   cPath: Str;
   exePath: Str;
+  compilerFlags?: Str[];
 }
 
 export function nativeCompileArgs(input: NativeBuildInput): Str[] {
-  return ["-std=c99", input.cPath, "-o", input.exePath];
+  return ["-std=c99", ...(input.compilerFlags ?? []), input.cPath, "-o", input.exePath];
 }
 
 export async function buildNative(input: NativeBuildInput): Promise<void> {

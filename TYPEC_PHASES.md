@@ -692,6 +692,7 @@ function main(): i32 {
 - Detect import cycles.
 - Support explicit exports.
 - Support `std/` imports from the checked-in TypeC standard library.
+- Support `project.json` dependency aliases and compiler flags.
 
 ## Do Not
 
@@ -699,6 +700,7 @@ function main(): i32 {
 - Do not require JavaScript package semantics.
 - Do not make import behavior depend on runtime loading.
 - Do not import host JavaScript modules as TypeC modules.
+- Do not execute project configuration as code.
 
 ---
 
