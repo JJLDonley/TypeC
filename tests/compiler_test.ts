@@ -59,6 +59,13 @@ Deno.test("emits C for inferred arrays and indexing", () => {
   assertIncludes(c, "return xs[0];");
 });
 
+Deno.test("emits C for fixed array parameters", () => {
+  const source = `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { const xs: i32[] = [1, 2, 3]; return first(xs); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32 first(i32 values[3])");
+  assertIncludes(c, "return first(xs);");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

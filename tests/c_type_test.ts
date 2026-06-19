@@ -1,5 +1,5 @@
 import type { TypeRef } from "../src/ast.ts";
-import { emitCType } from "../src/c_type.ts";
+import { emitCDeclarator, emitCType } from "../src/c_type.ts";
 
 type Str = string;
 
@@ -12,6 +12,11 @@ Deno.test("maps primitive TypeC names one-to-one", () => {
 Deno.test("maps pointer and reference types to C pointers", () => {
   assertEquals(emitCType({ kind: "PointerTypeRef", element: namedType("i32"), span: fakeSpan() }), "i32*");
   assertEquals(emitCType({ kind: "ReferenceTypeRef", element: namedType("i32"), span: fakeSpan() }), "i32*");
+});
+
+Deno.test("emits fixed array declarators", () => {
+  const type: TypeRef = { kind: "FixedArrayTypeRef", element: namedType("i32"), sizeText: "3", span: fakeSpan() };
+  assertEquals(emitCDeclarator(type, "values"), "i32 values[3]");
 });
 
 function namedType(name: Str): TypeRef {

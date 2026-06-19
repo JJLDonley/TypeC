@@ -60,6 +60,10 @@ Deno.test("rejects fixed array length mismatch", () => {
   assertCheckError(`function main(): i32 { const xs: i32[2] = [1, 2, 3]; return 0; }`, "Array length 3 is not assignable to 'i32[2]'");
 });
 
+Deno.test("rejects array return types", () => {
+  assertCheckError(`function values(): i32[3] { return [1, 2, 3]; } function main(): i32 { return 0; }`, "Function 'values' cannot return array type 'i32[3]'");
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });

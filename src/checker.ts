@@ -50,6 +50,7 @@ class Checker {
 
     let hasReturn = false;
     const returnType = typeName(fn.returnType);
+    if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
     for (const stmt of fn.body.statements) {
       if (stmt.kind === "ReturnStmt") hasReturn = true;
       this.checkStatement(stmt, locals, returnType);

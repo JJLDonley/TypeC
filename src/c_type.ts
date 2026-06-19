@@ -10,11 +10,22 @@ export function emitCType(type: TypeRef): Str {
     case "ReferenceTypeRef":
       return `${emitCType(type.element)}*`;
     case "InferredArrayTypeRef":
-      throw new Error("Cannot emit inferred array type before array checking");
+      throw new Error("Cannot emit inferred array type without a declarator");
     case "FixedArrayTypeRef":
-      throw new Error("Cannot emit fixed array type before array checking");
+      throw new Error("Cannot emit fixed array type without a declarator");
     case "RecordTypeRef":
       throw new Error("Record type literals must be emitted through a type alias");
+  }
+}
+
+export function emitCDeclarator(type: TypeRef, name: Str): Str {
+  switch (type.kind) {
+    case "InferredArrayTypeRef":
+      throw new Error("Cannot emit inferred array declarator before array length inference");
+    case "FixedArrayTypeRef":
+      return `${emitCType(type.element)} ${name}[${type.sizeText}]`;
+    default:
+      return `${emitCType(type)} ${name}`;
   }
 }
 

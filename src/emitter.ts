@@ -1,7 +1,7 @@
 import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl } from "./ast.ts";
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
-import { emitCType } from "./c_type.ts";
+import { emitCDeclarator, emitCType } from "./c_type.ts";
 
 type Str = string;
 
@@ -43,7 +43,7 @@ function emitFunction(fn: FunctionDecl): Str {
 
 function emitParams(fn: FunctionDecl): Str {
   if (fn.params.length === 0) return "void";
-  return fn.params.map((param) => `${emitCType(param.type)} ${param.name}`).join(", ");
+  return fn.params.map((param) => emitCDeclarator(param.type, param.name)).join(", ");
 }
 
 function emitStatement(stmt: Statement, returnType: Str): Str {
@@ -64,7 +64,8 @@ function emitArrayVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>): St
   if (stmt.initializer.kind !== "ArrayLiteralExpr") throw new Error("Array declarations require array literals");
   const element = stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef" ? emitCType(stmt.type.element) : "";
   const length = stmt.type.kind === "FixedArrayTypeRef" ? stmt.type.sizeText : String(stmt.initializer.elements.length);
-  return `${stmt.mutable ? "" : "const "}${element} ${stmt.name}[${length}] = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`)};`;
+  const declarator = `${element} ${stmt.name}[${length}]`;
+  return `${stmt.mutable ? "" : "const "}${declarator} = ${emitExpressionExpected(stmt.initializer, `${element}[${length}]`)};`;
 }
 
 function emitExpression(expr: Expression): Str {
