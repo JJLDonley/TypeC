@@ -4,6 +4,7 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl,
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "./checker_exprs.ts";
+import { blockReturns } from "./checker_returns.ts";
 import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "./checker_type_refs.ts";
 import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "./checker_types.ts";
 import { primitiveTypes } from "./token.ts";
@@ -492,16 +493,5 @@ class Checker {
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
   }
-}
-
-function blockReturns(statements: Statement[]): b8 {
-  return statements.some(statementReturns);
-}
-
-function statementReturns(statement: Statement): b8 {
-  if (statement.kind === "ReturnStmt") return true;
-  if (statement.kind !== "IfStmt") return false;
-  if (!statement.elseBody) return false;
-  return blockReturns(statement.thenBody.statements) && blockReturns(statement.elseBody.statements);
 }
 
