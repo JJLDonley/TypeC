@@ -672,15 +672,16 @@ Rationale:
 
 ## Goal
 
-Support multi-file TypeC projects.
+Support multi-file TypeC projects and simple standard-library imports.
 
 ## Example
 
 ```ts
 import { add } from "./math.tc";
+import { abs_i32 } from "std/math.tc";
 
 function main(): i32 {
-  return add(1, 2);
+  return add(abs_i32(1), 2);
 }
 ```
 
@@ -690,12 +691,14 @@ function main(): i32 {
 - Compile modules deterministically.
 - Detect import cycles.
 - Support explicit exports.
+- Support `std/` imports from the checked-in TypeC standard library.
 
 ## Do Not
 
 - Do not mimic Node module resolution fully.
 - Do not require JavaScript package semantics.
 - Do not make import behavior depend on runtime loading.
+- Do not import host JavaScript modules as TypeC modules.
 
 ---
 

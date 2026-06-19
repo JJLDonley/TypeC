@@ -54,6 +54,12 @@ Deno.test("deduplicates shared transitive imports", async () => {
   assertSame(countFunctions(program.functions.map((fn) => fn.name), "inc"), 1);
 });
 
+Deno.test("loads std imports", async () => {
+  const program = await loadProgram("examples/std_math.tc");
+  assertIncludes(program.functions.map((fn) => fn.name), "abs_i32");
+  assertIncludes(program.functions.map((fn) => fn.name), "clamp_i32");
+});
+
 Deno.test("rejects missing exports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);
@@ -61,10 +67,10 @@ Deno.test("rejects missing exports", async () => {
   await assertLoadError(`${dir}/main.tc`, "Module does not export 'hidden'");
 });
 
-Deno.test("rejects non-relative import paths", async () => {
+Deno.test("rejects unsupported import paths", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(`${dir}/main.tc`, `import { add } from "math.tc"; function main(): i32 { return 0; }`);
-  await assertLoadError(`${dir}/main.tc`, "Import path 'math.tc' must be relative");
+  await assertLoadError(`${dir}/main.tc`, "Import path 'math.tc' must be relative or std");
 });
 
 Deno.test("rejects non-TypeC import paths", async () => {

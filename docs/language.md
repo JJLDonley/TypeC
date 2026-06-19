@@ -12,7 +12,7 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
 - Fixed arrays `T[N]`, inferred local arrays `T[]`, array literals, and indexing
-- Static imports and explicit exports
+- Static imports, standard-library imports, and explicit exports
 - Explicit C extern function declarations
 - `//` and `/* */` comments
 
@@ -27,6 +27,20 @@ function main(): i32 {
   const x: i32 = add(20, 22);
   return x;
 }
+```
+
+## Imports
+
+Relative project imports use `./` or `../` paths:
+
+```ts
+import { add } from "./math.tc";
+```
+
+Standard-library imports use `std/` paths:
+
+```ts
+import { abs_i32 } from "std/math.tc";
 ```
 
 ## Run

@@ -66,12 +66,16 @@ function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest
 }
 
 function validateImportPath(path: Str, span: Diagnostic["span"]): void {
-  if (!isRelativeImportPath(path)) throw new TypeCError([{ message: `Import path '${path}' must be relative`, span }]);
+  if (!isRelativeImportPath(path) && !isStdImportPath(path)) throw new TypeCError([{ message: `Import path '${path}' must be relative or std`, span }]);
   if (!path.endsWith(".tc")) throw new TypeCError([{ message: `Import path '${path}' must target a .tc file`, span }]);
 }
 
 function isRelativeImportPath(path: Str): b8 {
   return path.startsWith("./") || path.startsWith("../");
+}
+
+function isStdImportPath(path: Str): b8 {
+  return path.startsWith("std/");
 }
 
 function mergeProgram(local: Program, imports: Program[]): Program {
@@ -106,7 +110,12 @@ function selectFunction(functions: FunctionDecl[], name: Str): FunctionDecl[] {
 }
 
 function resolveImportPath(fromPath: Str, importPath: Str): Str {
+  if (isStdImportPath(importPath)) return stdImportPath(importPath);
   return normalizePath(new URL(importPath, fileDirectoryUrl(fromPath)).pathname);
+}
+
+function stdImportPath(importPath: Str): Str {
+  return normalizePath(importPath);
 }
 
 function fileDirectoryUrl(path: Str): URL {

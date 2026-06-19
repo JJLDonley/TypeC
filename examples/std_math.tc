@@ -1,0 +1,5 @@
+import { abs_i32, clamp_i32 } from "std/math.tc";
+
+function main(): i32 {
+  return abs_i32(0 - 50) - clamp_i32(10, 0, 2) - 6;
+}
