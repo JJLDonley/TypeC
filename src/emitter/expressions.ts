@@ -1,8 +1,9 @@
-import type { Expression, FunctionDecl, RecordTypeRef, TypeAliasDecl } from "core/ast.ts";
-import { emitCType } from "c/type.ts";
+import type { Expression, RecordTypeRef } from "core/ast.ts";
 import type { EmitContext } from "emitter/context.ts";
+import { emitCallExpression } from "emitter/calls.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
+import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
 type usize = number;
@@ -22,7 +23,7 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
     case "BinaryExpr":
       return emitBinaryExpression(expr, context);
     case "CallExpr":
-      return emitCallExpression(expr, context);
+      return emitCallExpression(expr, context, emitExpression, emitExpressionExpected, emitArrayLiteralExpression);
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, context);
     case "FieldAccessExpr":
@@ -57,45 +58,10 @@ function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLitera
   return `.${field.name} = ${value}`;
 }
 
-function emitCTypeName(type: TypeAliasDecl["type"]): Str {
-  if (type.kind === "FixedArrayTypeRef") return `${emitCType(type.element)}[${type.sizeText}]`;
-  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element)}*`;
-  return emitCType(type);
-}
-
 function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, context: EmitContext, expectedType: Str | null = null): Str {
   const elementType = expectedType ? cArrayElementType(expectedType) : null;
   const elements = expr.elements.map((element) => elementType ? emitExpressionExpected(element, elementType, context) : emitExpression(element, context));
   return `{ ${elements.join(", ")} }`;
-}
-
-function emitCallExpression(expr: Extract<Expression, { kind: "CallExpr" }>, context: EmitContext): Str {
-  const fn = context.functions.get(expr.callee);
-  const args = expr.args.map((arg, index) => emitCallArg(arg, fn?.params[index], context));
-  return `${expr.callee}(${args.join(", ")})`;
-}
-
-function emitCallArg(arg: Expression, param: FunctionDecl["params"][usize] | undefined, context: EmitContext): Str {
-  if (!param) return emitExpression(arg, context);
-  const expectedType = emitCTypeName(param.type);
-  if (arg.kind === "ArrayLiteralExpr") return emitArrayCompoundLiteral(arg, emitArrayArgumentType(param.type), context);
-  if (isStringLiteralU8ArrayArgument(arg, param.type)) return emitCStringPointer(arg.text);
-  return emitExpressionExpected(arg, expectedType, context);
-}
-
-function isStringLiteralU8ArrayArgument(arg: Expression, type: FunctionDecl["params"][usize]["type"]): arg is Extract<Expression, { kind: "StringLiteral" }> {
-  if (arg.kind !== "StringLiteral") return false;
-  if (type.kind !== "FixedArrayTypeRef" && type.kind !== "InferredArrayTypeRef") return false;
-  return emitCType(type.element) === "u8";
-}
-
-function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
-  return `(${expectedType})${emitArrayLiteralExpression(expr, context, expectedType)}`;
-}
-
-function emitArrayArgumentType(type: FunctionDecl["params"][usize]["type"]): Str {
-  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element)}[]`;
-  return emitCTypeName(type);
 }
 
 function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {
