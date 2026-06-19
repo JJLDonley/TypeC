@@ -76,7 +76,7 @@ function readDependencies(value: unknown): Map<Str, Str> {
 function validateDependencyAlias(name: Str): void {
   if (!name.endsWith(".tc")) throw configError(`Dependency alias '${name}' must target a .tc import path`);
   if (isRelativeImportPath(name) || isStdImportPath(name)) throw configError(`Dependency alias '${name}' must not be relative or std`);
-  if (isAbsolutePath(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
+  if (isAbsolutePath(name) || hasUrlScheme(name) || hasParentTraversal(name)) throw configError(`Dependency alias '${name}' must be a project dependency import path`);
 }
 
 function validateDependencyTarget(name: Str, path: Str): void {

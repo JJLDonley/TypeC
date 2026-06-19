@@ -56,7 +56,7 @@ import { abs_i32 } from "std/math.tc";
 }
 ```
 
-Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, `std/` paths, or contain `..` segments.
+Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, URL-like paths, `std/` paths, or contain `..` segments.
 
 Dependency targets may be `std/` modules, absolute `.tc` paths, or project-relative `.tc` paths. Project-relative dependency targets cannot escape the project with `..` segments.
 

@@ -706,7 +706,7 @@ Supported fields:
 - `dependencies`: maps import aliases to `.tc` files.
 - `compiler.flags`: extra native C compiler flags.
 
-Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, `std/` paths, or contain `..` segments.
+Dependency aliases are virtual import paths. They cannot be relative paths, absolute paths, URL-like paths, `std/` paths, or contain `..` segments.
 
 Dependency targets may be relative project paths, absolute paths, or `std/` paths. Project-relative dependency targets cannot escape the project with `..` segments.
 
