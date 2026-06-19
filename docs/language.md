@@ -85,9 +85,9 @@ The standard library is written in TypeC and is expected to use the full complet
 
 Current stdlib modules are simple because advanced features are not implemented yet. As features such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to use them where they improve clarity, safety, or reuse.
 
-## C Strings
+## C Interop
 
-String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and pass to C functions expecting `u8*`.
+String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and pass to C functions expecting `u8*` or `void*`.
 
 ```ts
 extern function puts(text: u8*): i32;
@@ -96,6 +96,18 @@ function main(): i32 {
   const text: u8[] = "hello";
   puts(text);
   return 0;
+}
+```
+
+Raw `void*` parameters accept C-compatible pointer and array arguments without length or pointee type information.
+
+```ts
+extern function memset(data: void*, value: i32, count: usize): void*;
+
+function main(): i32 {
+  const bytes: u8[] = [0, 0, 0];
+  memset(bytes, 42, 3);
+  return 42;
 }
 ```
 

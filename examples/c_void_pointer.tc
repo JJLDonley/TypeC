@@ -1,0 +1,7 @@
+extern function memset(data: void*, value: i32, count: usize): void*;
+
+function main(): i32 {
+  const bytes: u8[] = [0, 0, 0];
+  memset(bytes, 42, 3);
+  return 42;
+}
