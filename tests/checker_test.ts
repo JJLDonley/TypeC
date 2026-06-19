@@ -193,6 +193,10 @@ Deno.test("checks bool literals", () => {
   check(resolve(parse(lex(`function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`))));
 });
 
+Deno.test("rejects non-call expression statements", () => {
+  assertCheckError(`function main(): i32 { 1; return 0; }`, "Expression statements must be function calls");
+});
+
 Deno.test("checks if else statements", () => {
   check(resolve(parse(lex(`function main(): i32 { if (true) { return 1; } else { return 0; } }`))));
 });

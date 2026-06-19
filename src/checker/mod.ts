@@ -22,6 +22,7 @@ import {
   checkWhileCondition as collectWhileConditionDiagnostics,
 } from "checker/conditions.ts";
 import { spanKey } from "checker/exprs.ts";
+import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
@@ -119,6 +120,7 @@ class Checker {
         this.checkReturn(stmt.expression, locals, returnType, stmt.span);
         return;
       case "ExpressionStmt":
+        this.diagnostics.push(...collectExpressionStatementDiagnostics(stmt.expression));
         this.typeOf(stmt.expression, locals);
         return;
       case "VarDeclStmt":

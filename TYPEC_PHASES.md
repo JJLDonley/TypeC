@@ -368,7 +368,7 @@ TAST means Typed AST.
 - return checking
 - bare `return;` for `void` functions
 - function call checking
-- expression statement checking
+- function-call expression statement checking
 - binary operator checking
 - pointer/reference checking
 - slice/array checking
