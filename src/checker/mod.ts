@@ -4,7 +4,6 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkArrayIndex as collectArrayIndexDiagnostics } from "checker/array_indexes.ts";
-import { checkArrayInitializer as collectArrayInitializerDiagnostics } from "checker/array_initializers.ts";
 import {
   checkArrayLiteralElementType as collectArrayLiteralElementTypeDiagnostics,
   checkArrayLiteralLength as collectArrayLiteralLengthDiagnostics,
@@ -32,16 +31,12 @@ import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
-import {
-  checkRecordLiteralFieldName as collectRecordLiteralFieldNameDiagnostics,
-  checkRecordLiteralMissingFields as collectRecordLiteralMissingFieldDiagnostics,
-  checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics,
-  findRecordField,
-} from "checker/record_literals.ts";
+import { checkRecordLiteralFields as collectRecordLiteralFieldDiagnostics } from "checker/record_literal_fields.ts";
+import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } from "checker/record_literals.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { blockReturns } from "checker/returns.ts";
 import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
-import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
+import { isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -256,22 +251,8 @@ class Checker {
     const record = this.recordAlias(expected);
     this.diagnostics.push(...collectRecordLiteralTargetDiagnostics(record, expected, expr));
     if (!record) return "<error>";
-    this.checkRecordLiteralFields(expr, locals, expected, record);
+    this.diagnostics.push(...collectRecordLiteralFieldDiagnostics(expr, record, expected, (fieldExpr, target) => this.typeOfExpected(fieldExpr, locals, target)));
     return expected;
-  }
-
-  private checkRecordLiteralFields(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName, record: RecordTypeRef): void {
-    const seen = new Set<Str>();
-    for (const field of expr.fields) {
-      this.diagnostics.push(...collectRecordLiteralFieldNameDiagnostics(field, record, expected, seen));
-      const expectedField = findRecordField(record, field.name);
-      if (!expectedField) continue;
-      const expectedType = typeName(expectedField.type);
-      this.diagnostics.push(...collectArrayInitializerDiagnostics(field.expression, expectedType, field.span));
-      const actual = this.typeOfExpected(field.expression, locals, expectedType);
-      if (!isAssignable(actual, expectedType)) this.error(`Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`, field.span);
-    }
-    this.diagnostics.push(...collectRecordLiteralMissingFieldDiagnostics(expr, record, expected, seen));
   }
 
   private recordAlias(name: TypeName): RecordTypeRef | null {
