@@ -4,6 +4,7 @@ import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
+import { checkBasicExpression } from "checker/basic_expressions.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
@@ -16,14 +17,12 @@ import { checkFieldAccessExpression } from "checker/field_access_expressions.ts"
 import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
-import { checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics } from "checker/literal_ranges.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
-import { stringLiteralType } from "checker/string_literals.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -137,17 +136,12 @@ class Checker {
   }
 
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
+    const basic = checkBasicExpression(expr);
+    if (basic.handled) {
+      this.diagnostics.push(...basic.diagnostics);
+      return basic.type;
+    }
     switch (expr.kind) {
-      case "IntegerLiteral":
-        this.diagnostics.push(...collectIntegerLiteralRangeDiagnostics(expr, "i32"));
-        return "i32";
-      case "FloatLiteral":
-        return "f64";
-      case "BoolLiteral":
-        return "bool";
-      case "StringLiteral":
-        this.error("String literals require an expected C string type", expr.span);
-        return stringLiteralType(expr);
       case "IdentifierExpr":
         return this.identifierType(expr.name, locals, expr.span);
       case "BinaryExpr":
@@ -167,6 +161,7 @@ class Checker {
       case "IndexExpr":
         return this.indexType(expr, locals);
     }
+    return basic.type;
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
@@ -215,7 +210,6 @@ class Checker {
   private checkMainFunction(fn: FunctionDecl, returnType: TypeName): void {
     this.diagnostics.push(...collectMainFunctionDiagnostics(fn, returnType));
   }
-
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
