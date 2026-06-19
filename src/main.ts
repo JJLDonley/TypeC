@@ -2,6 +2,7 @@ import { printAst } from "./ast_printer.ts";
 import { buildNative } from "./c_compiler.ts";
 import { type CliRequest, parseCliArgs, usageText } from "./cli.ts";
 import { compileFile } from "./compiler.ts";
+import { missingMainMessage } from "./entrypoint.ts";
 import { lex } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { runExecutable } from "./runner.ts";
@@ -62,7 +63,7 @@ async function run(inputPath: Str): Promise<never> {
 
 function requireMain(hasMain: b8): void {
   if (hasMain) return;
-  console.error("Program entrypoint 'main' not found");
+  console.error(missingMainMessage());
   Deno.exit(1);
 }
 

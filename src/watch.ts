@@ -1,5 +1,6 @@
 import { buildNative } from "./c_compiler.ts";
 import { compileFile } from "./compiler.ts";
+import { missingMainMessage } from "./entrypoint.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -27,6 +28,10 @@ async function rebuild(inputPath: Str, state: WatchState): Promise<void> {
   state.building = true;
   try {
     const result = await compileFile(inputPath);
+    if (!shouldBuildWatchedResult(result.hasMain)) {
+      console.error(missingMainMessage());
+      return;
+    }
     await buildNative(result);
     console.log(`Built ${result.exePath}`);
   } finally {
@@ -36,4 +41,8 @@ async function rebuild(inputPath: Str, state: WatchState): Promise<void> {
 
 export function shouldRebuild(kind: Deno.FsEvent["kind"]): b8 {
   return kind === "modify" || kind === "create";
+}
+
+export function shouldBuildWatchedResult(hasMain: b8): b8 {
+  return hasMain;
 }
