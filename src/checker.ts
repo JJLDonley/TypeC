@@ -16,6 +16,7 @@ import {
   checkWhileCondition as collectWhileConditionDiagnostics,
 } from "./checker_conditions.ts";
 import { spanKey } from "./checker_exprs.ts";
+import { checkFieldAccess } from "./checker_field_access.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
   checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
@@ -273,17 +274,9 @@ class Checker {
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    const record = this.recordAlias(operand);
-    if (!record) {
-      this.error(`Cannot access field '${expr.field}' on non-record type '${operand}'`, expr.span);
-      return "<error>";
-    }
-    const field = record.fields.find((candidate) => candidate.name === expr.field);
-    if (!field) {
-      this.error(`Unknown field '${expr.field}' on type '${operand}'`, expr.span);
-      return "<error>";
-    }
-    return typeName(field.type);
+    const result = checkFieldAccess(this.recordAlias(operand), operand, expr.field, expr.span);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
