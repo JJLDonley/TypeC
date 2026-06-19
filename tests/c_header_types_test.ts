@@ -10,6 +10,8 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("void * _Nullable"), "void*");
   assertSame(mapCHeaderType("_Bool"), "b8");
   assertSame(mapCHeaderType("size_t"), "usize");
+  assertSame(mapCHeaderType("int32_t[4]"), "i32[]");
+  assertSame(mapCHeaderType("const char [static 8]"), "u8[]");
 });
 
 Deno.test("rejects unsupported C header types", () => {

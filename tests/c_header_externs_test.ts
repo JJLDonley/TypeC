@@ -9,10 +9,12 @@ Deno.test("formats supported C header externs", () => {
   const output = formatHeaderExterns([
     fn("add", "int32_t", [{ name: "left", type: "int32_t" }, { name: "right", type: "int32_t" }]),
     fn("copy", "void *", [{ name: "dst", type: "void *" }, { name: "src", type: "const void *" }]),
+    fn("fill", "void", [{ name: "items", type: "int32_t[4]" }]),
   ]);
 
   assertIncludes(output, "extern function add(left: i32, right: i32): i32;");
   assertIncludes(output, "extern function copy(dst: void*, src: void*): void*;");
+  assertIncludes(output, "extern function fill(items: i32[]): void;");
 });
 
 Deno.test("skips unsupported C header externs", () => {

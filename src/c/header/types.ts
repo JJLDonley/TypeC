@@ -40,12 +40,19 @@ const typeMap = new Map<Str, Str>([
 
 export function mapCHeaderType(type: Str): Str {
   const normalized = normalizeCHeaderType(type);
+  const arrayElement = cArrayElementType(normalized);
+  if (arrayElement) return `${mapCHeaderType(arrayElement)}[]`;
   if (normalized.endsWith("*")) return `${mapCHeaderType(normalized.slice(0, -1))}*`;
   const mapped = typeMap.get(normalized);
   if (mapped) return mapped;
   throw new TypeCError([{ message: `Unsupported C type '${type}'` }]);
 }
 
+function cArrayElementType(type: Str): Str | null {
+  const match = type.match(/^(.+)\[[^\]]*\]$/);
+  return match?.[1] ?? null;
+}
+
 function normalizeCHeaderType(type: Str): Str {
-  return type.replace(/\bconst\b/g, "").replace(/\bvolatile\b/g, "").replace(/\brestrict\b/g, "").replace(/\b__restrict\b/g, "").replace(/\b__restrict__\b/g, "").replace(/\b_Nonnull\b/g, "").replace(/\b_Nullable\b/g, "").replace(/\b_Null_unspecified\b/g, "").replace(/\s*\*\s*/g, "*").replace(/\s+/g, " ").trim();
+  return type.replace(/\bconst\b/g, "").replace(/\bvolatile\b/g, "").replace(/\brestrict\b/g, "").replace(/\b__restrict\b/g, "").replace(/\b__restrict__\b/g, "").replace(/\b_Nonnull\b/g, "").replace(/\b_Nullable\b/g, "").replace(/\b_Null_unspecified\b/g, "").replace(/\s*\*\s*/g, "*").replace(/\s*\[\s*/g, "[").replace(/\s*\]\s*/g, "]").replace(/\s+/g, " ").trim();
 }
