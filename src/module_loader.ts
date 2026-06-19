@@ -1,13 +1,12 @@
-import type { Diagnostic } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
 import { generateExternsFromHeader } from "./c_header_generator.ts";
-import type { FunctionDecl, Program, TypeAliasDecl } from "./ast.ts";
+import type { Program } from "./ast.ts";
 import { lex } from "./lexer.ts";
-import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
-import { validateImportPath } from "./import_paths.ts";
 import { normalizePath } from "./path.ts";
-import { canonicalModulePath, isCHeaderPath, resolveModuleImportPath } from "./module_paths.ts";
+import { collectImportRequests } from "./module_import_requests.ts";
+import { canonicalModulePath, isCHeaderPath } from "./module_paths.ts";
+import { exportAllFunctions, mergeProgram, selectImports } from "./module_programs.ts";
 import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
@@ -16,12 +15,6 @@ interface LoadState {
   loaded: Map<Str, Program>;
   loading: Set<Str>;
   config: ProjectConfig;
-}
-
-interface ImportRequest {
-  path: Str;
-  names: Set<Str>;
-  span: Diagnostic["span"];
 }
 
 export async function loadProgram(entryPath: Str, config: ProjectConfig | null = null): Promise<Program> {
@@ -53,11 +46,7 @@ async function loadCanonicalModule(path: Str, state: LoadState): Promise<Program
 
 async function loadHeaderModule(path: Str, config: ProjectConfig): Promise<Program> {
   const source = await generateExternsFromHeader(path, config.compilerFlags, config.projectDir);
-  return exportAll(parse(lex(source)));
-}
-
-function exportAll(program: Program): Program {
-  return { ...program, functions: program.functions.map((fn) => ({ ...fn, exported: true })) };
+  return exportAllFunctions(parse(lex(source)));
 }
 
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {
@@ -67,53 +56,6 @@ async function collectImports(path: Str, program: Program, state: LoadState): Pr
     programs.push(selectImports(imported, [...request.names], request.span));
   }
   return programs;
-}
-
-function collectImportRequests(path: Str, program: Program, config: ProjectConfig): ImportRequest[] {
-  const requests = new Map<Str, ImportRequest>();
-  for (const importDecl of program.imports) {
-    validateImportPath(importDecl.path, importDecl.span, config);
-    const importedPath = resolveModuleImportPath(path, importDecl.path, config);
-    const request = requests.get(importedPath) ?? createImportRequest(importedPath, importDecl.span);
-    for (const name of importDecl.names) request.names.add(name);
-    requests.set(importedPath, request);
-  }
-  return [...requests.values()];
-}
-
-function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest {
-  return { path, names: new Set<Str>(), span };
-}
-
-function mergeProgram(local: Program, imports: Program[]): Program {
-  return {
-    kind: "Program",
-    imports: [],
-    typeAliases: uniqueRefs([...imports.flatMap((program) => program.typeAliases), ...local.typeAliases]),
-    functions: uniqueRefs([...imports.flatMap((program) => program.functions), ...local.functions]),
-    span: local.span,
-  };
-}
-
-function uniqueRefs<T>(items: T[]): T[] {
-  return [...new Set<T>(items)];
-}
-
-function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
-  const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
-  const functions = names.flatMap((name) => selectFunction(program.functions, name));
-  const found = new Set<Str>([...typeAliases.map((decl) => decl.name), ...functions.map((decl) => decl.name)]);
-  const missing = names.filter((name) => !found.has(name));
-  if (missing.length > 0) throw new TypeCError(missing.map((name) => ({ message: `Module does not export '${name}'`, span })));
-  return selectDependencyClosure(program, typeAliases.map((typeAlias) => typeAlias.name), functions.map((fn) => fn.name));
-}
-
-function selectTypeAlias(typeAliases: TypeAliasDecl[], name: Str): TypeAliasDecl[] {
-  return typeAliases.filter((typeAlias) => typeAlias.exported && typeAlias.name === name);
-}
-
-function selectFunction(functions: FunctionDecl[], name: Str): FunctionDecl[] {
-  return functions.filter((fn) => fn.exported && fn.name === name);
 }
 
 
