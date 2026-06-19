@@ -2,6 +2,7 @@ import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl 
 import type { CheckedProgram } from "./checker.ts";
 import { emitCPrelude } from "./c_prelude.ts";
 import { emitCDeclarator, emitCType } from "./c_type.ts";
+import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "./emitter_helpers.ts";
 
 type Str = string;
 type usize = number;
@@ -184,11 +185,6 @@ function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLite
   return `{ ${elements.join(", ")} }`;
 }
 
-function cArrayElementType(type: Str): Str | null {
-  const match = type.match(/^(.+)\[\d+\]$/);
-  return match?.[1] ?? null;
-}
-
 function emitCallExpression(expr: Extract<Expression, { kind: "CallExpr" }>, context: EmitContext): Str {
   const fn = context.functions.get(expr.callee);
   const args = expr.args.map((arg, index) => emitCallArg(arg, fn?.params[index], context));
@@ -206,13 +202,6 @@ function emitArrayCompoundLiteral(expr: Extract<Expression, { kind: "ArrayLitera
   return `(${expectedType})${emitArrayLiteralExpression(expr, context, expectedType)}`;
 }
 
-function emitIntegerLiteralExpression(expr: Extract<Expression, { kind: "IntegerLiteral" }>, expectedType: Str): Str {
-  if (expectedType === "u64" && expr.value > 9223372036854775807n) return `UINT64_C(${expr.text})`;
-  if (expectedType === "i64" && expr.value > 2147483647n) return `INT64_C(${expr.text})`;
-  if (expectedType === "u32" && expr.value > 2147483647n) return `UINT32_C(${expr.text})`;
-  return expr.text;
-}
-
 function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {
   const left = emitBinaryOperand(expr.left, expr.operator, "left", context);
   const right = emitBinaryOperand(expr.right, expr.operator, "right", context);
@@ -227,13 +216,6 @@ function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" |
   if (child < parent) return `(${operand})`;
   if (side === "right" && child === parent) return `(${operand})`;
   return operand;
-}
-
-function cPrecedence(operator: Str): usize {
-  if (operator === "*" || operator === "/" || operator === "%") return 3;
-  if (operator === "+" || operator === "-") return 2;
-  if (operator === "<" || operator === "<=" || operator === ">" || operator === ">=") return 1;
-  return 0;
 }
 
 function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, context: EmitContext): Str {
