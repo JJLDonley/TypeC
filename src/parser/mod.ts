@@ -18,6 +18,7 @@ import {
   importModifierDiagnostics,
   typeAliasModifierDiagnostics,
 } from "parser/declaration_modifiers.ts";
+import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
 import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
@@ -27,7 +28,6 @@ import type { Token, TokenKind } from "core/token.ts";
 type i32 = number;
 type Str = string;
 type b8 = boolean;
-type usize = number;
 
 export function parse(tokens: Token[]): Program {
   return lowerCast(parseCast(tokens));
@@ -300,36 +300,21 @@ class Parser {
   }
 
   private parseArrayLiteral(): CastExpression {
-    const open = this.expectText("[");
-    const elements = [];
-    if (!this.checkText("]")) {
-      do {
-        if (this.checkText("]")) break;
-        elements.push(this.parseExpression());
-      } while (this.matchText(","));
-    }
-    const close = this.expectText("]");
-    return { kind: "ArrayLiteralExpr", elements, span: span(open.span.start, close.span.end) };
+    return parseArrayLiteralWith(this.aggregateLiteralParser());
   }
 
   private parseRecordLiteral(): CastExpression {
-    const open = this.expectText("{");
-    const fields = [];
-    if (!this.checkText("}")) {
-      do {
-        if (this.checkText("}")) break;
-        fields.push(this.parseRecordLiteralField());
-      } while (this.matchText(","));
-    }
-    const close = this.expectText("}");
-    return { kind: "RecordLiteralExpr", fields, span: span(open.span.start, close.span.end) };
+    return parseRecordLiteralWith(this.aggregateLiteralParser());
   }
 
-  private parseRecordLiteralField(): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
-    const name = this.expectKind("identifier", "Expected field name");
-    this.expectText(":");
-    const expression = this.parseExpression();
-    return { name: name.text, expression, span: span(name.span.start, expression.span.end) };
+  private aggregateLiteralParser(): AggregateLiteralParser {
+    return {
+      checkText: (text: Str) => this.checkText(text),
+      matchText: (text: Str) => this.matchText(text),
+      expectKind: (kind: TokenKind, message: Str) => this.expectKind(kind, message),
+      expectText: (text: Str) => this.expectText(text),
+      parseExpression: () => this.parseExpression(),
+    };
   }
 
   private parseIdentifierExpression(): CastExpression {
