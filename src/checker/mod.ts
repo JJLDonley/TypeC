@@ -12,7 +12,7 @@ import {
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
-import { checkCallArguments as collectCallArgumentDiagnostics } from "checker/calls.ts";
+import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
@@ -215,14 +215,9 @@ class Checker {
   }
 
   private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
-    const fn = this.functions.get(expr.callee);
-    if (!fn) {
-      this.error(`Unknown function '${expr.callee}'`, expr.span);
-      return "<error>";
-    }
-
-    this.diagnostics.push(...collectCallArgumentDiagnostics(expr.args, fn, (arg, expected) => this.typeOfExpected(arg, locals, expected), expr.span));
-    return typeName(fn.returnType);
+    const result = checkCallExpression(expr, this.functions.get(expr.callee), (arg, expected) => this.typeOfExpected(arg, locals, expected));
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
