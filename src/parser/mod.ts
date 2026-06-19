@@ -8,7 +8,6 @@ import type {
   CastImportDecl,
   CastParam,
   CastProgram,
-  CastRecordField,
   CastStatement,
   CastTypeAliasDecl,
   CastTypeRef,
@@ -22,6 +21,7 @@ import {
 import { parseFloatLiteral, precedence, span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
+import { parseTypeRefWith } from "parser/type_refs.ts";
 import type { Token, TokenKind } from "core/token.ts";
 
 type i32 = number;
@@ -140,57 +140,14 @@ class Parser {
 
 
   private parseTypeRef(): CastTypeRef {
-    let type: CastTypeRef = this.checkText("{") ? this.parseRecordTypeRef() : this.parseNamedTypeRef();
-
-    while (this.isTypePostfixStart()) {
-      if (this.matchText("*")) {
-        type = { kind: "PointerTypeRef", element: type, span: span(type.span.start, this.previous().span.end) };
-        continue;
-      }
-      if (this.matchText("&")) {
-        type = { kind: "ReferenceTypeRef", element: type, span: span(type.span.start, this.previous().span.end) };
-        continue;
-      }
-      type = this.parseArrayTypeRef(type);
-    }
-
-    return type;
-  }
-
-  private parseNamedTypeRef(): CastTypeRef {
-    const token = this.expectKind("identifier", "Expected type name");
-    return { kind: "NamedTypeRef", name: token.text, span: token.span };
-  }
-
-  private parseArrayTypeRef(element: CastTypeRef): CastTypeRef {
-    this.expectText("[");
-    if (this.matchText("]")) {
-      return { kind: "InferredArrayTypeRef", element, span: span(element.span.start, this.previous().span.end) };
-    }
-
-    const size = this.expectKind("integer", "Expected array size");
-    const close = this.expectText("]");
-    return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(element.span.start, close.span.end) };
-  }
-
-  private parseRecordTypeRef(): CastTypeRef {
-    const open = this.expectText("{");
-    const fields: CastRecordField[] = [];
-    while (!this.checkText("}") && !this.check("eof")) fields.push(this.parseRecordField());
-    const close = this.expectText("}");
-    return { kind: "RecordTypeRef", fields, span: span(open.span.start, close.span.end) };
-  }
-
-  private parseRecordField(): CastRecordField {
-    const name = this.expectKind("identifier", "Expected field name");
-    this.expectText(":");
-    const type = this.parseTypeRef();
-    const semi = this.expectText(";");
-    return { name: name.text, type, span: span(name.span.start, semi.span.end) };
-  }
-
-  private isTypePostfixStart(): b8 {
-    return this.checkText("*") || this.checkText("&") || this.checkText("[");
+    return parseTypeRefWith({
+      check: (kind) => this.check(kind),
+      checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
+      expectKind: (kind, message) => this.expectKind(kind, message),
+      expectText: (text) => this.expectText(text),
+      previous: () => this.previous(),
+    });
   }
 
   private parseBlock(): CastBlockStmt {
