@@ -1,13 +1,10 @@
 import { sanitizeHeaderParamName, uniqueHeaderParamName } from "./c_header_identifiers.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { type JsonRecord, isJsonRecord } from "./json_record.ts";
 
 type Str = string;
 type b8 = boolean;
 type usize = number;
-
-interface JsonRecord {
-  [key: Str]: unknown;
-}
 
 export interface CHeaderParam {
   name: Str;
@@ -31,7 +28,7 @@ export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
 }
 
 function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]): void {
-  if (!isRecord(value)) return;
+  if (!isJsonRecord(value)) return;
   if (value.kind === "FunctionDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)) {
     const fn = readSupportedFunction(value);
     if (fn) functions.push(fn);
@@ -82,10 +79,10 @@ function readReturnType(type: Str): Str {
 
 function readSourceFile(value: JsonRecord): Str | null {
   const loc = value.loc;
-  if (!isRecord(loc)) return null;
+  if (!isJsonRecord(loc)) return null;
   if (typeof loc.file === "string") return loc.file;
   const includedFrom = loc.includedFrom;
-  if (!isRecord(includedFrom)) return null;
+  if (!isJsonRecord(includedFrom)) return null;
   if (typeof includedFrom.file === "string") return includedFrom.file;
   return null;
 }
@@ -105,11 +102,11 @@ function isHeaderDeclaration(value: JsonRecord): b8 {
 }
 
 function isParam(value: unknown): value is JsonRecord {
-  return isRecord(value) && value.kind === "ParmVarDecl";
+  return isJsonRecord(value) && value.kind === "ParmVarDecl";
 }
 
 function isCompoundStmt(value: unknown): b8 {
-  return isRecord(value) && value.kind === "CompoundStmt";
+  return isJsonRecord(value) && value.kind === "CompoundStmt";
 }
 
 function hasName(value: JsonRecord): b8 {
@@ -117,11 +114,11 @@ function hasName(value: JsonRecord): b8 {
 }
 
 function hasType(value: JsonRecord): b8 {
-  return isRecord(value.type) && typeof value.type.qualType === "string";
+  return isJsonRecord(value.type) && typeof value.type.qualType === "string";
 }
 
 function requireRecord(value: unknown, message: Str): JsonRecord {
-  if (isRecord(value)) return value;
+  if (isJsonRecord(value)) return value;
   throw new TypeCError([{ message }]);
 }
 
@@ -130,6 +127,3 @@ function readText(value: unknown, message: Str): Str {
   throw new TypeCError([{ message }]);
 }
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

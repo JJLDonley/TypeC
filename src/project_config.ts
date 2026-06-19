@@ -1,14 +1,11 @@
 import { compilerFlagError } from "./compiler_flags.ts";
 import { TypeCError } from "./diagnostics.ts";
+import { type JsonRecord, isJsonRecord } from "./json_record.ts";
 import { directoryOf, normalizePath } from "./path.ts";
 import { readProjectDependencies } from "./project_dependencies.ts";
 
 type Str = string;
 type b8 = boolean;
-
-interface JsonRecord {
-  [key: Str]: unknown;
-}
 
 export interface ProjectConfig {
   projectDir: Str;
@@ -25,7 +22,7 @@ export async function loadProjectConfig(entryPath: Str): Promise<ProjectConfig> 
 
 export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
   const value = parseJson(text);
-  if (!isRecord(value)) throw configError("project.json must contain an object");
+  if (!isJsonRecord(value)) throw configError("project.json must contain an object");
   rejectUnknownKeys("project.json", value, ["dependencies", "compiler"]);
   return {
     projectDir,
@@ -67,7 +64,7 @@ function parseJson(text: Str): unknown {
 
 function readCompilerFlags(value: unknown): Str[] {
   if (value === undefined) return [];
-  if (!isRecord(value)) throw configError("project.json compiler must be an object");
+  if (!isJsonRecord(value)) throw configError("project.json compiler must be an object");
   rejectUnknownKeys("project.json compiler", value, ["flags"]);
   const flags = value.flags;
   if (flags === undefined) return [];
@@ -79,10 +76,6 @@ function readCompilerFlags(value: unknown): Str[] {
 function validateCompilerFlag(flag: Str): void {
   const message = compilerFlagError(flag);
   if (message !== null) throw configError(message);
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function rejectUnknownKeys(scope: Str, value: JsonRecord, knownKeys: Str[]): void {

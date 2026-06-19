@@ -1,17 +1,14 @@
 import { TypeCError } from "./diagnostics.ts";
+import { type JsonRecord, isJsonRecord } from "./json_record.ts";
 import { hasParentTraversal } from "./path_security.ts";
 
 type Str = string;
 type b8 = boolean;
 
-interface JsonRecord {
-  [key: Str]: unknown;
-}
-
 export function readProjectDependencies(value: unknown): Map<Str, Str> {
   const dependencies = new Map<Str, Str>();
   if (value === undefined) return dependencies;
-  if (!isRecord(value)) throw dependencyError("project.json dependencies must be an object");
+  if (!isJsonRecord(value)) throw dependencyError("project.json dependencies must be an object");
   for (const [name, path] of Object.entries(value)) addDependency(dependencies, name, path);
   return dependencies;
 }
@@ -87,10 +84,6 @@ function isRelativeImportPath(path: Str): b8 {
 
 function isStdImportPath(path: Str): b8 {
   return path.startsWith("std/");
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function dependencyError(message: Str): TypeCError {
