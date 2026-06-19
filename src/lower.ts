@@ -11,10 +11,13 @@ import type {
   IntegerLiteral,
   Param,
   PointerTypeRef,
+  RecordField,
+  RecordTypeRef,
   PostfixPointerExpr,
   Program,
   ReferenceTypeRef,
   Statement,
+  TypeAliasDecl,
   TypeRef,
   VarDeclStmt,
 } from "./ast.ts";
@@ -31,10 +34,13 @@ import type {
   CastIntegerLiteral,
   CastParam,
   CastPointerTypeRef,
+  CastRecordField,
+  CastRecordTypeRef,
   CastPostfixPointerExpr,
   CastProgram,
   CastReferenceTypeRef,
   CastStatement,
+  CastTypeAliasDecl,
   CastTypeRef,
   CastVarDeclStmt,
 } from "./cast.ts";
@@ -42,8 +48,18 @@ import type {
 export function lowerCast(program: CastProgram): Program {
   return {
     kind: "Program",
+    typeAliases: program.typeAliases.map(lowerTypeAliasDecl),
     functions: program.functions.map(lowerFunctionDecl),
     span: program.span,
+  };
+}
+
+function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl {
+  return {
+    kind: "TypeAliasDecl",
+    name: typeAlias.name,
+    type: lowerTypeRef(typeAlias.type),
+    span: typeAlias.span,
   };
 }
 
@@ -78,6 +94,8 @@ function lowerTypeRef(type: CastTypeRef): TypeRef {
       return lowerInferredArrayTypeRef(type);
     case "FixedArrayTypeRef":
       return lowerFixedArrayTypeRef(type);
+    case "RecordTypeRef":
+      return lowerRecordTypeRef(type);
   }
 }
 
@@ -100,6 +118,14 @@ function lowerFixedArrayTypeRef(type: CastFixedArrayTypeRef): FixedArrayTypeRef 
     sizeText: type.sizeText,
     span: type.span,
   };
+}
+
+function lowerRecordTypeRef(type: CastRecordTypeRef): RecordTypeRef {
+  return { kind: "RecordTypeRef", fields: type.fields.map(lowerRecordField), span: type.span };
+}
+
+function lowerRecordField(field: CastRecordField): RecordField {
+  return { name: field.name, type: lowerTypeRef(field.type), span: field.span };
 }
 
 function lowerBlockStmt(block: CastBlockStmt): BlockStmt {

@@ -28,6 +28,15 @@ Deno.test("emits C for postfix pointer expressions", () => {
   assertIncludes(c, "return *p;");
 });
 
+Deno.test("emits C typedef for record aliases", () => {
+  const source = `type Vec2 = { x: f32; y: f32; }; function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "typedef struct {");
+  assertIncludes(c, "  f32 x;");
+  assertIncludes(c, "  f32 y;");
+  assertIncludes(c, "} Vec2;");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

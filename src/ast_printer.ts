@@ -1,4 +1,4 @@
-import type { BlockStmt, Expression, FunctionDecl, Param, Program, Statement, TypeRef } from "./ast.ts";
+import type { BlockStmt, Expression, FunctionDecl, Param, Program, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import { typeName } from "./type_ref.ts";
 
 type Str = string;
@@ -17,8 +17,13 @@ class AstPrinter {
   program(program: Program): void {
     this.line("Program");
     this.indented(() => {
+      for (const typeAlias of program.typeAliases) this.typeAliasDecl(typeAlias);
       for (const fn of program.functions) this.functionDecl(fn);
     });
+  }
+
+  private typeAliasDecl(typeAlias: TypeAliasDecl): void {
+    this.line(`TypeAliasDecl ${typeAlias.name} = ${this.type(typeAlias.type)}`);
   }
 
   private functionDecl(fn: FunctionDecl): void {

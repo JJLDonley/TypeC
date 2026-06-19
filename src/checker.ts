@@ -1,6 +1,6 @@
 import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
-import type { Expression, FunctionDecl, Statement, TypeRef } from "./ast.ts";
+import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { primitiveTypes } from "./token.ts";
@@ -22,6 +22,7 @@ export function check(program: ResolvedProgram): CheckedProgram {
 class Checker {
   private diagnostics: Diagnostic[] = [];
   private functions = new Map<Str, FunctionDecl>();
+  private typeAliases = new Map<Str, TypeRef>();
   private expressionTypes = new Map<Str, { type: TypeName }>();
 
   constructor(private program: ResolvedProgram) {}
@@ -34,6 +35,8 @@ class Checker {
   }
 
   private collectFunctions(): void {
+    for (const typeAlias of this.program.typeAliases) this.typeAliases.set(typeAlias.name, typeAlias.type);
+    for (const typeAlias of this.program.typeAliases) this.checkType(typeAlias.type);
     for (const fn of this.program.functions) {
       this.functions.set(fn.name, fn);
       this.checkType(fn.returnType);
@@ -153,7 +156,7 @@ class Checker {
   private checkType(type: TypeRef): void {
     switch (type.kind) {
       case "NamedTypeRef":
-        if (!primitiveTypes.has(type.name)) this.error(`Unknown type '${type.name}'`, type.span);
+        if (!primitiveTypes.has(type.name) && !this.typeAliases.has(type.name)) this.error(`Unknown type '${type.name}'`, type.span);
         return;
       case "PointerTypeRef":
       case "ReferenceTypeRef":
@@ -167,6 +170,18 @@ class Checker {
         this.checkType(type.element);
         this.error("Inferred array types require array initializers", type.span);
         return;
+      case "RecordTypeRef":
+        this.checkRecordType(type);
+        return;
+    }
+  }
+
+  private checkRecordType(type: RecordTypeRef): void {
+    const fields = new Set<Str>();
+    for (const field of type.fields) {
+      if (fields.has(field.name)) this.error(`Duplicate field '${field.name}'`, field.span);
+      fields.add(field.name);
+      this.checkType(field.type);
     }
   }
 

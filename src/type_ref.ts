@@ -15,6 +15,8 @@ export function typeName(type: TypeRef): Str {
       return `${typeName(type.element)}[]`;
     case "FixedArrayTypeRef":
       return `${typeName(type.element)}[${type.sizeText}]`;
+    case "RecordTypeRef":
+      return `{${type.fields.map((field) => `${field.name}:${typeName(field.type)}`).join(";")}}`;
   }
 }
 

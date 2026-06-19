@@ -20,6 +20,13 @@ Deno.test("rejects duplicate functions", () => {
   );
 });
 
+Deno.test("rejects duplicate type aliases", () => {
+  assertResolveError(
+    `type Vec2 = { x: f32; }; type Vec2 = { y: f32; }; function main(): i32 { return 0; }`,
+    "Duplicate type 'Vec2'",
+  );
+});
+
 Deno.test("rejects duplicate parameters", () => {
   assertResolveError(`function add(a: i32, a: i32): i32 { return a; }`, "Duplicate parameter 'a'");
 });

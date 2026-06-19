@@ -1,7 +1,17 @@
 import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
 import type { Program } from "./ast.ts";
-import type { CastBlockStmt, CastExpression, CastFunctionDecl, CastParam, CastProgram, CastStatement, CastTypeRef } from "./cast.ts";
+import type {
+  CastBlockStmt,
+  CastExpression,
+  CastFunctionDecl,
+  CastParam,
+  CastProgram,
+  CastRecordField,
+  CastStatement,
+  CastTypeAliasDecl,
+  CastTypeRef,
+} from "./cast.ts";
 import { lowerCast } from "./lower.ts";
 import type { Token, TokenKind } from "./token.ts";
 
@@ -25,11 +35,24 @@ class Parser {
 
   parseProgram(): CastProgram {
     const start = this.peek().span.start;
+    const typeAliases: CastTypeAliasDecl[] = [];
     const functions: CastFunctionDecl[] = [];
-    while (!this.check("eof")) functions.push(this.parseFunction());
+    while (!this.check("eof")) {
+      if (this.checkText("type")) typeAliases.push(this.parseTypeAlias());
+      else functions.push(this.parseFunction());
+    }
     const end = this.peek().span.end;
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
-    return { kind: "Program", functions, span: { start, end } };
+    return { kind: "Program", typeAliases, functions, span: { start, end } };
+  }
+
+  private parseTypeAlias(): CastTypeAliasDecl {
+    const start = this.expectText("type");
+    const name = this.expectKind("identifier", "Expected type alias name");
+    this.expectText("=");
+    const type = this.parseTypeRef();
+    const semi = this.expectText(";");
+    return { kind: "TypeAliasDecl", name: name.text, type, span: span(start.span.start, semi.span.end) };
   }
 
   private parseFunction(): CastFunctionDecl {
@@ -66,7 +89,7 @@ class Parser {
   }
 
   private parseTypeRef(): CastTypeRef {
-    let type: CastTypeRef = this.parseNamedTypeRef();
+    let type: CastTypeRef = this.checkText("{") ? this.parseRecordTypeRef() : this.parseNamedTypeRef();
 
     while (this.isTypePostfixStart()) {
       if (this.matchText("*")) {
@@ -97,6 +120,22 @@ class Parser {
     const size = this.expectKind("integer", "Expected array size");
     const close = this.expectText("]");
     return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(element.span.start, close.span.end) };
+  }
+
+  private parseRecordTypeRef(): CastTypeRef {
+    const open = this.expectText("{");
+    const fields: CastRecordField[] = [];
+    while (!this.checkText("}") && !this.check("eof")) fields.push(this.parseRecordField());
+    const close = this.expectText("}");
+    return { kind: "RecordTypeRef", fields, span: span(open.span.start, close.span.end) };
+  }
+
+  private parseRecordField(): CastRecordField {
+    const name = this.expectKind("identifier", "Expected field name");
+    this.expectText(":");
+    const type = this.parseTypeRef();
+    const semi = this.expectText(";");
+    return { name: name.text, type, span: span(name.span.start, semi.span.end) };
   }
 
   private isTypePostfixStart(): b8 {

@@ -7,7 +7,15 @@ type b8 = boolean;
 
 export interface CastProgram {
   kind: "Program";
+  typeAliases: CastTypeAliasDecl[];
   functions: CastFunctionDecl[];
+  span: SourceSpan;
+}
+
+export interface CastTypeAliasDecl {
+  kind: "TypeAliasDecl";
+  name: Str;
+  type: CastTypeRef;
   span: SourceSpan;
 }
 
@@ -31,7 +39,8 @@ export type CastTypeRef =
   | CastPointerTypeRef
   | CastReferenceTypeRef
   | CastInferredArrayTypeRef
-  | CastFixedArrayTypeRef;
+  | CastFixedArrayTypeRef
+  | CastRecordTypeRef;
 
 export interface CastNamedTypeRef {
   kind: "NamedTypeRef";
@@ -61,6 +70,18 @@ export interface CastFixedArrayTypeRef {
   kind: "FixedArrayTypeRef";
   element: CastTypeRef;
   sizeText: Str;
+  span: SourceSpan;
+}
+
+export interface CastRecordTypeRef {
+  kind: "RecordTypeRef";
+  fields: CastRecordField[];
+  span: SourceSpan;
+}
+
+export interface CastRecordField {
+  name: Str;
+  type: CastTypeRef;
   span: SourceSpan;
 }
 

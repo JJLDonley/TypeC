@@ -7,7 +7,15 @@ type b8 = boolean;
 
 export interface Program {
   kind: "Program";
+  typeAliases: TypeAliasDecl[];
   functions: FunctionDecl[];
+  span: SourceSpan;
+}
+
+export interface TypeAliasDecl {
+  kind: "TypeAliasDecl";
+  name: Str;
+  type: TypeRef;
   span: SourceSpan;
 }
 
@@ -26,7 +34,13 @@ export interface Param {
   span: SourceSpan;
 }
 
-export type TypeRef = NamedTypeRef | PointerTypeRef | ReferenceTypeRef | InferredArrayTypeRef | FixedArrayTypeRef;
+export type TypeRef =
+  | NamedTypeRef
+  | PointerTypeRef
+  | ReferenceTypeRef
+  | InferredArrayTypeRef
+  | FixedArrayTypeRef
+  | RecordTypeRef;
 
 export interface NamedTypeRef {
   kind: "NamedTypeRef";
@@ -56,6 +70,18 @@ export interface FixedArrayTypeRef {
   kind: "FixedArrayTypeRef";
   element: TypeRef;
   sizeText: Str;
+  span: SourceSpan;
+}
+
+export interface RecordTypeRef {
+  kind: "RecordTypeRef";
+  fields: RecordField[];
+  span: SourceSpan;
+}
+
+export interface RecordField {
+  name: Str;
+  type: TypeRef;
   span: SourceSpan;
 }
 

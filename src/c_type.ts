@@ -13,6 +13,8 @@ export function emitCType(type: TypeRef): Str {
       throw new Error("Cannot emit inferred array type before array checking");
     case "FixedArrayTypeRef":
       throw new Error("Cannot emit fixed array type before array checking");
+    case "RecordTypeRef":
+      throw new Error("Record type literals must be emitted through a type alias");
   }
 }
 
