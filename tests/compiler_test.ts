@@ -65,6 +65,12 @@ Deno.test("emits C for const and function call", () => {
   assertIncludes(c, "const i32 x = add(20, 22);");
 });
 
+Deno.test("emits C preserving binary precedence", () => {
+  const source = `function main(): i32 { return (1 + 2) * 3; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return (1 + 2) * 3;");
+});
+
 Deno.test("emits C for postfix pointer expressions", () => {
   const source = `function main(): i32 { let x: i32 = 1; const p: i32* = x.&; return p.*; }`;
   const c = emitC(check(resolve(parse(lex(source)))));

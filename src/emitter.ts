@@ -129,7 +129,7 @@ function emitExpression(expr: Expression, typeAliases: Map<Str, TypeAliasDecl>):
     case "IdentifierExpr":
       return expr.name;
     case "BinaryExpr":
-      return `${emitExpression(expr.left, typeAliases)} ${expr.operator} ${emitExpression(expr.right, typeAliases)}`;
+      return emitBinaryExpression(expr, typeAliases);
     case "CallExpr":
       return `${expr.callee}(${expr.args.map((arg) => emitExpression(arg, typeAliases)).join(", ")})`;
     case "PostfixPointerExpr":
@@ -171,6 +171,29 @@ function emitCTypeName(type: TypeAliasDecl["type"]): Str {
 
 function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
   return `{ ${expr.elements.map((element) => emitExpression(element, typeAliases)).join(", ")} }`;
+}
+
+function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const left = emitBinaryOperand(expr.left, expr.operator, "left", typeAliases);
+  const right = emitBinaryOperand(expr.right, expr.operator, "right", typeAliases);
+  return `${left} ${expr.operator} ${right}`;
+}
+
+function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" | "right", typeAliases: Map<Str, TypeAliasDecl>): Str {
+  const operand = emitExpression(expr, typeAliases);
+  if (expr.kind !== "BinaryExpr") return operand;
+  const parent = cPrecedence(parentOperator);
+  const child = cPrecedence(expr.operator);
+  if (child < parent) return `(${operand})`;
+  if (side === "right" && child === parent) return `(${operand})`;
+  return operand;
+}
+
+function cPrecedence(operator: Str): usize {
+  if (operator === "*" || operator === "/") return 3;
+  if (operator === "+" || operator === "-") return 2;
+  if (operator === "<" || operator === "<=" || operator === ">" || operator === ">=") return 1;
+  return 0;
 }
 
 function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, typeAliases: Map<Str, TypeAliasDecl>): Str {
