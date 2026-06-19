@@ -41,6 +41,7 @@ import {
   findRecordField,
 } from "checker/record_literals.ts";
 import { blockReturns } from "checker/returns.ts";
+import { checkStringLiteralTarget as collectStringLiteralTargetDiagnostics, stringLiteralType } from "checker/string_literals.ts";
 import { checkValueType as collectValueTypeDiagnostics } from "checker/value_types.ts";
 import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "checker/types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "checker/type_alias_order.ts";
@@ -209,6 +210,12 @@ class Checker {
       this.expressionTypes.set(spanKey(expr.span), { type });
       return type;
     }
+    if (expr.kind === "StringLiteral") {
+      const type = stringLiteralType(expr);
+      this.diagnostics.push(...collectStringLiteralTargetDiagnostics(type, expected, expr));
+      this.expressionTypes.set(spanKey(expr.span), { type });
+      return type;
+    }
     return this.typeOf(expr, locals);
   }
 
@@ -221,6 +228,9 @@ class Checker {
         return "f64";
       case "BoolLiteral":
         return "bool";
+      case "StringLiteral":
+        this.error("String literals require an expected C string type", expr.span);
+        return stringLiteralType(expr);
       case "IdentifierExpr":
         return this.identifierType(expr.name, locals, expr.span);
       case "BinaryExpr":

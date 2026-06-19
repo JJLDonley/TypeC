@@ -145,6 +145,7 @@ export type CastExpression =
   | CastIntegerLiteral
   | CastFloatLiteral
   | CastBoolLiteral
+  | CastStringLiteral
   | CastIdentifierExpr
   | CastBinaryExpr
   | CastCallExpr
@@ -172,6 +173,12 @@ export interface CastBoolLiteral {
   kind: "BoolLiteral";
   value: b8;
   text: "true" | "false";
+  span: SourceSpan;
+}
+
+export interface CastStringLiteral {
+  kind: "StringLiteral";
+  text: Str;
   span: SourceSpan;
 }
 

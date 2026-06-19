@@ -15,10 +15,10 @@ Deno.test("accepts C ABI compatible functions", () => {
 });
 
 Deno.test("reports non-C ABI function types", () => {
-  const diagnostics = checkCAbiFunction(fn("bad", reference(named("i32")), [{ name: "items", type: fixedArray(named("i32")), span }]), "Exported", new Map());
+  const diagnostics = checkCAbiFunction(fn("bad", reference(named("i32")), [{ name: "items", type: reference(named("i32")), span }]), "Exported", new Map());
 
   assertText(diagnostics[0]?.message ?? "", "Exported function 'bad' return type 'i32&' is not C ABI compatible");
-  assertText(diagnostics[1]?.message ?? "", "Exported function 'bad' parameter 'items' type 'i32[2]' is not C ABI compatible");
+  assertText(diagnostics[1]?.message ?? "", "Exported function 'bad' parameter 'items' type 'i32&' is not C ABI compatible");
 });
 
 function fn(name: Str, returnType: TypeRef, params: FunctionDecl["params"]): FunctionDecl {
@@ -40,10 +40,6 @@ function named(name: Str): TypeRef {
 
 function reference(element: TypeRef): TypeRef {
   return { kind: "ReferenceTypeRef", element, span };
-}
-
-function fixedArray(element: TypeRef): TypeRef {
-  return { kind: "FixedArrayTypeRef", element, sizeText: "2", span };
 }
 
 function assertText(actual: Str, expected: Str): void {

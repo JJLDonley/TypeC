@@ -11,7 +11,6 @@ export function checkFunctionReturnType(fn: FunctionDecl, returnType: TypeName):
   return [{ message: `Function '${fn.name}' cannot return array type '${returnType}'`, span: fn.returnType.span }];
 }
 
-export function checkFunctionParamType(param: FunctionDecl["params"][usize], functionName: Str): Diagnostic[] {
-  if (param.type.kind !== "InferredArrayTypeRef") return [];
-  return [{ message: `Parameter '${param.name}' of function '${functionName}' cannot have inferred array type`, span: param.span }];
+export function checkFunctionParamType(_param: FunctionDecl["params"][usize], _functionName: Str): Diagnostic[] {
+  return [];
 }

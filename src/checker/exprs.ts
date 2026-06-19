@@ -24,6 +24,7 @@ export function isAddressable(expr: Expression): b8 {
     case "IntegerLiteral":
     case "FloatLiteral":
     case "BoolLiteral":
+    case "StringLiteral":
     case "BinaryExpr":
     case "CallExpr":
     case "RecordLiteralExpr":

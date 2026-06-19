@@ -145,6 +145,7 @@ export type Expression =
   | IntegerLiteral
   | FloatLiteral
   | BoolLiteral
+  | StringLiteral
   | IdentifierExpr
   | BinaryExpr
   | CallExpr
@@ -172,6 +173,12 @@ export interface BoolLiteral {
   kind: "BoolLiteral";
   value: b8;
   text: "true" | "false";
+  span: SourceSpan;
+}
+
+export interface StringLiteral {
+  kind: "StringLiteral";
+  text: Str;
   span: SourceSpan;
 }
 

@@ -45,6 +45,7 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   const expectedArray = parseArrayType(expected);
   const actualArray = parseArrayType(actual);
   if (expectedArray && actualArray) return expectedArray.element === actualArray.element && (expectedArray.length === null || expectedArray.length === actualArray.length);
+  if (actualArray && expected.endsWith("*")) return actualArray.element === pointeeType(expected);
   if (!isReferenceType(actual)) return false;
   if (!isPointerLikeType(expected)) return false;
   return pointeeType(actual) === pointeeType(expected);

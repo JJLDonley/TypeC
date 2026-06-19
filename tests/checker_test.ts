@@ -20,8 +20,8 @@ Deno.test("rejects non-C ABI extern parameter types", () => {
   assertCheckError(`extern function use_ref(x: i32&): void; function main(): i32 { return 0; }`, "Extern function 'use_ref' parameter 'x' type 'i32&' is not C ABI compatible");
 });
 
-Deno.test("rejects non-C ABI extern return types", () => {
-  assertCheckError(`extern function values(): i32[3]; function main(): i32 { return 0; }`, "Extern function 'values' return type 'i32[3]' is not C ABI compatible");
+Deno.test("rejects extern array return types", () => {
+  assertCheckError(`extern function values(): i32[3]; function main(): i32 { return 0; }`, "Function 'values' cannot return array type 'i32[3]'");
 });
 
 Deno.test("rejects non-C ABI exported parameter types", () => {
@@ -61,8 +61,8 @@ Deno.test("rejects inferred array record fields", () => {
   assertCheckError(`type Bad = { xs: i32[]; }; function main(): i32 { return 0; }`, "Field 'xs' cannot have inferred array type");
 });
 
-Deno.test("rejects inferred array parameters", () => {
-  assertCheckError(`function first(values: i32[]): i32 { return values[0]; } function main(): i32 { return 0; }`, "Parameter 'values' of function 'first' cannot have inferred array type");
+Deno.test("accepts pointer-decayed inferred array parameters", () => {
+  check(resolve(parse(lex(`function first(values: i32[]): i32 { return values[0]; } function main(): i32 { const values: i32[] = [1, 2]; return first(values); }`))));
 });
 
 Deno.test("rejects pointer-like array targets", () => {

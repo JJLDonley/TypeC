@@ -78,6 +78,13 @@ Deno.test("parses bool literals", () => {
   if (!statement.expression || statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
 });
 
+Deno.test("parses string literals", () => {
+  const program = parse(lex(`extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`));
+  const statement = requireBody(program.functions[1].body).statements[0];
+  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") throw new Error("Expected call return");
+  if (statement.expression.args[0]?.kind !== "StringLiteral") throw new Error("Expected string literal argument");
+});
+
 Deno.test("rejects out-of-range float literals", () => {
   const huge = `1${"0".repeat(400)}.0`;
   assertParseError(`function value(): f64 { return ${huge}; }`, `Float literal '${huge}' is out of range for 'f64'`);

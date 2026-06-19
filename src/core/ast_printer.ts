@@ -94,6 +94,9 @@ class AstPrinter {
       case "BoolLiteral":
         this.line(`BoolLiteral ${expression.text}`);
         return;
+      case "StringLiteral":
+        this.line(`StringLiteral ${expression.text}`);
+        return;
       case "IdentifierExpr":
         this.line(`IdentifierExpr ${expression.name}`);
         return;

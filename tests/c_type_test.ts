@@ -19,6 +19,11 @@ Deno.test("emits fixed array declarators", () => {
   assertEquals(emitCDeclarator(type, "values"), "i32 values[3]");
 });
 
+Deno.test("emits inferred array parameters as pointers", () => {
+  const type: TypeRef = { kind: "InferredArrayTypeRef", element: namedType("i32"), span: fakeSpan() };
+  assertEquals(emitCDeclarator(type, "values"), "i32* values");
+});
+
 function namedType(name: Str): TypeRef {
   return { kind: "NamedTypeRef", name, span: fakeSpan() };
 }

@@ -16,10 +16,10 @@ Deno.test("reports array function return types", () => {
   assertText(diagnostics[0]?.message ?? "", "Function 'items' cannot return array type 'i32[2]'");
 });
 
-Deno.test("reports inferred array parameter types", () => {
+Deno.test("accepts pointer-decayed inferred array parameter types", () => {
   const diagnostics = checkFunctionParamType({ name: "items", type: inferredArray(named("i32")), span }, "sum");
 
-  assertText(diagnostics[0]?.message ?? "", "Parameter 'items' of function 'sum' cannot have inferred array type");
+  assertLen(diagnostics.length, 0);
 });
 
 Deno.test("accepts valid function signature types", () => {

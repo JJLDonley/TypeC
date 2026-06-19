@@ -202,6 +202,19 @@ Deno.test("emits C for if else statements", () => {
   assertIncludes(c, "} else {");
 });
 
+Deno.test("emits C string literals for u8 pointer calls", () => {
+  const source = `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return puts((u8*)\"hello\");");
+});
+
+Deno.test("emits inferred array parameters as C pointers", () => {
+  const source = `function first(values: i32[]): i32 { return values[0]; } function main(): i32 { const values: i32[] = [1, 2]; return first(values); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "static i32 first(i32* values)");
+  assertIncludes(c, "return first(values);");
+});
+
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
 }

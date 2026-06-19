@@ -16,9 +16,10 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
       return isCAbiTypeSeen(type.element, typeAliases, seen);
     case "RecordTypeRef":
       return type.fields.every((field) => isCAbiRecordFieldType(field.type, typeAliases, seen));
-    case "ReferenceTypeRef":
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
+      return isCAbiTypeSeen(type.element, typeAliases, seen);
+    case "ReferenceTypeRef":
       return false;
   }
 }

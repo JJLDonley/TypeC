@@ -21,7 +21,7 @@ export function emitCType(type: TypeRef): Str {
 export function emitCDeclarator(type: TypeRef, name: Str): Str {
   switch (type.kind) {
     case "InferredArrayTypeRef":
-      throw new Error("Cannot emit inferred array declarator before array length inference");
+      return `${emitCType(type.element)}* ${name}`;
     case "FixedArrayTypeRef":
       return `${emitCType(type.element)} ${name}[${type.sizeText}]`;
     default:

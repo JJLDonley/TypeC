@@ -16,7 +16,7 @@ Deno.test("classifies primitive and pointer C ABI types", () => {
   assertSame(isCAbiType(named("i32"), aliases), true);
   assertSame(isCAbiType(pointer(named("void")), aliases), true);
   assertSame(isCAbiType(reference(named("i32")), aliases), false);
-  assertSame(isCAbiType(inferredArray(named("i32")), aliases), false);
+  assertSame(isCAbiType(inferredArray(named("i32")), aliases), true);
 });
 
 Deno.test("classifies record alias C ABI types", () => {

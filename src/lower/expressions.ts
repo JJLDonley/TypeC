@@ -7,6 +7,7 @@ import type {
   FieldAccessExpr,
   FloatLiteral,
   IdentifierExpr,
+  StringLiteral,
   IndexExpr,
   IntegerLiteral,
   PostfixPointerExpr,
@@ -21,6 +22,7 @@ import type {
   CastFieldAccessExpr,
   CastFloatLiteral,
   CastIdentifierExpr,
+  CastStringLiteral,
   CastIndexExpr,
   CastIntegerLiteral,
   CastPostfixPointerExpr,
@@ -35,6 +37,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerFloatLiteral(expression);
     case "BoolLiteral":
       return lowerBoolLiteral(expression);
+    case "StringLiteral":
+      return lowerStringLiteral(expression);
     case "IdentifierExpr":
       return lowerIdentifierExpr(expression);
     case "BinaryExpr":
@@ -64,6 +68,10 @@ function lowerFloatLiteral(expression: CastFloatLiteral): FloatLiteral {
 
 function lowerBoolLiteral(expression: CastBoolLiteral): BoolLiteral {
   return { kind: "BoolLiteral", value: expression.value, text: expression.text, span: expression.span };
+}
+
+function lowerStringLiteral(expression: CastStringLiteral): StringLiteral {
+  return { kind: "StringLiteral", text: expression.text, span: expression.span };
 }
 
 function lowerIdentifierExpr(expression: CastIdentifierExpr): IdentifierExpr {
