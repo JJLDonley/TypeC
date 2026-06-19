@@ -7,6 +7,7 @@ import { primitiveTypes } from "./token.ts";
 import { typeName } from "./type_ref.ts";
 
 type Str = string;
+type f64 = number;
 type b8 = boolean;
 type usize = number;
 type IntLiteralValue = bigint;
@@ -34,6 +35,7 @@ const integerRanges = new Map<Str, IntegerRange>([
   ["u32", { min: 0n, max: 4294967295n }],
   ["u64", { min: 0n, max: 18446744073709551615n }],
 ]);
+const maxF32: f64 = 3.4028234663852886e38;
 
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
@@ -190,6 +192,7 @@ class Checker {
       return expected;
     }
     if (expr.kind === "FloatLiteral" && isFloatType(expected)) {
+      this.checkFloatLiteralRange(expr, expected);
       this.expressionTypes.set(spanKey(expr.span), { type: expected });
       return expected;
     }
@@ -241,6 +244,12 @@ class Checker {
     if (!range) return;
     if (expr.value >= range.min && expr.value <= range.max) return;
     this.error(`Integer literal '${expr.text}' is out of range for '${type}'`, expr.span);
+  }
+
+  private checkFloatLiteralRange(expr: Extract<Expression, { kind: "FloatLiteral" }>, type: TypeName): void {
+    if (type !== "f32") return;
+    if (Math.abs(expr.value) <= maxF32) return;
+    this.error(`Float literal '${expr.text}' is out of range for 'f32'`, expr.span);
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {

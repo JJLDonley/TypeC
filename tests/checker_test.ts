@@ -211,6 +211,11 @@ Deno.test("rejects integer literals outside target range", () => {
   assertCheckError(`function main(): i32 { return 2147483648; }`, "Integer literal '2147483648' is out of range for 'i32'");
 });
 
+Deno.test("rejects float literals outside target range", () => {
+  const huge = `1${"0".repeat(39)}.0`;
+  assertCheckError(`function main(): i32 { const x: f32 = ${huge}; return 0; }`, `Float literal '${huge}' is out of range for 'f32'`);
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(`function main(): i32 { return 1.5; }`, "Return type 'f64' is not assignable to 'i32'");
 });
