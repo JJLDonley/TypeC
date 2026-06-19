@@ -157,7 +157,7 @@ function validateCompilerFlag(flag: Str): void {
   if (flag === "-o" || flag.startsWith("-o")) throw configError("project.json compiler.flags cannot override output paths");
   if (isArtifactModeFlag(flag)) throw configError("project.json compiler.flags cannot change build artifact mode");
   if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
-  if (flag === "-x") throw configError("project.json compiler.flags cannot override input language");
+  if (flag.startsWith("-x")) throw configError("project.json compiler.flags cannot override input language");
 }
 
 function isArtifactModeFlag(flag: Str): b8 {

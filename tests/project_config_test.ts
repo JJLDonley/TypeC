@@ -37,6 +37,7 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"compiler":{"flags":["-I"]}}`, "project.json compiler flag '-I' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-include"]}}`, "project.json compiler flag '-include' must include its operand in the same argument");
   assertConfigError(`{"compiler":{"flags":["-x"]}}`, "project.json compiler.flags cannot override input language");
+  assertConfigError(`{"compiler":{"flags":["-xc++"]}}`, "project.json compiler.flags cannot override input language");
   assertConfigError(`{"dependencies":{"./math.tc":"std/math.tc"}}`, "Dependency alias './math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"std/math.tc":"std/math.tc"}}`, "Dependency alias 'std/math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"/math.tc":"std/math.tc"}}`, "Dependency alias '/math.tc' must be a project dependency import path");
