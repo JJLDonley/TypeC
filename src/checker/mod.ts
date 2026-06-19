@@ -11,6 +11,7 @@ import {
   checkArrayLiteralTarget as collectArrayLiteralTargetDiagnostics,
   checkInferredArrayLiteral as collectInferredArrayLiteralDiagnostics,
 } from "checker/array_literals.ts";
+import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryOperation } from "checker/binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import { checkCallArguments as collectCallArgumentDiagnostics } from "checker/calls.ts";
@@ -129,12 +130,7 @@ class Checker {
   }
 
   private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
-    const local = locals.get(stmt.name);
-    if (!local) return;
-    if (!local.mutable) this.error(`Cannot assign to const '${stmt.name}'`, stmt.span);
-    if (parseArrayType(local.type)) this.error(`Cannot assign to array variable '${stmt.name}'`, stmt.span);
-    const actual = this.typeOfExpected(stmt.expression, locals, local.type);
-    if (!isAssignable(actual, local.type)) this.error(`Assignment type '${actual}' is not assignable to '${local.type}'`, stmt.span);
+    this.diagnostics.push(...collectAssignmentDiagnostics(stmt, locals.get(stmt.name), (expr, expected) => this.typeOfExpected(expr, locals, expected)));
   }
 
   private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
