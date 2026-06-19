@@ -15,7 +15,7 @@ import {
   checkIfCondition as collectIfConditionDiagnostics,
   checkWhileCondition as collectWhileConditionDiagnostics,
 } from "./checker_conditions.ts";
-import { isAddressable, spanKey } from "./checker_exprs.ts";
+import { spanKey } from "./checker_exprs.ts";
 import {
   checkFunctionParamType as collectFunctionParamTypeDiagnostics,
   checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
@@ -26,9 +26,10 @@ import {
 } from "./checker_literal_ranges.ts";
 import { createFunctionLocals, type LocalInfo } from "./checker_locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "./checker_main.ts";
+import { checkPostfixPointerOperation } from "./checker_pointer_ops.ts";
 import { blockReturns } from "./checker_returns.ts";
 import { checkValueType as collectValueTypeDiagnostics } from "./checker_value_types.ts";
-import { isAssignable, isFloatType, isIntegerType, isPointerLikeType, parseArrayType } from "./checker_types.ts";
+import { isAssignable, isFloatType, isIntegerType, parseArrayType } from "./checker_types.ts";
 import { checkTypeAliasOrder as collectTypeAliasOrderDiagnostics } from "./checker_type_alias_order.ts";
 import {
   checkArrayElementType as collectArrayElementTypeDiagnostics,
@@ -350,13 +351,9 @@ class Checker {
 
   private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    if (expr.operator === ".&") {
-      if (!isAddressable(expr.operand)) this.error("Cannot take address of non-addressable expression", expr.span);
-      return `${operand}&`;
-    }
-    if (isPointerLikeType(operand)) return operand.slice(0, -1);
-    this.error(`Cannot dereference non-pointer-like type '${operand}'`, expr.span);
-    return "<error>";
+    const result = checkPostfixPointerOperation(expr, operand);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private checkType(type: TypeRef): void {
