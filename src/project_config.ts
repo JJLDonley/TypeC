@@ -1,6 +1,6 @@
 import { compilerFlagError } from "./compiler_flags.ts";
 import { TypeCError } from "./diagnostics.ts";
-import { directoryOf } from "./path.ts";
+import { directoryOf, normalizePath } from "./path.ts";
 import { readProjectDependencies } from "./project_dependencies.ts";
 
 type Str = string;
@@ -94,9 +94,5 @@ function rejectUnknownKeys(scope: Str, value: JsonRecord, knownKeys: Str[]): voi
 
 function configError(message: Str): TypeCError {
   return new TypeCError([{ message }]);
-}
-
-function normalizePath(path: Str): Str {
-  return path.startsWith("/") ? path : `${Deno.cwd()}/${path}`;
 }
 

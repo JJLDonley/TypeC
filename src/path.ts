@@ -1,6 +1,10 @@
 type Str = string;
 type b8 = boolean;
 
+export function normalizePath(path: Str): Str {
+  return path.startsWith("/") ? path : `${Deno.cwd()}/${path}`;
+}
+
 export function basenameNoExt(path: Str): Str {
   const file = path.split(/[\\/]/).pop() ?? "out";
   return file.replace(/\.[^.]+$/, "");

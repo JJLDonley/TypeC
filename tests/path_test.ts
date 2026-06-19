@@ -1,7 +1,12 @@
-import { basenameNoExt, buildOutputPaths, directoryOf, isPathWithinDir, stripTrailingSlash } from "../src/path.ts";
+import { basenameNoExt, buildOutputPaths, directoryOf, isPathWithinDir, normalizePath, stripTrailingSlash } from "../src/path.ts";
 
 type Str = string;
 type b8 = boolean;
+
+Deno.test("normalizes paths", () => {
+  assertEquals(normalizePath("/project/main.tc"), "/project/main.tc");
+  assertEquals(normalizePath("main.tc"), `${Deno.cwd()}/main.tc`);
+});
 
 Deno.test("gets basename without extension", () => {
   assertEquals(basenameNoExt("examples/main.tc"), "main");

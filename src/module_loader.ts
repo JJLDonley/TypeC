@@ -6,6 +6,7 @@ import { lex } from "./lexer.ts";
 import { selectDependencyClosure } from "./module_dependencies.ts";
 import { parse } from "./parser.ts";
 import { isStdImportPath, validateImportPath } from "./import_paths.ts";
+import { normalizePath } from "./path.ts";
 import { loadProjectConfig, type ProjectConfig } from "./project_config.ts";
 
 type Str = string;
@@ -155,6 +156,3 @@ async function canonicalModulePath(path: Str): Promise<Str> {
   }
 }
 
-function normalizePath(path: Str): Str {
-  return path.startsWith("/") ? path : `${Deno.cwd()}/${path}`;
-}
