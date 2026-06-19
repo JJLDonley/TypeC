@@ -1,4 +1,5 @@
 import { TypeCError } from "./diagnostics.ts";
+import { keywords } from "./token.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -159,18 +160,38 @@ function readFunction(value: JsonRecord): CFunction {
 function readParams(value: unknown): CParam[] {
   if (!Array.isArray(value)) return [];
   const params: CParam[] = [];
-  for (const child of value) if (isParam(child)) params.push(readParam(child, params.length));
+  const names = new Set<Str>();
+  for (const child of value) if (isParam(child)) params.push(readParam(child, params.length, names));
   return params;
 }
 
-function readParam(value: JsonRecord, index: usize): CParam {
+function readParam(value: JsonRecord, index: usize, names: Set<Str>): CParam {
   const type = requireRecord(value.type, "Parameter has no type");
-  return { name: readParamName(value, index), type: readText(type.qualType, "Parameter has no type") };
+  return { name: readParamName(value, index, names), type: readText(type.qualType, "Parameter has no type") };
 }
 
-function readParamName(value: JsonRecord, index: usize): Str {
-  if (typeof value.name === "string" && value.name.length > 0) return value.name;
-  return `arg${index}`;
+function readParamName(value: JsonRecord, index: usize, names: Set<Str>): Str {
+  const candidate = typeof value.name === "string" && value.name.length > 0 ? sanitizeParamName(value.name) : `arg${index}`;
+  return uniqueParamName(candidate, names);
+}
+
+function sanitizeParamName(name: Str): Str {
+  const replaced = name.replace(/[^A-Za-z0-9_]/g, "_");
+  const prefixed = /^[A-Za-z_]/.test(replaced) ? replaced : `arg_${replaced}`;
+  if (keywords.has(prefixed)) return `arg_${prefixed}`;
+  return prefixed;
+}
+
+function uniqueParamName(name: Str, names: Set<Str>): Str {
+  if (!names.has(name)) {
+    names.add(name);
+    return name;
+  }
+  let index: usize = 1;
+  while (names.has(`${name}_${index}`)) index += 1;
+  const unique = `${name}_${index}`;
+  names.add(unique);
+  return unique;
 }
 
 function readSourceFile(value: JsonRecord): Str | null {
