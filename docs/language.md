@@ -62,6 +62,12 @@ Then source can import through the alias:
 import { abs_i32 } from "basic/math.tc";
 ```
 
+## Standard Library
+
+The standard library is written in TypeC and is expected to use the full completed language, not only the initial core subset.
+
+Current stdlib modules are simple because advanced features are not implemented yet. As features such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to use them where they improve clarity, safety, or reuse.
+
 ## Run
 
 ```bash

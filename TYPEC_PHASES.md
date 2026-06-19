@@ -672,7 +672,7 @@ Rationale:
 
 ## Goal
 
-Support multi-file TypeC projects and simple standard-library imports.
+Support multi-file TypeC projects and standard-library imports.
 
 ## Example
 
@@ -708,6 +708,20 @@ Supported fields:
 
 Dependency targets may be relative project paths, absolute paths, or `std/` paths.
 
+## Standard Library Policy
+
+The standard library is normal TypeC code. It should use the strongest completed language features available.
+
+Early stdlib modules may start with the current core subset only because later features do not exist yet. As classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants become available, stdlib modules should be refactored to use those features where they make APIs clearer, safer, or more reusable.
+
+Feature phases must include stdlib impact checks:
+
+- Add or update stdlib examples when the feature is useful for basic library APIs.
+- Prefer generic stdlib APIs over duplicated primitive-only APIs once generics are implemented.
+- Prefer enums/tagged unions over integer sentinel values once those features are implemented.
+- Prefer safe pointer abstractions and arenas in stdlib memory APIs once specified.
+- Keep emitted C portable and explicit.
+
 ## Do
 
 - Resolve imports statically.
@@ -716,6 +730,7 @@ Dependency targets may be relative project paths, absolute paths, or `std/` path
 - Support explicit exports.
 - Support `std/` imports from the checked-in TypeC standard library.
 - Support `project.json` dependency aliases and compiler flags.
+- Treat stdlib modules as first-class TypeC modules that may use any completed language feature.
 
 ## Do Not
 
@@ -724,6 +739,7 @@ Dependency targets may be relative project paths, absolute paths, or `std/` path
 - Do not make import behavior depend on runtime loading.
 - Do not import host JavaScript modules as TypeC modules.
 - Do not execute project configuration as code.
+- Do not freeze stdlib design to the initial compiler subset.
 
 ---
 
