@@ -46,6 +46,7 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"dependencies":{"":"std/math.tc"}}`, "Dependency alias '' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic//math":"std/math.tc"}}`, "Dependency alias 'basic//math' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic/":"std/math.tc"}}`, "Dependency alias 'basic/' must be a project dependency import path");
+  assertConfigError(`{"dependencies":{"basic/./math":"std/math.tc"}}`, "Dependency alias 'basic/./math' must be a project dependency import path");
   assertConfigError(`{"dependencies":{"basic/math.tc":"std/math.tc"}}`, "Dependency alias 'basic/math.tc' must not include a file extension");
   assertConfigError(`{"dependencies":{"raylib.h":"vendor/raylib.h"}}`, "Dependency alias 'raylib.h' must not include a file extension");
   assertConfigError(`{"dependencies":{"basic/math":"std/math"}}`, "Dependency 'basic/math' target must be a .tc or .h file");

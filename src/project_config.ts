@@ -81,7 +81,11 @@ function validateDependencyAlias(name: Str): void {
 }
 
 function hasValidAliasSegments(path: Str): b8 {
-  return path.length > 0 && path.split("/").every((segment) => segment.length > 0);
+  return path.length > 0 && path.split("/").every(isValidAliasSegment);
+}
+
+function isValidAliasSegment(segment: Str): b8 {
+  return segment.length > 0 && segment !== ".";
 }
 
 function isAliasFilePath(path: Str): b8 {
