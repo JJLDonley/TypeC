@@ -11,7 +11,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
-- Fixed arrays `T[N]`, inferred local arrays `T[]`, array literals, and indexing
+- Fixed arrays `T[N]`, inferred local arrays `T[]`, pointer-decayed parameter arrays, array literals, and indexing
+- NUL-terminated C string literals as `u8[]`, decaying to `u8*` for C calls
 - Static imports, standard-library imports, and explicit exports
 - Explicit C extern function declarations
 - `//` and `/* */` comments
@@ -83,8 +84,22 @@ The standard library is written in TypeC and is expected to use the full complet
 
 Current stdlib modules are simple because advanced features are not implemented yet. As features such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to use them where they improve clarity, safety, or reuse.
 
+## C Strings
+
+String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and pass to C functions expecting `u8*`.
+
+```ts
+extern function puts(text: u8*): i32;
+
+function main(): i32 {
+  const text: u8[] = "hello";
+  const ignored: i32 = puts(text);
+  return 0;
+}
+```
+
 ## Run
 
 ```bash
-deno run -A src/main.ts run examples/main.tc
+deno run -A src/driver/main.ts run examples/main.tc
 ```
