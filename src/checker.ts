@@ -55,6 +55,7 @@ class Checker {
 
     const returnType = typeName(fn.returnType);
     if (parseArrayType(returnType)) this.error(`Function '${fn.name}' cannot return array type '${returnType}'`, fn.returnType.span);
+    if (fn.external) this.checkExternFunction(fn);
     if (!fn.body) return;
     for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
     if (returnType !== "void" && !blockReturns(fn.body.statements)) this.error(`Function '${fn.name}' must return '${returnType}'`, fn.span);
@@ -326,6 +327,13 @@ class Checker {
     }
   }
 
+  private checkExternFunction(fn: FunctionDecl): void {
+    if (!isCAbiType(fn.returnType)) this.error(`Extern function '${fn.name}' return type '${typeName(fn.returnType)}' is not C ABI compatible`, fn.returnType.span);
+    for (const param of fn.params) {
+      if (!isCAbiType(param.type)) this.error(`Extern function '${fn.name}' parameter '${param.name}' type '${typeName(param.type)}' is not C ABI compatible`, param.span);
+    }
+  }
+
   private checkRecordType(type: RecordTypeRef): void {
     const fields = new Set<Str>();
     for (const field of type.fields) {
@@ -342,6 +350,20 @@ class Checker {
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
+  }
+}
+
+function isCAbiType(type: TypeRef): b8 {
+  switch (type.kind) {
+    case "NamedTypeRef":
+      return true;
+    case "PointerTypeRef":
+      return isCAbiType(type.element);
+    case "ReferenceTypeRef":
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+    case "RecordTypeRef":
+      return false;
   }
 }
 

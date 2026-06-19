@@ -10,6 +10,14 @@ Deno.test("checks extern function calls", () => {
   check(resolve(parse(lex(`extern function add(a: i32, b: i32): i32; function main(): i32 { return add(20, 22); }`))));
 });
 
+Deno.test("rejects non-C ABI extern parameter types", () => {
+  assertCheckError(`extern function use_ref(x: i32&): void; function main(): i32 { return 0; }`, "Extern function 'use_ref' parameter 'x' type 'i32&' is not C ABI compatible");
+});
+
+Deno.test("rejects non-C ABI extern return types", () => {
+  assertCheckError(`extern function values(): i32[3]; function main(): i32 { return 0; }`, "Extern function 'values' return type 'i32[3]' is not C ABI compatible");
+});
+
 Deno.test("records typed expression information", () => {
   const program = check(resolve(parse(lex(`function main(): i32 { return 0; }`))));
   const types = [...program.expressionTypes.values()].map((entry) => entry.type);

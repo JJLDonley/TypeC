@@ -12,7 +12,11 @@ export function emitC(program: CheckedProgram): Str {
     out.push(emitTypeAlias(typeAlias));
     out.push("");
   }
-  for (const fn of program.functions) {
+  for (const fn of program.functions.filter((fn) => fn.external)) {
+    out.push(emitFunction(fn));
+    out.push("");
+  }
+  for (const fn of program.functions.filter((fn) => !fn.external)) {
     out.push(emitFunction(fn));
     out.push("");
   }

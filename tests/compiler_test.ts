@@ -13,6 +13,12 @@ Deno.test("emits C prototypes for extern functions", () => {
   assertIncludes(c, "i32 main(void)");
 });
 
+Deno.test("emits extern prototypes before functions", () => {
+  const source = `function main(): i32 { return add(20, 22); } extern function add(a: i32, b: i32): i32;`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertOrdered(c, "i32 add(i32 a, i32 b);", "i32 main(void)");
+});
+
 Deno.test("emits C for minimal main", () => {
   const source = `function main(): i32 {\n  return 0;\n}\n`;
   const c = emitC(check(resolve(parse(lex(source)))));
