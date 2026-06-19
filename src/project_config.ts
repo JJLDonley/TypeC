@@ -156,13 +156,17 @@ function readCompilerFlags(value: unknown): Str[] {
 function validateCompilerFlag(flag: Str): void {
   if (!flag.startsWith("-")) throw configError("project.json compiler.flags must contain flags only");
   if (flag === "-std" || flag.startsWith("-std=")) throw configError("project.json compiler.flags cannot override the C standard");
-  if (flag === "-o" || flag.startsWith("-o") || isLinkerOutputFlag(flag)) throw configError("project.json compiler.flags cannot override output paths");
+  if (isOutputPathFlag(flag)) throw configError("project.json compiler.flags cannot override output paths");
   if (isArtifactModeFlag(flag)) throw configError("project.json compiler.flags cannot change build artifact mode");
   if (isEntrypointFlag(flag)) throw configError("project.json compiler.flags cannot override the program entrypoint");
   if (isHostedEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot remove the hosted C environment");
   if (isTargetEnvironmentFlag(flag)) throw configError("project.json compiler.flags cannot override the target environment");
   if (isSeparateOperandFlag(flag)) throw configError(`project.json compiler flag '${flag}' must include its operand in the same argument`);
   if (flag.startsWith("-x")) throw configError("project.json compiler.flags cannot override input language");
+}
+
+function isOutputPathFlag(flag: Str): b8 {
+  return flag === "-o" || flag.startsWith("-o") || flag === "--output" || flag.startsWith("--output=") || isLinkerOutputFlag(flag);
 }
 
 function isLinkerOutputFlag(flag: Str): b8 {
