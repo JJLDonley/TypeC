@@ -58,6 +58,10 @@ Deno.test("rejects inferred array record fields", () => {
   assertCheckError(`type Bad = { xs: i32[]; }; function main(): i32 { return 0; }`, "Field 'xs' cannot have inferred array type");
 });
 
+Deno.test("rejects inferred array parameters", () => {
+  assertCheckError(`function first(values: i32[]): i32 { return values[0]; } function main(): i32 { return 0; }`, "Parameter 'values' of function 'first' cannot have inferred array type");
+});
+
 Deno.test("checks bare returns from void functions", () => {
   check(resolve(parse(lex(`function done(): void { return; } function main(): i32 { return 0; }`))));
 });

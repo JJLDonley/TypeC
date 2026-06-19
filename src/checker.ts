@@ -9,6 +9,7 @@ import { typeName } from "./type_ref.ts";
 type Str = string;
 type i32 = number;
 type b8 = boolean;
+type usize = number;
 
 interface LocalInfo {
   type: TypeName;
@@ -52,6 +53,7 @@ class Checker {
       for (const param of fn.params) {
         this.checkType(param.type);
         this.checkValueType(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span);
+        this.checkParamType(param, fn.name);
       }
     }
   }
@@ -413,6 +415,10 @@ class Checker {
 
   private checkValueType(type: TypeRef, message: Str, span: SourceSpan): void {
     if (type.kind === "NamedTypeRef" && type.name === "void") this.error(message, span);
+  }
+
+  private checkParamType(param: FunctionDecl["params"][usize], functionName: Str): void {
+    if (param.type.kind === "InferredArrayTypeRef") this.error(`Parameter '${param.name}' of function '${functionName}' cannot have inferred array type`, param.span);
   }
 
   private checkArraySize(sizeText: Str, span: SourceSpan): void {
