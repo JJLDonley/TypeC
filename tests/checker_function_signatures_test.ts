@@ -1,6 +1,6 @@
 import type { FunctionDecl, TypeRef } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
-import { checkFunctionParamType, checkFunctionReturnType } from "checker/function_signatures.ts";
+import { checkFunctionReturnType } from "checker/function_signatures.ts";
 
 type Str = string;
 type usize = number;
@@ -16,15 +16,8 @@ Deno.test("reports array function return types", () => {
   assertText(diagnostics[0]?.message ?? "", "Function 'items' cannot return array type 'i32[2]'");
 });
 
-Deno.test("accepts pointer-decayed inferred array parameter types", () => {
-  const diagnostics = checkFunctionParamType({ name: "items", type: inferredArray(named("i32")), span }, "sum");
-
-  assertLen(diagnostics.length, 0);
-});
-
-Deno.test("accepts valid function signature types", () => {
+Deno.test("accepts valid function signature return types", () => {
   assertLen(checkFunctionReturnType(fn("main", named("i32")), "i32").length, 0);
-  assertLen(checkFunctionParamType({ name: "value", type: named("i32"), span }, "id").length, 0);
 });
 
 function fn(name: Str, returnType: TypeRef): FunctionDecl {
@@ -46,10 +39,6 @@ function named(name: Str): TypeRef {
 
 function fixedArray(element: TypeRef): TypeRef {
   return { kind: "FixedArrayTypeRef", element, sizeText: "2", span };
-}
-
-function inferredArray(element: TypeRef): TypeRef {
-  return { kind: "InferredArrayTypeRef", element, span };
 }
 
 function assertText(actual: Str, expected: Str): void {

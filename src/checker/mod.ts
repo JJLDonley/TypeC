@@ -21,10 +21,7 @@ import {
 import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
-import {
-  checkFunctionParamType as collectFunctionParamTypeDiagnostics,
-  checkFunctionReturnType as collectFunctionReturnTypeDiagnostics,
-} from "checker/function_signatures.ts";
+import { checkFunctionReturnType as collectFunctionReturnTypeDiagnostics } from "checker/function_signatures.ts";
 import {
   checkFloatLiteralRange as collectFloatLiteralRangeDiagnostics,
   checkIntegerLiteralRange as collectIntegerLiteralRangeDiagnostics,
@@ -84,7 +81,6 @@ class Checker {
       for (const param of fn.params) {
         this.checkType(param.type);
         this.diagnostics.push(...collectValueTypeDiagnostics(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span));
-        this.diagnostics.push(...collectFunctionParamTypeDiagnostics(param, fn.name));
       }
     }
   }
