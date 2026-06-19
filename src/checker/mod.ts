@@ -14,10 +14,7 @@ import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignm
 import { checkBinaryOperation } from "checker/binary_operations.ts";
 import { checkCAbiFunction as collectCAbiFunctionDiagnostics } from "checker/c_abi_diagnostics.ts";
 import { checkCallArguments as collectCallArgumentDiagnostics } from "checker/calls.ts";
-import {
-  checkIfCondition as collectIfConditionDiagnostics,
-  checkWhileCondition as collectWhileConditionDiagnostics,
-} from "checker/conditions.ts";
+import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
@@ -121,21 +118,18 @@ class Checker {
   }
 
   private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
-    const condition = this.typeOf(stmt.condition, locals);
-    this.diagnostics.push(...collectWhileConditionDiagnostics(condition, stmt.condition.span));
-    this.checkBlock(stmt.body.statements, locals, returnType);
+    this.diagnostics.push(...checkWhileStatement(stmt, locals, (expr) => this.typeOf(expr, locals), (children, parent) => this.checkBlock(children, parent, returnType)));
   }
 
   private checkIf(stmt: Extract<Statement, { kind: "IfStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
-    const condition = this.typeOf(stmt.condition, locals);
-    this.diagnostics.push(...collectIfConditionDiagnostics(condition, stmt.condition.span));
-    this.checkBlock(stmt.thenBody.statements, locals, returnType);
-    if (stmt.elseBody) this.checkBlock(stmt.elseBody.statements, locals, returnType);
+    this.diagnostics.push(...checkIfStatement(stmt, locals, (expr) => this.typeOf(expr, locals), (children, parent) => this.checkBlock(children, parent, returnType)));
   }
 
-  private checkBlock(statements: Statement[], parentLocals: Map<Str, LocalInfo>, returnType: TypeName): void {
+  private checkBlock(statements: Statement[], parentLocals: Map<Str, LocalInfo>, returnType: TypeName): Diagnostic[] {
+    const before = this.diagnostics.length;
     const locals = new Map<Str, LocalInfo>(parentLocals);
     for (const child of statements) this.checkStatement(child, locals, returnType);
+    return this.diagnostics.splice(before);
   }
 
   private typeOf(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
