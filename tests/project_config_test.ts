@@ -37,6 +37,7 @@ Deno.test("rejects invalid project config", () => {
   assertConfigError(`{"dependencies":{"./math.tc":"std/math.tc"}}`, "Dependency alias './math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"std/math.tc":"std/math.tc"}}`, "Dependency alias 'std/math.tc' must not be relative or std");
   assertConfigError(`{"dependencies":{"basic/math.tc":"std/math"}}`, "Dependency 'basic/math.tc' target must be a .tc file");
+  assertConfigError(`{"dependencies":{"basic/math.tc":"https://example.test/math.tc"}}`, "Dependency 'basic/math.tc' target must be a local TypeC path");
 });
 
 function assertConfigError(text: Str, message: Str): void {

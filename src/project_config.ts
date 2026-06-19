@@ -80,6 +80,11 @@ function validateDependencyAlias(name: Str): void {
 
 function validateDependencyTarget(name: Str, path: Str): void {
   if (!path.endsWith(".tc")) throw configError(`Dependency '${name}' target must be a .tc file`);
+  if (hasUrlScheme(path)) throw configError(`Dependency '${name}' target must be a local TypeC path`);
+}
+
+function hasUrlScheme(path: Str): b8 {
+  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(path);
 }
 
 function isRelativeImportPath(path: Str): b8 {
