@@ -1,6 +1,6 @@
 import type { Diagnostic, SourceSpan } from "./diagnostics.ts";
 import { TypeCError } from "./diagnostics.ts";
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "./ast.ts";
+import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "./ast.ts";
 import type { ResolvedProgram } from "./rast.ts";
 import type { TypedProgram, TypeName } from "./tast.ts";
 import { primitiveTypes } from "./token.ts";
@@ -45,6 +45,7 @@ class Checker {
       if (typeAlias.type.kind !== "RecordTypeRef") this.error(`Type alias '${typeAlias.name}' must name a record type`, typeAlias.span);
       this.checkType(typeAlias.type);
     }
+    this.checkTypeAliasOrder();
     for (const fn of this.program.functions) {
       this.functions.set(fn.name, fn);
       this.checkType(fn.returnType);
@@ -52,6 +53,20 @@ class Checker {
         this.checkType(param.type);
         this.checkValueType(param.type, `Parameter '${param.name}' cannot have type 'void'`, param.span);
       }
+    }
+  }
+
+  private checkTypeAliasOrder(): void {
+    const indexes = new Map<Str, i32>();
+    for (let index = 0; index < this.program.typeAliases.length; index++) indexes.set(this.program.typeAliases[index]!.name, index as i32);
+    for (let index = 0; index < this.program.typeAliases.length; index++) this.checkTypeAliasDeps(this.program.typeAliases[index]!, index as i32, indexes);
+  }
+
+  private checkTypeAliasDeps(typeAlias: TypeAliasDecl, index: i32, indexes: Map<Str, i32>): void {
+    for (const name of collectTypeAliasRefs(typeAlias.type)) {
+      const refIndex = indexes.get(name);
+      if (refIndex === undefined || refIndex < index) continue;
+      this.error(`Type alias '${typeAlias.name}' cannot depend on '${name}' before it is declared`, typeAlias.span);
     }
   }
 
@@ -400,6 +415,29 @@ class Checker {
 
   private error(message: Str, span: Diagnostic["span"]): void {
     this.diagnostics.push({ message, span });
+  }
+}
+
+function collectTypeAliasRefs(type: TypeRef): Set<Str> {
+  const refs = new Set<Str>();
+  collectTypeAliasRefsInto(type, refs);
+  return refs;
+}
+
+function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
+  switch (type.kind) {
+    case "NamedTypeRef":
+      if (!primitiveTypes.has(type.name)) refs.add(type.name);
+      return;
+    case "PointerTypeRef":
+    case "ReferenceTypeRef":
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+      collectTypeAliasRefsInto(type.element, refs);
+      return;
+    case "RecordTypeRef":
+      for (const field of type.fields) collectTypeAliasRefsInto(field.type, refs);
+      return;
   }
 }
 

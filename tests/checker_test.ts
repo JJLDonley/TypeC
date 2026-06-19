@@ -34,6 +34,14 @@ Deno.test("rejects non-record type aliases", () => {
   assertCheckError(`type Count = i32; function main(): i32 { return 0; }`, "Type alias 'Count' must name a record type");
 });
 
+Deno.test("rejects record aliases that depend on undeclared aliases", () => {
+  assertCheckError(`type A = { b: B; }; type B = { x: i32; }; function main(): i32 { return 0; }`, "Type alias 'A' cannot depend on 'B' before it is declared");
+});
+
+Deno.test("rejects recursive record aliases", () => {
+  assertCheckError(`type Node = { next: Node*; }; function main(): i32 { return 0; }`, "Type alias 'Node' cannot depend on 'Node' before it is declared");
+});
+
 Deno.test("rejects void value types", () => {
   assertCheckError(`function bad(x: void): i32 { return 0; } function main(): i32 { return 0; }`, "Parameter 'x' cannot have type 'void'");
   assertCheckError(`function main(): i32 { const x: void = 0; return 0; }`, "Variable 'x' cannot have type 'void'");
