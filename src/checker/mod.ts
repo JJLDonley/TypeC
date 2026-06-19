@@ -1,6 +1,6 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import type { Expression, FunctionDecl, RecordTypeRef, Statement, TypeRef } from "core/ast.ts";
+import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import {
@@ -29,6 +29,7 @@ import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkMainFunction as collectMainFunctionDiagnostics } from "checker/main.ts";
 import { checkPostfixPointerOperation } from "checker/pointer_ops.ts";
+import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { checkRecordLiteralFields as collectRecordLiteralFieldDiagnostics } from "checker/record_literal_fields.ts";
 import { checkRecordLiteralTarget as collectRecordLiteralTargetDiagnostics } from "checker/record_literals.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
@@ -222,23 +223,17 @@ class Checker {
 
   private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
     const operand = this.typeOf(expr.operand, locals);
-    const result = checkFieldAccess(this.recordAlias(operand), operand, expr.field, expr.span);
+    const result = checkFieldAccess(lookupRecordAlias(operand, this.typeAliases), operand, expr.field, expr.span);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
 
   private recordLiteralType(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const record = this.recordAlias(expected);
+    const record = lookupRecordAlias(expected, this.typeAliases);
     this.diagnostics.push(...collectRecordLiteralTargetDiagnostics(record, expected, expr));
     if (!record) return "<error>";
     this.diagnostics.push(...collectRecordLiteralFieldDiagnostics(expr, record, expected, (fieldExpr, target) => this.typeOfExpected(fieldExpr, locals, target)));
     return expected;
-  }
-
-  private recordAlias(name: TypeName): RecordTypeRef | null {
-    const type = this.typeAliases.get(name);
-    if (type?.kind === "RecordTypeRef") return type;
-    return null;
   }
 
   private arrayLiteralType(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
