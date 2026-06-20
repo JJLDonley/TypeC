@@ -343,10 +343,19 @@ class Checker {
     expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
     locals: Map<Str, LocalInfo>,
   ): TypeName {
+    const constant = this.qualifiedConstant(expr);
+    if (constant) return typeName(constant.type);
     const operand = this.typeOf(expr.operand, locals);
     const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
+  }
+
+  private qualifiedConstant(
+    expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  ): ConstDecl | null {
+    const name = qualifiedExpressionName(expr);
+    return name === null ? null : this.constants.get(name) ?? null;
   }
 
   private indexType(
@@ -368,4 +377,11 @@ class Checker {
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
+}
+
+function qualifiedExpressionName(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+): Str | null {
+  if (expr.operand.kind !== "IdentifierExpr") return null;
+  return `${expr.operand.name}.${expr.field}`;
 }

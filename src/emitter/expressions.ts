@@ -180,6 +180,8 @@ function emitFieldAccessExpression(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   context: EmitContext,
 ): Str {
+  const constant = emitQualifiedConstantExpression(expr, context);
+  if (constant !== null) return constant;
   if (isArrayDataFieldAccess(expr, context)) return emitMemberOperand(expr.operand, context);
   if (isSliceDataFieldAccess(expr, context)) {
     return `${emitMemberOperand(expr.operand, context)}.data`;
@@ -189,6 +191,15 @@ function emitFieldAccessExpression(
     return `${emitMemberOperand(expr.operand, context)}.length`;
   }
   return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
+}
+
+function emitQualifiedConstantExpression(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): Str | null {
+  if (expr.operand.kind !== "IdentifierExpr") return null;
+  const name = `${expr.operand.name}.${expr.field}`;
+  return context.constants?.get(name)?.cName ?? null;
 }
 
 function isArrayDataFieldAccess(

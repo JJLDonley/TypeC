@@ -54,8 +54,17 @@ function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b
       return expr.elements.every((element) => isConstantExpression(element, availableConstants));
     case "CallExpr":
     case "PostfixPointerExpr":
-    case "FieldAccessExpr":
     case "IndexExpr":
       return false;
+    case "FieldAccessExpr":
+      return isQualifiedConstantExpression(expr, availableConstants);
   }
+}
+
+function isQualifiedConstantExpression(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  availableConstants: Set<Str>,
+): b8 {
+  if (expr.operand.kind !== "IdentifierExpr") return false;
+  return availableConstants.has(`${expr.operand.name}.${expr.field}`);
 }

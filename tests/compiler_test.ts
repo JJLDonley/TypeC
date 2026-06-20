@@ -60,6 +60,20 @@ Deno.test("emits C for imported module constants", async () => {
   assertIncludes(c, "return ANSWER;");
 });
 
+Deno.test("emits C for namespace constant imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/config.tc`, `export const ANSWER: i32 = 42;`);
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Config from "./config.tc"; function main(): i32 { return Config.ANSWER; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "static const i32 Config_ANSWER = 42;");
+  assertIncludes(c, "return Config_ANSWER;");
+});
+
 Deno.test("emits C for namespace function dependencies", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

@@ -5,6 +5,7 @@ import type { ResolvedProgram, SymbolKind } from "core/rast.ts";
 import { type Scope, ScopeTable } from "core/scope.ts";
 
 type Str = string;
+type b8 = boolean;
 
 export function resolve(program: Program): ResolvedProgram {
   const resolver = new Resolver(program);
@@ -118,7 +119,10 @@ class Resolver {
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "PostfixPointerExpr":
+        this.resolveExpression(expression.operand, scope);
+        return;
       case "FieldAccessExpr":
+        if (this.resolveQualifiedSymbol(expression, scope)) return;
         this.resolveExpression(expression.operand, scope);
         return;
       case "RecordLiteralExpr":
@@ -134,6 +138,14 @@ class Resolver {
     }
   }
 
+  private resolveQualifiedSymbol(
+    expression: Extract<Expression, { kind: "FieldAccessExpr" }>,
+    scope: Scope,
+  ): b8 {
+    const name = qualifiedExpressionName(expression);
+    return name !== null && this.scopeTable.lookup(scope, name) !== null;
+  }
+
   private declare(scope: Scope, name: Str, kind: SymbolKind, span: Diagnostic["span"]): void {
     if (this.scopeTable.declare(scope, name, kind)) return;
     this.diagnostics.push({ message: `Duplicate ${kind} '${name}'`, span });
@@ -143,4 +155,11 @@ class Resolver {
     if (this.scopeTable.lookup(scope, name)) return;
     this.diagnostics.push({ message: `Unknown identifier '${name}'`, span });
   }
+}
+
+function qualifiedExpressionName(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+): Str | null {
+  if (expr.operand.kind !== "IdentifierExpr") return null;
+  return `${expr.operand.name}.${expr.field}`;
 }
