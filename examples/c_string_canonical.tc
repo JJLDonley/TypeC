@@ -1,0 +1,7 @@
+extern function puts(text: Ptr<u8>): i32;
+
+function main(): i32 {
+  const text: Array<u8> = "TypeC canonical C string";
+  puts(text);
+  return 42;
+}
