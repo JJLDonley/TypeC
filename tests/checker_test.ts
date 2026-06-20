@@ -475,6 +475,13 @@ Deno.test("rejects integer constant division by zero", () => {
   );
 });
 
+Deno.test("does not treat mixed numeric constant division as integer division", () => {
+  assertCheckErrorAbsent(
+    `const ZERO: i32 = 0; const BAD: f64 = 1.0 / ZERO; function main(): i32 { return 0; }`,
+    "Operator '/' cannot divide by zero",
+  );
+});
+
 Deno.test("rejects namespace integer constant division by zero", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/config.tc`, `export const ZERO: i32 = 0;`);
@@ -564,6 +571,18 @@ async function assertProgramCheckError(path: Str, message: Str): Promise<void> {
     throw error;
   }
   throw new Error(`Expected ${message}`);
+}
+
+function assertCheckErrorAbsent(source: Str, message: Str): void {
+  try {
+    check(resolve(parse(lex(source))));
+  } catch (error) {
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.every((diagnostic) => diagnostic.message !== message)
+    ) return;
+    throw error;
+  }
 }
 
 function assertCheckError(source: Str, message: Str): void {

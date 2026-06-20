@@ -38,8 +38,9 @@ function constantIntegerDivideByZeroDiagnostic(
   constants: Map<Str, ConstDecl>,
 ): Diagnostic[] {
   if (!isIntegerDivisionOperator(expr.operator)) return [];
+  const left = evaluateIntegerConstant(expr.left, constants);
   const right = evaluateIntegerConstant(expr.right, constants);
-  if (right !== 0n) return [];
+  if (left === null || right !== 0n) return [];
   return [{ message: `Operator '${expr.operator}' cannot divide by zero`, span: expr.span }];
 }
 
