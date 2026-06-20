@@ -2,6 +2,7 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
 import { selectDependencyClosure } from "module/dependencies.ts";
+import { namespaceProgramFunctions } from "module/function_namespaces.ts";
 import { namespaceProgramTypes } from "module/type_namespaces.ts";
 
 type Str = string;
@@ -49,7 +50,10 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
     exportedTypeNames(program),
     exportedFunctionNames(program),
   );
-  const namespaced = namespaceProgramTypes(selected, namespace);
+  const namespaced = namespaceProgramFunctions(
+    namespaceProgramTypes(selected, namespace),
+    namespace,
+  );
   const typeAliases = namespaced.typeAliases.map((typeAlias) =>
     namespaceTypeAlias(typeAlias, namespace)
   );

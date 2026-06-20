@@ -29,6 +29,25 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for namespace function dependencies", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/math.tc`,
+    `function inc(x: i32): i32 { return x + 1; } export function answer(): i32 { return inc(41); }`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Math from "./math.tc"; function main(): i32 { return Math.answer(); }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "static i32 inc(i32 x)");
+  assertIncludes(c, "return inc(41);");
+  assertIncludes(c, "return answer();");
+  assertNotIncludes(c, "Math.");
+});
+
 Deno.test("emits C for namespace type aliases", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/types.tc`, `export type Pair = { left: i32; right: i32; };`);

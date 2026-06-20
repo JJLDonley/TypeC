@@ -12,14 +12,19 @@ Deno.test("loads imported exports", async () => {
 
 Deno.test("loads namespace imported functions", async () => {
   const dir = await Deno.makeTempDir();
-  await writeText(`${dir}/math.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await writeText(
+    `${dir}/math.tc`,
+    `function inc(x: i32): i32 { return x + 1; } export function add(a: i32, b: i32): i32 { return inc(a + b); }`,
+  );
   await writeText(
     `${dir}/main.tc`,
     `import * as Math from "./math.tc"; function main(): i32 { return Math.add(1, 2); }`,
   );
   const program = await loadProgram(`${dir}/main.tc`);
   const imported = program.functions.find((fn) => fn.name === "Math.add");
+  const dependency = program.functions.find((fn) => fn.name === "Math.inc");
   assertText(imported?.cName ?? "", "add");
+  assertText(dependency?.cName ?? "", "inc");
 });
 
 Deno.test("loads namespace imported type aliases", async () => {
