@@ -55,7 +55,7 @@ Deno.test("collects C header typedef records from clang AST", () => {
   assertText(records[0].sourceFile ?? "", "/project/raylib.h");
 });
 
-Deno.test("drops ambiguous duplicate C header records", () => {
+Deno.test("collects duplicate C header records for later selection", () => {
   const records = collectHeaderRecords({
     kind: "TranslationUnitDecl",
     inner: [
@@ -64,7 +64,7 @@ Deno.test("drops ambiguous duplicate C header records", () => {
     ],
   });
 
-  assertSame(records.length, 0);
+  assertSame(records.length, 2);
 });
 
 Deno.test("reads C header function metadata", () => {

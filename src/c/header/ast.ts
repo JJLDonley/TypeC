@@ -1,6 +1,5 @@
 import { readHeaderFunction } from "c/header/function.ts";
 import { readHeaderRecord, readHeaderRecordDecl } from "c/header/records.ts";
-import { uniqueCompatibleHeaderRecords } from "c/header/record_uniqueness.ts";
 import { isJsonRecord, type JsonRecord } from "json/record.ts";
 import {
   isFalseJsonFlag,
@@ -64,7 +63,7 @@ function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]
 export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
   const records: CHeaderRecord[] = [];
   collectHeaderRecordsInto(value, records);
-  return uniqueCompatibleHeaderRecords(records);
+  return records;
 }
 
 function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {

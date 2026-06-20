@@ -1,8 +1,8 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
+import { selectHeaderRecords } from "c/header/record_selection.ts";
 import { mapCHeaderType } from "c/header/types.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import { isPathWithinDir } from "paths";
 
 type Str = string;
 type b8 = boolean;
@@ -11,10 +11,9 @@ export function formatHeaderRecordAliases(
   records: CHeaderRecord[],
   includeDir: Str | null = null,
 ): Str {
-  const recordNames = new Set<Str>(records.map((record) => record.name));
-  const aliases = records.filter((record) => isIncludedHeaderRecord(record, includeDir)).flatMap((
-    record,
-  ) => formatSupportedRecord(record, recordNames));
+  const selected = selectHeaderRecords(records, includeDir);
+  const recordNames = new Set<Str>(selected.map((record) => record.name));
+  const aliases = selected.flatMap((record) => formatSupportedRecord(record, recordNames));
   return `${aliases.join("\n")}${aliases.length > 0 ? "\n" : ""}`;
 }
 
@@ -43,10 +42,4 @@ function isSupportedHeaderRecord(record: CHeaderRecord): b8 {
 
 function isSupportedHeaderRecordField(field: CHeaderRecordField): b8 {
   return isTypeCIdentifier(field.name);
-}
-
-function isIncludedHeaderRecord(record: CHeaderRecord, includeDir: Str | null): b8 {
-  if (includeDir === null) return true;
-  if (record.sourceFile === null) return false;
-  return isPathWithinDir(record.sourceFile, includeDir);
 }

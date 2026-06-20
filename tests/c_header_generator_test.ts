@@ -99,6 +99,25 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "set_callback");
 });
 
+Deno.test("filters incompatible outside records before generating externs", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      locatedTypedefRecord("Color", [field("r", "unsigned char")], "/project/include/color.h"),
+      locatedTypedefRecord("Color", [field("r", "int32_t")], "/usr/include/color.h"),
+      locatedFunctionDecl(
+        "draw",
+        "void (Color)",
+        [param("tint", "Color")],
+        "/project/include/draw.h",
+      ),
+    ],
+  }, "/project/include");
+
+  assertIncludes(output, "export type Color = { r: u8; };");
+  assertIncludes(output, "extern function draw(tint: Color): void;");
+});
+
 Deno.test("filters generated externs to requested header directory", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
@@ -150,10 +169,14 @@ function param(name: Str, qualType: Str): unknown {
 }
 
 function typedefRecord(name: Str, fields: unknown[]): unknown {
+  return locatedTypedefRecord(name, fields, "/project/header.h");
+}
+
+function locatedTypedefRecord(name: Str, fields: unknown[], file: Str): unknown {
   return {
     kind: "TypedefDecl",
     name,
-    loc: { file: "/project/header.h" },
+    loc: { file },
     inner: [{ kind: "RecordDecl", completeDefinition: true, inner: fields }],
   };
 }
