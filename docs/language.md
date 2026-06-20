@@ -228,17 +228,24 @@ platform C scalars    -> explicit ABI aliases when required
 
 ## C Interop
 
-String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and
-pass to C functions expecting `u8*`, `u8[]`, `u8[N]`, or `void*`.
+String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` / `Array<u8>`
+locals and pass to C functions expecting `u8*`, `Ptr<u8>`, `u8[]`, `u8[N]`, or `void*`.
 
 ```ts
-extern function puts(text: u8*): i32;
+extern function puts(text: Ptr<u8>): i32;
 
 function main(): i32 {
-  const text: u8[] = "hello";
+  const text: Array<u8> = "hello";
   puts(text);
   return 0;
 }
+```
+
+Runnable examples:
+
+```bash
+deno run -A src/driver/main.ts run examples/c_string.tc
+deno run -A src/driver/main.ts run examples/c_string_canonical.tc
 ```
 
 Raw `void*` parameters accept C-compatible pointer and array arguments without length or pointee
