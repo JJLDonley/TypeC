@@ -504,9 +504,9 @@ Provide a CLI that builds and watches `.tc` files.
 ## Suggested Commands
 
 ```bash
-deno run -A src/main.ts build examples/main.tc
-deno run -A src/main.ts run examples/main.tc
-deno run -A src/main.ts watch examples/main.tc
+deno run -A src/driver/main.ts build examples/main.tc
+deno run -A src/driver/main.ts run examples/main.tc
+deno run -A src/driver/main.ts watch examples/main.tc
 ```
 
 Later:
@@ -1397,7 +1397,7 @@ i32 main(void) {
 Command:
 
 ```bash
-deno run -A src/main.ts run examples/main.tc
+deno run -A src/driver/main.ts run examples/main.tc
 ```
 
 This is the first milestone. Everything else comes after this works reliably.
