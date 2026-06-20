@@ -1135,6 +1135,8 @@ representation are skipped safely.
 
 # Phase 13: Defer
 
+Implementation status: not started. This phase is blocked until syntax and lowering are specified.
+
 ## Goal
 
 Allow explicit scope-exit cleanup without hidden ownership semantics.
