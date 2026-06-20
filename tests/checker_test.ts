@@ -470,6 +470,20 @@ Deno.test("rejects overflowing integer constant expressions", () => {
   );
 });
 
+Deno.test("rejects overflowing array constant element expressions", () => {
+  assertCheckError(
+    `const VALUES: Array<u8, 1> = [255 + 1]; function main(): i32 { return 0; }`,
+    "Integer constant '256' is out of range for 'u8'",
+  );
+});
+
+Deno.test("rejects overflowing record constant field expressions", () => {
+  assertCheckError(
+    `type Pixel = { r: u8; }; const VALUE: Pixel = { r: 255 + 1 }; function main(): i32 { return 0; }`,
+    "Integer constant '256' is out of range for 'u8'",
+  );
+});
+
 Deno.test("rejects overflowing float constant expressions", () => {
   assertCheckError(
     `const BASE: f32 = 340000000000000000000000000000000000000.0; const BAD: f32 = BASE * 10.0; function main(): i32 { return 0; }`,

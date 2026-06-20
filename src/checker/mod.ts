@@ -132,6 +132,7 @@ class Checker {
       ...checkConstantValue(
         constant,
         availableConstants,
+        this.typeAliases,
         (expr, expected) => this.typeOfExpected(expr, new Map<Str, LocalInfo>(), expected),
       ),
     );
