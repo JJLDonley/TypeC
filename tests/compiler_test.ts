@@ -247,6 +247,23 @@ Deno.test("emits C for header string constant imports", async () => {
   assertIncludes(c, 'static const u8* Lib_TITLE = (u8*)"TypeC";');
 });
 
+Deno.test("emits C for header string array constant imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `int consume(unsigned char *text);\nstatic const unsigned char BYTES[] = "hi";`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { Lib.consume(Lib.BYTES); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, 'static const u8 Lib_BYTES[3] = "hi";');
+  assertIncludes(c, "consume(Lib_BYTES);");
+});
+
 Deno.test("emits C for header string macro imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

@@ -1,6 +1,6 @@
 import type { CHeaderConstant } from "c/header/ast.ts";
+import { mapCHeaderConstantType } from "c/header/constant_types.ts";
 import { isIncludedHeaderConstant, isSupportedHeaderConstant } from "c/header/support.ts";
-import { mapCHeaderType } from "c/header/types.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -42,6 +42,6 @@ function formatSupportedConstant(
 
 function formatConstant(constant: CHeaderConstant, recordNames: Set<Str>): Str {
   return `export const ${constant.name}: ${
-    mapCHeaderType(constant.type, recordNames)
+    mapCHeaderConstantType(constant.type, recordNames)
   } = ${constant.value};`;
 }

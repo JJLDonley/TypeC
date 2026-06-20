@@ -12,6 +12,7 @@ export function isIncludedHeaderFunction(fn: CHeaderFunction, includeDir: Str | 
 }
 
 export function isIncludedHeaderConstant(constant: CHeaderConstant, includeDir: Str | null): b8 {
+  if (includeDir !== null && constant.sourceFile === null) return true;
   return isIncludedSource(constant.sourceFile, includeDir);
 }
 

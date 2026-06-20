@@ -55,6 +55,7 @@ Deno.test("generates externs from clang AST", () => {
       constVarDecl("PI", "const double", "3.5", "FloatingLiteral"),
       constVarDecl("ENABLED", "const bool", "1"),
       constVarDecl("TITLE", "const char *", '"TypeC"', "StringLiteral"),
+      constVarDecl("BYTES", "const unsigned char[3]", '"hi"', "StringLiteral"),
       constVarDecl("BAD_TYPE", "const __unsupported_t", "1"),
       constVarDecl("i32", "const int32_t", "1"),
       varDecl("RUNTIME_VALUE", "int32_t"),
@@ -104,6 +105,7 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "export const PI: f64 = 3.5;");
   assertIncludes(output, "export const ENABLED: bool = true;");
   assertIncludes(output, 'export const TITLE: u8* = "TypeC";');
+  assertIncludes(output, 'export const BYTES: Array<u8, 3> = "hi";');
   assertExcludes(output, "BAD_TYPE");
   assertExcludes(output, "export const i32");
   assertExcludes(output, "RUNTIME_VALUE");
