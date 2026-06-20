@@ -356,6 +356,15 @@ Deno.test("emits C for postfix pointer expressions", () => {
   assertIncludes(c, "return *p;");
 });
 
+Deno.test("emits C for canonical pointer reference and array syntax", () => {
+  const source =
+    `function main(): i32 { let x: i32 = 40; const p: Ptr<i32> = x.&; const r: Ref<i32> = x.&; const values: Array<i32, 2> = [p.*, r.* + 2]; return values[0] + values[1]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32* p = &x;");
+  assertIncludes(c, "i32* r = &x;");
+  assertIncludes(c, "const i32 values[2] = { *p, *r + 2 };");
+});
+
 Deno.test("emits C for field access through dereference", () => {
   const source =
     `type Vec2 = { x: i32; y: i32; }; function main(): i32 { const v: Vec2 = { x: 1, y: 2 }; const p: Vec2* = v.&; return p.*.x; }`;
