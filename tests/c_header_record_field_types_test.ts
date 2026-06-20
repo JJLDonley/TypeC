@@ -8,6 +8,7 @@ Deno.test("maps C record field types", () => {
 
   assertSame(mapCHeaderRecordFieldType("int32_t", records), "i32");
   assertSame(mapCHeaderRecordFieldType("Color[4]", records), "Color[4]");
+  assertSame(mapCHeaderRecordFieldType("const Color [ 4 ]", records), "Color[4]");
 });
 
 Deno.test("rejects nested C record array fields", () => {
