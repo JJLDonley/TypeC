@@ -6,6 +6,7 @@ import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
+import { checkCFunctionSymbols as collectCFunctionSymbolDiagnostics } from "checker/c_symbols.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
@@ -53,6 +54,7 @@ class Checker {
     this.functions = declarations.functions;
     this.typeAliases = declarations.typeAliases;
     this.diagnostics.push(...declarations.diagnostics);
+    this.diagnostics.push(...collectCFunctionSymbolDiagnostics(this.program.functions));
   }
 
   private checkFunction(fn: FunctionDecl): void {
@@ -80,29 +82,83 @@ class Checker {
     this.typeOf(expr, locals);
   }
 
-  private checkReturn(expr: Expression | null, locals: Map<Str, LocalInfo>, expected: TypeName, span: SourceSpan): void {
-    this.diagnostics.push(...collectReturnStatementDiagnostics(expr, expected, span, (value, target) => this.typeOfExpected(value, locals, target)));
+  private checkReturn(
+    expr: Expression | null,
+    locals: Map<Str, LocalInfo>,
+    expected: TypeName,
+    span: SourceSpan,
+  ): void {
+    this.diagnostics.push(
+      ...collectReturnStatementDiagnostics(
+        expr,
+        expected,
+        span,
+        (value, target) => this.typeOfExpected(value, locals, target),
+      ),
+    );
   }
 
-  private checkVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, locals: Map<Str, LocalInfo>): void {
-    const result = checkLocalDeclaration(stmt, this.typeAliases, (expr, expected) => this.typeOfExpected(expr, locals, expected));
+  private checkVarDecl(
+    stmt: Extract<Statement, { kind: "VarDeclStmt" }>,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    const result = checkLocalDeclaration(
+      stmt,
+      this.typeAliases,
+      (expr, expected) => this.typeOfExpected(expr, locals, expected),
+    );
     this.diagnostics.push(...result.diagnostics);
     locals.set(stmt.name, { type: result.type, mutable: stmt.mutable });
   }
 
-  private checkAssignment(stmt: Extract<Statement, { kind: "AssignmentStmt" }>, locals: Map<Str, LocalInfo>): void {
-    this.diagnostics.push(...collectAssignmentDiagnostics(stmt, locals.get(stmt.name), (expr, expected) => this.typeOfExpected(expr, locals, expected)));
+  private checkAssignment(
+    stmt: Extract<Statement, { kind: "AssignmentStmt" }>,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    this.diagnostics.push(
+      ...collectAssignmentDiagnostics(
+        stmt,
+        locals.get(stmt.name),
+        (expr, expected) => this.typeOfExpected(expr, locals, expected),
+      ),
+    );
   }
 
-  private checkWhile(stmt: Extract<Statement, { kind: "WhileStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
-    this.diagnostics.push(...checkWhileStatement(stmt, locals, (expr) => this.typeOf(expr, locals), (children, parent) => this.checkBlock(children, parent, returnType)));
+  private checkWhile(
+    stmt: Extract<Statement, { kind: "WhileStmt" }>,
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    this.diagnostics.push(
+      ...checkWhileStatement(
+        stmt,
+        locals,
+        (expr) => this.typeOf(expr, locals),
+        (children, parent) => this.checkBlock(children, parent, returnType),
+      ),
+    );
   }
 
-  private checkIf(stmt: Extract<Statement, { kind: "IfStmt" }>, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
-    this.diagnostics.push(...checkIfStatement(stmt, locals, (expr) => this.typeOf(expr, locals), (children, parent) => this.checkBlock(children, parent, returnType)));
+  private checkIf(
+    stmt: Extract<Statement, { kind: "IfStmt" }>,
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    this.diagnostics.push(
+      ...checkIfStatement(
+        stmt,
+        locals,
+        (expr) => this.typeOf(expr, locals),
+        (children, parent) => this.checkBlock(children, parent, returnType),
+      ),
+    );
   }
 
-  private checkBlock(statements: Statement[], parentLocals: Map<Str, LocalInfo>, returnType: TypeName): Diagnostic[] {
+  private checkBlock(
+    statements: Statement[],
+    parentLocals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): Diagnostic[] {
     const before = this.diagnostics.length;
     const locals = new Map<Str, LocalInfo>(parentLocals);
     for (const child of statements) this.checkStatement(child, locals, returnType);
@@ -115,8 +171,17 @@ class Checker {
     return type;
   }
 
-  private typeOfExpected(expr: Expression, locals: Map<Str, LocalInfo>, expected: TypeName): TypeName {
-    const result = checkExpectedExpression(expr, expected, this.typeAliases, (value, target) => this.typeOfExpected(value, locals, target));
+  private typeOfExpected(
+    expr: Expression,
+    locals: Map<Str, LocalInfo>,
+    expected: TypeName,
+  ): TypeName {
+    const result = checkExpectedExpression(
+      expr,
+      expected,
+      this.typeAliases,
+      (value, target) => this.typeOfExpected(value, locals, target),
+    );
     if (!result.handled) return this.typeOf(expr, locals);
     this.diagnostics.push(...result.diagnostics);
     this.expressionTypes.set(spanKey(expr.span), { type: result.type });
@@ -142,38 +207,59 @@ class Checker {
     return result.type;
   }
 
-  private binaryType(expr: Extract<Expression, { kind: "BinaryExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
-    const result = checkBinaryExpression(expr, (value) => this.typeOf(value, locals), (value, expected) => this.typeOfExpected(value, locals, expected));
+  private binaryType(
+    expr: Extract<Expression, { kind: "BinaryExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkBinaryExpression(
+      expr,
+      (value) => this.typeOf(value, locals),
+      (value, expected) => this.typeOfExpected(value, locals, expected),
+    );
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
 
-  private callType(expr: Extract<Expression, { kind: "CallExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
-    const result = checkCallExpression(expr, this.functions.get(expr.callee), (arg, expected) => this.typeOfExpected(arg, locals, expected));
+  private callType(
+    expr: Extract<Expression, { kind: "CallExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkCallExpression(
+      expr,
+      this.functions.get(expr.callee),
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+    );
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
 
-  private fieldAccessType(expr: Extract<Expression, { kind: "FieldAccessExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
+  private fieldAccessType(
+    expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
 
-  private indexType(expr: Extract<Expression, { kind: "IndexExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
+  private indexType(
+    expr: Extract<Expression, { kind: "IndexExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const result = checkIndexExpression(expr, operand, (index) => this.typeOf(index, locals));
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
 
-  private postfixPointerType(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, locals: Map<Str, LocalInfo>): TypeName {
+  private postfixPointerType(
+    expr: Extract<Expression, { kind: "PostfixPointerExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const result = checkPostfixPointerExpression(expr, operand);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
-
 }
-
