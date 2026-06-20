@@ -124,6 +124,28 @@ such as classes, methods, enums, generics, interfaces, tagged unions, pattern ma
 pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to
 use them where they improve clarity, safety, or reuse.
 
+## Planned Constants and Enums
+
+Phase 12 adds TypeScript-like module-level constants:
+
+```ts
+export const SCREEN_WIDTH: i32 = 800;
+export const RAYWHITE: Color = { r: 245, g: 245, b: 245, a: 255 };
+```
+
+Phase 14 adds TypeScript-like scoped enums:
+
+```ts
+export enum Key {
+  Space = 32,
+  Escape = 256,
+}
+
+const key: Key = Key.Space;
+```
+
+These are specified in `TYPEC_PHASES.md` but are not implemented in the current prototype yet.
+
 ## Array, Slice, Pointer, and Reference Model
 
 The current prototype supports `T*`, `T&`, local `T[]`, `T[N]`, and canonical spellings `Ptr<T>`,

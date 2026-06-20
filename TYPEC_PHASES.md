@@ -1028,26 +1028,81 @@ function main(): i32 {
 
 ## Goal
 
-Allow named values that are evaluated by the compiler and emitted as C constants or substituted
-literals.
+Allow named module-level values that are evaluated by the compiler and emitted as C constants or
+substituted literals.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use TypeScript-like module-level `const` declarations with required type annotations:
+
+```ts
+const SCREEN_WIDTH: i32 = 800;
+export const SCREEN_HEIGHT: i32 = 450;
+export const TITLE: Ptr<u8> = "TypeC";
+export const RAYWHITE: Color = { r: 245, g: 245, b: 245, a: 255 };
+```
+
+Local `const` statements remain runtime local declarations. Phase 12 adds only module-level
+constants.
+
+## Compile-Time Expressions
+
+Phase 12 constants may use:
+
+- integer, float, bool, and string literals
+- record literals whose fields are compile-time expressions
+- array literals whose elements are compile-time expressions
+- unary `+` and `-` for numeric literals and constant expressions
+- binary `+`, `-`, `*`, `/`, and `%` for numeric constant expressions
+- references to earlier module-level constants from the same module or imported modules
+- scoped enum members once Phase 14 is implemented
+
+Phase 12 constants must not use function calls, pointer operators, assignment, indexing, field
+access outside record literals, loops, conditionals, or runtime locals.
+
+## Type Rules
+
+- Every module-level constant must have an explicit type annotation.
+- Constant values must be assignable to the annotated type using normal TypeC assignability rules.
+- Integer constants must fit in the annotated integer type.
+- Floating constants must fit in the annotated float type.
+- Record constants must provide exactly the declared fields using existing record literal rules.
+- Array constants must match the declared fixed array length when one is provided.
+- String literals are NUL-terminated `Array<u8, N>` values and may initialize compatible `u8` array
+  or pointer constants using the existing C string rules.
+
+## C Emission
+
+- Emit fixed-width TypeC C aliases, never raw C scalar spellings.
+- Numeric and bool constants may be substituted at use sites or emitted as `static const` C values.
+- Record and array constants emit as `static const` C objects with deterministic internal names
+  unless exported through C ABI rules later.
+- Exported TypeC constants are visible to TypeC imports. They are not exported as C ABI symbols
+  unless a later phase explicitly defines C symbol export for constants.
+
+## C Header Constants and Macros
+
+Header imports may generate TypeC constants only for compiler-derived, deterministic values that can
+be represented by Phase 12 constant expressions. Object-like macros and `const` variables may import
+when their type and value are known and C-compatible. Function-like macros, macros requiring target
+side effects, macros depending on unsupported C syntax, and values without deterministic compiler
+representation are skipped safely.
 
 ## Do
 
-- Define exactly which expressions are compile-time evaluable.
 - Keep evaluation deterministic and side-effect free.
 - Reject values that cannot be represented in their declared TypeC type.
 - Emit fixed-width C types and literals.
+- Preserve TypeScript-like `const NAME: Type = value;` syntax.
+- Keep imported constants namespaced by normal import rules.
 
 ## Do Not
 
 - Do not add macros as a substitute for typed constants.
-- Do not evaluate function calls unless explicitly specified later.
+- Do not evaluate function calls.
 - Do not introduce hidden runtime initialization.
+- Do not infer module-level constant types in this phase.
+- Do not import unsafe or target-dependent macros by guessing.
 
 ---
 
@@ -1081,25 +1136,99 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Goal
 
-Add simple closed sets of named integer values.
+Add simple scoped sets of named integer values.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use TypeScript-like enum declarations:
+
+```ts
+enum Key {
+  Space = 32,
+  Escape = 256,
+}
+
+export enum Direction {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+
+function main(): i32 {
+  const key: Key = Key.Space;
+  return 0;
+}
+```
+
+Enum members are always accessed through the enum scope:
+
+```ts
+Key.Space;
+Direction.Up;
+```
+
+Unqualified member access such as `Space` is invalid unless imported as an explicitly named constant
+by a later import rule.
+
+## Representation
+
+- The default backing type is `i32`.
+- Member values are deterministic integer constants.
+- A member without an initializer has value `previous + 1`, or `0` for the first member.
+- Initializers must be Phase 12 integer constant expressions.
+- Member values must fit in `i32` until explicit backing-type syntax is specified later.
+- Duplicate member names are invalid.
+- Duplicate member values are allowed.
+
+## Type Rules
+
+- Each enum declaration introduces a distinct nominal type.
+- Enum members have the enum type, not raw `i32`.
+- Enum values may be compared for equality with values of the same enum type.
+- Enum values may be explicitly cast to their backing integer type only after a later phase defines
+  source-level cast syntax. Until then, enum-to-integer conversion is not available in TypeC source.
+- Raw integers are not implicitly assignable to enum types.
+- Enum values are not implicitly assignable to integer types.
+
+## C Emission
+
+- Do not emit C `enum` for TypeC enums, because C enum size is implementation-defined.
+- Emit the enum type as a fixed-width alias using the backing TypeC integer alias, e.g.
+  `typedef i32 Key;`.
+- Emit members as deterministic constants using Phase 12 constant emission rules.
+- Use scoped internal C names for members, e.g. `Key_Space`, to avoid global C symbol collisions.
+
+## C Header Enum Import
+
+C header enums may import only when the compiler AST provides deterministic integer values. Imported
+C enum constants are exposed through the header module namespace. A C enum with a usable name
+imports as a TypeC enum type with scoped members. Anonymous or unscoped C enum constants may import
+as namespaced Phase 12 integer constants when no safe enum type can be formed.
+
+Examples:
+
+```ts
+import * as RL from "raylib";
+
+const key: RL.KeyboardKey = RL.KeyboardKey.KEY_SPACE;
+const mode: i32 = RL.FLAG_WINDOW_RESIZABLE;
+```
 
 ## Do
 
-- Define representation explicitly.
+- Keep enum members scoped.
+- Use TypeScript-like `enum Name { Member = value }` syntax.
+- Use fixed-width integer aliases for representation.
 - Require deterministic discriminant values.
-- Type-check enum values distinctly from raw integers unless conversion rules are specified.
-- Emit portable C using TypeC fixed-width integer aliases.
+- Type-check enum values distinctly from raw integers.
 
 ## Do Not
 
 - Do not add payloads in this phase.
 - Do not add pattern matching in this phase.
 - Do not rely on C enum implementation-defined sizes.
+- Do not add implicit integer-to-enum or enum-to-integer conversions.
 
 ---
 
