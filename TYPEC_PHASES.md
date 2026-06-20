@@ -910,8 +910,9 @@ function main(): i32 {
   blocked until slice lowering is implemented.
 - Raw C ABI `T[]`/`T*`/`Ptr<T>` carries no length; APIs needing length should pass an explicit
   `usize` until `Slice<T>` lowering is implemented.
-- Array and slice return types remain invalid for C ABI externs unless a later phase defines
-  ABI-safe aggregate return rules; return `T*` / `Ptr<T>` for pointer-return C APIs.
+- Array and slice return types remain invalid for C ABI externs; return `T*` / `Ptr<T>` for
+  pointer-return C APIs. C functions cannot return array values directly, and TypeC does not guess
+  wrapper ABI rules.
 
 ## Canonical Array and Slice Implementation Order
 
@@ -964,12 +965,22 @@ function main(): i32 {
 - Platform-width C scalar types map to explicit ABI aliases such as `c_int`, `c_uint`, `c_long`, and
   `c_ulong`; call sites emit those TypeC ABI aliases rather than raw C spellings.
 - Pointer types map recursively to TypeC `T*` / `Ptr<T>`.
+- C function pointer types map to TypeScript-like function types once function pointer support is
+  implemented: `(arg: T) => R`. Function pointer values are raw C ABI pointers and cannot capture
+  TypeC local state.
+- C callback parameters accept only compatible external function symbols or non-capturing TypeC
+  function declarations after callback support is implemented. Closures and captured locals are not
+  part of the C ABI.
 - `char*`, `const char*`, and `unsigned char*` map to `u8*` / `Ptr<u8>`.
 - `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type
   information.
 - C array parameters map to legacy TypeC `T[]` or `T*` / `Ptr<T>` and lower to C pointers. Header
   declarations that differ only by array-vs-pointer parameter spelling are treated as the same ABI
-  signature. Nested C arrays are skipped safely until TypeC nested array ABI rules are specified.
+  signature.
+- Nested fixed C arrays map to nested canonical TypeC arrays when every dimension is known, e.g.
+  `i32[2][3]` maps to `Array<Array<i32, 3>, 2>` and compact `i32[2][3]`. Nested unsized arrays,
+  mixed unsized inner dimensions, and nested pointer-decayed arrays remain unsupported because their
+  length information is not recoverable from C ABI spelling alone.
 - C typedef structs and bare struct records with C-compatible fields import as TypeC record aliases;
   fixed-size C array fields import as fixed TypeC arrays such as `T[N]`; namespace imports expose
   records as qualified TypeC types such as `RL.Color` while emitted C uses the original C typedef
@@ -987,8 +998,21 @@ function main(): i32 {
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely
   and deterministically.
-- Function pointers, callbacks, variadics, old-style declarations, array return types, unsupported
-  macros, and unsafe signatures are skipped safely until explicitly specified.
+- Variadic C functions use TypeScript-like rest syntax in extern declarations once variadic support
+  is implemented:
+
+  ```ts
+  extern function printf(format: Ptr<u8>, ...args): c_int;
+  ```
+
+  Variadic arguments must be primitive C ABI scalar values or raw pointers after default C argument
+  promotions are defined by TypeC. Record values, arrays, slices, and TypeC-only types are not valid
+  variadic arguments.
+- Function-like C macros are not imported as functions. They remain unsupported unless a later phase
+  defines a typed inline expansion model. Object-like macros are handled only by Phase 12 constant
+  import rules.
+- Old-style declarations, unsupported macros, unsafe signatures, and signatures requiring
+  unsupported callback, variadic, or function-pointer behavior are skipped safely.
 
 ## Header Interop Implementation Order
 
@@ -998,10 +1022,15 @@ function main(): i32 {
 4. Add C ABI alias types for platform-width C scalars and emit portable typedefs for them.
 5. Add C typedef struct import for C-compatible fields, qualified namespace type references, and
    namespaced field access.
-6. Add C enum import after enum representation is specified.
-7. Add safe constant and simple macro import after constant semantics are specified.
-8. Keep unsupported C signatures skipped with diagnostics/debug visibility, not guessed
-   declarations.
+6. Add nested fixed-array record field and parameter import for fully sized nested arrays.
+7. Add C function pointer type import after TypeScript-like function pointer parsing is implemented.
+8. Add callback parameter support for non-capturing TypeC functions and extern symbols.
+9. Add variadic extern declarations after rest syntax and C default-promotion checking are
+   implemented.
+10. Add C enum import after enum representation is implemented.
+11. Add safe constant and simple macro import after constant semantics are implemented.
+12. Keep unsupported C signatures skipped with diagnostics/debug visibility, not guessed
+    declarations.
 
 ## Do
 

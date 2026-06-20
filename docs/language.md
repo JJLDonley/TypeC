@@ -224,9 +224,13 @@ import { Color } from "raylib";
 
 Header imports are virtual TypeC modules generated from clang AST output. Supported functions,
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
-safely. C `bool` and `_Bool` import as TypeC `bool`, which emits as `b8`. Unsupported function
-pointers, callbacks, variadics, old-style declarations, array returns, unsafe macros, enums,
-constants, and unknown signatures are skipped until specified.
+safely. C `bool` and `_Bool` import as TypeC `bool`, which emits as `b8`.
+
+Planned C interop extensions are now specified in `TYPEC_PHASES.md`: fully sized nested C arrays,
+function pointer types using TypeScript-like `(arg: T) => R`, callback parameters for non-capturing
+functions, variadic externs using `...args`, scoped C enum imports, and safe object-like macro /
+constant imports. Function-like macros, old-style declarations, array returns, unsafe macros, and
+unknown signatures remain skipped unless a later phase defines safe lowering.
 
 Runnable examples:
 
