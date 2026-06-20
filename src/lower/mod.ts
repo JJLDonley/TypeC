@@ -11,3 +11,8 @@ export function lowerCast(program: CastProgram): Program {
     span: program.span,
   };
 }
+
+export * from "lower/declarations.ts";
+export * from "lower/expressions.ts";
+export * from "lower/statements.ts";
+export * from "lower/types.ts";
