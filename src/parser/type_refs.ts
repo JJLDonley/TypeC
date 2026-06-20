@@ -41,6 +41,7 @@ function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
 function parseCanonicalGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   if (token.text === "Ptr") return parsePointerGenericTypeRef(parser, token);
   if (token.text === "Ref") return parseReferenceGenericTypeRef(parser, token);
+  if (token.text === "Slice") return parseSliceGenericTypeRef(parser, token);
   return parseArrayGenericTypeRef(parser, token);
 }
 
@@ -56,6 +57,12 @@ function parseReferenceGenericTypeRef(parser: TypeRefParser, token: Token): Cast
   return { kind: "ReferenceTypeRef", element, span: span(token.span.start, close.span.end) };
 }
 
+function parseSliceGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  const element = parseTypeRefWith(parser);
+  const close = parser.expectText(">");
+  return { kind: "SliceTypeRef", element, span: span(token.span.start, close.span.end) };
+}
+
 function parseArrayGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const element = parseTypeRefWith(parser);
   if (!parser.matchText(",")) {
@@ -68,7 +75,7 @@ function parseArrayGenericTypeRef(parser: TypeRefParser, token: Token): CastType
 }
 
 function isCanonicalGenericType(name: Str): b8 {
-  return name === "Ptr" || name === "Ref" || name === "Array";
+  return name === "Ptr" || name === "Ref" || name === "Array" || name === "Slice";
 }
 
 function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {

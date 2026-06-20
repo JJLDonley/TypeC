@@ -10,7 +10,7 @@ export function isArrayTypeRef(type: TypeRef): b8 {
 
 export function isVoidValueType(type: TypeRef): b8 {
   if (isVoidNamedType(type)) return true;
-  if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef") return isVoidValueType(type.element);
+  if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef" || type.kind === "SliceTypeRef") return isVoidValueType(type.element);
   return false;
 }
 
@@ -31,6 +31,7 @@ function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
       return;
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SliceTypeRef":
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
       collectTypeAliasRefsInto(type.element, refs);

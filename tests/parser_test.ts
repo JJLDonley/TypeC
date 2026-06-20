@@ -51,9 +51,9 @@ Deno.test("parses pointer reference and array type syntax", () => {
 });
 
 Deno.test("parses canonical pointer reference and array type syntax", () => {
-  const program = parse(lex(`function f(a: Ptr<i32>, b: Ref<i32>, c: Array<i32>, d: Array<i32, 16>): void { return; }`));
+  const program = parse(lex(`function f(a: Ptr<i32>, b: Ref<i32>, c: Array<i32>, d: Array<i32, 16>, e: Slice<i32>): void { return; }`));
   const types = program.functions[0].params.map((param) => typeName(param.type));
-  assertEqualText(types, ["i32*", "i32&", "i32[]", "i32[16]"]);
+  assertEqualText(types, ["i32*", "i32&", "i32[]", "i32[16]", "Slice<i32>"]);
 });
 
 Deno.test("parses postfix pointer expressions", () => {

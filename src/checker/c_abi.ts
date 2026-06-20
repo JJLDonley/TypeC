@@ -20,6 +20,7 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
     case "FixedArrayTypeRef":
       return isCAbiTypeSeen(type.element, typeAliases, seen);
     case "ReferenceTypeRef":
+    case "SliceTypeRef":
       return false;
   }
 }

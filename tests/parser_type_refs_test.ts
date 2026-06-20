@@ -42,6 +42,12 @@ Deno.test("parses canonical array type refs", () => {
   assertText(typeName(fixed), "i32[16]");
 });
 
+Deno.test("parses canonical slice type refs", () => {
+  const slice = parseTypeRefWith(parserFor([identifier("Slice"), punct("<"), identifier("i32"), punct(">"), eof()]));
+
+  assertText(typeName(slice), "Slice<i32>");
+});
+
 function parserFor(tokens: Token[]): TypeRefParser {
   let current: i32 = 0;
   return {
@@ -80,6 +86,8 @@ function typeName(type: CastTypeRef): Str {
       return `${typeName(type.element)}*`;
     case "ReferenceTypeRef":
       return `${typeName(type.element)}&`;
+    case "SliceTypeRef":
+      return `Slice<${typeName(type.element)}>`;
     case "InferredArrayTypeRef":
       return `${typeName(type.element)}[]`;
     case "FixedArrayTypeRef":

@@ -9,6 +9,8 @@ export function emitCType(type: TypeRef): Str {
     case "PointerTypeRef":
     case "ReferenceTypeRef":
       return `${emitCType(type.element)}*`;
+    case "SliceTypeRef":
+      throw new Error("Slice type emission requires slice lowering");
     case "InferredArrayTypeRef":
       throw new Error("Cannot emit inferred array type without a declarator");
     case "FixedArrayTypeRef":

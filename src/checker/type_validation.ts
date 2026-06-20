@@ -20,6 +20,8 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
       return [...checkTypeRef(type.element, typeAliases), ...checkPointerElementType(type)];
     case "ReferenceTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkReferenceElementType(type)];
+    case "SliceTypeRef":
+      return [...checkTypeRef(type.element, typeAliases), ...checkSliceType(type)];
     case "FixedArrayTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkArrayElementType(type), ...checkArraySize(type.sizeText, type)];
     case "InferredArrayTypeRef":
@@ -27,6 +29,10 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
     case "RecordTypeRef":
       return checkRecordType(type, typeAliases);
   }
+}
+
+function checkSliceType(type: Extract<TypeRef, { kind: "SliceTypeRef" }>): Diagnostic[] {
+  return [{ message: "Slice<T> requires slice lowering support", span: type.span }];
 }
 
 function checkNamedType(type: Extract<TypeRef, { kind: "NamedTypeRef" }>, typeAliases: Map<Str, TypeRef>): Diagnostic[] {

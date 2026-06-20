@@ -49,6 +49,7 @@ export type TypeRef =
   | NamedTypeRef
   | PointerTypeRef
   | ReferenceTypeRef
+  | SliceTypeRef
   | InferredArrayTypeRef
   | FixedArrayTypeRef
   | RecordTypeRef;
@@ -67,6 +68,12 @@ export interface PointerTypeRef {
 
 export interface ReferenceTypeRef {
   kind: "ReferenceTypeRef";
+  element: TypeRef;
+  span: SourceSpan;
+}
+
+export interface SliceTypeRef {
+  kind: "SliceTypeRef";
   element: TypeRef;
   span: SourceSpan;
 }

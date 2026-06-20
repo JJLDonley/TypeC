@@ -49,6 +49,7 @@ export type CastTypeRef =
   | CastNamedTypeRef
   | CastPointerTypeRef
   | CastReferenceTypeRef
+  | CastSliceTypeRef
   | CastInferredArrayTypeRef
   | CastFixedArrayTypeRef
   | CastRecordTypeRef;
@@ -67,6 +68,12 @@ export interface CastPointerTypeRef {
 
 export interface CastReferenceTypeRef {
   kind: "ReferenceTypeRef";
+  element: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastSliceTypeRef {
+  kind: "SliceTypeRef";
   element: CastTypeRef;
   span: SourceSpan;
 }

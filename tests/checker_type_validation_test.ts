@@ -23,6 +23,12 @@ Deno.test("reports invalid type refs", () => {
   assertText(checkTypeRef(fixedArray(named("i32"), "0"), new Map())[0]?.message ?? "", "Array size must be greater than zero");
 });
 
+Deno.test("reports unsupported slice type refs", () => {
+  const diagnostics = checkTypeRef(slice(named("i32")), new Map());
+
+  assertText(diagnostics[0]?.message ?? "", "Slice<T> requires slice lowering support");
+});
+
 Deno.test("reports invalid record fields", () => {
   const diagnostics = checkTypeRef(record([["x", named("void")], ["x", inferredArray(named("i32"))]]), new Map());
 
@@ -45,6 +51,10 @@ function fixedArray(element: TypeRef, sizeText: Str = "2"): TypeRef {
 
 function inferredArray(element: TypeRef): TypeRef {
   return { kind: "InferredArrayTypeRef", element, span };
+}
+
+function slice(element: TypeRef): TypeRef {
+  return { kind: "SliceTypeRef", element, span };
 }
 
 function record(fields: [Str, TypeRef][]): TypeRef {
