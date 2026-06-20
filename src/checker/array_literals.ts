@@ -1,7 +1,8 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
-import { isAssignable, parseArrayType } from "checker/types.ts";
+import { parseArrayTypeName } from "checker/type_name_shapes.ts";
+import { isAssignable } from "checker/types.ts";
 
 type usize = number;
 type IntLiteralValue = bigint;
@@ -18,25 +19,52 @@ export interface ArrayLiteralTargetCheck {
   diagnostics: Diagnostic[];
 }
 
-export function checkArrayLiteralTarget(expected: TypeName, expr: ArrayLiteralExpr): ArrayLiteralTargetCheck {
-  const array = parseArrayType(expected);
+export function checkArrayLiteralTarget(
+  expected: TypeName,
+  expr: ArrayLiteralExpr,
+): ArrayLiteralTargetCheck {
+  const array = parseArrayTypeName(expected);
   if (array) return { array, diagnostics: [] };
-  return { array: null, diagnostics: [{ message: `Array literal is not assignable to non-array type '${expected}'`, span: expr.span }] };
+  return {
+    array: null,
+    diagnostics: [{
+      message: `Array literal is not assignable to non-array type '${expected}'`,
+      span: expr.span,
+    }],
+  };
 }
 
-export function checkInferredArrayLiteral(expr: ArrayLiteralExpr, array: ExpectedArrayType): Diagnostic[] {
+export function checkInferredArrayLiteral(
+  expr: ArrayLiteralExpr,
+  array: ExpectedArrayType,
+): Diagnostic[] {
   if (array.length !== null) return [];
   if (expr.elements.length > 0) return [];
   return [{ message: "Cannot infer empty array type", span: expr.span }];
 }
 
-export function checkArrayLiteralElementType(actual: TypeName, expectedElement: TypeName, element: Expression): Diagnostic[] {
+export function checkArrayLiteralElementType(
+  actual: TypeName,
+  expectedElement: TypeName,
+  element: Expression,
+): Diagnostic[] {
   if (isAssignable(actual, expectedElement)) return [];
-  return [{ message: `Array element type '${actual}' is not assignable to '${expectedElement}'`, span: element.span }];
+  return [{
+    message: `Array element type '${actual}' is not assignable to '${expectedElement}'`,
+    span: element.span,
+  }];
 }
 
-export function checkArrayLiteralLength(elementCount: usize, array: ExpectedArrayType, expected: TypeName, expr: ArrayLiteralExpr): Diagnostic[] {
+export function checkArrayLiteralLength(
+  elementCount: usize,
+  array: ExpectedArrayType,
+  expected: TypeName,
+  expr: ArrayLiteralExpr,
+): Diagnostic[] {
   if (array.length === null) return [];
   if (array.length === BigInt(elementCount)) return [];
-  return [{ message: `Array length ${elementCount} is not assignable to '${expected}'`, span: expr.span }];
+  return [{
+    message: `Array length ${elementCount} is not assignable to '${expected}'`,
+    span: expr.span,
+  }];
 }
