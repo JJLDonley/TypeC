@@ -1,6 +1,7 @@
 # TypeC Phase Document
 
-TypeC is a low-level, strictly typed language using TypeScript-like syntax and compiling ahead-of-time to C.
+TypeC is a low-level, strictly typed language using TypeScript-like syntax and compiling
+ahead-of-time to C.
 
 Source files use the `.tc` extension.
 
@@ -8,13 +9,15 @@ Source files use the `.tc` extension.
 example.tc -> TypeC compiler -> C -> native binary
 ```
 
-TypeC is not JavaScript. TypeC is not TypeScript with a runtime. TypeC borrows TypeScript syntax where useful, but its semantics are static, predictable, and suitable for systems programming.
+TypeC is not JavaScript. TypeC is not TypeScript with a runtime. TypeC borrows TypeScript syntax
+where useful, but its semantics are static, predictable, and suitable for systems programming.
 
 ---
 
 ## Core Goal
 
-Build a small, strict, native language that feels familiar to TypeScript users but behaves like a low-level compiled language.
+Build a small, strict, native language that feels familiar to TypeScript users but behaves like a
+low-level compiled language.
 
 TypeC should provide:
 
@@ -157,7 +160,8 @@ Convert `.tc` source text into tokens.
 - comments
 - EOF
 
-Pointer, reference, slice, and array syntax requires these tokens to be preserved distinctly enough for parsing:
+Pointer, reference, slice, and array syntax requires these tokens to be preserved distinctly enough
+for parsing:
 
 ```txt
 [ ]
@@ -244,19 +248,31 @@ call_side_effect();
 Then add low-level type syntax:
 
 ```ts
-let pointer: i32* = value.&;
-let reference: i32& = value.&;
-let inferredArray: i32[] = values;
-let fixedArray: i32[16] = values;
+let pointer: Ptr<i32> = value.&;
+let pointerSugar: i32* = value.&;
+let reference: Ref<i32> = value.&;
+let referenceSugar: i32& = value.&;
+let inferredArray: Array<i32> = values;
+let inferredArraySugar: i32[] = values;
+let fixedArray: Array<i32, 16> = values;
+let fixedArraySugar: i32[16] = values;
 ```
 
 Parser rules:
 
-- `T[]` means unsized array syntax. In local variables it means size inferred from the initializer. In function parameter and C ABI positions it decays to `T*`.
-- `T[N]` means fixed-size array of `T` with compile-time length `N`.
-- Slice syntax is separate from raw array decay and is not part of this phase.
-- `T*` means pointer to `T`.
-- `T&` means reference to `T`.
+- `Ptr<T>` is the canonical raw pointer type. `T*` is equivalent syntax.
+- `Ref<T>` is the canonical reference type. `T&` is equivalent syntax.
+- `Array<T, N>` is the canonical fixed-size array value type with compile-time length `N`. `T[N]` is
+  equivalent syntax.
+- `Array<T>` is an inferred-size array value type and is valid only where an initializer supplies
+  the length. `T[]` is equivalent local array syntax.
+- `Slice<T>` is a length-carrying view over contiguous `T` values. It has pointer data and runtime
+  length.
+- `T[]` is never slice syntax. Slice syntax is `Slice<T>` only.
+- Dereference is an expression operation (`expr.*`), not a type wrapper. Do not introduce `Deref<T>`
+  in this phase.
+- In function parameter and C ABI positions, legacy `T[]` remains pointer-decayed C array syntax for
+  C interop only.
 - Pointer/reference operators are postfix only.
 - `expr.*` means dereference pointer expression.
 - `expr.&` means address/reference expression.
@@ -390,7 +406,9 @@ Rules:
 - no implicit `any`
 - no implicit nullable values
 - no implicit numeric widening unless explicitly allowed
-- `T*`, `T&`, local `T[]`, and `T[N]` are distinct static types; parameter/C ABI `T[]` lowers to `T*`
+- `Ptr<T>`, `Ref<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>` are distinct static types; `T*`,
+  `T&`, local `T[]`, and `T[N]` normalize to their canonical forms; parameter/C ABI `T[]` lowers to
+  `T*` / `Ptr<T>`
 - `expr.*` requires pointer-like input and produces the pointee type
 - `expr.&` produces pointer/reference type according to context
 - prefix pointer operators are rejected
@@ -581,16 +599,27 @@ Introduce low-level memory features without a garbage collector.
 
 ## Type Syntax
 
-TypeC uses postfix, C-adjacent low-level type syntax instead of generic wrapper names.
+TypeC has canonical explicit low-level container and pointer types:
 
-```ts
-T*          // pointer to T
-T&          // reference to T
-T[]         // unsized array syntax: inferred-size local array, pointer-decayed parameter/C ABI array
-T[N]        // fixed-size array of T with compile-time length N
+```txt
+Ptr<T>        // raw pointer to T, no length
+Ref<T>        // reference to T
+Array<T>      // inferred-size array value; initializer must provide length
+Array<T, N>   // fixed-size array value with compile-time length N
+Slice<T>      // pointer plus runtime length view over contiguous T values
 ```
 
-Slice syntax is separate and not part of this phase. `T[]` is raw unsized array syntax, not a length-carrying slice.
+TypeC also keeps compact C-adjacent sugar for raw pointer, reference, and array values:
+
+```ts
+T*          // equivalent to Ptr<T>
+T&          // equivalent to Ref<T>
+T[]         // equivalent to Array<T> for local inferred arrays; C ABI pointer-decayed array in parameter positions
+T[N]        // equivalent to Array<T, N>
+```
+
+`T[]` is never a length-carrying slice. Slices are spelled `Slice<T>` only. Dereference remains an
+expression operation (`expr.*`), not a wrapper type; no `Deref<T>` type is introduced in this phase.
 
 Examples:
 
@@ -603,11 +632,11 @@ function byRef(v: i32&): i32 {
   return v;
 }
 
-function sum(values: i32[16]): i32 {
+function sum(values: Slice<i32>): i32 {
   let total: i32 = 0;
   let i: usize = 0;
 
-  while (i < values.length) {
+  while (i < values.length()) {
     total = total + values[i];
     i = i + 1;
   }
@@ -615,15 +644,48 @@ function sum(values: i32[16]): i32 {
   return total;
 }
 
-function first(values: i32[16]): i32 {
+function first(values: Array<i32, 16>): i32 {
   return values[0];
 }
 
 function localArray(): i32 {
-  const values: i32[] = [1, 2, 3];
+  const values: Array<i32> = [1, 2, 3];
   return values[0];
 }
+
+function sliceFromArray(): i32 {
+  const values: Array<i32> = [1, 2, 3];
+  return sum(values);
+}
 ```
+
+## Array and Slice Behavior
+
+Array values own fixed storage. Slice values are views containing `data: Ptr<T>` and
+`length: usize`.
+
+```txt
+array.length()    // compile-time array length as usize
+array.data        // pointer to the first element, Ptr<T>
+slice.length()    // runtime slice length as usize
+slice.data        // slice data pointer, Ptr<T>
+```
+
+An `Array<T, N>` automatically coerces to `Slice<T>` when a slice is expected.
+
+```ts
+function take(values: Slice<i32>): i32 {
+  return values.length();
+}
+
+function main(): i32 {
+  const values: Array<i32> = [1, 2, 3];
+  return take(values);
+}
+```
+
+An `Array<T, N>` may decay to `Ptr<T>` only when a raw pointer or C ABI parameter is expected. APIs
+that need length should prefer `Slice<T>` or pass an explicit `usize`.
 
 ## Pointer and Reference Operators
 
@@ -654,9 +716,9 @@ Rationale:
 - Make ownership rules documented.
 - Make pointer/slice behavior clear.
 - Prefer safe defaults where possible.
-- Use `T[]` and `T[N]` for arrays.
-- Lower array parameters and C ABI array declarations as pointers (`T[]` -> `T*`).
-- Use `T*` and `T&` for pointer and reference types.
+- Use `Array<T>`, `Array<T, N>`, `Slice<T>`, `Ptr<T>`, and `Ref<T>` as canonical low-level types.
+- Keep `T[]`, `T[N]`, `T*`, and `T&` as equivalent compact syntax where specified.
+- Lower C ABI array declarations as pointers (`T[]` -> `T*` / `Ptr<T>`).
 - Use postfix `expr.*` and `expr.&` for pointer/reference expressions.
 - Reject prefix `*expr` and `&expr`.
 
@@ -665,8 +727,8 @@ Rationale:
 - Do not add a garbage collector.
 - Do not hide heap allocation behind normal object literals.
 - Do not make arrays secretly dynamic JS arrays.
-- Do not treat raw `T[]` as a safe slice; it carries no length after pointer decay.
-- Do not use `ptr<T>`, `slice<T>`, or `array<T, N>` as the primary surface syntax.
+- Do not treat raw C ABI `T[]` as a safe slice; it carries no length after pointer decay.
+- Do not add alternate lowercase wrapper spellings such as `ptr<T>`, `slice<T>`, or `array<T, N>`.
 - Do not support prefix pointer operators.
 - Do not allow unchecked pointer behavior in safe code without a clear escape hatch.
 
@@ -711,17 +773,33 @@ Supported fields:
 - `dependencies`: maps import aliases to `.tc` files.
 - `compiler.flags`: extra native C compiler flags.
 
-Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty, encoded separator, encoded backslash, or `.` path segments, use backslashes, be relative paths, absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
+Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty,
+encoded separator, encoded backslash, or `.` path segments, use backslashes, be relative paths,
+absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
 
-Imports may target relative `.tc` files or relative `.h` headers and must use `/` separators without malformed percent encoding, encoded separators, or encoded dot segments. Dependency targets may be relative project paths, absolute paths, or `std/` paths. Dependency targets must use `/` separators and cannot contain encoded separators. TypeC dependency targets use `.tc`; C header dependency targets use `.h` and are converted to explicit extern declarations through compiler AST output. Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and `-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
+Imports may target relative `.tc` files or relative `.h` headers and must use `/` separators without
+malformed percent encoding, encoded separators, or encoded dot segments. Dependency targets may be
+relative project paths, absolute paths, or `std/` paths. Dependency targets must use `/` separators
+and cannot contain encoded separators. TypeC dependency targets use `.tc`; C header dependency
+targets use `.h` and are converted to explicit extern declarations through compiler AST output.
+Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and
+`-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..`
+segments. Project-relative dependency targets cannot escape the project with `..` segments.
 
-Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled build behavior such as the C standard, output path, input language, program entrypoint, hosted C environment, target environment, forced source includes, or artifact mode. Flags that need operands must use single-argument form.
+Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled
+build behavior such as the C standard, output path, input language, program entrypoint, hosted C
+environment, target environment, forced source includes, or artifact mode. Flags that need operands
+must use single-argument form.
 
 ## Standard Library Policy
 
-The standard library is normal TypeC code. It should use the strongest completed language features available.
+The standard library is normal TypeC code. It should use the strongest completed language features
+available.
 
-Early stdlib modules may start with the current core subset only because later features do not exist yet. As classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants become available, stdlib modules should be refactored to use those features where they make APIs clearer, safer, or more reusable.
+Early stdlib modules may start with the current core subset only because later features do not exist
+yet. As classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe
+pointers, defer, arenas, and compile-time constants become available, stdlib modules should be
+refactored to use those features where they make APIs clearer, safer, or more reusable.
 
 Feature phases must include stdlib impact checks:
 
@@ -762,7 +840,7 @@ Allow TypeC to call C and expose C-compatible functions.
 ## Syntax
 
 ```ts
-extern function puts(s: u8*): i32;
+extern function puts(s: Ptr<u8>): i32;
 extern function read_bytes(dst: u8[], count: usize): usize;
 
 export function main(): i32 {
@@ -770,10 +848,12 @@ export function main(): i32 {
 }
 ```
 
-C string literals use ordinary string token syntax and have TypeC type `u8[]` with a trailing NUL byte. They are only valid where a `u8[]`, `u8*`, or C-compatible pointer-decayed argument is expected.
+C string literals use ordinary string token syntax and have TypeC type `Array<u8, N>` with a
+trailing NUL byte. They are valid where `Array<u8, N>`, `Slice<u8>`, legacy `u8[]`, `u8*`,
+`Ptr<u8>`, or a C-compatible pointer-decayed argument is expected.
 
 ```ts
-extern function puts(s: u8*): i32;
+extern function puts(s: Ptr<u8>): i32;
 
 function main(): i32 {
   return puts("hello");
@@ -782,24 +862,53 @@ function main(): i32 {
 
 ## C ABI Array and String Rules
 
-- `T[]` in local variable position is an inferred-size static array.
-- `T[]` in function parameter position is an unsized array parameter and lowers to `T*`.
-- `T[N]` in function parameter position lowers as a C array parameter, which is ABI-equivalent to `T*`; the declared `N` is documentation/checking metadata, not passed at runtime.
-- Passing an array expression to a function expecting `T*`, `T[]`, or `void*` decays to a pointer to its first element.
-- `u8[]` is the TypeC spelling for C byte/string buffers. In C header interop, `char*`, `const char*`, and `unsigned char*` map to `u8*`; array forms map to `u8[]` when preserved by the header AST and to `u8*` after ABI decay.
-- TypeC string literals are NUL-terminated `u8[]` values and can decay to `u8*`, `u8[]`, `u8[N]`, or `void*` for C calls.
-- Raw `T[]`/`T*` carries no length; APIs needing length must pass an explicit `usize`.
-- Array return types remain invalid; return `T*` for C pointer-return APIs.
+- `Array<T>` / local `T[]` is an inferred-size static array.
+- `Array<T, N>` / `T[N]` is a fixed-size static array.
+- `Slice<T>` is a length-carrying `{ data: Ptr<T>, length: usize }` view and is not C ABI-compatible
+  unless explicitly lowered by TypeC-generated code.
+- `Array<T, N>` automatically coerces to `Slice<T>` when a `Slice<T>` is expected.
+- `Array<T, N>` may decay to `Ptr<T>` / `T*`, legacy C ABI `T[]`, or `void*` when a raw C ABI
+  pointer is expected.
+- Legacy `T[]` in function parameter position is an unsized C array parameter and lowers to `T*` /
+  `Ptr<T>`.
+- `T[N]` in function parameter position lowers as a C array parameter, which is ABI-equivalent to
+  `T*`; the declared `N` is documentation/checking metadata, not passed at runtime.
+- `u8*` / `Ptr<u8>` is the TypeC representation for C byte/string pointers. In C header interop,
+  `char*`, `const char*`, and `unsigned char*` map to `u8*` / `Ptr<u8>`.
+- C array forms map to legacy `u8[]` / `Array<u8>` when preserved by the header AST and to `u8*` /
+  `Ptr<u8>` after ABI decay.
+- TypeC string literals are NUL-terminated `Array<u8, N>` values and can decay to `u8*`, `Ptr<u8>`,
+  legacy `u8[]`, `u8[N]`, `Array<u8, N>`, `Slice<u8>`, or `void*` where expected.
+- Raw C ABI `T[]`/`T*`/`Ptr<T>` carries no length; APIs needing length should prefer `Slice<T>` or
+  pass an explicit `usize`.
+- Array and slice return types remain invalid for C ABI externs unless a later phase defines
+  ABI-safe aggregate return rules; return `T*` / `Ptr<T>` for pointer-return C APIs.
+
+## Canonical Array and Slice Implementation Order
+
+1. Add builtin generic type parsing and normalization for `Array<T>`, `Array<T, N>`, `Slice<T>`,
+   `Ptr<T>`, and `Ref<T>`.
+2. Normalize existing sugar to canonical forms: `T[]` to `Array<T>` in local inferred-array
+   positions, `T[N]` to `Array<T, N>`, `T*` to `Ptr<T>`, and `T&` to `Ref<T>`.
+3. Add local type inference for array literals and string literals: `[1, 2, 3]` infers
+   `Array<i32, 3>` and `"abc"` infers `Array<u8, 4>`.
+4. Add array and slice member access: `.data` and `.length()`.
+5. Add implicit `Array<T, N>` to `Slice<T>` coercion where a slice is expected.
+6. Preserve `Array<T, N>` to `Ptr<T>` decay only where a raw pointer or C ABI parameter is expected.
+7. Update C emission so array-to-slice calls pass generated slice values and array-to-pointer C
+   calls pass array data.
 
 ## C Header Import Rules
 
 - Header-generated extern declarations must come from compiler AST output.
 - Supported C scalar types map to fixed-width TypeC names.
-- Pointer types map recursively to TypeC `T*`.
-- `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type information.
-- C array parameters map to TypeC `T[]` or `T*` and lower to C pointers.
+- Pointer types map recursively to TypeC `T*` / `Ptr<T>`.
+- `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type
+  information.
+- C array parameters map to legacy TypeC `T[]` or `T*` / `Ptr<T>` and lower to C pointers.
 - Unsupported signatures are skipped safely.
-- Struct typedef import, macros/constants, function pointers, variadics, and callbacks require later explicit phases unless already specified elsewhere in this document.
+- Struct typedef import, macros/constants, function pointers, variadics, and callbacks require later
+  explicit phases unless already specified elsewhere in this document.
 
 ## Do
 
@@ -808,9 +917,10 @@ function main(): i32 {
 - Require explicit external declarations.
 - Allow header-generated extern declarations only when derived from compiler AST output.
 - Keep name mangling predictable.
-- Use existing postfix pointer type syntax (`T*`) in extern declarations.
+- Use existing postfix pointer type syntax (`T*`) or canonical `Ptr<T>` in extern declarations.
 - Allow `T[]` as pointer-decayed syntax for C ABI parameter arrays.
-- Treat `u8[]`/`u8*` as the TypeC representation for C byte strings and `char*` interop.
+- Treat `u8*` / `Ptr<u8>` as the TypeC representation for C byte strings and `char*` interop.
+- Prefer `Slice<T>` for TypeC-owned APIs that need pointer plus length.
 
 ## Do Not
 
@@ -825,11 +935,13 @@ function main(): i32 {
 
 ## Goal
 
-Allow named values that are evaluated by the compiler and emitted as C constants or substituted literals.
+Allow named values that are evaluated by the compiler and emitted as C constants or substituted
+literals.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -854,7 +966,8 @@ Allow explicit scope-exit cleanup without hidden ownership semantics.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -879,7 +992,8 @@ Add simple closed sets of named integer values.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -900,11 +1014,13 @@ Syntax not specified in this phase document. Do not implement this phase until a
 
 ## Goal
 
-Add static-layout data types with associated functions, lowered predictably to records and functions.
+Add static-layout data types with associated functions, lowered predictably to records and
+functions.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -926,11 +1042,13 @@ Syntax not specified in this phase document. Do not implement this phase until a
 
 ## Goal
 
-Add stricter pointer categories or annotations that improve safety while preserving explicit memory behavior.
+Add stricter pointer categories or annotations that improve safety while preserving explicit memory
+behavior.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -955,7 +1073,8 @@ Add explicit region-style allocation as a standard memory-management pattern.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -980,7 +1099,8 @@ Add compile-time constraints for generic or static-dispatch code.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -1005,7 +1125,8 @@ Allow reusable typed functions and data structures through compile-time instanti
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -1030,7 +1151,8 @@ Add sum types with explicit variants and payloads.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 
@@ -1055,7 +1177,8 @@ Add exhaustive branching over enums and tagged unions.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design update defines exact syntax, semantics, lowering, examples, and tests.
+Syntax not specified in this phase document. Do not implement this phase until a dedicated design
+update defines exact syntax, semantics, lowering, examples, and tests.
 
 ## Do
 

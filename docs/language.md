@@ -6,14 +6,19 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 
 - Function declarations
 - Required parameter and return type annotations
-- Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`, `f64`, `void`
-- `return expr;`, `return;`, function-call expression statements, `while`, assignment, `let`, and `const` statements
+- Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`,
+  `f64`, `void`
+- `return expr;`, `return;`, function-call expression statements, `while`, assignment, `let`, and
+  `const` statements
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
-- Fixed arrays `T[N]`, inferred local arrays `T[]`, pointer-decayed parameter arrays, array literals, and indexing
-- NUL-terminated C string literals as `u8[]`, decaying to `u8*`, `u8[]`, `u8[N]`, or `void*` for C calls
-- `void*` C interop parameters accepting pointer and array arguments without pointee type information
+- Fixed arrays `T[N]`, inferred local arrays `T[]`, pointer-decayed parameter arrays, array
+  literals, and indexing
+- NUL-terminated C string literals as `u8[]`, decaying to `u8*`, `u8[]`, `u8[N]`, or `void*` for C
+  calls
+- `void*` C interop parameters accepting pointer and array arguments without pointee type
+  information
 - Static imports, standard-library imports, and explicit exports
 - Explicit C extern function declarations
 - `//` and `/* */` comments
@@ -59,11 +64,24 @@ import { abs_i32 } from "std/math.tc";
 }
 ```
 
-Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty, encoded separator, encoded backslash, or `.` path segments, use backslashes, be relative paths, absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
+Dependency aliases are extensionless virtual import paths. They cannot be empty, contain empty,
+encoded separator, encoded backslash, or `.` path segments, use backslashes, be relative paths,
+absolute paths, URL-like paths, `std/` paths, file paths, or contain `..` segments.
 
-Imports may target relative `.tc` files or relative `.h` headers and must use `/` separators without malformed percent encoding, encoded separators, or encoded dot segments. Dependency targets may be `std/` modules, absolute `.tc` or `.h` paths, or project-relative `.tc` or `.h` paths. Dependency targets must use `/` separators and cannot contain encoded separators. Header targets are read through clang AST output and exposed as explicit extern declarations. Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and `-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..` segments. Project-relative dependency targets cannot escape the project with `..` segments.
+Imports may target relative `.tc` files or relative `.h` headers and must use `/` separators without
+malformed percent encoding, encoded separators, or encoded dot segments. Dependency targets may be
+`std/` modules, absolute `.tc` or `.h` paths, or project-relative `.tc` or `.h` paths. Dependency
+targets must use `/` separators and cannot contain encoded separators. Header targets are read
+through clang AST output and exposed as explicit extern declarations. Project `-I`, `-isystem`,
+`-D`, and `-U` flags are used while reading headers; relative `-I` and `-isystem` paths are resolved
+from the project directory. `std/` targets cannot contain `..` segments. Project-relative dependency
+targets cannot escape the project with `..` segments.
 
-Compiler flags are appended to the native C compiler invocation. Entries must be flags, not extra source files. Flags cannot override TypeC-controlled build behavior such as the C standard, output path, input language, program entrypoint, hosted C environment, target environment, forced source includes, or artifact mode. Flags that need operands must use single-argument form such as `-Iinclude` or `-DNAME=VALUE`.
+Compiler flags are appended to the native C compiler invocation. Entries must be flags, not extra
+source files. Flags cannot override TypeC-controlled build behavior such as the C standard, output
+path, input language, program entrypoint, hosted C environment, target environment, forced source
+includes, or artifact mode. Flags that need operands must use single-argument form such as
+`-Iinclude` or `-DNAME=VALUE`.
 
 ```json
 {
@@ -81,13 +99,52 @@ import { abs_i32 } from "basic/math";
 
 ## Standard Library
 
-The standard library is written in TypeC and is expected to use the full completed language, not only the initial core subset.
+The standard library is written in TypeC and is expected to use the full completed language, not
+only the initial core subset.
 
-Current stdlib modules are simple because advanced features are not implemented yet. As features such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to use them where they improve clarity, safety, or reuse.
+Current stdlib modules are simple because advanced features are not implemented yet. As features
+such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe
+pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to
+use them where they improve clarity, safety, or reuse.
+
+## Planned Array, Slice, Pointer, and Reference Model
+
+The current prototype supports `T*`, `T&`, local `T[]`, and `T[N]`. The planned canonical model is:
+
+```txt
+Ptr<T>        // raw pointer, no length
+Ref<T>        // reference
+Array<T>      // inferred-size array value
+Array<T, N>   // fixed-size array value
+Slice<T>      // pointer plus runtime length
+```
+
+Compact syntax remains equivalent where specified:
+
+```ts
+T*    // Ptr<T>
+T&    // Ref<T>
+T[]   // Array<T> for local inferred arrays; C ABI pointer-decayed array in parameters
+T[N]  // Array<T, N>
+```
+
+`T[]` is not slice syntax. Slices are spelled `Slice<T>`. Arrays automatically coerce to `Slice<T>`
+when a slice is expected. Arrays may decay to `Ptr<T>` only when a raw pointer or C ABI parameter is
+expected.
+
+Planned array and slice members:
+
+```txt
+array.length()
+array.data
+slice.length()
+slice.data
+```
 
 ## C Interop
 
-String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and pass to C functions expecting `u8*`, `u8[]`, `u8[N]`, or `void*`.
+String literals are byte strings with a trailing NUL byte. They can initialize `u8[]` locals and
+pass to C functions expecting `u8*`, `u8[]`, `u8[N]`, or `void*`.
 
 ```ts
 extern function puts(text: u8*): i32;
@@ -99,7 +156,9 @@ function main(): i32 {
 }
 ```
 
-Raw `void*` parameters accept C-compatible pointer and array arguments without length or pointee type information.
+Raw `void*` parameters accept C-compatible pointer and array arguments without length or pointee
+type information. In the planned canonical model, C `char*` and `const char*` map to `Ptr<u8>` with
+`u8*` retained as equivalent compact syntax.
 
 ```ts
 extern function memset(data: void*, value: i32, count: usize): void*;
