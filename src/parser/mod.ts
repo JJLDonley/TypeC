@@ -39,6 +39,19 @@ export function parseCast(tokens: Token[]): CastProgram {
   return new Parser(tokens).parseProgram();
 }
 
+export * from "parser/aggregate_literals.ts";
+export * from "parser/declaration_modifiers.ts";
+export * from "parser/declarations.ts";
+export * from "parser/expressions.ts";
+export * from "parser/helpers.ts";
+export * from "parser/imports.ts";
+export * from "parser/params.ts";
+export * from "parser/postfix_expressions.ts";
+export * from "parser/primary_expressions.ts";
+export * from "parser/programs.ts";
+export * from "parser/statements.ts";
+export * from "parser/type_refs.ts";
+
 class Parser {
   private current: i32 = 0;
   private diagnostics: Diagnostic[] = [];
