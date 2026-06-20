@@ -21,11 +21,14 @@ Deno.test("collects safe object-like macro constants", () => {
 #define BAD_CALL(x) (x)
 #define i32 1
 #define TEXT "hi"
+#define URL "http://typec"
+#define WITH_LINE_COMMENT 7 // pixels
+#define WITH_BLOCK_COMMENT 8 /* pixels */
 `,
     "/project/include/config.h",
   );
 
-  assertSame(constants.length, 10);
+  assertSame(constants.length, 13);
   assertConstant(constants[0], "WIDTH", "i32", "800");
   assertConstant(constants[1], "HEIGHT", "u32", "600");
   assertConstant(constants[2], "SCALE", "f64", "2.5");
@@ -36,6 +39,9 @@ Deno.test("collects safe object-like macro constants", () => {
   assertConstant(constants[7], "ENABLED", "bool", "true");
   assertConstant(constants[8], "TITLE", "u8*", '"TypeC"');
   assertConstant(constants[9], "TEXT", "u8*", '"hi"');
+  assertConstant(constants[10], "URL", "u8*", '"http://typec"');
+  assertConstant(constants[11], "WITH_LINE_COMMENT", "i32", "7");
+  assertConstant(constants[12], "WITH_BLOCK_COMMENT", "i32", "8");
 });
 
 function assertConstant(
