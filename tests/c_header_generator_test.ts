@@ -56,6 +56,10 @@ Deno.test("generates externs from clang AST", () => {
       constVarDecl("ENABLED", "const bool", "1"),
       constVarDecl("TITLE", "const char *", '"TypeC"', "StringLiteral"),
       constVarDecl("BYTES", "const unsigned char[3]", '"hi"', "StringLiteral"),
+      constVarDecl("DUPLICATE", "const int32_t", "1"),
+      constVarDecl("DUPLICATE", "const int32_t", "1"),
+      constVarDecl("CONFLICT_CONST", "const int32_t", "1"),
+      constVarDecl("CONFLICT_CONST", "const int32_t", "2"),
       constVarDecl("BAD_TYPE", "const __unsupported_t", "1"),
       constVarDecl("i32", "const int32_t", "1"),
       varDecl("RUNTIME_VALUE", "int32_t"),
@@ -106,6 +110,8 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "export const ENABLED: bool = true;");
   assertIncludes(output, 'export const TITLE: u8* = "TypeC";');
   assertIncludes(output, 'export const BYTES: Array<u8, 3> = "hi";');
+  assertSame(countOccurrences(output, "export const DUPLICATE"), 1);
+  assertExcludes(output, "CONFLICT_CONST");
   assertExcludes(output, "BAD_TYPE");
   assertExcludes(output, "export const i32");
   assertExcludes(output, "RUNTIME_VALUE");
