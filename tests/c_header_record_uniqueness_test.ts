@@ -14,6 +14,25 @@ Deno.test("keeps one compatible duplicate header record", () => {
   assertText(records[0]?.sourceFile ?? "", "/project/a.h");
 });
 
+Deno.test("keeps duplicate header records with equivalent TypeC field types", () => {
+  const records = uniqueCompatibleHeaderRecords([
+    record("Color", [["r", "unsigned char"]], "/project/a.h"),
+    record("Color", [["r", "uint8_t"]], "/project/b.h"),
+  ]);
+
+  assertSame(records.length, 1);
+});
+
+Deno.test("keeps duplicate header records with equivalent record field types", () => {
+  const records = uniqueCompatibleHeaderRecords([
+    record("Paint", [["color", "Color"]], "/project/a.h"),
+    record("Paint", [["color", "struct Color"]], "/project/b.h"),
+    record("Color", [["r", "unsigned char"]], "/project/color.h"),
+  ]);
+
+  assertSame(records.length, 2);
+});
+
 Deno.test("drops incompatible duplicate header records", () => {
   const records = uniqueCompatibleHeaderRecords([
     record("Color", [["r", "unsigned char"]], "/project/a.h"),
