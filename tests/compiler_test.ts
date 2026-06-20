@@ -34,6 +34,7 @@ Deno.test("emits C for module constants", () => {
   const program = parse(lex(`
     const ANSWER: i32 = 42;
     const NEGATIVE: i32 = -ANSWER;
+    const SUM: i32 = ANSWER + 1;
     function main(): i32 {
       return ANSWER;
     }
@@ -42,7 +43,8 @@ Deno.test("emits C for module constants", () => {
   const c = emitC(check(resolve(program)));
 
   assertIncludes(c, "static const i32 ANSWER = 42;");
-  assertIncludes(c, "static const i32 NEGATIVE = -ANSWER;");
+  assertIncludes(c, "static const i32 NEGATIVE = -42;");
+  assertIncludes(c, "static const i32 SUM = 42 + 1;");
   assertIncludes(c, "return ANSWER;");
 });
 

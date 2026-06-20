@@ -11,6 +11,7 @@ export * from "emitter/array_var_declarations.ts";
 export * from "emitter/assignments.ts";
 export * from "emitter/blocks.ts";
 export * from "emitter/calls.ts";
+export * from "emitter/constant_expressions.ts";
 export * from "emitter/constants.ts";
 export * from "emitter/context.ts";
 export * from "emitter/control_flow.ts";

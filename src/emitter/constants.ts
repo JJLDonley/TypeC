@@ -1,7 +1,7 @@
 import type { ConstDecl } from "core/ast.ts";
 import { emitCDeclarator } from "c/type.ts";
+import { emitConstantExpressionExpected } from "emitter/constant_expressions.ts";
 import type { EmitContext } from "emitter/context.ts";
-import { emitExpressionExpected } from "emitter/expressions.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -10,7 +10,7 @@ export function emitConstantDefinition(constant: ConstDecl, context: EmitContext
   const declarator = emitCDeclarator(constant.type, constantCName(constant), context.typeAliases);
   const expectedType = emitCTypeName(constant.type, context.typeAliases);
   return `static const ${declarator} = ${
-    emitExpressionExpected(constant.initializer, expectedType, context)
+    emitConstantExpressionExpected(constant.initializer, expectedType, context)
   };`;
 }
 
