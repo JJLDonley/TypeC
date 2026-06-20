@@ -463,6 +463,17 @@ Deno.test("rejects comparison operators in constants", () => {
   );
 });
 
+Deno.test("rejects integer constant division by zero", () => {
+  assertCheckError(
+    `const ZERO: i32 = 0; const BAD: i32 = 1 / ZERO; function main(): i32 { return 0; }`,
+    "Operator '/' cannot divide by zero",
+  );
+  assertCheckError(
+    `const ZERO: i32 = 0; const BAD: i32 = 1 % ZERO; function main(): i32 { return 0; }`,
+    "Operator '%' cannot divide by zero",
+  );
+});
+
 Deno.test("rejects overflowing integer constant expressions", () => {
   assertCheckError(
     `const BAD: u8 = 255 + 1; function main(): i32 { return 0; }`,

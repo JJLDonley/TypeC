@@ -1,3 +1,4 @@
+import { checkConstantIntegerDivision } from "checker/constant_division.ts";
 import { checkConstantRanges } from "checker/constant_ranges.ts";
 import type { ConstDecl, Expression, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
@@ -18,6 +19,7 @@ export function checkConstantValue(
   const expectedType = typeName(constant.type);
   return [
     ...checkConstantExpression(constant.initializer, availableConstants),
+    ...checkConstantIntegerDivision(constant.initializer, availableConstants),
     ...checkConstantAssignable(constant, resolveExpectedType),
     ...checkConstantRanges(constant.initializer, expectedType, availableConstants, aliases),
   ];
