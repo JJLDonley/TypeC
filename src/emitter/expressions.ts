@@ -67,11 +67,29 @@ function emitRecordLiteralExpression(
   expectedType: Str,
   context: EmitContext,
 ): Str {
-  const record = context.typeAliases.get(expectedType)?.type;
-  const fields = expr.fields.map((field) =>
-    emitRecordLiteralField(field, record?.kind === "RecordTypeRef" ? record : null, context)
-  ).join(", ");
+  const record = expectedRecordType(expectedType, context);
+  const fields = expr.fields.map((field) => emitRecordLiteralField(field, record, context)).join(
+    ", ",
+  );
   return `(${expectedType}){ ${fields} }`;
+}
+
+function expectedRecordType(expectedType: Str, context: EmitContext): RecordTypeRef | null {
+  const type = context.typeAliases.get(expectedType)?.type ??
+    findTypeAliasByCName(expectedType, context);
+  return type?.kind === "RecordTypeRef" ? type : null;
+}
+
+function findTypeAliasByCName(expectedType: Str, context: EmitContext): RecordTypeRef | null {
+  for (const typeAlias of context.typeAliases.values()) {
+    if (
+      (typeAlias.cName ?? typeAlias.name) === expectedType &&
+      typeAlias.type.kind === "RecordTypeRef"
+    ) {
+      return typeAlias.type;
+    }
+  }
+  return null;
 }
 
 function emitRecordLiteralField(

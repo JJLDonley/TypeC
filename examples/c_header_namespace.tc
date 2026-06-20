@@ -1,0 +1,6 @@
+import * as Header from "./c_header_namespace.h";
+
+function main(): i32 {
+  const vec: Header.Vec4 = { lanes: [1, 2, 3, 4] };
+  return 42;
+}

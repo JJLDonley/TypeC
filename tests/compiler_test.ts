@@ -150,6 +150,23 @@ Deno.test("emits C for bare struct header records", async () => {
   assertIncludes(c, "void draw(Color c);");
 });
 
+Deno.test("emits C for namespace header record fixed array fields", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `typedef struct Pixel { unsigned char rgba[4]; } Pixel;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { const p: Lib.Pixel = { rgba: [1, 2, 3, 4] }; return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "u8 rgba[4];");
+  assertIncludes(c, ".rgba = { 1, 2, 3, 4 }");
+});
+
 Deno.test("emits C for header record fixed array fields", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(
