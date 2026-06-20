@@ -1,6 +1,7 @@
 import type { Expression, Statement } from "core/ast.ts";
 import { cStringByteLength } from "core/c_strings.ts";
 import { emitCType } from "c/type.ts";
+import { emitBracedBlock, emitIfElseBlock } from "emitter/blocks.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 import { emitCStringLiteral } from "emitter/strings.ts";
@@ -40,23 +41,11 @@ function emitIf(
   context: EmitContext,
   locals: LocalTypes,
 ): Str {
-  const out: Str[] = [];
-  out.push(`if (${emitExpression(stmt.condition, context)}) {`);
-  const thenLocals = new Map(locals);
-  for (const child of stmt.thenBody.statements) {
-    out.push(`  ${emitStatement(child, returnType, context, thenLocals)}`);
-  }
-  if (!stmt.elseBody) {
-    out.push("}");
-    return out.join("\n  ");
-  }
-  out.push("} else {");
-  const elseLocals = new Map(locals);
-  for (const child of stmt.elseBody.statements) {
-    out.push(`  ${emitStatement(child, returnType, context, elseLocals)}`);
-  }
-  out.push("}");
-  return out.join("\n  ");
+  const header = `if (${emitExpression(stmt.condition, context)}) {`;
+  const thenBody = emitChildStatements(stmt.thenBody.statements, returnType, context, locals);
+  if (!stmt.elseBody) return emitBracedBlock(header, thenBody);
+  const elseBody = emitChildStatements(stmt.elseBody.statements, returnType, context, locals);
+  return emitIfElseBlock(header, thenBody, elseBody);
 }
 
 function emitWhile(
@@ -65,14 +54,18 @@ function emitWhile(
   context: EmitContext,
   locals: LocalTypes,
 ): Str {
-  const out: Str[] = [];
-  out.push(`while (${emitExpression(stmt.condition, context)}) {`);
-  const bodyLocals = new Map(locals);
-  for (const child of stmt.body.statements) {
-    out.push(`  ${emitStatement(child, returnType, context, bodyLocals)}`);
-  }
-  out.push("}");
-  return out.join("\n  ");
+  const body = emitChildStatements(stmt.body.statements, returnType, context, locals);
+  return emitBracedBlock(`while (${emitExpression(stmt.condition, context)}) {`, body);
+}
+
+function emitChildStatements(
+  statements: Statement[],
+  returnType: Str,
+  context: EmitContext,
+  locals: LocalTypes,
+): Str[] {
+  const childLocals = new Map(locals);
+  return statements.map((child) => emitStatement(child, returnType, context, childLocals));
 }
 
 function emitAssignment(
