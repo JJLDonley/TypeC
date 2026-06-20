@@ -82,6 +82,12 @@ Deno.test("collects C header constants from clang AST", () => {
         cast(literal("IntegerLiteral", "1")),
         "/project/config.h",
       ),
+      varDecl(
+        "UNSUPPORTED_EXPR",
+        "const int32_t",
+        binary(literal("IntegerLiteral", "1"), literal("IntegerLiteral", "2")),
+        "/project/config.h",
+      ),
     ],
   });
 
@@ -155,6 +161,10 @@ function literal(kind: Str, value: Str): unknown {
 
 function cast(initializer: unknown): unknown {
   return { kind: "ImplicitCastExpr", inner: [initializer] };
+}
+
+function binary(left: unknown, right: unknown): unknown {
+  return { kind: "BinaryOperator", inner: [left, right] };
 }
 
 function assertSame(actual: usize | b8, expected: usize | b8): void {

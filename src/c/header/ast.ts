@@ -134,26 +134,24 @@ function readConstantLiteral(inner: unknown, type: Str): Str | null {
 }
 
 function findConstantLiteral(value: unknown): Str | null {
-  if (!isJsonRecord(value)) {
-    if (!isJsonArray(value)) return null;
-    for (const child of value) {
-      const literal = findConstantLiteral(child);
-      if (literal !== null) return literal;
-    }
-    return null;
-  }
+  if (isJsonArray(value)) return findSingleConstantLiteral(value);
+  if (!isJsonRecord(value)) return null;
   if (isHeaderConstantLiteral(value) && isJsonText(value.value)) return value.value;
-  const inner = value.inner;
-  if (!isJsonArray(inner)) return null;
-  for (const child of inner) {
-    const literal = findConstantLiteral(child);
-    if (literal !== null) return literal;
-  }
-  return null;
+  if (!isTransparentConstantWrapper(value)) return null;
+  return findSingleConstantLiteral(value.inner);
+}
+
+function findSingleConstantLiteral(inner: unknown): Str | null {
+  if (!isJsonArray(inner) || inner.length !== 1) return null;
+  return findConstantLiteral(inner[0]);
 }
 
 function isHeaderConstantLiteral(value: JsonRecord): b8 {
   return value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral";
+}
+
+function isTransparentConstantWrapper(value: JsonRecord): b8 {
+  return value.kind === "ImplicitCastExpr" || value.kind === "ParenExpr";
 }
 
 function isBoolHeaderType(type: Str): b8 {
