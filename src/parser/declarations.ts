@@ -11,6 +11,7 @@ import type {
 } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import {
+  constModifierDiagnostics,
   functionModifierDiagnostics,
   importModifierDiagnostics,
   typeAliasModifierDiagnostics,
@@ -128,7 +129,7 @@ function parseConstDeclaration(
   parser: DeclarationParser,
   modifiers: DeclarationModifiers,
 ): CastConstDecl {
-  parser.diagnostics().push(...typeAliasModifierDiagnostics(modifiers.externToken));
+  parser.diagnostics().push(...constModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("const");
   const name = parser.expectKind("identifier", "Expected constant name");
   parser.expectText(":");

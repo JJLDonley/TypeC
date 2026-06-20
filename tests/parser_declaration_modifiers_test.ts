@@ -1,6 +1,7 @@
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { Token } from "core/token.ts";
 import {
+  constModifierDiagnostics,
   functionModifierDiagnostics,
   importModifierDiagnostics,
   typeAliasModifierDiagnostics,
@@ -27,6 +28,12 @@ Deno.test("reports invalid type alias modifiers", () => {
   assertText(diagnostics[0]?.message ?? "", "Type aliases cannot be extern");
 });
 
+Deno.test("reports invalid constant modifiers", () => {
+  const diagnostics = constModifierDiagnostics(token("extern"));
+
+  assertText(diagnostics[0]?.message ?? "", "Constants cannot be extern");
+});
+
 Deno.test("reports invalid function modifiers", () => {
   const diagnostics = functionModifierDiagnostics(token("export"), token("extern"));
 
@@ -36,6 +43,7 @@ Deno.test("reports invalid function modifiers", () => {
 Deno.test("accepts valid declaration modifiers", () => {
   assertLen(importModifierDiagnostics(null, null).length, 0);
   assertLen(typeAliasModifierDiagnostics(null).length, 0);
+  assertLen(constModifierDiagnostics(null).length, 0);
   assertLen(functionModifierDiagnostics(token("export"), null).length, 0);
 });
 

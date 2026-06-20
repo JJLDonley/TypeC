@@ -131,6 +131,23 @@ Deno.test("parses variadic extern function declarations", () => {
   assertBool(declaration.variadic === true, true);
 });
 
+Deno.test("rejects extern constants", () => {
+  const fixture = parserFixture([
+    keyword("extern"),
+    keyword("const"),
+    identifier("ANSWER"),
+    punct(":"),
+    identifier("i32"),
+    punct("="),
+    integer("42"),
+    punct(";"),
+  ]);
+
+  parseDeclarationWith(fixture.parser);
+
+  assertText(fixture.diagnostics[0]?.message ?? "", "Constants cannot be extern");
+});
+
 Deno.test("rejects invalid declaration modifiers", () => {
   const fixture = parserFixture([
     keyword("extern"),
