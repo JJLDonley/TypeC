@@ -9,9 +9,7 @@ import {
   isFloatType,
   isIntegerType,
   isNumericType,
-  isPointerLikeType,
   maxF32,
-  parseArrayType,
 } from "checker/types.ts";
 
 type Str = string;
@@ -26,8 +24,8 @@ Deno.test("classifies checker primitive types", () => {
   assertSame(isIntegerType("f32"), false);
   assertSame(isFloatType("f32"), true);
   assertSame(isFloatType("i32"), false);
-  assertSame(isPointerLikeType("Vec*"), true);
-  assertSame(isPointerLikeType("Vec&"), true);
+  assertSame(isPointerLikeTypeName("Vec*"), true);
+  assertSame(isPointerLikeTypeName("Vec&"), true);
 });
 
 Deno.test("reads checker numeric ranges", () => {
@@ -38,13 +36,13 @@ Deno.test("reads checker numeric ranges", () => {
 });
 
 Deno.test("parses checker array types", () => {
-  const inferred = parseArrayType("i32[]");
-  const fixed = parseArrayType("i32[3]");
+  const inferred = parseArrayTypeName("i32[]");
+  const fixed = parseArrayTypeName("i32[3]");
 
   assertText(inferred?.element ?? "", "i32");
   assertSame(inferred?.length === null, true);
   assertBigInt(fixed?.length ?? 0n, 3n);
-  assertSame(parseArrayType("i32") === null, true);
+  assertSame(parseArrayTypeName("i32") === null, true);
 });
 
 Deno.test("parses shared checker type name shapes", () => {

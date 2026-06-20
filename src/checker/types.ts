@@ -1,10 +1,6 @@
 import type { TypeName } from "core/tast.ts";
 import { isArrayPointerAssignable, isPointerAssignable } from "checker/pointer_compatibility.ts";
-import {
-  type ArrayTypeNameShape,
-  isPointerLikeTypeName,
-  parseArrayTypeName,
-} from "checker/type_name_shapes.ts";
+import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 
 type Str = string;
 type f64 = number;
@@ -69,12 +65,4 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   }
   if (isArrayPointerAssignable(actual, expected)) return true;
   return isPointerAssignable(actual, expected);
-}
-
-export function parseArrayType(type: TypeName): ArrayTypeNameShape | null {
-  return parseArrayTypeName(type);
-}
-
-export function isPointerLikeType(type: TypeName): b8 {
-  return isPointerLikeTypeName(type);
 }
