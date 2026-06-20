@@ -1,6 +1,7 @@
 import type { Expression, RecordTypeRef } from "core/ast.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCallExpression } from "emitter/calls.ts";
+import { expectedRecordType } from "emitter/record_types.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
@@ -72,24 +73,6 @@ function emitRecordLiteralExpression(
     ", ",
   );
   return `(${expectedType}){ ${fields} }`;
-}
-
-function expectedRecordType(expectedType: Str, context: EmitContext): RecordTypeRef | null {
-  const type = context.typeAliases.get(expectedType)?.type ??
-    findTypeAliasByCName(expectedType, context);
-  return type?.kind === "RecordTypeRef" ? type : null;
-}
-
-function findTypeAliasByCName(expectedType: Str, context: EmitContext): RecordTypeRef | null {
-  for (const typeAlias of context.typeAliases.values()) {
-    if (
-      (typeAlias.cName ?? typeAlias.name) === expectedType &&
-      typeAlias.type.kind === "RecordTypeRef"
-    ) {
-      return typeAlias.type;
-    }
-  }
-  return null;
 }
 
 function emitRecordLiteralField(
