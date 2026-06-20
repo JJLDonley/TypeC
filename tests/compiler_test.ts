@@ -234,6 +234,23 @@ Deno.test("emits C for header macro constant imports", async () => {
   assertIncludes(c, "return Lib_ANSWER;");
 });
 
+Deno.test("emits C for header string macro imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#define TITLE "TypeC"\nint consume(unsigned char *text);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { Lib.consume(Lib.TITLE); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, 'static const u8* Lib_TITLE = (u8*)"TypeC";');
+  assertIncludes(c, "consume(Lib_TITLE);");
+});
+
 Deno.test("deduplicates direct and namespace header function imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/lib.h`, `void tick(void);`);

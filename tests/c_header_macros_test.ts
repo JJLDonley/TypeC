@@ -13,6 +13,9 @@ Deno.test("collects safe object-like macro constants", () => {
 #define MIXED (1u + 2u)
 #define HEX (0x10 + 2)
 #define EXP 1e3
+#define ENABLED true
+#define TITLE "TypeC"
+#define BAD_ESCAPE "a\\n"
 #define BAD_BIG_EXP 1e100
 #define BAD_IDENT (WIDTH + 2)
 #define BAD_CALL(x) (x)
@@ -22,7 +25,7 @@ Deno.test("collects safe object-like macro constants", () => {
     "/project/include/config.h",
   );
 
-  assertSame(constants.length, 7);
+  assertSame(constants.length, 10);
   assertConstant(constants[0], "WIDTH", "i32", "800");
   assertConstant(constants[1], "HEIGHT", "u32", "600");
   assertConstant(constants[2], "SCALE", "f64", "2.5");
@@ -30,6 +33,9 @@ Deno.test("collects safe object-like macro constants", () => {
   assertConstant(constants[4], "MIXED", "u32", "1 + 2");
   assertConstant(constants[5], "HEX", "i32", "16 + 2");
   assertConstant(constants[6], "EXP", "f64", "1000.0");
+  assertConstant(constants[7], "ENABLED", "bool", "true");
+  assertConstant(constants[8], "TITLE", "u8*", '"TypeC"');
+  assertConstant(constants[9], "TEXT", "u8*", '"hi"');
 });
 
 function assertConstant(

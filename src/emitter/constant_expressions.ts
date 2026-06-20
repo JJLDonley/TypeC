@@ -2,7 +2,7 @@ import type { ConstDecl, Expression, RecordTypeRef } from "core/ast.ts";
 import { cArrayElementType, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
-import { emitCStringLiteral } from "emitter/strings.ts";
+import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -20,7 +20,7 @@ export function emitConstantExpressionExpected(
     case "BoolLiteral":
       return expr.text;
     case "StringLiteral":
-      return emitCStringLiteral(expr.text);
+      return emitConstantStringLiteral(expr, expectedType);
     case "IdentifierExpr":
       return emitConstantReference(expr.name, expectedType, context);
     case "UnaryExpr":
@@ -38,6 +38,15 @@ export function emitConstantExpressionExpected(
     case "IndexExpr":
       throw new Error("Unsupported compile-time constant expression");
   }
+}
+
+function emitConstantStringLiteral(
+  expr: Extract<Expression, { kind: "StringLiteral" }>,
+  expectedType: Str,
+): Str {
+  if (expectedType === "u8*") return emitCStringPointer(expr.text);
+  if (expectedType === "void*") return emitCStringVoidPointer(expr.text);
+  return emitCStringLiteral(expr.text);
 }
 
 function emitConstantReference(name: Str, expectedType: Str, context: EmitContext): Str {

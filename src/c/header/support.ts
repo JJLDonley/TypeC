@@ -52,5 +52,6 @@ function isConstType(type: Str): b8 {
 }
 
 function isGeneratedMacroType(type: Str): b8 {
-  return type === "i32" || type === "u32" || type === "i64" || type === "u64" || type === "f64";
+  return type === "bool" || type === "u8*" || type === "i32" || type === "u32" ||
+    type === "i64" || type === "u64" || type === "f64";
 }

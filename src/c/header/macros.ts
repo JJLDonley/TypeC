@@ -4,7 +4,7 @@ import { isTypeCIdentifier } from "c/header/identifiers.ts";
 type Str = string;
 type b8 = boolean;
 
-type MacroValueType = "i32" | "u32" | "i64" | "u64" | "f64";
+type MacroValueType = "bool" | "u8*" | "i32" | "u32" | "i64" | "u64" | "f64";
 
 export function collectHeaderMacroConstants(
   source: Str,
@@ -47,13 +47,24 @@ interface MacroValue {
 
 function parseMacroValue(value: Str): MacroValue | null {
   const unwrapped = unwrapParentheses(value.trim());
-  return parseFloatMacroValue(unwrapped) ?? parseIntegerMacroValue(unwrapped) ??
+  return parseBoolMacroValue(unwrapped) ?? parseStringMacroValue(unwrapped) ??
+    parseFloatMacroValue(unwrapped) ?? parseIntegerMacroValue(unwrapped) ??
     parseNumericExpressionMacroValue(unwrapped);
 }
 
 function unwrapParentheses(value: Str): Str {
   if (!value.startsWith("(") || !value.endsWith(")")) return value;
   return value.slice(1, -1).trim();
+}
+
+function parseBoolMacroValue(value: Str): MacroValue | null {
+  if (value === "true" || value === "false") return { type: "bool", text: value };
+  return null;
+}
+
+function parseStringMacroValue(value: Str): MacroValue | null {
+  if (!/^"[^"\\\r\n]*"$/.test(value)) return null;
+  return { type: "u8*", text: value };
 }
 
 function parseFloatMacroValue(value: Str): MacroValue | null {
