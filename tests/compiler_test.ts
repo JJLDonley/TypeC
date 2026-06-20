@@ -1,6 +1,7 @@
 import { check } from "checker";
 import { compileFile } from "driver/compiler.ts";
 import { emitC } from "emitter";
+import { loadProgram } from "module/loader.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
 import { resolve } from "core/resolver.ts";
@@ -23,6 +24,18 @@ Deno.test("tracks project compiler flags", async () => {
   await Deno.writeTextFile(`${dir}/main.tc`, `function main(): i32 { return 0; }`);
   const result = await compileFile(`${dir}/main.tc`, `${dir}/build`);
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
+});
+
+Deno.test("emits C calls for namespace header imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/lib.h`, `void tick(void);`);
+  await Deno.writeTextFile(`${dir}/main.tc`, `import * as Lib from "./lib.h"; function main(): i32 { Lib.tick(); return 0; }`);
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "void tick(void);");
+  assertIncludes(c, "tick();");
+  assertNotIncludes(c, "Lib.tick");
 });
 
 Deno.test("emits C prototypes for extern functions", () => {
