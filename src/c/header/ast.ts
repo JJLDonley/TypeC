@@ -130,6 +130,7 @@ function readConstantLiteral(inner: unknown, type: Str): Str | null {
   if (isBoolHeaderType(type) && isIntegerLiteralText(literal)) {
     return literal === "0" ? "false" : "true";
   }
+  if (isStringLiteralText(literal) && !isSimpleStringLiteralText(literal)) return null;
   return literal;
 }
 
@@ -147,7 +148,8 @@ function findSingleConstantLiteral(inner: unknown): Str | null {
 }
 
 function isHeaderConstantLiteral(value: JsonRecord): b8 {
-  return value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral";
+  return value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral" ||
+    value.kind === "StringLiteral";
 }
 
 function isTransparentConstantWrapper(value: JsonRecord): b8 {
@@ -160,6 +162,14 @@ function isBoolHeaderType(type: Str): b8 {
 
 function isIntegerLiteralText(value: Str): b8 {
   return /^-?[0-9]+$/.test(value);
+}
+
+function isStringLiteralText(value: Str): b8 {
+  return value.startsWith('"') && value.endsWith('"');
+}
+
+function isSimpleStringLiteralText(value: Str): b8 {
+  return /^"[^"\\\r\n]*"$/.test(value);
 }
 
 function readSourceFile(value: JsonRecord): Str | null {

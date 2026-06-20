@@ -83,19 +83,33 @@ Deno.test("collects C header constants from clang AST", () => {
         "/project/config.h",
       ),
       varDecl(
+        "TITLE",
+        "const char *",
+        cast(literal("StringLiteral", '"TypeC"')),
+        "/project/config.h",
+      ),
+      varDecl(
         "UNSUPPORTED_EXPR",
         "const int32_t",
         binary(literal("IntegerLiteral", "1"), literal("IntegerLiteral", "2")),
         "/project/config.h",
       ),
+      varDecl(
+        "UNSUPPORTED_STRING",
+        "const char *",
+        literal("StringLiteral", '"a\\n"'),
+        "/project/config.h",
+      ),
     ],
   });
 
-  assertSame(constants.length, 2);
+  assertSame(constants.length, 3);
   assertText(constants[0].name, "ANSWER");
   assertText(constants[0].value, "42");
   assertText(constants[1].name, "ENABLED");
   assertText(constants[1].value, "true");
+  assertText(constants[2].name, "TITLE");
+  assertText(constants[2].value, '"TypeC"');
 });
 
 Deno.test("reads C header function metadata", () => {
