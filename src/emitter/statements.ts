@@ -1,4 +1,5 @@
 import type { Statement } from "core/ast.ts";
+import { emitAssignment, type LocalTypes } from "emitter/assignments.ts";
 import { emitBracedBlock, emitIfElseBlock } from "emitter/blocks.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
@@ -6,7 +7,6 @@ import { emitCTypeName } from "emitter/type_names.ts";
 import { emitVarDecl } from "emitter/var_declarations.ts";
 
 type Str = string;
-type LocalTypes = Map<Str, Str>;
 
 export function emitStatement(
   stmt: Statement,
@@ -64,16 +64,4 @@ function emitChildStatements(
 ): Str[] {
   const childLocals = new Map(locals);
   return statements.map((child) => emitStatement(child, returnType, context, childLocals));
-}
-
-function emitAssignment(
-  stmt: Extract<Statement, { kind: "AssignmentStmt" }>,
-  context: EmitContext,
-  locals: LocalTypes,
-): Str {
-  const targetType = locals.get(stmt.name);
-  const expression = targetType
-    ? emitExpressionExpected(stmt.expression, targetType, context)
-    : emitExpression(stmt.expression, context);
-  return `${stmt.name} = ${expression};`;
 }
