@@ -4,6 +4,7 @@ import type { Program } from "core/ast.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
 import { normalizePath } from "paths";
+import { markHeaderModule } from "module/header_modules.ts";
 import { collectImportRequests } from "module/import_requests.ts";
 import { canonicalModulePath, isCHeaderPath } from "module/paths.ts";
 import {
@@ -60,7 +61,7 @@ async function loadCanonicalModule(path: Str, state: LoadState): Promise<Program
 
 async function loadHeaderModule(path: Str, config: ProjectConfig): Promise<Program> {
   const source = await generateExternsFromHeader(path, config.compilerFlags, config.projectDir);
-  return exportAllFunctions(parse(lex(source)));
+  return markHeaderModule(exportAllFunctions(parse(lex(source))));
 }
 
 async function collectImports(path: Str, program: Program, state: LoadState): Promise<Program[]> {

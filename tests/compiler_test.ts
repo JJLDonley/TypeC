@@ -42,10 +42,32 @@ Deno.test("emits C for namespace function dependencies", async () => {
 
   const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
 
-  assertIncludes(c, "static i32 inc(i32 x)");
-  assertIncludes(c, "return inc(41);");
-  assertIncludes(c, "return answer();");
+  assertIncludes(c, "static i32 Math_inc(i32 x)");
+  assertIncludes(c, "return Math_inc(41);");
+  assertIncludes(c, "return Math_answer();");
   assertNotIncludes(c, "Math.");
+});
+
+Deno.test("emits distinct C names for repeated namespace imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/left.tc`,
+    `export function add(a: i32, b: i32): i32 { return a + b; }`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/right.tc`,
+    `export function add(a: i32, b: i32): i32 { return a + b; }`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Left from "./left.tc"; import * as Right from "./right.tc"; function main(): i32 { return Left.add(20, Right.add(10, 12)); }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "static i32 Left_add(i32 a, i32 b)");
+  assertIncludes(c, "static i32 Right_add(i32 a, i32 b)");
+  assertIncludes(c, "return Left_add(20, Right_add(10, 12));");
 });
 
 Deno.test("emits C for namespace type aliases", async () => {
@@ -58,8 +80,8 @@ Deno.test("emits C for namespace type aliases", async () => {
 
   const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
 
-  assertIncludes(c, "} Pair;");
-  assertIncludes(c, "const Pair p = (Pair){ .left = 1, .right = 2 };");
+  assertIncludes(c, "} Types_Pair;");
+  assertIncludes(c, "const Types_Pair p = (Types_Pair){ .left = 1, .right = 2 };");
   assertNotIncludes(c, "Types.Pair");
 });
 

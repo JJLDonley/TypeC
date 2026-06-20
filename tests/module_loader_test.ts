@@ -23,8 +23,8 @@ Deno.test("loads namespace imported functions", async () => {
   const program = await loadProgram(`${dir}/main.tc`);
   const imported = program.functions.find((fn) => fn.name === "Math.add");
   const dependency = program.functions.find((fn) => fn.name === "Math.inc");
-  assertText(imported?.cName ?? "", "add");
-  assertText(dependency?.cName ?? "", "inc");
+  assertText(imported?.cName ?? "", "Math_add");
+  assertText(dependency?.cName ?? "", "Math_inc");
 });
 
 Deno.test("loads namespace imported type aliases", async () => {
@@ -40,8 +40,8 @@ Deno.test("loads namespace imported type aliases", async () => {
   const program = await loadProgram(`${dir}/main.tc`);
   const imported = program.typeAliases.find((typeAlias) => typeAlias.name === "Types.Pair");
   const dependency = program.typeAliases.find((typeAlias) => typeAlias.name === "Types.Inner");
-  assertText(imported?.cName ?? "", "Pair");
-  assertText(dependency?.cName ?? "", "Inner");
+  assertText(imported?.cName ?? "", "Types_Pair");
+  assertText(dependency?.cName ?? "", "Types_Inner");
 });
 
 Deno.test("loads imported type aliases", async () => {

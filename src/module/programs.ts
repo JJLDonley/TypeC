@@ -1,6 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
+import { namespaceCName } from "module/c_names.ts";
 import { selectDependencyClosure } from "module/dependencies.ts";
 import { namespaceProgramFunctions } from "module/function_namespaces.ts";
 import { namespaceProgramTypes } from "module/type_namespaces.ts";
@@ -76,12 +77,21 @@ function namespaceTypeAlias(typeAlias: TypeAliasDecl, namespace: Str): TypeAlias
     ...typeAlias,
     exported: false,
     name: `${namespace}.${typeAlias.name}`,
-    cName: typeAlias.cName ?? typeAlias.name,
+    cName: typeAlias.cName ?? namespaceCName(namespace, typeAlias.name),
   };
 }
 
 function namespaceFunction(fn: FunctionDecl, namespace: Str): FunctionDecl {
-  return { ...fn, exported: false, name: `${namespace}.${fn.name}`, cName: fn.cName ?? fn.name };
+  return {
+    ...fn,
+    exported: false,
+    name: `${namespace}.${fn.name}`,
+    cName: fn.cName ?? namespaceFunctionCName(fn, namespace),
+  };
+}
+
+function namespaceFunctionCName(fn: FunctionDecl, namespace: Str): Str {
+  return fn.external ? fn.name : namespaceCName(namespace, fn.name);
 }
 
 function uniqueRefs<T>(items: T[]): T[] {
