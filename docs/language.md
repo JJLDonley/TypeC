@@ -120,10 +120,11 @@ import { abs_i32 } from "basic/math";
 The standard library is written in TypeC and is expected to use the full completed language, not
 only the initial core subset.
 
-Current stdlib modules are simple because advanced features are not implemented yet. As features
-such as classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe
-pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to
-use them where they improve clarity, safety, or reuse.
+Current stdlib modules are simple because many advanced features are not implemented yet. Completed
+features such as compile-time constants may be used in stdlib modules where they improve clarity,
+safety, or reuse. Later features such as classes, methods, enums, generics, interfaces, tagged
+unions, pattern matching, safe pointers, defer, and arenas should be adopted only after their phases
+are implemented.
 
 ## Constants and Planned Enums
 
