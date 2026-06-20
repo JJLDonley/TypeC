@@ -24,14 +24,19 @@ Deno.test("loads namespace imported functions", async () => {
 
 Deno.test("loads namespace imported type aliases", async () => {
   const dir = await Deno.makeTempDir();
-  await writeText(`${dir}/types.tc`, `export type Pair = { left: i32; right: i32; };`);
+  await writeText(
+    `${dir}/types.tc`,
+    `type Inner = { value: i32; }; export type Pair = { left: Inner; right: Inner; };`,
+  );
   await writeText(
     `${dir}/main.tc`,
-    `import * as Types from "./types.tc"; function main(): i32 { const p: Types.Pair = { left: 1, right: 2 }; return p.left; }`,
+    `import * as Types from "./types.tc"; function main(): i32 { const p: Types.Pair = { left: { value: 1 }, right: { value: 2 } }; return p.left.value; }`,
   );
   const program = await loadProgram(`${dir}/main.tc`);
   const imported = program.typeAliases.find((typeAlias) => typeAlias.name === "Types.Pair");
+  const dependency = program.typeAliases.find((typeAlias) => typeAlias.name === "Types.Inner");
   assertText(imported?.cName ?? "", "Pair");
+  assertText(dependency?.cName ?? "", "Inner");
 });
 
 Deno.test("loads imported type aliases", async () => {

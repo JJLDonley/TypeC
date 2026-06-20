@@ -59,6 +59,26 @@ Deno.test("emits C calls for namespace header imports", async () => {
   assertNotIncludes(c, "Lib.tick");
 });
 
+Deno.test("emits C for namespace header record imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `typedef struct Color { unsigned char r; unsigned char g; unsigned char b; unsigned char a; } Color; void draw(Color tint);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { const tint: Lib.Color = { r: 1, g: 2, b: 3, a: 4 }; Lib.draw(tint); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "} Color;");
+  assertIncludes(c, "void draw(Color tint);");
+  assertIncludes(c, "const Color tint = (Color){ .r = 1, .g = 2, .b = 3, .a = 4 };");
+  assertIncludes(c, "draw(tint);");
+  assertNotIncludes(c, "Lib.Color");
+});
+
 Deno.test("emits C prototypes for extern functions", () => {
   const source = `extern function puts(s: u8*): i32; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
