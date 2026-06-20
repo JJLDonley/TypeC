@@ -71,6 +71,24 @@ Deno.test("emits distinct C names for repeated namespace imports", async () => {
   assertIncludes(c, "return Left_add(20, Right_add(10, 12));");
 });
 
+Deno.test("emits C for namespace type aliases with fixed array fields", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/types.tc`,
+    `export type Bytes = { values: u8[4]; };`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Types from "./types.tc"; function main(): i32 { const bytes: Types.Bytes = { values: [1, 2, 3, 4] }; return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "u8 values[4];");
+  assertIncludes(c, ".values = { 1, 2, 3, 4 }");
+  assertNotIncludes(c, "Types.Bytes");
+});
+
 Deno.test("emits C for namespace type aliases", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/types.tc`, `export type Pair = { left: i32; right: i32; };`);
