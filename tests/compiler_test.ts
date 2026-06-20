@@ -167,6 +167,27 @@ Deno.test("emits C for header record fixed array fields", async () => {
   assertIncludes(c, ".colors = { 1, 2, 3, 4 }");
 });
 
+Deno.test("emits C for namespace project header record imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/include`);
+  await Deno.writeTextFile(`${dir}/project.json`, `{"dependencies":{"gfx":"include/gfx.h"}}`);
+  await Deno.writeTextFile(
+    `${dir}/include/gfx.h`,
+    `typedef struct Color { unsigned char r; unsigned char g; unsigned char b; unsigned char a; } Color; void draw(Color tint);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Gfx from "gfx"; function main(): i32 { const tint: Gfx.Color = { r: 1, g: 2, b: 3, a: 4 }; Gfx.draw(tint); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "typedef struct Color {");
+  assertIncludes(c, "void draw(Color tint);");
+  assertIncludes(c, "draw(tint);");
+  assertNotIncludes(c, "Gfx.");
+});
+
 Deno.test("emits C for namespace header record imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(
