@@ -474,6 +474,17 @@ Deno.test("rejects integer constant division by zero", () => {
   );
 });
 
+Deno.test("rejects aggregate integer constant division by zero", () => {
+  assertCheckError(
+    `const ZERO: i32 = 0; const VALUES: Array<i32, 1> = [1 / ZERO]; function main(): i32 { return 0; }`,
+    "Operator '/' cannot divide by zero",
+  );
+  assertCheckError(
+    `type Cell = { value: i32; }; const ZERO: i32 = 0; const BAD: Cell = { value: 1 % ZERO }; function main(): i32 { return 0; }`,
+    "Operator '%' cannot divide by zero",
+  );
+});
+
 Deno.test("rejects overflowing integer constant expressions", () => {
   assertCheckError(
     `const BAD: u8 = 255 + 1; function main(): i32 { return 0; }`,
