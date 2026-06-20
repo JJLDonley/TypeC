@@ -61,8 +61,8 @@ export function isFloatType(type: TypeName): b8 {
 
 export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (actual === expected) return true;
-  const expectedArray = parseArrayType(expected);
-  const actualArray = parseArrayType(actual);
+  const expectedArray = parseArrayTypeName(expected);
+  const actualArray = parseArrayTypeName(actual);
   if (expectedArray && actualArray) {
     return expectedArray.element === actualArray.element &&
       (expectedArray.length === null || expectedArray.length === actualArray.length);
