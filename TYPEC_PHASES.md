@@ -671,7 +671,8 @@ slice.length()    // runtime slice length as usize
 slice.data        // slice data pointer, Ptr<T>
 ```
 
-An `Array<T, N>` automatically coerces to `Slice<T>` when a slice is expected.
+After slice lowering is implemented, `Array<T, N>` will coerce to `Slice<T>` when a slice is
+expected.
 
 ```ts
 function take(values: Slice<i32>): i32 {
@@ -685,7 +686,7 @@ function main(): i32 {
 ```
 
 An `Array<T, N>` may decay to `Ptr<T>` only when a raw pointer or C ABI parameter is expected. APIs
-that need length should prefer `Slice<T>` or pass an explicit `usize`.
+that need length should pass an explicit `usize` until `Slice<T>` lowering is implemented.
 
 ## Pointer and Reference Operators
 
