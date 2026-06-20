@@ -1,6 +1,7 @@
 import {
   isPointerLikeTypeName,
   parseArrayTypeName,
+  parseFunctionTypeName,
   pointeeTypeName,
 } from "checker/type_name_shapes.ts";
 import {
@@ -45,6 +46,16 @@ Deno.test("parses checker array types", () => {
   assertSame(parseArrayTypeName("i32") === null, true);
 });
 
+Deno.test("parses checker function types", () => {
+  const type = parseFunctionTypeName("(value: i32, data: u8*) => bool");
+
+  assertText(type?.params[0]?.name ?? "", "value");
+  assertText(type?.params[0]?.type ?? "", "i32");
+  assertText(type?.params[1]?.type ?? "", "u8*");
+  assertText(type?.returnType ?? "", "bool");
+  assertSame(parseFunctionTypeName("i32") === null, true);
+});
+
 Deno.test("parses shared checker type name shapes", () => {
   assertText(parseArrayTypeName("u8[4]")?.element ?? "", "u8");
   assertBigInt(parseArrayTypeName("u8[4]")?.length ?? 0n, 4n);
@@ -61,6 +72,8 @@ Deno.test("checks assignability", () => {
   assertSame(isAssignable("u8*", "void*"), true);
   assertSame(isAssignable("u8[4]", "void*"), true);
   assertSame(isAssignable("void*", "u8*"), false);
+  assertSame(isAssignable("(value: i32) => i32", "(arg0: i32) => i32"), true);
+  assertSame(isAssignable("(value: i64) => i32", "(arg0: i32) => i32"), false);
 });
 
 function assertSame(actual: b8, expected: b8): void {

@@ -211,12 +211,13 @@ Deno.test("emits C for header function pointer parameters", async () => {
   );
   await Deno.writeTextFile(
     `${dir}/main.tc`,
-    `import { set_callback } from "./lib.h"; function main(): i32 { return 42; }`,
+    `import { set_callback } from "./lib.h"; function handler(value: i32): i32 { return value; } function main(): i32 { set_callback(handler); return 42; }`,
   );
 
   const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
 
   assertIncludes(c, "void set_callback(i32 (*callback)(i32));");
+  assertIncludes(c, "set_callback(handler);");
 });
 
 Deno.test("emits C for header nested fixed array parameters", async () => {

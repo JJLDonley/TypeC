@@ -966,8 +966,7 @@ function main(): i32 {
 - C function pointer types map to TypeScript-like function types: `(arg: T) => R`. Function pointer
   values are raw C ABI pointers and cannot capture TypeC local state.
 - C callback parameters accept only compatible external function symbols or non-capturing TypeC
-  function declarations after callback support is implemented. Closures and captured locals are not
-  part of the C ABI.
+  function declarations. Closures and captured locals are not part of the C ABI.
 - `char*`, `const char*`, and `unsigned char*` map to `u8*` / `Ptr<u8>`.
 - `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type
   information.

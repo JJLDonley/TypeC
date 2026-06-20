@@ -5,6 +5,7 @@ import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
+import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { spanKey } from "checker/exprs.ts";
@@ -43,6 +44,7 @@ export * from "checker/c_ordinary_symbols.ts";
 export * from "checker/c_symbol_names.ts";
 export * from "checker/c_symbols.ts";
 export * from "checker/call_args.ts";
+export * from "checker/callback_expressions.ts";
 export * from "checker/call_expressions.ts";
 export * from "checker/calls.ts";
 export * from "checker/conditions.ts";
@@ -228,6 +230,12 @@ class Checker {
     locals: Map<Str, LocalInfo>,
     expected: TypeName,
   ): TypeName {
+    const callback = this.globalCallbackType(expr, locals, expected);
+    if (callback?.handled) {
+      this.diagnostics.push(...callback.diagnostics);
+      this.expressionTypes.set(spanKey(expr.span), { type: callback.type });
+      return callback.type;
+    }
     const result = checkExpectedExpression(
       expr,
       expected,
@@ -238,6 +246,15 @@ class Checker {
     this.diagnostics.push(...result.diagnostics);
     this.expressionTypes.set(spanKey(expr.span), { type: result.type });
     return result.type;
+  }
+
+  private globalCallbackType(
+    expr: Expression,
+    locals: Map<Str, LocalInfo>,
+    expected: TypeName,
+  ): ReturnType<typeof checkExpectedCallbackExpression> | null {
+    if (expr.kind === "IdentifierExpr" && locals.has(expr.name)) return null;
+    return checkExpectedCallbackExpression(expr, expected, this.functions);
   }
 
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {

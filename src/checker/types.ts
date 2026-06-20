@@ -1,6 +1,10 @@
 import type { TypeName } from "core/tast.ts";
 import { isArrayPointerAssignable, isPointerAssignable } from "checker/pointer_compatibility.ts";
-import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
+import {
+  parseArrayTypeName,
+  parseFunctionTypeName,
+  parseSliceTypeName,
+} from "checker/type_name_shapes.ts";
 
 type Str = string;
 type f64 = number;
@@ -67,6 +71,18 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (expectedSlice && actualArray !== null && actualArray.length !== null) {
     return expectedSlice.element === actualArray.element;
   }
+  if (areFunctionTypesAssignable(actual, expected)) return true;
   if (isArrayPointerAssignable(actual, expected)) return true;
   return isPointerAssignable(actual, expected);
+}
+
+function areFunctionTypesAssignable(actual: TypeName, expected: TypeName): b8 {
+  const actualFunction = parseFunctionTypeName(actual);
+  const expectedFunction = parseFunctionTypeName(expected);
+  if (!actualFunction || !expectedFunction) return false;
+  if (actualFunction.returnType !== expectedFunction.returnType) return false;
+  if (actualFunction.params.length !== expectedFunction.params.length) return false;
+  return actualFunction.params.every((param, index) =>
+    param.type === expectedFunction.params[index]!.type
+  );
 }

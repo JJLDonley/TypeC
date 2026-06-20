@@ -47,6 +47,7 @@ function emitCallArg(
   emitArrayLiteralExpression: ArrayLiteralEmitter,
 ): Str {
   if (!param) return emitExpression(arg, context);
+  if (param.type.kind === "FunctionTypeRef") return emitExpression(arg, context);
   const expectedType = emitCTypeName(param.type, context.typeAliases);
   if (arg.kind === "ArrayLiteralExpr") {
     return emitArrayCompoundLiteral(
