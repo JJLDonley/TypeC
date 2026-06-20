@@ -1,5 +1,10 @@
-import { collectHeaderFunctions, collectHeaderRecords } from "c/header/ast.ts";
+import {
+  collectHeaderConstants,
+  collectHeaderFunctions,
+  collectHeaderRecords,
+} from "c/header/ast.ts";
 import { readClangHeaderAst } from "c/header/clang.ts";
+import { formatHeaderConstants } from "c/header/constants.ts";
 import { formatHeaderExterns } from "c/header/externs.ts";
 import { formatHeaderRecordAliases } from "c/header/record_aliases.ts";
 import { selectHeaderRecords } from "c/header/record_selection.ts";
@@ -15,8 +20,8 @@ export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null
   );
   const recordNames = new Set<Str>(records.map((record) => record.name));
   return `${formatHeaderRecordAliases(records)}${
-    formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)
-  }`;
+    formatHeaderConstants(collectHeaderConstants(ast), includeDir, recordNames)
+  }${formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)}`;
 }
 
 export async function generateExternsFromHeader(

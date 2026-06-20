@@ -1,4 +1,4 @@
-import type { CHeaderFunction } from "c/header/ast.ts";
+import type { CHeaderConstant, CHeaderFunction } from "c/header/ast.ts";
 import { cArrayElementType } from "c/header/array_types.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
@@ -8,9 +8,17 @@ type Str = string;
 type b8 = boolean;
 
 export function isIncludedHeaderFunction(fn: CHeaderFunction, includeDir: Str | null): b8 {
+  return isIncludedSource(fn.sourceFile, includeDir);
+}
+
+export function isIncludedHeaderConstant(constant: CHeaderConstant, includeDir: Str | null): b8 {
+  return isIncludedSource(constant.sourceFile, includeDir);
+}
+
+function isIncludedSource(sourceFile: Str | null, includeDir: Str | null): b8 {
   if (includeDir === null) return true;
-  if (fn.sourceFile === null) return false;
-  return isPathWithinDir(fn.sourceFile, includeDir);
+  if (sourceFile === null) return false;
+  return isPathWithinDir(sourceFile, includeDir);
 }
 
 export function isSupportedHeaderFunction(fn: CHeaderFunction): b8 {
@@ -30,6 +38,14 @@ function hasArrayReturnType(fn: CHeaderFunction): b8 {
   return cArrayElementType(normalizeCHeaderType(fn.returnType)) !== null;
 }
 
+export function isSupportedHeaderConstant(constant: CHeaderConstant): b8 {
+  return isTypeCIdentifier(constant.name) && isConstType(constant.type);
+}
+
 function isStaticFunction(fn: CHeaderFunction): b8 {
   return fn.storageClass === "static";
+}
+
+function isConstType(type: Str): b8 {
+  return type.includes("const");
 }

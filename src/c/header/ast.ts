@@ -38,6 +38,13 @@ export interface CHeaderRecord {
   sourceFile: Str | null;
 }
 
+export interface CHeaderConstant {
+  name: Str;
+  type: Str;
+  value: Str;
+  sourceFile: Str | null;
+}
+
 export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
   const functions: CHeaderFunction[] = [];
   collectHeaderFunctionsInto(value, functions);
@@ -61,6 +68,12 @@ export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
   return records;
 }
 
+export function collectHeaderConstants(value: unknown): CHeaderConstant[] {
+  const constants: CHeaderConstant[] = [];
+  collectHeaderConstantsInto(value, constants);
+  return constants;
+}
+
 function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {
   if (!isJsonRecord(value)) return;
   if (value.kind === "TypedefDecl" && hasName(value) && isHeaderDeclaration(value)) {
@@ -72,6 +85,15 @@ function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): voi
     if (record) records.push(record);
   }
   collectInner(value, (child) => collectHeaderRecordsInto(child, records));
+}
+
+function collectHeaderConstantsInto(value: unknown, constants: CHeaderConstant[]): void {
+  if (!isJsonRecord(value)) return;
+  if (value.kind === "VarDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)) {
+    const constant = readHeaderConstant(value);
+    if (constant) constants.push(constant);
+  }
+  collectInner(value, (child) => collectHeaderConstantsInto(child, constants));
 }
 
 function collectInner(value: JsonRecord, visit: (child: unknown) => void): void {
@@ -86,6 +108,42 @@ function isHeaderDeclaration(value: JsonRecord): b8 {
 
 function hasName(value: JsonRecord): b8 {
   return isNonEmptyJsonText(value.name);
+}
+
+function readHeaderConstant(value: JsonRecord): CHeaderConstant | null {
+  const literal = readConstantLiteral(value.inner);
+  if (literal === null) return null;
+  if (!isJsonRecord(value.type) || !isJsonText(value.type.qualType) || !isJsonText(value.name)) {
+    return null;
+  }
+  return {
+    name: value.name,
+    type: value.type.qualType,
+    value: literal,
+    sourceFile: readSourceFile(value),
+  };
+}
+
+function readConstantLiteral(inner: unknown): Str | null {
+  if (!isJsonArray(inner)) return null;
+  const literal = inner.find(isHeaderConstantLiteral);
+  if (!isJsonRecord(literal) || !isJsonText(literal.value)) return null;
+  return literal.value;
+}
+
+function isHeaderConstantLiteral(value: unknown): b8 {
+  return isJsonRecord(value) &&
+    (value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral");
+}
+
+function readSourceFile(value: JsonRecord): Str | null {
+  const loc = value.loc;
+  if (!isJsonRecord(loc)) return null;
+  if (isJsonText(loc.file)) return loc.file;
+  const includedFrom = loc.includedFrom;
+  if (!isJsonRecord(includedFrom)) return null;
+  if (isJsonText(includedFrom.file)) return includedFrom.file;
+  return null;
 }
 
 function hasType(value: JsonRecord): b8 {

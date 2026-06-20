@@ -186,6 +186,23 @@ Deno.test("emits C calls for namespace header imports", async () => {
   assertNotIncludes(c, "Lib.tick");
 });
 
+Deno.test("emits C for header constant imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdint.h>\nstatic const int32_t ANSWER = 42;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { return Lib.ANSWER; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "static const i32 Lib_ANSWER = 42;");
+  assertIncludes(c, "return Lib_ANSWER;");
+});
+
 Deno.test("deduplicates direct and namespace header function imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/lib.h`, `void tick(void);`);

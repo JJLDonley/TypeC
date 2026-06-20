@@ -51,6 +51,11 @@ Deno.test("generates externs from clang AST", () => {
       ]),
       functionDecl("export", "void (void)", []),
       functionDecl("i32", "void (void)", []),
+      constVarDecl("ANSWER", "const int32_t", "42"),
+      constVarDecl("PI", "const double", "3.5", "FloatingLiteral"),
+      constVarDecl("BAD_TYPE", "const __unsupported_t", "1"),
+      constVarDecl("i32", "const int32_t", "1"),
+      varDecl("RUNTIME_VALUE", "int32_t"),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
       definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("platform", "long (unsigned int)", [param("value", "unsigned int")]),
@@ -93,6 +98,11 @@ Deno.test("generates externs from clang AST", () => {
   );
   assertExcludes(output, "extern function export");
   assertExcludes(output, "extern function i32");
+  assertIncludes(output, "export const ANSWER: i32 = 42;");
+  assertIncludes(output, "export const PI: f64 = 3.5;");
+  assertExcludes(output, "BAD_TYPE");
+  assertExcludes(output, "export const i32");
+  assertExcludes(output, "RUNTIME_VALUE");
   assertExcludes(output, "extern function helper");
   assertExcludes(output, "extern function defined");
   assertIncludes(output, "extern function platform(value: c_uint): c_long;");
@@ -240,6 +250,15 @@ function enumConstant(name: Str): unknown {
 
 function varDecl(name: Str, qualType: Str): unknown {
   return { kind: "VarDecl", name, type: { qualType } };
+}
+
+function constVarDecl(
+  name: Str,
+  qualType: Str,
+  value: Str,
+  literalKind: Str = "IntegerLiteral",
+): unknown {
+  return { kind: "VarDecl", name, type: { qualType }, inner: [{ kind: literalKind, value }] };
 }
 
 function typedefRecord(name: Str, fields: unknown[]): unknown {
