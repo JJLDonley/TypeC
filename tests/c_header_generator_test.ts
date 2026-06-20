@@ -127,6 +127,22 @@ Deno.test("skips functions using records with unsupported dependencies", () => {
   assertExcludes(output, "use_paint");
 });
 
+Deno.test("skips unsupported C enum and value declarations", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      enumDecl("Mode", [enumConstant("MODE_ON")]),
+      varDecl("LIMIT", "const int"),
+      functionDecl("tick", "void (void)", []),
+    ],
+  });
+
+  assertIncludes(output, "extern function tick(): void;");
+  assertExcludes(output, "Mode");
+  assertExcludes(output, "MODE_ON");
+  assertExcludes(output, "LIMIT");
+});
+
 Deno.test("generates dependent records in dependency order", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
@@ -206,6 +222,18 @@ function definedFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknow
 
 function param(name: Str, qualType: Str): unknown {
   return { kind: "ParmVarDecl", name, type: { qualType } };
+}
+
+function enumDecl(name: Str, inner: unknown[]): unknown {
+  return { kind: "EnumDecl", name, inner };
+}
+
+function enumConstant(name: Str): unknown {
+  return { kind: "EnumConstantDecl", name };
+}
+
+function varDecl(name: Str, qualType: Str): unknown {
+  return { kind: "VarDecl", name, type: { qualType } };
 }
 
 function typedefRecord(name: Str, fields: unknown[]): unknown {
