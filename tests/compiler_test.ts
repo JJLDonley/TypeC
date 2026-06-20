@@ -223,6 +223,27 @@ Deno.test("emits C for namespace project header record imports", async () => {
   assertNotIncludes(c, "Gfx.");
 });
 
+Deno.test("emits C for direct project header record imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/include`);
+  await Deno.writeTextFile(`${dir}/project.json`, `{"dependencies":{"gfx":"include/gfx.h"}}`);
+  await Deno.writeTextFile(
+    `${dir}/include/gfx.h`,
+    `typedef struct Color { unsigned char rgba[4]; } Color; void draw(Color tint);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Color, draw } from "gfx"; function main(): i32 { const tint: Color = { rgba: [1, 2, 3, 4] }; draw(tint); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "typedef struct Color {");
+  assertIncludes(c, "u8 rgba[4];");
+  assertIncludes(c, "void draw(Color tint);");
+  assertIncludes(c, "draw(tint);");
+});
+
 Deno.test("emits C for namespace header record imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(
