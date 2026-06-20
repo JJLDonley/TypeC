@@ -52,6 +52,7 @@ export * from "checker/calls.ts";
 export * from "checker/conditions.ts";
 export * from "checker/control_flow.ts";
 export * from "checker/constant_division.ts";
+export * from "checker/constant_ranges.ts";
 export * from "checker/constant_values.ts";
 export * from "checker/constants.ts";
 export * from "checker/expected_expressions.ts";
