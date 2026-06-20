@@ -2,6 +2,7 @@ import {
   check,
   checkArrayIndex,
   checkConstantIntegerDivision,
+  evaluateIntegerConstant,
   isAssignable,
   parseArrayTypeName,
 } from "checker";
@@ -19,6 +20,7 @@ Deno.test("exports checker public helpers", () => {
   assertText(`${isAssignable("i32", "i32")}`, "true");
   assertText(`${checkArrayIndex(integerLiteral(), "i32", null).length}`, "0");
   assertText(`${checkConstantIntegerDivision(integerLiteral(), new Map()).length}`, "0");
+  assertText(`${evaluateIntegerConstant(integerLiteral(), new Map()) ?? 0n}`, "0");
   assertText(parseArrayTypeName("i32[2]")?.element ?? "", "i32");
 });
 
