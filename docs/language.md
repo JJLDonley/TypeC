@@ -140,9 +140,9 @@ Constants are compile-time values. Initializers may use literals, earlier consta
 literals, array literals, unary `+` / `-`, and numeric `+ - * / %`. Calls, pointer operators,
 indexing, and runtime locals are not compile-time constant expressions. Integer and `f32`
 expressions are checked against the annotated type, including inside record and array constants.
-Exported constants are visible to TypeC imports but are not exported as C ABI symbols.
-`extern const` is invalid TypeC source syntax; C header constants are imported through header
-modules instead.
+Integer constant division and modulo by zero are rejected. Exported constants are visible to TypeC
+imports but are not exported as C ABI symbols. `extern const` is invalid TypeC source syntax; C
+header constants are imported through header modules instead.
 
 Runnable example:
 

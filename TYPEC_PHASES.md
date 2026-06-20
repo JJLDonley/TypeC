@@ -1092,6 +1092,7 @@ access outside record literals, loops, conditionals, or runtime locals.
 - Every module-level constant must have an explicit type annotation.
 - Constant values must be assignable to the annotated type using normal TypeC assignability rules.
 - Integer constants must fit in the annotated integer type.
+- Integer constant division and modulo by zero are invalid.
 - Floating constants must fit in the annotated float type.
 - Record constants must provide exactly the declared fields using existing record literal rules.
 - Array constants must match the declared fixed array length when one is provided.
