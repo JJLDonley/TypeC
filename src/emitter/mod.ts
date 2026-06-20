@@ -1,13 +1,9 @@
-import type { FunctionDecl } from "core/ast.ts";
 import type { CheckedProgram } from "checker";
 import { emitCPrelude } from "c/prelude.ts";
-import { emitCType } from "c/type.ts";
-import { createEmitContext, type EmitContext } from "emitter/context.ts";
+import { createEmitContext } from "emitter/context.ts";
+import { emitFunctionDefinition } from "emitter/function_definitions.ts";
 import { collectFunctionPrototypes } from "emitter/function_prototypes.ts";
-import { emitFunctionSignature } from "emitter/functions.ts";
-import { emitStatement } from "emitter/statements.ts";
 import { collectEmittedTypeAliases } from "emitter/type_alias_collection.ts";
-import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
 
@@ -26,21 +22,5 @@ export function emitC(program: CheckedProgram): Str {
     out.push(emitFunctionDefinition(fn, context));
     out.push("");
   }
-  return out.join("\n");
-}
-
-function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): Str {
-  if (!fn.body) throw new Error("Function definition requires a body");
-  const out: Str[] = [];
-  out.push(`${emitFunctionSignature(fn, context)} {`);
-  const locals = new Map<Str, Str>(
-    fn.params.map((param) => [param.name, emitCTypeName(param.type, context.typeAliases)]),
-  );
-  for (const stmt of fn.body.statements) {
-    out.push(
-      `  ${emitStatement(stmt, emitCType(fn.returnType, context.typeAliases), context, locals)}`,
-    );
-  }
-  out.push("}");
   return out.join("\n");
 }
