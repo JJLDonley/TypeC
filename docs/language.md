@@ -240,8 +240,8 @@ function main(): i32 {
 ```
 
 Raw `void*` parameters accept C-compatible pointer and array arguments without length or pointee
-type information. In the planned canonical model, C `char*` and `const char*` map to `Ptr<u8>` with
-`u8*` retained as equivalent compact syntax.
+type information. C `char*` and `const char*` map to `Ptr<u8>` with `u8*` retained as equivalent
+compact syntax.
 
 ```ts
 extern function memset(data: void*, value: i32, count: usize): void*;
