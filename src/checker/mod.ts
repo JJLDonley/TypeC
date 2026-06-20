@@ -6,13 +6,7 @@ import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
-import { checkCOrdinarySymbols as collectCOrdinarySymbolDiagnostics } from "checker/c_ordinary_symbols.ts";
-import {
-  checkCFunctionSymbols as collectCFunctionSymbolDiagnostics,
-  checkCTypeAliasSymbols as collectCTypeAliasSymbolDiagnostics,
-} from "checker/c_symbols.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
-import { checkDeclarations as collectDeclarationDiagnostics } from "checker/declarations.ts";
 import { spanKey } from "checker/exprs.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
@@ -24,6 +18,7 @@ import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
+import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStatementDispatch } from "checker/statements.ts";
@@ -54,17 +49,10 @@ class Checker {
   }
 
   private collectFunctions(): void {
-    const declarations = collectDeclarationDiagnostics(this.program);
+    const declarations = collectProgramDeclarations(this.program);
     this.functions = declarations.functions;
     this.typeAliases = declarations.typeAliases;
     this.diagnostics.push(...declarations.diagnostics);
-    this.diagnostics.push(
-      ...collectCFunctionSymbolDiagnostics(this.program.functions, this.program.typeAliases),
-    );
-    this.diagnostics.push(...collectCTypeAliasSymbolDiagnostics(this.program.typeAliases));
-    this.diagnostics.push(
-      ...collectCOrdinarySymbolDiagnostics(this.program.functions, this.program.typeAliases),
-    );
   }
 
   private checkFunction(fn: FunctionDecl): void {
