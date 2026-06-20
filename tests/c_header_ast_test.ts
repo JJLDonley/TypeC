@@ -1,4 +1,4 @@
-import { collectHeaderFunctions } from "c/header/ast.ts";
+import { collectHeaderFunctions, collectHeaderRecords } from "c/header/ast.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -9,8 +9,17 @@ Deno.test("collects C header function declarations from clang AST", () => {
     kind: "TranslationUnitDecl",
     inner: [
       functionDecl("add", "int32_t (int32_t)", [param("value", "int32_t")], "/project/math.h"),
-      functionDecl("ignored", "int32_t (int32_t)", [param("value", "int32_t")], "/project/math.h", false),
-      { kind: "NamespaceDecl", inner: [functionDecl("nested", "void (void)", [], "/project/nested.h")] },
+      functionDecl(
+        "ignored",
+        "int32_t (int32_t)",
+        [param("value", "int32_t")],
+        "/project/math.h",
+        false,
+      ),
+      {
+        kind: "NamespaceDecl",
+        inner: [functionDecl("nested", "void (void)", [], "/project/nested.h")],
+      },
     ],
   });
 
@@ -23,12 +32,45 @@ Deno.test("collects C header function declarations from clang AST", () => {
   assertText(functions[1].name, "nested");
 });
 
+Deno.test("collects C header typedef records from clang AST", () => {
+  const records = collectHeaderRecords({
+    kind: "TranslationUnitDecl",
+    inner: [
+      typedefRecord(
+        "Color",
+        [field("r", "unsigned char"), field("g", "unsigned char")],
+        "/project/raylib.h",
+      ),
+      {
+        kind: "NamespaceDecl",
+        inner: [typedefRecord("Vec2", [field("x", "float")], "/project/vec.h")],
+      },
+    ],
+  });
+
+  assertSame(records.length, 2);
+  assertText(records[0].name, "Color");
+  assertText(records[0].fields[0].name, "r");
+  assertText(records[0].fields[0].type, "unsigned char");
+  assertText(records[0].sourceFile ?? "", "/project/raylib.h");
+});
+
 Deno.test("reads C header function metadata", () => {
   const functions = collectHeaderFunctions({
     kind: "TranslationUnitDecl",
     inner: [
-      { kind: "FunctionDecl", name: "body", type: { qualType: "void (void)" }, storageClass: "static", loc: { includedFrom: { file: "/project/body.h" } }, inner: [{ kind: "CompoundStmt" }] },
-      functionDecl("unnamed", "void (int32_t, int32_t)", [param("", "int32_t"), param("value", "int32_t")], "/project/unnamed.h"),
+      {
+        kind: "FunctionDecl",
+        name: "body",
+        type: { qualType: "void (void)" },
+        storageClass: "static",
+        loc: { includedFrom: { file: "/project/body.h" } },
+        inner: [{ kind: "CompoundStmt" }],
+      },
+      functionDecl("unnamed", "void (int32_t, int32_t)", [
+        param("", "int32_t"),
+        param("value", "int32_t"),
+      ], "/project/unnamed.h"),
     ],
   });
 
@@ -39,12 +81,31 @@ Deno.test("reads C header function metadata", () => {
   assertText(functions[1].params[0].name, "arg0");
 });
 
-function functionDecl(name: Str, qualType: Str, inner: unknown[], file: Str, used: b8 = true): unknown {
+function functionDecl(
+  name: Str,
+  qualType: Str,
+  inner: unknown[],
+  file: Str,
+  used: b8 = true,
+): unknown {
   return { kind: "FunctionDecl", name, type: { qualType }, loc: { file }, isUsed: used, inner };
 }
 
 function param(name: Str, qualType: Str): unknown {
   return { kind: "ParmVarDecl", name, type: { qualType } };
+}
+
+function typedefRecord(name: Str, fields: unknown[], file: Str): unknown {
+  return {
+    kind: "TypedefDecl",
+    name,
+    loc: { file },
+    inner: [{ kind: "RecordDecl", completeDefinition: true, inner: fields }],
+  };
+}
+
+function field(name: Str, qualType: Str): unknown {
+  return { kind: "FieldDecl", name, type: { qualType } };
 }
 
 function assertSame(actual: usize | b8, expected: usize | b8): void {

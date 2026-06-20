@@ -7,33 +7,64 @@ Deno.test("generates externs from clang AST", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
     inner: [
-      functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
-      functionDecl("add_i32", "int32_t (int32_t, int32_t)", [param("left", "int32_t"), param("right", "int32_t")]),
+      typedefRecord("Color", [
+        field("r", "unsigned char"),
+        field("g", "unsigned char"),
+        field("b", "unsigned char"),
+        field("a", "unsigned char"),
+      ]),
+      functionDecl("add_i32", "int32_t (int32_t, int32_t)", [
+        param("left", "int32_t"),
+        param("right", "int32_t"),
+      ]),
+      functionDecl("add_i32", "int32_t (int32_t, int32_t)", [
+        param("left", "int32_t"),
+        param("right", "int32_t"),
+      ]),
       functionDecl("conflict", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("conflict", "int64_t (int64_t)", [param("value", "int64_t")]),
       functionDecl("set_name", "void (const char *)", [param("name", "const char *")]),
-      functionDecl("add_internal", "__int32_t (__int32_t, __uint32_t)", [param("left", "__int32_t"), param("right", "__uint32_t")]),
+      functionDecl("add_internal", "__int32_t (__int32_t, __uint32_t)", [
+        param("left", "__int32_t"),
+        param("right", "__uint32_t"),
+      ]),
       functionDecl("alias_width", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("alias_width", "__int32_t (__int32_t)", [param("value", "__int32_t")]),
-      functionDecl("copy_ptr", "void *(void *, const void *)", [param("dst", "void *"), param("src", "const void *")]),
-      functionDecl("copy_text", "void (char *restrict, const char *restrict)", [param("dst", "char *restrict"), param("src", "const char *restrict")]),
+      functionDecl("copy_ptr", "void *(void *, const void *)", [
+        param("dst", "void *"),
+        param("src", "const void *"),
+      ]),
+      functionDecl("copy_text", "void (char *restrict, const char *restrict)", [
+        param("dst", "char *restrict"),
+        param("src", "const char *restrict"),
+      ]),
       functionDecl("nullable_text", "void (char * _Nullable)", [param("text", "char * _Nullable")]),
-      functionDecl("use_keyword", "void (int32_t, int32_t)", [param("function", "int32_t"), param("function", "int32_t")]),
+      functionDecl("use_keyword", "void (int32_t, int32_t)", [
+        param("function", "int32_t"),
+        param("function", "int32_t"),
+      ]),
       functionDecl("export", "void (void)", []),
       functionDecl("i32", "void (void)", []),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
       definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("platform", "long (unsigned int)", [param("value", "unsigned int")]),
-      functionDecl("unsupported", "__unsupported_t (__unsupported_t)", [param("value", "__unsupported_t")]),
+      functionDecl("unsupported", "__unsupported_t (__unsupported_t)", [
+        param("value", "__unsupported_t"),
+      ]),
       functionDecl("mixed", "int32_t (int32_t)", [param("value", "int32_t")]),
-      functionDecl("mixed", "__unsupported_t (__unsupported_t)", [param("value", "__unsupported_t")]),
+      functionDecl("mixed", "__unsupported_t (__unsupported_t)", [
+        param("value", "__unsupported_t"),
+      ]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
       functionDecl("old_style", "void ()", []),
       functionDecl("get_callback", "int32_t (*(void))(int32_t)", []),
-      functionDecl("set_callback", "void (int32_t (*)(int32_t))", [param("callback", "int32_t (*)(int32_t)")]),
+      functionDecl("set_callback", "void (int32_t (*)(int32_t))", [
+        param("callback", "int32_t (*)(int32_t)"),
+      ]),
     ],
   });
 
+  assertIncludes(output, "export type Color = { r: u8; g: u8; b: u8; a: u8; };");
   assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
   assertExcludes(output, "extern function conflict");
@@ -44,7 +75,10 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function copy_text(dst: u8*, src: u8*): void;");
   assertIncludes(output, "extern function nullable_text(text: u8*): void;");
-  assertIncludes(output, "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;");
+  assertIncludes(
+    output,
+    "extern function use_keyword(arg_function: i32, arg_function_1: i32): void;",
+  );
   assertExcludes(output, "extern function export");
   assertExcludes(output, "extern function i32");
   assertExcludes(output, "extern function helper");
@@ -63,8 +97,18 @@ Deno.test("filters generated externs to requested header directory", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
     inner: [
-      locatedFunctionDecl("local_add", "int32_t (int32_t)", [param("value", "int32_t")], "/project/include/math.h"),
-      locatedFunctionDecl("system_add", "int32_t (int32_t)", [param("value", "int32_t")], "/usr/include/math.h"),
+      locatedFunctionDecl(
+        "local_add",
+        "int32_t (int32_t)",
+        [param("value", "int32_t")],
+        "/project/include/math.h",
+      ),
+      locatedFunctionDecl(
+        "system_add",
+        "int32_t (int32_t)",
+        [param("value", "int32_t")],
+        "/usr/include/math.h",
+      ),
       functionDecl("unknown_add", "int32_t (int32_t)", [param("value", "int32_t")]),
     ],
   }, "/project/include/");
@@ -87,11 +131,29 @@ function locatedFunctionDecl(name: Str, qualType: Str, inner: unknown[], file: S
 }
 
 function definedFunctionDecl(name: Str, qualType: Str, inner: unknown[]): unknown {
-  return { kind: "FunctionDecl", name, type: { qualType }, inner: [...inner, { kind: "CompoundStmt" }] };
+  return {
+    kind: "FunctionDecl",
+    name,
+    type: { qualType },
+    inner: [...inner, { kind: "CompoundStmt" }],
+  };
 }
 
 function param(name: Str, qualType: Str): unknown {
   return { kind: "ParmVarDecl", name, type: { qualType } };
+}
+
+function typedefRecord(name: Str, fields: unknown[]): unknown {
+  return {
+    kind: "TypedefDecl",
+    name,
+    loc: { file: "/project/header.h" },
+    inner: [{ kind: "RecordDecl", completeDefinition: true, inner: fields }],
+  };
+}
+
+function field(name: Str, qualType: Str): unknown {
+  return { kind: "FieldDecl", name, type: { qualType } };
 }
 
 function countOccurrences(haystack: Str, needle: Str): usize {

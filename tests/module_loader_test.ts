@@ -138,6 +138,20 @@ Deno.test("loads relative project dependency imports", async () => {
   assertIncludes(program.functions.map((fn) => fn.name), "answer");
 });
 
+Deno.test("loads relative C header typedef record imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/types.h`,
+    `typedef struct Color { unsigned char r; unsigned char g; unsigned char b; unsigned char a; } Color;`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import { Color } from "./types.h"; function main(): i32 { const c: Color = { r: 1, g: 2, b: 3, a: 4 }; return c.r; }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.typeAliases.map((typeAlias) => typeAlias.name), "Color");
+});
+
 Deno.test("loads relative C header imports", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(

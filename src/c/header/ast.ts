@@ -1,6 +1,13 @@
 import { readHeaderFunction } from "c/header/function.ts";
-import { type JsonRecord, isJsonRecord } from "json/record.ts";
-import { isFalseJsonFlag, isJsonArray, isJsonText, isNonEmptyJsonText, isTruthyJsonFlag } from "json/values.ts";
+import { readHeaderRecord, readHeaderRecordDecl } from "c/header/records.ts";
+import { isJsonRecord, type JsonRecord } from "json/record.ts";
+import {
+  isFalseJsonFlag,
+  isJsonArray,
+  isJsonText,
+  isNonEmptyJsonText,
+  isTruthyJsonFlag,
+} from "json/values.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -20,6 +27,17 @@ export interface CHeaderFunction {
   hasBody: b8;
 }
 
+export interface CHeaderRecordField {
+  name: Str;
+  type: Str;
+}
+
+export interface CHeaderRecord {
+  name: Str;
+  fields: CHeaderRecordField[];
+  sourceFile: Str | null;
+}
+
 export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
   const functions: CHeaderFunction[] = [];
   collectHeaderFunctionsInto(value, functions);
@@ -28,12 +46,42 @@ export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
 
 function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]): void {
   if (!isJsonRecord(value)) return;
-  if (value.kind === "FunctionDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)) {
+  if (
+    value.kind === "FunctionDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)
+  ) {
     const fn = readHeaderFunction(value);
     if (fn) functions.push(fn);
   }
   const inner = value.inner;
-  if (isJsonArray(inner)) for (const child of inner) collectHeaderFunctionsInto(child, functions);
+  if (isJsonArray(inner)) {
+    for (const child of inner) {
+      collectHeaderFunctionsInto(child, functions);
+    }
+  }
+}
+
+export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
+  const records: CHeaderRecord[] = [];
+  collectHeaderRecordsInto(value, records);
+  return uniqueHeaderRecords(records);
+}
+
+function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {
+  if (!isJsonRecord(value)) return;
+  if (value.kind === "TypedefDecl" && hasName(value) && isHeaderDeclaration(value)) {
+    const record = readHeaderRecord(value);
+    if (record) records.push(record);
+  }
+  if (value.kind === "RecordDecl" && hasName(value) && isHeaderDeclaration(value)) {
+    const record = readHeaderRecordDecl(value);
+    if (record) records.push(record);
+  }
+  const inner = value.inner;
+  if (isJsonArray(inner)) { for (const child of inner) collectHeaderRecordsInto(child, records); }
+}
+
+function uniqueHeaderRecords(records: CHeaderRecord[]): CHeaderRecord[] {
+  return [...new Map(records.map((record) => [record.name, record])).values()];
 }
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
@@ -47,5 +95,3 @@ function hasName(value: JsonRecord): b8 {
 function hasType(value: JsonRecord): b8 {
   return isJsonRecord(value.type) && isJsonText(value.type.qualType);
 }
-
-

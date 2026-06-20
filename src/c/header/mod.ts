@@ -6,6 +6,8 @@ export * from "c/header/function.ts";
 export * from "c/header/generator.ts";
 export * from "c/header/identifiers.ts";
 export * from "c/header/params.ts";
+export * from "c/header/record_aliases.ts";
+export * from "c/header/records.ts";
 export * from "c/header/signatures.ts";
 export * from "c/header/support.ts";
 export * from "c/header/types.ts";
