@@ -1,6 +1,7 @@
 import { check } from "checker";
 import { TypeCError } from "core/diagnostics.ts";
 import { lex } from "core/lexer.ts";
+import { loadProgram } from "module/loader.ts";
 import { parse } from "parser";
 import { resolve } from "core/resolver.ts";
 
@@ -474,6 +475,17 @@ Deno.test("rejects integer constant division by zero", () => {
   );
 });
 
+Deno.test("rejects namespace integer constant division by zero", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/config.tc`, `export const ZERO: i32 = 0;`);
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Config from "./config.tc"; const BAD: i32 = 1 / Config.ZERO; function main(): i32 { return 0; }`,
+  );
+
+  await assertProgramCheckError(`${dir}/main.tc`, "Operator '/' cannot divide by zero");
+});
+
 Deno.test("rejects aggregate integer constant division by zero", () => {
   assertCheckError(
     `const ZERO: i32 = 0; const VALUES: Array<i32, 1> = [1 / ZERO]; function main(): i32 { return 0; }`,
@@ -540,6 +552,19 @@ Deno.test("rejects return mismatch", () => {
     "Return type 'f64' is not assignable to 'i32'",
   );
 });
+
+async function assertProgramCheckError(path: Str, message: Str): Promise<void> {
+  try {
+    check(resolve(await loadProgram(path)));
+  } catch (error) {
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.message === message)
+    ) return;
+    throw error;
+  }
+  throw new Error(`Expected ${message}`);
+}
 
 function assertCheckError(source: Str, message: Str): void {
   try {
