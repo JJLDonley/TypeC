@@ -10,11 +10,13 @@ Deno.test("formats supported C header externs", () => {
     fn("add", "int32_t", [{ name: "left", type: "int32_t" }, { name: "right", type: "int32_t" }]),
     fn("copy", "void *", [{ name: "dst", type: "void *" }, { name: "src", type: "const void *" }]),
     fn("fill", "void", [{ name: "items", type: "int32_t[4]" }]),
+    fn("platform", "int", [{ name: "value", type: "unsigned long" }]),
   ]);
 
   assertIncludes(output, "extern function add(left: i32, right: i32): i32;");
   assertIncludes(output, "extern function copy(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function fill(items: i32[]): void;");
+  assertIncludes(output, "extern function platform(value: c_ulong): c_int;");
 });
 
 Deno.test("skips unsupported C header externs", () => {
@@ -25,7 +27,7 @@ Deno.test("skips unsupported C header externs", () => {
     fn("helper", "int32_t", [], "int32_t (void)", "/project/header.h", "static"),
     fn("defined", "int32_t", [], "int32_t (void)", "/project/header.h", null, true),
     fn("export", "void", [], "void (void)"),
-    fn("bad_type", "long", [{ name: "value", type: "long" }]),
+    fn("bad_type", "__unsupported_t", [{ name: "value", type: "__unsupported_t" }]),
   ]);
 
   assertText(output, "");

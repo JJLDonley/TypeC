@@ -23,9 +23,10 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("i32", "void (void)", []),
       staticFunctionDecl("helper", "int32_t (int32_t)", [param("value", "int32_t")]),
       definedFunctionDecl("defined", "int32_t (int32_t)", [param("value", "int32_t")]),
-      functionDecl("unsupported", "long (long)", [param("value", "long")]),
+      functionDecl("platform", "long (unsigned int)", [param("value", "unsigned int")]),
+      functionDecl("unsupported", "__unsupported_t (__unsupported_t)", [param("value", "__unsupported_t")]),
       functionDecl("mixed", "int32_t (int32_t)", [param("value", "int32_t")]),
-      functionDecl("mixed", "long (long)", [param("value", "long")]),
+      functionDecl("mixed", "__unsupported_t (__unsupported_t)", [param("value", "__unsupported_t")]),
       functionDecl("log_message", "int (const char *, ...)", [param("format", "const char *")]),
       functionDecl("old_style", "void ()", []),
       functionDecl("get_callback", "int32_t (*(void))(int32_t)", []),
@@ -48,6 +49,7 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "extern function i32");
   assertExcludes(output, "extern function helper");
   assertExcludes(output, "extern function defined");
+  assertIncludes(output, "extern function platform(value: c_uint): c_long;");
   assertExcludes(output, "unsupported");
   assertIncludes(output, "extern function mixed(value: i32): i32;");
   assertSame(countOccurrences(output, "extern function mixed"), 1);

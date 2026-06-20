@@ -17,6 +17,7 @@ Deno.test("extracts C array element types", () => {
 Deno.test("maps scalar C header types", () => {
   assertSame(mapScalarCHeaderType("uint32_t") ?? "", "u32");
   assertSame(mapScalarCHeaderType("signed char") ?? "", "i8");
+  assertSame(mapScalarCHeaderType("unsigned int") ?? "", "c_uint");
 });
 
 function assertSame(actual: Str, expected: Str): void {

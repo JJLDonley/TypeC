@@ -14,6 +14,7 @@ Deno.test("accepts known primitive and alias types", () => {
   const aliases = new Map<Str, TypeRef>([["Pair", record([["x", named("i32")]])]]);
 
   assertLen(checkTypeRef(named("i32"), aliases).length, 0);
+  assertLen(checkTypeRef(named("c_int"), aliases).length, 0);
   assertLen(checkTypeRef(named("Pair"), aliases).length, 0);
 });
 

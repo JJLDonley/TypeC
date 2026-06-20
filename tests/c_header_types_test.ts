@@ -10,15 +10,17 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("void * _Nullable"), "void*");
   assertSame(mapCHeaderType("_Bool"), "b8");
   assertSame(mapCHeaderType("size_t"), "usize");
+  assertSame(mapCHeaderType("int"), "c_int");
+  assertSame(mapCHeaderType("unsigned long"), "c_ulong");
   assertSame(mapCHeaderType("int32_t[4]"), "i32[]");
   assertSame(mapCHeaderType("const char [static 8]"), "u8[]");
 });
 
 Deno.test("rejects unsupported C header types", () => {
   try {
-    mapCHeaderType("long");
+    mapCHeaderType("__unsupported_t");
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === "Unsupported C type 'long'")) return;
+    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === "Unsupported C type '__unsupported_t'")) return;
   }
   throw new Error("Expected unsupported C type error");
 });

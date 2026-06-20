@@ -7,6 +7,7 @@ Deno.test("maps primitive TypeC names one-to-one", () => {
   assertEquals(emitCType(namedType("i32")), "i32");
   assertEquals(emitCType(namedType("usize")), "usize");
   assertEquals(emitCType(namedType("bool")), "b8");
+  assertEquals(emitCType(namedType("c_int")), "c_int");
 });
 
 Deno.test("maps pointer and reference types to C pointers", () => {

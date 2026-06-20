@@ -7,7 +7,8 @@ type usize = number;
 
 Deno.test("builds TypeC header signatures", () => {
   assertText(headerFunctionTypeCSignature(fn("add", "int32_t", ["int32_t", "int32_t"])) ?? "", "i32(i32,i32)");
-  assertText(headerFunctionTypeCSignature(fn("bad", "long", [])) ?? "", "");
+  assertText(headerFunctionTypeCSignature(fn("platform", "long", [])) ?? "", "c_long()");
+  assertText(headerFunctionTypeCSignature(fn("bad", "__unsupported_t", [])) ?? "", "");
 });
 
 Deno.test("deduplicates equivalent header signatures", () => {
@@ -25,7 +26,7 @@ Deno.test("keeps only unambiguous header signatures", () => {
     fn("same", "int32_t", ["int32_t"]),
     fn("same", "int64_t", ["int64_t"]),
     fn("ok", "int32_t", ["int32_t"]),
-    fn("skip", "long", ["long"]),
+    fn("skip", "__unsupported_t", ["__unsupported_t"]),
   ]);
 
   assertSame(functions.length, 1);
