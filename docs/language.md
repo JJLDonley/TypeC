@@ -122,9 +122,11 @@ such as classes, methods, enums, generics, interfaces, tagged unions, pattern ma
 pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to
 use them where they improve clarity, safety, or reuse.
 
-## Planned Array, Slice, Pointer, and Reference Model
+## Array, Slice, Pointer, and Reference Model
 
-The current prototype supports `T*`, `T&`, local `T[]`, and `T[N]`. The planned canonical model is:
+The current prototype supports `T*`, `T&`, local `T[]`, `T[N]`, and canonical spellings `Ptr<T>`,
+`Ref<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>`. `Slice<T>` parses as a distinct type but is
+rejected by checking until slice lowering is implemented.
 
 ```txt
 Ptr<T>        // raw pointer, no length
@@ -143,9 +145,9 @@ T[]   // Array<T> for local inferred arrays; C ABI pointer-decayed array in para
 T[N]  // Array<T, N>
 ```
 
-`T[]` is not slice syntax. Slices are spelled `Slice<T>`. Arrays automatically coerce to `Slice<T>`
-when a slice is expected. Arrays may decay to `Ptr<T>` only when a raw pointer or C ABI parameter is
-expected.
+`T[]` is not slice syntax. Slices are spelled `Slice<T>`. Arrays may decay to `Ptr<T>` only when a
+raw pointer or C ABI parameter is expected. Automatic array-to-slice coercion is planned, not yet
+implemented.
 
 Planned array and slice members:
 
