@@ -47,7 +47,8 @@ interface MacroValue {
 
 function parseMacroValue(value: Str): MacroValue | null {
   const unwrapped = unwrapParentheses(value.trim());
-  return parseFloatMacroValue(unwrapped) ?? parseIntegerMacroValue(unwrapped);
+  return parseFloatMacroValue(unwrapped) ?? parseIntegerMacroValue(unwrapped) ??
+    parseNumericExpressionMacroValue(unwrapped);
 }
 
 function unwrapParentheses(value: Str): Str {
@@ -56,7 +57,10 @@ function unwrapParentheses(value: Str): Str {
 }
 
 function parseFloatMacroValue(value: Str): MacroValue | null {
-  if (!/^[+-]?(?:[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)(?:[eE][+-]?[0-9]+)?[fFlL]?$/.test(value)) {
+  if (
+    !/^[+-]?(?:(?:[0-9]+\.[0-9]*|[0-9]*\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+)[fFlL]?$/
+      .test(value)
+  ) {
     return null;
   }
   return { type: "f64", text: value.replace(/[fFlL]$/, "") };
@@ -71,6 +75,59 @@ function parseIntegerMacroValue(value: Str): MacroValue | null {
   const type = integerMacroType(suffix, sign === "-");
   if (type === null) return null;
   return { type, text: `${sign}${digits}` };
+}
+
+function parseNumericExpressionMacroValue(value: Str): MacroValue | null {
+  if (!isNumericExpressionText(value)) return null;
+  const literals = value.match(numericLiteralPattern()) ?? [];
+  if (literals.length === 0) return null;
+  return { type: numericExpressionType(literals), text: stripNumericSuffixes(value) };
+}
+
+function isNumericExpressionText(value: Str): b8 {
+  return /^[0-9A-Fa-fxXuUlLfFeE.+\-*/%()\s]+$/.test(value) && /[+\-*/%()]/.test(value);
+}
+
+function numericExpressionType(literals: Str[]): MacroValueType {
+  if (literals.some(isFloatMacroLiteral)) return "f64";
+  if (
+    literals.some((literal) => integerMacroType(integerLiteralSuffix(literal), false) === "u64")
+  ) {
+    return "u64";
+  }
+  if (
+    literals.some((literal) => integerMacroType(integerLiteralSuffix(literal), false) === "i64")
+  ) {
+    return "i64";
+  }
+  if (
+    literals.some((literal) => integerMacroType(integerLiteralSuffix(literal), false) === "u32")
+  ) {
+    return "u32";
+  }
+  return "i32";
+}
+
+function stripNumericSuffixes(value: Str): Str {
+  return value.replace(numericLiteralPattern(), (literal) => stripNumericSuffix(literal));
+}
+
+function numericLiteralPattern(): RegExp {
+  return /(?:0[xX][0-9A-Fa-f]+|[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[uUlLfF]*/g;
+}
+
+function stripNumericSuffix(literal: Str): Str {
+  if (isFloatMacroLiteral(literal)) return literal.replace(/[fFlL]$/, "");
+  return literal.replace(/[uUlL]+$/, "");
+}
+
+function isFloatMacroLiteral(literal: Str): b8 {
+  return literal.includes(".") || /[eE]/.test(literal);
+}
+
+function integerLiteralSuffix(literal: Str): Str {
+  const match = literal.match(/[uUlL]+$/);
+  return match?.[0] ?? "";
 }
 
 function integerMacroType(suffix: Str, negative: b8): MacroValueType | null {
