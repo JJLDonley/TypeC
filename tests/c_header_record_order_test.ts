@@ -24,14 +24,23 @@ Deno.test("orders header records through pointer and array fields", () => {
   assertText(records.map((record) => record.name).join(","), "Color,Palette,Paint,Brush");
 });
 
-Deno.test("preserves unresolved cycles after ordered records", () => {
+Deno.test("drops unresolved record cycles after ordered records", () => {
   const records = orderHeaderRecordsByDependencies([
     record("A", [["b", "B"]]),
     record("B", [["a", "A"]]),
     record("Color", [["r", "unsigned char"]]),
   ]);
 
-  assertText(records.map((record) => record.name).join(","), "Color,A,B");
+  assertText(records.map((record) => record.name).join(","), "Color");
+});
+
+Deno.test("drops self-referential records", () => {
+  const records = orderHeaderRecordsByDependencies([
+    record("Node", [["next", "Node*"]]),
+    record("Color", [["r", "unsigned char"]]),
+  ]);
+
+  assertText(records.map((record) => record.name).join(","), "Color");
 });
 
 function record(name: Str, fields: [Str, Str][]): CHeaderRecord {

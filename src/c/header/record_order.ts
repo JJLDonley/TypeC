@@ -4,7 +4,6 @@ import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
 type b8 = boolean;
-type usize = number;
 
 export function orderHeaderRecordsByDependencies(records: CHeaderRecord[]): CHeaderRecord[] {
   const names = new Set<Str>(records.map((record) => record.name));
@@ -13,7 +12,7 @@ export function orderHeaderRecordsByDependencies(records: CHeaderRecord[]): CHea
   while (pending.size > 0) {
     const before = pending.size;
     collectReadyRecords(pending, ordered, names);
-    if (pending.size === before) return [...ordered, ...pending.values()];
+    if (pending.size === before) return ordered;
   }
   return ordered;
 }
@@ -35,19 +34,16 @@ function recordDependenciesSatisfied(
   pending: Map<Str, CHeaderRecord>,
   names: Set<Str>,
 ): b8 {
-  return record.fields.every((field) =>
-    fieldDependenciesSatisfied(record.name, field, pending, names)
-  );
+  return record.fields.every((field) => fieldDependenciesSatisfied(field, pending, names));
 }
 
 function fieldDependenciesSatisfied(
-  owner: Str,
   field: CHeaderRecordField,
   pending: Map<Str, CHeaderRecord>,
   names: Set<Str>,
 ): b8 {
   for (const dependency of fieldDependencies(field, names)) {
-    if (dependency !== owner && pending.has(dependency)) return false;
+    if (pending.has(dependency)) return false;
   }
   return true;
 }
