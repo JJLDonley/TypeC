@@ -874,8 +874,9 @@ export function main(): i32 {
 ```
 
 C string literals use ordinary string token syntax and have TypeC type `Array<u8, N>` with a
-trailing NUL byte. They are valid where `Array<u8, N>`, `Slice<u8>`, legacy `u8[]`, `u8*`,
-`Ptr<u8>`, or a C-compatible pointer-decayed argument is expected.
+trailing NUL byte. They are valid where `Array<u8, N>`, legacy `u8[]`, `u8*`, `Ptr<u8>`, or a
+C-compatible pointer-decayed argument is expected. `Slice<u8>` string-literal decay remains blocked
+until slice lowering is implemented.
 
 ```ts
 extern function puts(s: Ptr<u8>): i32;
@@ -890,8 +891,9 @@ function main(): i32 {
 - `Array<T>` / local `T[]` is an inferred-size static array.
 - `Array<T, N>` / `T[N]` is a fixed-size static array.
 - `Slice<T>` is a length-carrying `{ data: Ptr<T>, length: usize }` view and is not C ABI-compatible
-  unless explicitly lowered by TypeC-generated code.
-- `Array<T, N>` automatically coerces to `Slice<T>` when a `Slice<T>` is expected.
+  unless explicitly lowered by TypeC-generated code. Current checking rejects `Slice<T>` until that
+  lowering exists.
+- `Array<T, N>` to `Slice<T>` coercion is planned but not implemented.
 - `Array<T, N>` may decay to `Ptr<T>` / `T*`, legacy C ABI `T[]`, or `void*` when a raw C ABI
   pointer is expected.
 - Legacy `T[]` in function parameter position is an unsized C array parameter and lowers to `T*` /
