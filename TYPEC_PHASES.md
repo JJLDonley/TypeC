@@ -1051,6 +1051,8 @@ function main(): i32 {
 
 # Phase 12: Compile-Time Constants
 
+Implementation status: complete in the current prototype.
+
 ## Goal
 
 Allow named module-level values that are evaluated by the compiler and emitted as C constants or
