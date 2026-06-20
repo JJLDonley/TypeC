@@ -1,6 +1,12 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
-import { typeName } from "core/type_ref.ts";
+import {
+  cParamShape,
+  cTypeShape,
+  indexTypeAliases,
+  type TypeAliasIndex,
+} from "checker/c_abi_shapes.ts";
+import { functionCName, typeAliasCName } from "checker/c_symbol_names.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -35,7 +41,7 @@ function addFunctionGroup(groups: Map<Str, FunctionDecl[]>, fn: FunctionDecl): v
 
 function checkCFunctionGroup(
   [name, functions]: [Str, FunctionDecl[]],
-  aliases: Map<Str, TypeAliasDecl>,
+  aliases: TypeAliasIndex,
 ): Diagnostic[] {
   if (functions.length < 2) return [];
   if (isCompatibleExternGroup(functions, aliases)) return [];
@@ -45,7 +51,7 @@ function checkCFunctionGroup(
   }));
 }
 
-function isCompatibleExternGroup(functions: FunctionDecl[], aliases: Map<Str, TypeAliasDecl>): b8 {
+function isCompatibleExternGroup(functions: FunctionDecl[], aliases: TypeAliasIndex): b8 {
   return functions.every((fn) => fn.external) &&
     functions.every((fn) => sameFunctionAbi(fn, functions[0], aliases));
 }
@@ -53,7 +59,7 @@ function isCompatibleExternGroup(functions: FunctionDecl[], aliases: Map<Str, Ty
 function sameFunctionAbi(
   left: FunctionDecl,
   right: FunctionDecl | undefined,
-  aliases: Map<Str, TypeAliasDecl>,
+  aliases: TypeAliasIndex,
 ): b8 {
   if (!right) return false;
   if (cTypeShape(left.returnType, aliases) !== cTypeShape(right.returnType, aliases)) return false;
@@ -66,27 +72,9 @@ function sameFunctionAbi(
 function sameParamAbi(
   left: TypeRef,
   right: TypeRef | undefined,
-  aliases: Map<Str, TypeAliasDecl>,
+  aliases: TypeAliasIndex,
 ): b8 {
   return right !== undefined && cParamShape(left, aliases) === cParamShape(right, aliases);
-}
-
-function cParamShape(type: TypeRef, aliases: Map<Str, TypeAliasDecl>): Str {
-  switch (type.kind) {
-    case "InferredArrayTypeRef":
-    case "FixedArrayTypeRef":
-      return `${cTypeShape(type.element, aliases)}*`;
-    default:
-      return cTypeShape(type, aliases);
-  }
-}
-
-function functionCName(fn: FunctionDecl): Str {
-  return fn.cName ?? fn.name;
-}
-
-function indexTypeAliases(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl> {
-  return new Map<Str, TypeAliasDecl>(typeAliases.map((typeAlias) => [typeAlias.name, typeAlias]));
 }
 
 function groupTypeAliasesByCName(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl[]> {
@@ -102,7 +90,7 @@ function addTypeAliasGroup(groups: Map<Str, TypeAliasDecl[]>, typeAlias: TypeAli
 
 function checkCTypeAliasGroup(
   [name, typeAliases]: [Str, TypeAliasDecl[]],
-  aliases: Map<Str, TypeAliasDecl>,
+  aliases: TypeAliasIndex,
 ): Diagnostic[] {
   if (typeAliases.length < 2) return [];
   if (typeAliases.every((typeAlias) => sameTypeAliasAbi(typeAlias, typeAliases[0], aliases))) {
@@ -117,32 +105,7 @@ function checkCTypeAliasGroup(
 function sameTypeAliasAbi(
   left: TypeAliasDecl,
   right: TypeAliasDecl | undefined,
-  aliases: Map<Str, TypeAliasDecl>,
+  aliases: TypeAliasIndex,
 ): b8 {
   return right !== undefined && cTypeShape(left.type, aliases) === cTypeShape(right.type, aliases);
-}
-
-function cTypeShape(type: TypeRef, aliases: Map<Str, TypeAliasDecl>): Str {
-  switch (type.kind) {
-    case "NamedTypeRef":
-      return aliases.get(type.name)?.cName ?? typeName(type);
-    case "PointerTypeRef":
-      return `${cTypeShape(type.element, aliases)}*`;
-    case "ReferenceTypeRef":
-      return `${cTypeShape(type.element, aliases)}*`;
-    case "SliceTypeRef":
-      return `Slice<${cTypeShape(type.element, aliases)}>`;
-    case "InferredArrayTypeRef":
-      return `${cTypeShape(type.element, aliases)}[]`;
-    case "FixedArrayTypeRef":
-      return `${cTypeShape(type.element, aliases)}[${type.sizeText}]`;
-    case "RecordTypeRef":
-      return `{${
-        type.fields.map((field) => `${field.name}:${cTypeShape(field.type, aliases)}`).join(";")
-      }}`;
-  }
-}
-
-function typeAliasCName(typeAlias: TypeAliasDecl): Str {
-  return typeAlias.cName ?? typeAlias.name;
 }
