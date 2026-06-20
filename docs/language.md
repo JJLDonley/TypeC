@@ -13,14 +13,16 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
-- Fixed arrays `T[N]`, inferred local arrays `T[]`, pointer-decayed parameter arrays, array
-  literals, and indexing
-- NUL-terminated C string literals as `u8[]`, decaying to `u8*`, `u8[]`, `u8[N]`, or `void*` for C
-  calls
+- Fixed arrays `T[N]` / `Array<T, N>`, inferred local arrays `T[]` / `Array<T>`, pointer-decayed
+  parameter arrays, array literals, and indexing
+- Canonical pointer/reference types `Ptr<T>` and `Ref<T>` with equivalent compact `T*` and `T&`
+  spellings
+- NUL-terminated C string literals as `u8[]`, decaying to `Ptr<u8>`, `u8*`, `u8[]`, `u8[N]`, or
+  `void*` for C calls
 - `void*` C interop parameters accepting pointer and array arguments without pointee type
   information
 - Static imports, standard-library imports, and explicit exports
-- Explicit C extern function declarations
+- Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
 ## Example
