@@ -133,6 +133,23 @@ Deno.test("deduplicates direct and namespace header record imports", async () =>
   assertNotIncludes(c, "Lib.Color");
 });
 
+Deno.test("emits C for header record fixed array fields", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `typedef struct Palette { unsigned char colors[4]; } Palette;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Palette } from "./lib.h"; function main(): i32 { const p: Palette = { colors: [1, 2, 3, 4] }; return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "u8 colors[4];");
+  assertIncludes(c, ".colors = { 1, 2, 3, 4 }");
+});
+
 Deno.test("emits C for namespace header record imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(
