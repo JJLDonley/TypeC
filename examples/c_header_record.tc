@@ -1,0 +1,6 @@
+import { Pixel } from "./c_header_record.h";
+
+function main(): i32 {
+  const pixel: Pixel = { rgba: [1, 2, 3, 4] };
+  return 42;
+}
