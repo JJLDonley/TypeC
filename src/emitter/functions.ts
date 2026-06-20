@@ -8,7 +8,13 @@ export function emitFunctionPrototype(fn: FunctionDecl): Str {
 }
 
 export function emitFunctionSignature(fn: FunctionDecl): Str {
-  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${fn.name}(${emitParams(fn)})`;
+  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${emitFunctionCName(fn)}(${
+    emitParams(fn)
+  })`;
+}
+
+function emitFunctionCName(fn: FunctionDecl): Str {
+  return fn.cName ?? fn.name;
 }
 
 function emitFunctionStorage(fn: FunctionDecl): Str {

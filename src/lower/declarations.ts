@@ -4,7 +4,13 @@ import { lowerBlockStmt } from "lower/statements.ts";
 import { lowerTypeRef } from "lower/types.ts";
 
 export function lowerImportDecl(importDecl: CastImportDecl): ImportDecl {
-  return { kind: "ImportDecl", names: importDecl.names, path: importDecl.path, span: importDecl.span };
+  return {
+    kind: "ImportDecl",
+    names: importDecl.names,
+    namespace: importDecl.namespace,
+    path: importDecl.path,
+    span: importDecl.span,
+  };
 }
 
 export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl {
@@ -23,6 +29,7 @@ export function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
     exported: fn.exported,
     external: fn.external,
     name: fn.name,
+    cName: fn.cName,
     params: fn.params.map(lowerParam),
     returnType: lowerTypeRef(fn.returnType),
     body: fn.body ? lowerBlockStmt(fn.body) : null,

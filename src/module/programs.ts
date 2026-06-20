@@ -13,7 +13,10 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
   return {
     kind: "Program",
     imports: [],
-    typeAliases: uniqueRefs([...imports.flatMap((program) => program.typeAliases), ...local.typeAliases]),
+    typeAliases: uniqueRefs([
+      ...imports.flatMap((program) => program.typeAliases),
+      ...local.typeAliases,
+    ]),
     functions: uniqueRefs([...imports.flatMap((program) => program.functions), ...local.functions]),
     span: local.span,
   };
@@ -22,10 +25,32 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
 export function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
   const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
   const functions = names.flatMap((name) => selectFunction(program.functions, name));
-  const found = new Set<Str>([...typeAliases.map((decl) => decl.name), ...functions.map((decl) => decl.name)]);
+  const found = new Set<Str>([
+    ...typeAliases.map((decl) => decl.name),
+    ...functions.map((decl) => decl.name),
+  ]);
   const missing = names.filter((name) => !found.has(name));
-  if (missing.length > 0) throw new TypeCError(missing.map((name) => ({ message: `Module does not export '${name}'`, span })));
-  return selectDependencyClosure(program, typeAliases.map((typeAlias) => typeAlias.name), functions.map((fn) => fn.name));
+  if (missing.length > 0) {
+    throw new TypeCError(
+      missing.map((name) => ({ message: `Module does not export '${name}'`, span })),
+    );
+  }
+  return selectDependencyClosure(
+    program,
+    typeAliases.map((typeAlias) => typeAlias.name),
+    functions.map((fn) => fn.name),
+  );
+}
+
+export function selectNamespaceImports(program: Program, namespace: Str): Program {
+  const functions = program.functions.filter((fn) => fn.exported).map((fn) =>
+    namespaceFunction(fn, namespace)
+  );
+  return { kind: "Program", imports: [], typeAliases: [], functions, span: program.span };
+}
+
+function namespaceFunction(fn: FunctionDecl, namespace: Str): FunctionDecl {
+  return { ...fn, exported: false, name: `${namespace}.${fn.name}`, cName: fn.cName ?? fn.name };
 }
 
 function uniqueRefs<T>(items: T[]): T[] {

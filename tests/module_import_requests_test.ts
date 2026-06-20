@@ -21,8 +21,19 @@ Deno.test("collects merged import requests", () => {
   assertText([...(requests[1]?.names ?? [])].join(","), "max_i32");
 });
 
+Deno.test("collects namespace import requests", () => {
+  const program = parse(lex(`import * as Math from "basic/math";`));
+  const requests = collectImportRequests("/project/main.tc", program, projectConfig());
+
+  assertText([...(requests[0]?.namespaces ?? [])].join(","), "Math");
+});
+
 function projectConfig(): ProjectConfig {
-  return { projectDir: "/project", dependencies: new Map<Str, Str>([["basic/math", "std/math.tc"]]), compilerFlags: [] };
+  return {
+    projectDir: "/project",
+    dependencies: new Map<Str, Str>([["basic/math", "std/math.tc"]]),
+    compilerFlags: [],
+  };
 }
 
 function assertSame(actual: usize, expected: usize): void {

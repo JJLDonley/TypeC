@@ -16,6 +16,7 @@ export interface CastProgram {
 export interface CastImportDecl {
   kind: "ImportDecl";
   names: Str[];
+  namespace?: Str | null;
   path: Str;
   span: SourceSpan;
 }
@@ -33,6 +34,7 @@ export interface CastFunctionDecl {
   exported: b8;
   external: b8;
   name: Str;
+  cName?: Str | null;
   params: CastParam[];
   returnType: CastTypeRef;
   body: CastBlockStmt | null;
@@ -109,7 +111,13 @@ export interface CastBlockStmt {
   span: SourceSpan;
 }
 
-export type CastStatement = CastReturnStmt | CastExpressionStmt | CastVarDeclStmt | CastAssignmentStmt | CastWhileStmt | CastIfStmt;
+export type CastStatement =
+  | CastReturnStmt
+  | CastExpressionStmt
+  | CastVarDeclStmt
+  | CastAssignmentStmt
+  | CastWhileStmt
+  | CastIfStmt;
 
 export interface CastReturnStmt {
   kind: "ReturnStmt";

@@ -16,6 +16,7 @@ export interface Program {
 export interface ImportDecl {
   kind: "ImportDecl";
   names: Str[];
+  namespace?: Str | null;
   path: Str;
   span: SourceSpan;
 }
@@ -33,6 +34,7 @@ export interface FunctionDecl {
   exported: b8;
   external: b8;
   name: Str;
+  cName?: Str | null;
   params: Param[];
   returnType: TypeRef;
   body: BlockStmt | null;
@@ -109,7 +111,13 @@ export interface BlockStmt {
   span: SourceSpan;
 }
 
-export type Statement = ReturnStmt | ExpressionStmt | VarDeclStmt | AssignmentStmt | WhileStmt | IfStmt;
+export type Statement =
+  | ReturnStmt
+  | ExpressionStmt
+  | VarDeclStmt
+  | AssignmentStmt
+  | WhileStmt
+  | IfStmt;
 
 export interface ReturnStmt {
   kind: "ReturnStmt";

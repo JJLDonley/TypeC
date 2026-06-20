@@ -13,6 +13,7 @@ export interface PrimaryExpressionParser {
   checkText(text: Str): b8;
   matchText(text: Str): b8;
   advance(): Token;
+  expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
   peek(): Token;
   error(token: Token, message: Str): void;
@@ -24,7 +25,9 @@ export interface PrimaryExpressionParser {
 export function parsePrimaryWith(parser: PrimaryExpressionParser): CastExpression {
   if (parser.check("integer")) return parseIntegerLiteral(parser.advance());
   if (parser.check("float")) return parseFloatLiteralExpression(parser, parser.advance());
-  if (parser.checkText("true") || parser.checkText("false")) return parseBoolLiteral(parser.advance());
+  if (parser.checkText("true") || parser.checkText("false")) {
+    return parseBoolLiteral(parser.advance());
+  }
   if (parser.check("string")) return parseStringLiteral(parser.advance());
   if (parser.check("identifier")) return parseIdentifierExpression(parser);
   if (parser.checkText("{")) return parser.parseRecordLiteral();
@@ -37,14 +40,24 @@ function parseIntegerLiteral(token: Token): CastExpression {
   return { kind: "IntegerLiteral", value: BigInt(token.text), text: token.text, span: token.span };
 }
 
-function parseFloatLiteralExpression(parser: PrimaryExpressionParser, token: Token): CastExpression {
+function parseFloatLiteralExpression(
+  parser: PrimaryExpressionParser,
+  token: Token,
+): CastExpression {
   const value = parseFloatLiteral(token.text);
-  if (!Number.isFinite(value)) parser.error(token, `Float literal '${token.text}' is out of range for 'f64'`);
+  if (!Number.isFinite(value)) {
+    parser.error(token, `Float literal '${token.text}' is out of range for 'f64'`);
+  }
   return { kind: "FloatLiteral", value, text: token.text, span: token.span };
 }
 
 function parseBoolLiteral(token: Token): CastExpression {
-  return { kind: "BoolLiteral", value: token.text === "true", text: token.text as "true" | "false", span: token.span };
+  return {
+    kind: "BoolLiteral",
+    value: token.text === "true",
+    text: token.text as "true" | "false",
+    span: token.span,
+  };
 }
 
 function parseStringLiteral(token: Token): CastExpression {
@@ -59,17 +72,43 @@ function parseParenthesizedExpression(parser: PrimaryExpressionParser): CastExpr
 
 function parseIdentifierExpression(parser: PrimaryExpressionParser): CastExpression {
   const ident = parser.advance();
+  const namespaceCall = parseNamespaceCall(parser, ident);
+  if (namespaceCall) return namespaceCall;
   if (!parser.matchText("(")) return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
+  return parseCallExpression(parser, ident.text, ident.span.start);
+}
+
+function parseNamespaceCall(
+  parser: PrimaryExpressionParser,
+  namespace: Token,
+): CastExpression | null {
+  if (!parser.matchText(".")) return null;
+  const member = parser.expectKind("identifier", "Expected namespace member");
+  if (!parser.matchText("(")) {
+    return {
+      kind: "FieldAccessExpr",
+      operand: { kind: "IdentifierExpr", name: namespace.text, span: namespace.span },
+      field: member.text,
+      span: span(namespace.span.start, member.span.end),
+    };
+  }
+  return parseCallExpression(parser, `${namespace.text}.${member.text}`, namespace.span.start);
+}
+
+function parseCallExpression(
+  parser: PrimaryExpressionParser,
+  callee: Str,
+  start: Token["span"]["start"],
+): CastExpression {
   const args = parseCallArguments(parser);
   const close = parser.expectText(")");
-  return { kind: "CallExpr", callee: ident.text, args, span: span(ident.span.start, close.span.end) };
+  return { kind: "CallExpr", callee, args, span: span(start, close.span.end) };
 }
 
 function parseCallArguments(parser: PrimaryExpressionParser): CastExpression[] {
   const args: CastExpression[] = [];
   if (!parser.checkText(")")) {
-    do args.push(parser.parseExpression());
-    while (parser.matchText(","));
+    do args.push(parser.parseExpression()); while (parser.matchText(","));
   }
   return args;
 }

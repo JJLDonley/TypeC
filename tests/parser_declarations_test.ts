@@ -1,7 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { CastBlockStmt, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { parseDeclarationWith, type DeclarationParser } from "parser/declarations.ts";
+import { type DeclarationParser, parseDeclarationWith } from "parser/declarations.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -13,15 +13,48 @@ const sourceSpan = {
 };
 
 Deno.test("parses import declarations", () => {
-  const fixture = parserFixture([keyword("import"), punct("{"), identifier("add"), punct("}"), keyword("from"), text("math"), punct(";")]);
+  const fixture = parserFixture([
+    keyword("import"),
+    punct("{"),
+    identifier("add"),
+    punct("}"),
+    keyword("from"),
+    text("math"),
+    punct(";"),
+  ]);
 
   const declaration = parseDeclarationWith(fixture.parser);
 
   assertText(declaration.kind, "ImportDecl");
 });
 
+Deno.test("parses namespace import declarations", () => {
+  const fixture = parserFixture([
+    keyword("import"),
+    punct("*"),
+    keyword("as"),
+    identifier("RL"),
+    keyword("from"),
+    text("raylib"),
+    punct(";"),
+  ]);
+
+  const declaration = parseDeclarationWith(fixture.parser);
+
+  assertText(declaration.kind, "ImportDecl");
+  if (declaration.kind !== "ImportDecl") throw new Error("Expected import");
+  assertText(declaration.namespace ?? "", "RL");
+});
+
 Deno.test("parses exported type aliases", () => {
-  const fixture = parserFixture([keyword("export"), keyword("type"), identifier("Count"), punct("="), identifier("i32"), punct(";")]);
+  const fixture = parserFixture([
+    keyword("export"),
+    keyword("type"),
+    identifier("Count"),
+    punct("="),
+    identifier("i32"),
+    punct(";"),
+  ]);
 
   const declaration = parseDeclarationWith(fixture.parser);
 
@@ -31,7 +64,20 @@ Deno.test("parses exported type aliases", () => {
 });
 
 Deno.test("parses extern function declarations", () => {
-  const fixture = parserFixture([keyword("extern"), keyword("function"), identifier("puts"), punct("("), identifier("text"), punct(":"), identifier("u8"), punct("*"), punct(")"), punct(":"), identifier("i32"), punct(";")]);
+  const fixture = parserFixture([
+    keyword("extern"),
+    keyword("function"),
+    identifier("puts"),
+    punct("("),
+    identifier("text"),
+    punct(":"),
+    identifier("u8"),
+    punct("*"),
+    punct(")"),
+    punct(":"),
+    identifier("i32"),
+    punct(";"),
+  ]);
 
   const declaration = parseDeclarationWith(fixture.parser);
 
@@ -41,7 +87,16 @@ Deno.test("parses extern function declarations", () => {
 });
 
 Deno.test("rejects invalid declaration modifiers", () => {
-  const fixture = parserFixture([keyword("extern"), keyword("import"), punct("{"), identifier("add"), punct("}"), keyword("from"), text("math"), punct(";")]);
+  const fixture = parserFixture([
+    keyword("extern"),
+    keyword("import"),
+    punct("{"),
+    identifier("add"),
+    punct("}"),
+    keyword("from"),
+    text("math"),
+    punct(";"),
+  ]);
 
   parseDeclarationWith(fixture.parser);
 

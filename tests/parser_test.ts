@@ -7,7 +7,9 @@ import { typeName } from "core/type_ref.ts";
 type Str = string;
 
 Deno.test("parses extern functions", () => {
-  const program = parse(lex(`extern function puts(s: u8*): i32; function main(): i32 { return 0; }`));
+  const program = parse(
+    lex(`extern function puts(s: u8*): i32; function main(): i32 { return 0; }`),
+  );
   const fn = program.functions[0];
   if (!fn.external) throw new Error("Expected extern function");
   if (fn.body) throw new Error("Expected no extern body");
@@ -16,21 +18,44 @@ Deno.test("parses extern functions", () => {
 Deno.test("rejects invalid declaration modifiers", () => {
   assertParseError(`export import { add } from "./math.tc";`, "Imports cannot be exported");
   assertParseError(`extern type Vec2 = { x: f32; };`, "Type aliases cannot be extern");
-  assertParseError(`export extern function add(a: i32, b: i32): i32;`, "Extern functions cannot be exported");
+  assertParseError(
+    `export extern function add(a: i32, b: i32): i32;`,
+    "Extern functions cannot be exported",
+  );
 });
 
 Deno.test("parses imports", () => {
-  const program = parse(lex(`import { add } from "./math.tc"; function main(): i32 { return add(1, 2); }`));
+  const program = parse(
+    lex(`import { add } from "./math.tc"; function main(): i32 { return add(1, 2); }`),
+  );
   if (program.imports.length !== 1) throw new Error("Expected one import");
   if (program.imports[0].names[0] !== "add") throw new Error("Expected add import");
 });
 
+Deno.test("parses namespace imports and calls", () => {
+  const program = parse(
+    lex(`import * as Math from "./math.tc"; function main(): i32 { return Math.add(1, 2); }`),
+  );
+  if (program.imports[0].namespace !== "Math") throw new Error("Expected namespace import");
+  const statement = requireBody(program.functions[0].body).statements[0];
+  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") {
+    throw new Error("Expected namespace call");
+  }
+  if (statement.expression.callee !== "Math.add") throw new Error("Expected namespace callee");
+});
+
 Deno.test("rejects empty imports", () => {
-  assertParseError(`import { } from "./math.tc"; function main(): i32 { return 0; }`, "Import must name at least one symbol");
+  assertParseError(
+    `import { } from "./math.tc"; function main(): i32 { return 0; }`,
+    "Import must name at least one symbol",
+  );
 });
 
 Deno.test("rejects duplicate import names", () => {
-  assertParseError(`import { add, add } from "./math.tc"; function main(): i32 { return 0; }`, "Duplicate imported name 'add'");
+  assertParseError(
+    `import { add, add } from "./math.tc"; function main(): i32 { return 0; }`,
+    "Duplicate imported name 'add'",
+  );
 });
 
 Deno.test("parses exported functions", () => {
@@ -45,13 +70,19 @@ Deno.test("parses record type alias", () => {
 });
 
 Deno.test("parses pointer reference and array type syntax", () => {
-  const program = parse(lex(`function f(a: i32*, b: i32&, c: i32[], d: i32[16]): void { return; }`));
+  const program = parse(
+    lex(`function f(a: i32*, b: i32&, c: i32[], d: i32[16]): void { return; }`),
+  );
   const types = program.functions[0].params.map((param) => typeName(param.type));
   assertEqualText(types, ["i32*", "i32&", "i32[]", "i32[16]"]);
 });
 
 Deno.test("parses canonical pointer reference and array type syntax", () => {
-  const program = parse(lex(`function f(a: Ptr<i32>, b: Ref<i32>, c: Array<i32>, d: Array<i32, 16>, e: Slice<i32>): void { return; }`));
+  const program = parse(
+    lex(
+      `function f(a: Ptr<i32>, b: Ref<i32>, c: Array<i32>, d: Array<i32, 16>, e: Slice<i32>): void { return; }`,
+    ),
+  );
   const types = program.functions[0].params.map((param) => typeName(param.type));
   assertEqualText(types, ["i32*", "i32&", "i32[]", "i32[16]", "Slice<i32>"]);
 });
@@ -60,7 +91,9 @@ Deno.test("parses postfix pointer expressions", () => {
   const program = parse(lex(`function f(p: i32*): i32 { return p.*; }`));
   const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (!statement.expression || statement.expression.kind !== "PostfixPointerExpr") throw new Error("Expected postfix pointer expression");
+  if (!statement.expression || statement.expression.kind !== "PostfixPointerExpr") {
+    throw new Error("Expected postfix pointer expression");
+  }
   if (statement.expression.operator !== ".*") throw new Error("Expected .* operator");
 });
 
@@ -68,11 +101,15 @@ Deno.test("parses array literals and indexing", () => {
   const program = parse(lex(`function main(): i32 { const xs: i32[] = [1, 2, 3]; return xs[0]; }`));
   const returnStatement = requireBody(program.functions[0].body).statements[1];
   if (returnStatement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (!returnStatement.expression || returnStatement.expression.kind !== "IndexExpr") throw new Error("Expected index expression");
+  if (!returnStatement.expression || returnStatement.expression.kind !== "IndexExpr") {
+    throw new Error("Expected index expression");
+  }
 });
 
 Deno.test("parses while and assignment statements", () => {
-  const program = parse(lex(`function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`));
+  const program = parse(
+    lex(`function main(): i32 { let x: i32 = 0; while (x < 3) { x = x + 1; } return x; }`),
+  );
   const statement = requireBody(program.functions[0].body).statements[1];
   if (statement.kind !== "WhileStmt") throw new Error("Expected while statement");
 });
@@ -81,25 +118,40 @@ Deno.test("parses bool literals", () => {
   const program = parse(lex(`function flag(): bool { return true; }`));
   const statement = requireBody(program.functions[0].body).statements[0];
   if (statement.kind !== "ReturnStmt") throw new Error("Expected return statement");
-  if (!statement.expression || statement.expression.kind !== "BoolLiteral") throw new Error("Expected bool literal");
+  if (!statement.expression || statement.expression.kind !== "BoolLiteral") {
+    throw new Error("Expected bool literal");
+  }
 });
 
 Deno.test("parses string literals", () => {
-  const program = parse(lex(`extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`));
+  const program = parse(
+    lex(`extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`),
+  );
   const statement = requireBody(program.functions[1].body).statements[0];
-  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") throw new Error("Expected call return");
-  if (statement.expression.args[0]?.kind !== "StringLiteral") throw new Error("Expected string literal argument");
+  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") {
+    throw new Error("Expected call return");
+  }
+  if (statement.expression.args[0]?.kind !== "StringLiteral") {
+    throw new Error("Expected string literal argument");
+  }
 });
 
 Deno.test("parses expression statements", () => {
-  const program = parse(lex(`extern function tick(): void; function main(): i32 { tick(); return 0; }`));
+  const program = parse(
+    lex(`extern function tick(): void; function main(): i32 { tick(); return 0; }`),
+  );
   const statement = requireBody(program.functions[1].body).statements[0];
-  if (statement.kind !== "ExpressionStmt" || statement.expression.kind !== "CallExpr") throw new Error("Expected call expression statement");
+  if (statement.kind !== "ExpressionStmt" || statement.expression.kind !== "CallExpr") {
+    throw new Error("Expected call expression statement");
+  }
 });
 
 Deno.test("rejects out-of-range float literals", () => {
   const huge = `1${"0".repeat(400)}.0`;
-  assertParseError(`function value(): f64 { return ${huge}; }`, `Float literal '${huge}' is out of range for 'f64'`);
+  assertParseError(
+    `function value(): f64 { return ${huge}; }`,
+    `Float literal '${huge}' is out of range for 'f64'`,
+  );
 });
 
 Deno.test("parses bare returns", () => {
@@ -120,7 +172,10 @@ function assertParseError(source: Str, message: Str): void {
   try {
     parse(lex(source));
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === message)) return;
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.message === message)
+    ) return;
   }
   throw new Error(`Expected parser error: ${message}`);
 }

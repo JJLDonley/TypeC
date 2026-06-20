@@ -19,7 +19,9 @@ Deno.test("parses primary literals", () => {
 });
 
 Deno.test("parses identifier calls", () => {
-  const expr = parsePrimaryWith(parserFor([identifier("add"), punct("("), identifier("x"), punct(")") ]));
+  const expr = parsePrimaryWith(
+    parserFor([identifier("add"), punct("("), identifier("x"), punct(")")]),
+  );
 
   assertText(expr.kind, "CallExpr");
 });
@@ -60,6 +62,12 @@ function parserFixture(tokens: Token[]): ParserFixture {
     advance: () => {
       current += 1;
       return peek(tokens, current - 1);
+    },
+    expectKind: (kind, message) => {
+      const next = peek(tokens, current);
+      if (next.kind !== kind) throw new Error(message);
+      current += 1;
+      return next;
     },
     expectText: (text) => {
       const next = peek(tokens, current);

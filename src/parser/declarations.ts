@@ -1,7 +1,18 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { CastBlockStmt, CastFunctionDecl, CastImportDecl, CastParam, CastTypeAliasDecl, CastTypeRef } from "core/cast.ts";
+import type {
+  CastBlockStmt,
+  CastFunctionDecl,
+  CastImportDecl,
+  CastParam,
+  CastTypeAliasDecl,
+  CastTypeRef,
+} from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { functionModifierDiagnostics, importModifierDiagnostics, typeAliasModifierDiagnostics } from "parser/declaration_modifiers.ts";
+import {
+  functionModifierDiagnostics,
+  importModifierDiagnostics,
+  typeAliasModifierDiagnostics,
+} from "parser/declaration_modifiers.ts";
 import { span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 import { parseParamsWith } from "parser/params.ts";
@@ -46,9 +57,29 @@ function parseDeclarationModifiers(parser: DeclarationParser): DeclarationModifi
   return { exported, exportToken, external, externToken };
 }
 
-function parseImportDeclaration(parser: DeclarationParser, modifiers: DeclarationModifiers): CastImportDecl {
-  parser.diagnostics().push(...importModifierDiagnostics(modifiers.exportToken, modifiers.externToken));
+function parseImportDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastImportDecl {
+  parser.diagnostics().push(
+    ...importModifierDiagnostics(modifiers.exportToken, modifiers.externToken),
+  );
   const start = parser.expectText("import");
+  const namespace = parser.checkText("*") ? parseNamespaceImport(parser) : null;
+  const names = namespace ? [] : parseNamedImport(parser);
+  parser.expectText("from");
+  const path = parser.expectKind("string", "Expected import path");
+  const semi = parser.expectText(";");
+  return {
+    kind: "ImportDecl",
+    names,
+    namespace,
+    path: path.text,
+    span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseNamedImport(parser: DeclarationParser): Str[] {
   parser.expectText("{");
   const names = parseImportNamesWith({
     checkText: (text) => parser.checkText(text),
@@ -58,24 +89,41 @@ function parseImportDeclaration(parser: DeclarationParser, modifiers: Declaratio
     error: (token, message) => parser.error(token, message),
   });
   parser.expectText("}");
-  parser.expectText("from");
-  const path = parser.expectKind("string", "Expected import path");
-  const semi = parser.expectText(";");
-  return { kind: "ImportDecl", names, path: path.text, span: span(start.span.start, semi.span.end) };
+  return names;
 }
 
-function parseTypeAliasDeclaration(parser: DeclarationParser, modifiers: DeclarationModifiers): CastTypeAliasDecl {
+function parseNamespaceImport(parser: DeclarationParser): Str {
+  parser.expectText("*");
+  parser.expectText("as");
+  return parser.expectKind("identifier", "Expected import namespace").text;
+}
+
+function parseTypeAliasDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastTypeAliasDecl {
   parser.diagnostics().push(...typeAliasModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("type");
   const name = parser.expectKind("identifier", "Expected type alias name");
   parser.expectText("=");
   const type = parser.parseTypeRef();
   const semi = parser.expectText(";");
-  return { kind: "TypeAliasDecl", exported: modifiers.exported, name: name.text, type, span: span(start.span.start, semi.span.end) };
+  return {
+    kind: "TypeAliasDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    type,
+    span: span(start.span.start, semi.span.end),
+  };
 }
 
-function parseFunctionDeclaration(parser: DeclarationParser, modifiers: DeclarationModifiers): CastFunctionDecl {
-  parser.diagnostics().push(...functionModifierDiagnostics(modifiers.exportToken, modifiers.externToken));
+function parseFunctionDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastFunctionDecl {
+  parser.diagnostics().push(
+    ...functionModifierDiagnostics(modifiers.exportToken, modifiers.externToken),
+  );
   const functionToken = parser.expectText("function");
   const name = parser.expectKind("identifier", "Expected function name");
   parser.expectText("(");
@@ -83,8 +131,25 @@ function parseFunctionDeclaration(parser: DeclarationParser, modifiers: Declarat
   parser.expectText(")");
   parser.expectText(":");
   const returnType = parser.parseTypeRef();
-  if (modifiers.external) return parseExternFunction(parser, modifiers.exported, functionToken, name.text, params, returnType);
-  return parseBodyFunction(parser, modifiers.exported, modifiers.external, functionToken, name.text, params, returnType);
+  if (modifiers.external) {
+    return parseExternFunction(
+      parser,
+      modifiers.exported,
+      functionToken,
+      name.text,
+      params,
+      returnType,
+    );
+  }
+  return parseBodyFunction(
+    parser,
+    modifiers.exported,
+    modifiers.external,
+    functionToken,
+    name.text,
+    params,
+    returnType,
+  );
 }
 
 function parseFunctionParams(parser: DeclarationParser): CastParam[] {
@@ -111,6 +176,7 @@ function parseExternFunction(
     exported,
     external: true,
     name,
+    cName: null,
     params,
     returnType,
     body: null,
@@ -133,6 +199,7 @@ function parseBodyFunction(
     exported,
     external,
     name,
+    cName: null,
     params,
     returnType,
     body,

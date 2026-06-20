@@ -9,11 +9,18 @@ import type {
   CastTypeRef,
 } from "core/cast.ts";
 import { lowerCast } from "lower";
-import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
+import {
+  type AggregateLiteralParser,
+  parseArrayLiteralWith,
+  parseRecordLiteralWith,
+} from "parser/aggregate_literals.ts";
 import type { DeclarationParser } from "parser/declarations.ts";
-import { parseExpressionWith, type ExpressionParser } from "parser/expressions.ts";
+import { type ExpressionParser, parseExpressionWith } from "parser/expressions.ts";
 import { span } from "parser/helpers.ts";
-import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
+import {
+  parsePostfixExpressionWith,
+  type PostfixExpressionParser,
+} from "parser/postfix_expressions.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
 import { parseProgramWith, type ProgramParser } from "parser/programs.ts";
 import { parseStatementWith, type StatementParser } from "parser/statements.ts";
@@ -143,6 +150,7 @@ class Parser {
       checkText: (text) => this.checkText(text),
       matchText: (text) => this.matchText(text),
       advance: () => this.advance(),
+      expectKind: (kind, message) => this.expectKind(kind, message),
       expectText: (text) => this.expectText(text),
       peek: () => this.peek(),
       error: (token, message) => this.error(token, message),
@@ -169,7 +177,6 @@ class Parser {
       parseExpression: () => this.parseExpression(),
     };
   }
-
 
   private expectKind(kind: TokenKind, message: Str): Token {
     if (this.check(kind)) return this.advance();
