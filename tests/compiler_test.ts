@@ -48,6 +48,15 @@ Deno.test("emits C for module constants", () => {
   assertIncludes(c, "return ANSWER;");
 });
 
+Deno.test("compiles constants example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/constants.tc", dir);
+
+  assertIncludes(result.cSource, "static const i32 BASE = 40;");
+  assertIncludes(result.cSource, "static const i32 ANSWER = 40 + 2;");
+  assertIncludes(result.cSource, "return ANSWER;");
+});
+
 Deno.test("emits C for aggregate constants", () => {
   const program = parse(lex(`
     type Color = { r: u8; g: u8; b: u8; a: u8; };
