@@ -26,6 +26,22 @@ Deno.test("parses record type refs", () => {
   assertText(typeName(type), "{x:i32}");
 });
 
+Deno.test("parses canonical pointer and reference type refs", () => {
+  const pointer = parseTypeRefWith(parserFor([identifier("Ptr"), punct("<"), identifier("i32"), punct(">"), eof()]));
+  const reference = parseTypeRefWith(parserFor([identifier("Ref"), punct("<"), identifier("i32"), punct(">"), eof()]));
+
+  assertText(typeName(pointer), "i32*");
+  assertText(typeName(reference), "i32&");
+});
+
+Deno.test("parses canonical array type refs", () => {
+  const inferred = parseTypeRefWith(parserFor([identifier("Array"), punct("<"), identifier("i32"), punct(">"), eof()]));
+  const fixed = parseTypeRefWith(parserFor([identifier("Array"), punct("<"), identifier("i32"), punct(","), integer("16"), punct(">"), eof()]));
+
+  assertText(typeName(inferred), "i32[]");
+  assertText(typeName(fixed), "i32[16]");
+});
+
 function parserFor(tokens: Token[]): TypeRefParser {
   let current: i32 = 0;
   return {
@@ -79,6 +95,10 @@ function identifier(text: Str): Token {
 
 function punct(text: Str): Token {
   return token("punctuation", text);
+}
+
+function integer(text: Str): Token {
+  return token("integer", text);
 }
 
 function eof(): Token {

@@ -34,7 +34,41 @@ export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
 
 function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
   const token = parser.expectKind("identifier", "Expected type name");
+  if (isCanonicalGenericType(token.text) && parser.matchText("<")) return parseCanonicalGenericTypeRef(parser, token);
   return { kind: "NamedTypeRef", name: token.text, span: token.span };
+}
+
+function parseCanonicalGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  if (token.text === "Ptr") return parsePointerGenericTypeRef(parser, token);
+  if (token.text === "Ref") return parseReferenceGenericTypeRef(parser, token);
+  return parseArrayGenericTypeRef(parser, token);
+}
+
+function parsePointerGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  const element = parseTypeRefWith(parser);
+  const close = parser.expectText(">");
+  return { kind: "PointerTypeRef", element, span: span(token.span.start, close.span.end) };
+}
+
+function parseReferenceGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  const element = parseTypeRefWith(parser);
+  const close = parser.expectText(">");
+  return { kind: "ReferenceTypeRef", element, span: span(token.span.start, close.span.end) };
+}
+
+function parseArrayGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  const element = parseTypeRefWith(parser);
+  if (!parser.matchText(",")) {
+    const close = parser.expectText(">");
+    return { kind: "InferredArrayTypeRef", element, span: span(token.span.start, close.span.end) };
+  }
+  const size = parser.expectKind("integer", "Expected array size");
+  const close = parser.expectText(">");
+  return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(token.span.start, close.span.end) };
+}
+
+function isCanonicalGenericType(name: Str): b8 {
+  return name === "Ptr" || name === "Ref" || name === "Array";
 }
 
 function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
