@@ -203,6 +203,23 @@ Deno.test("emits C for header constant imports", async () => {
   assertIncludes(c, "return Lib_ANSWER;");
 });
 
+Deno.test("emits C for header bool constant imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdbool.h>\nstatic const bool ENABLED = true;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { if (Lib.ENABLED) { return 42; } else { return 0; } }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "static const b8 Lib_ENABLED = true;");
+  assertIncludes(c, "if (Lib_ENABLED)");
+});
+
 Deno.test("emits C for header macro constant imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/lib.h`, `#define ANSWER (40 + 2)`);

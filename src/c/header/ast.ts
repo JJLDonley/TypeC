@@ -111,11 +111,11 @@ function hasName(value: JsonRecord): b8 {
 }
 
 function readHeaderConstant(value: JsonRecord): CHeaderConstant | null {
-  const literal = readConstantLiteral(value.inner);
-  if (literal === null) return null;
   if (!isJsonRecord(value.type) || !isJsonText(value.type.qualType) || !isJsonText(value.name)) {
     return null;
   }
+  const literal = readConstantLiteral(value.inner, value.type.qualType);
+  if (literal === null) return null;
   return {
     name: value.name,
     type: value.type.qualType,
@@ -124,16 +124,44 @@ function readHeaderConstant(value: JsonRecord): CHeaderConstant | null {
   };
 }
 
-function readConstantLiteral(inner: unknown): Str | null {
-  if (!isJsonArray(inner)) return null;
-  const literal = inner.find(isHeaderConstantLiteral);
-  if (!isJsonRecord(literal) || !isJsonText(literal.value)) return null;
-  return literal.value;
+function readConstantLiteral(inner: unknown, type: Str): Str | null {
+  const literal = findConstantLiteral(inner);
+  if (literal === null) return null;
+  if (isBoolHeaderType(type) && isIntegerLiteralText(literal)) {
+    return literal === "0" ? "false" : "true";
+  }
+  return literal;
 }
 
-function isHeaderConstantLiteral(value: unknown): b8 {
-  return isJsonRecord(value) &&
-    (value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral");
+function findConstantLiteral(value: unknown): Str | null {
+  if (!isJsonRecord(value)) {
+    if (!isJsonArray(value)) return null;
+    for (const child of value) {
+      const literal = findConstantLiteral(child);
+      if (literal !== null) return literal;
+    }
+    return null;
+  }
+  if (isHeaderConstantLiteral(value) && isJsonText(value.value)) return value.value;
+  const inner = value.inner;
+  if (!isJsonArray(inner)) return null;
+  for (const child of inner) {
+    const literal = findConstantLiteral(child);
+    if (literal !== null) return literal;
+  }
+  return null;
+}
+
+function isHeaderConstantLiteral(value: JsonRecord): b8 {
+  return value.kind === "IntegerLiteral" || value.kind === "FloatingLiteral";
+}
+
+function isBoolHeaderType(type: Str): b8 {
+  return type === "const bool" || type === "const _Bool" || type === "bool" || type === "_Bool";
+}
+
+function isIntegerLiteralText(value: Str): b8 {
+  return /^-?[0-9]+$/.test(value);
 }
 
 function readSourceFile(value: JsonRecord): Str | null {

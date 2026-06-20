@@ -1,4 +1,8 @@
-import { collectHeaderFunctions, collectHeaderRecords } from "c/header/ast.ts";
+import {
+  collectHeaderConstants,
+  collectHeaderFunctions,
+  collectHeaderRecords,
+} from "c/header/ast.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -67,6 +71,27 @@ Deno.test("collects duplicate C header records for later selection", () => {
   assertSame(records.length, 2);
 });
 
+Deno.test("collects C header constants from clang AST", () => {
+  const constants = collectHeaderConstants({
+    kind: "TranslationUnitDecl",
+    inner: [
+      varDecl("ANSWER", "const int32_t", literal("IntegerLiteral", "42"), "/project/config.h"),
+      varDecl(
+        "ENABLED",
+        "const bool",
+        cast(literal("IntegerLiteral", "1")),
+        "/project/config.h",
+      ),
+    ],
+  });
+
+  assertSame(constants.length, 2);
+  assertText(constants[0].name, "ANSWER");
+  assertText(constants[0].value, "42");
+  assertText(constants[1].name, "ENABLED");
+  assertText(constants[1].value, "true");
+});
+
 Deno.test("reads C header function metadata", () => {
   const functions = collectHeaderFunctions({
     kind: "TranslationUnitDecl",
@@ -118,6 +143,18 @@ function typedefRecord(name: Str, fields: unknown[], file: Str): unknown {
 
 function field(name: Str, qualType: Str): unknown {
   return { kind: "FieldDecl", name, type: { qualType } };
+}
+
+function varDecl(name: Str, qualType: Str, initializer: unknown, file: Str): unknown {
+  return { kind: "VarDecl", name, type: { qualType }, loc: { file }, inner: [initializer] };
+}
+
+function literal(kind: Str, value: Str): unknown {
+  return { kind, value };
+}
+
+function cast(initializer: unknown): unknown {
+  return { kind: "ImplicitCastExpr", inner: [initializer] };
 }
 
 function assertSame(actual: usize | b8, expected: usize | b8): void {
