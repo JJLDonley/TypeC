@@ -149,6 +149,15 @@ T[N]  // Array<T, N>
 raw pointer or C ABI parameter is expected. Automatic array-to-slice coercion is planned, not yet
 implemented.
 
+Runnable canonical type examples:
+
+```bash
+deno run -A src/driver/main.ts run examples/pointer_canonical.tc
+deno run -A src/driver/main.ts run examples/ref_canonical.tc
+deno run -A src/driver/main.ts run examples/array_canonical.tc
+deno run -A src/driver/main.ts run examples/array_fixed_canonical.tc
+```
+
 Planned array and slice members:
 
 ```txt
