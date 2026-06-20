@@ -1,10 +1,9 @@
 import type { Statement } from "core/ast.ts";
-import { emitCType } from "c/type.ts";
-import { emitArrayVarDecl } from "emitter/array_var_declarations.ts";
 import { emitBracedBlock, emitIfElseBlock } from "emitter/blocks.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
+import { emitVarDecl } from "emitter/var_declarations.ts";
 
 type Str = string;
 type LocalTypes = Map<Str, Str>;
@@ -77,15 +76,4 @@ function emitAssignment(
     ? emitExpressionExpected(stmt.expression, targetType, context)
     : emitExpression(stmt.expression, context);
   return `${stmt.name} = ${expression};`;
-}
-
-function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, context: EmitContext): Str {
-  if (stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef") {
-    return emitArrayVarDecl(stmt, context);
-  }
-  return `${stmt.mutable ? "" : "const "}${
-    emitCType(stmt.type, context.typeAliases)
-  } ${stmt.name} = ${
-    emitExpressionExpected(stmt.initializer, emitCType(stmt.type, context.typeAliases), context)
-  };`;
 }
