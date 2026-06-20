@@ -1,3 +1,4 @@
+export * from "c/header/array_types.ts";
 export * from "c/header/ast.ts";
 export * from "c/header/clang.ts";
 export * from "c/header/externs.ts";
@@ -14,6 +15,8 @@ export * from "c/header/record_support.ts";
 export * from "c/header/record_uniqueness.ts";
 export * from "c/header/record_type_usage.ts";
 export * from "c/header/records.ts";
+export * from "c/header/scalar_types.ts";
 export * from "c/header/signatures.ts";
 export * from "c/header/support.ts";
+export * from "c/header/type_normalization.ts";
 export * from "c/header/types.ts";
