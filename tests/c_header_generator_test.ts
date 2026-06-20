@@ -99,6 +99,18 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "set_callback");
 });
 
+Deno.test("generates dependent records in dependency order", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      typedefRecord("Paint", [field("tint", "Color")]),
+      typedefRecord("Color", [field("r", "unsigned char")]),
+    ],
+  });
+
+  assertOrdered(output, "export type Color", "export type Paint");
+});
+
 Deno.test("filters incompatible outside records before generating externs", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
@@ -199,4 +211,12 @@ function assertSame(actual: usize, expected: usize): void {
 
 function assertExcludes(haystack: Str, needle: Str): void {
   if (haystack.includes(needle)) throw new Error(`Expected output to exclude ${needle}`);
+}
+
+function assertOrdered(haystack: Str, first: Str, second: Str): void {
+  const firstIndex = haystack.indexOf(first);
+  const secondIndex = haystack.indexOf(second);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) {
+    throw new Error(`Expected ${first} before ${second}`);
+  }
 }

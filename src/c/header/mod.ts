@@ -7,6 +7,7 @@ export * from "c/header/generator.ts";
 export * from "c/header/identifiers.ts";
 export * from "c/header/params.ts";
 export * from "c/header/record_aliases.ts";
+export * from "c/header/record_order.ts";
 export * from "c/header/record_selection.ts";
 export * from "c/header/record_uniqueness.ts";
 export * from "c/header/record_type_usage.ts";

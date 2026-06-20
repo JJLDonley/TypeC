@@ -972,6 +972,8 @@ function main(): i32 {
   selected record, including pointer, qualifier, `struct T`, and array spellings.
 - Duplicate header records with equivalent mapped TypeC field layouts collapse to one imported
   record; duplicate incompatible header records are skipped safely.
+- Imported header records are emitted before records that depend on them when dependency order can
+  be resolved.
 - C enums should import as namespaced integer-backed constants or enum types once enum semantics are
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely

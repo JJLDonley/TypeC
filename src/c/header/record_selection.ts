@@ -1,4 +1,5 @@
 import type { CHeaderRecord } from "c/header/ast.ts";
+import { orderHeaderRecordsByDependencies } from "c/header/record_order.ts";
 import { uniqueCompatibleHeaderRecords } from "c/header/record_uniqueness.ts";
 import { isPathWithinDir } from "paths";
 
@@ -9,8 +10,10 @@ export function selectHeaderRecords(
   records: CHeaderRecord[],
   includeDir: Str | null = null,
 ): CHeaderRecord[] {
-  return uniqueCompatibleHeaderRecords(
-    records.filter((record) => isIncludedHeaderRecord(record, includeDir)),
+  return orderHeaderRecordsByDependencies(
+    uniqueCompatibleHeaderRecords(
+      records.filter((record) => isIncludedHeaderRecord(record, includeDir)),
+    ),
   );
 }
 

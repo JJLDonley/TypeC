@@ -23,6 +23,15 @@ Deno.test("ignores incompatible records outside include directory", () => {
   assertText(records[0]?.sourceFile ?? "", "/project/include/color.h");
 });
 
+Deno.test("orders selected records by dependencies", () => {
+  const records = selectHeaderRecords([
+    record("Paint", [["tint", "Color"]], "/project/include/paint.h"),
+    record("Color", [["r", "unsigned char"]], "/project/include/color.h"),
+  ], "/project/include");
+
+  assertText(records.map((record) => record.name).join(","), "Color,Paint");
+});
+
 Deno.test("drops incompatible records inside include directory", () => {
   const records = selectHeaderRecords([
     record("Color", [["r", "unsigned char"]], "/project/include/a.h"),
