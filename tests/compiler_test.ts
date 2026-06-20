@@ -418,6 +418,34 @@ Deno.test("emits C for canonical pointer reference and array syntax", () => {
   assertIncludes(c, "const i32 values[2] = { *p, *r + 2 };");
 });
 
+Deno.test("emits C for slice indexing", () => {
+  const source =
+    `function first(values: Slice<i32>): i32 { return values[0]; } function main(): i32 { const values: Array<i32, 2> = [40, 2]; return first(values); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "return values.data[0];");
+});
+
+Deno.test("emits C for array to slice calls", () => {
+  const source =
+    `function take(values: Slice<i32>): usize { return values.length(); } function main(): i32 { const values: Array<i32, 2> = [40, 2]; const len: usize = take(values); return 42; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "typedef struct Slice_i32 { i32* data; usize length; } Slice_i32;");
+  assertIncludes(c, "usize take(Slice_i32 values)");
+  assertIncludes(c, "return values.length;");
+  assertIncludes(c, "take((Slice_i32){ .data = values, .length = 2 })");
+});
+
+Deno.test("emits C for local array to slice initialization", () => {
+  const source =
+    `function main(): i32 { const values: Array<i32, 2> = [40, 2]; const slice: Slice<i32> = values; const len: usize = slice.length(); return 42; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const Slice_i32 slice = (Slice_i32){ .data = values, .length = 2 };");
+  assertIncludes(c, "const usize len = slice.length;");
+});
+
 Deno.test("emits C for array length field access", () => {
   const source =
     `function main(): i32 { const values: Array<i32, 2> = [40, 2]; const len: usize = values.length(); return 42; }`;

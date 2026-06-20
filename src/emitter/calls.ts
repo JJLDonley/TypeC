@@ -1,5 +1,7 @@
 import type { Expression, FunctionDecl } from "core/ast.ts";
 import { emitCType } from "c/type.ts";
+import { spanKey } from "checker/exprs.ts";
+import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCStringPointer } from "emitter/strings.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
@@ -55,7 +57,22 @@ function emitCallArg(
     );
   }
   if (isStringLiteralU8ArrayArgument(arg, param.type)) return emitCStringPointer(arg.text);
+  if (param.type.kind === "SliceTypeRef") {
+    return emitSliceCallArg(arg, expectedType, context, emitExpression);
+  }
   return emitExpressionExpected(arg, expectedType, context);
+}
+
+function emitSliceCallArg(
+  arg: Expression,
+  expectedType: Str,
+  context: EmitContext,
+  emitExpression: ExpressionEmitter,
+): Str {
+  const actualType = context.expressionTypes?.get(spanKey(arg.span))?.type ?? null;
+  const array = actualType ? parseArrayTypeName(actualType) : null;
+  if (array?.length === null || array === null) return emitExpression(arg, context);
+  return `(${expectedType}){ .data = ${emitExpression(arg, context)}, .length = ${array.length} }`;
 }
 
 function isStringLiteralU8ArrayArgument(

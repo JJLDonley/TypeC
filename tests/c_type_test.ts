@@ -1,4 +1,5 @@
 import type { TypeRef } from "core/ast.ts";
+import { emitSliceCType } from "c/slices.ts";
 import { emitCDeclarator, emitCParamDeclarator, emitCType } from "c/type.ts";
 
 type Str = string;
@@ -18,6 +19,15 @@ Deno.test("maps pointer and reference types to C pointers", () => {
   assertEquals(
     emitCType({ kind: "ReferenceTypeRef", element: namedType("i32"), span: fakeSpan() }),
     "i32*",
+  );
+});
+
+Deno.test("emits slice types", () => {
+  const type: TypeRef = { kind: "SliceTypeRef", element: namedType("i32"), span: fakeSpan() };
+  assertEquals(emitCType(type), "Slice_i32");
+  assertEquals(
+    emitSliceCType(namedType("i32")),
+    "typedef struct Slice_i32 { i32* data; usize length; } Slice_i32;",
   );
 });
 

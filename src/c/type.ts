@@ -1,4 +1,5 @@
 import type { TypeAliasDecl, TypeRef } from "core/ast.ts";
+import { sliceCTypeName } from "c/slice_names.ts";
 
 type Str = string;
 type usize = number;
@@ -16,7 +17,7 @@ export function emitCType(
     case "ReferenceTypeRef":
       return `${emitCType(type.element, aliases)}*`;
     case "SliceTypeRef":
-      throw new Error("Slice type emission requires slice lowering");
+      return sliceCTypeName(type.element);
     case "InferredArrayTypeRef":
       throw new Error("Cannot emit inferred array type without a declarator");
     case "FixedArrayTypeRef":

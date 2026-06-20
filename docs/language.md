@@ -150,8 +150,8 @@ These are specified in `TYPEC_PHASES.md` but are not implemented in the current 
 ## Array, Slice, Pointer, and Reference Model
 
 The current prototype supports `T*`, `T&`, local `T[]`, `T[N]`, and canonical spellings `Ptr<T>`,
-`Ref<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>`. `Slice<T>` parses as a distinct type but is
-rejected by checking until slice lowering is implemented.
+`Ref<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>`. `Slice<T>` is supported for TypeC-owned APIs
+and lowers to a generated C struct with `data` and `length` fields.
 
 ```txt
 Ptr<T>        // raw pointer, no length
@@ -174,7 +174,7 @@ T[N]  // Array<T, N>
 raw pointer or C ABI parameter is expected. Array `.data` exposes the raw pointer for C interop.
 Fixed arrays expose `.length()` as a compile-time `usize`; unsized C ABI array parameters do not
 carry length. Fully sized nested C arrays are supported for header record fields and pointer-decayed
-parameters. Automatic array-to-slice coercion is planned, not yet implemented.
+parameters. `Array<T, N>` coerces to `Slice<T>` where a TypeC-owned slice is expected.
 
 Runnable canonical type examples:
 
@@ -183,9 +183,10 @@ deno run -A src/driver/main.ts run examples/pointer_canonical.tc
 deno run -A src/driver/main.ts run examples/ref_canonical.tc
 deno run -A src/driver/main.ts run examples/array_canonical.tc
 deno run -A src/driver/main.ts run examples/array_fixed_canonical.tc
+deno run -A src/driver/main.ts run examples/slice_canonical.tc
 ```
 
-Planned array and slice members:
+Array and slice members:
 
 ```txt
 array.length()

@@ -20,18 +20,27 @@ Deno.test("accepts known primitive and alias types", () => {
 
 Deno.test("reports invalid type refs", () => {
   assertText(checkTypeRef(named("Missing"), new Map())[0]?.message ?? "", "Unknown type 'Missing'");
-  assertText(checkTypeRef(pointer(fixedArray(named("i32"))), new Map())[0]?.message ?? "", "Pointer type cannot target array type");
-  assertText(checkTypeRef(fixedArray(named("i32"), "0"), new Map())[0]?.message ?? "", "Array size must be greater than zero");
+  assertText(
+    checkTypeRef(pointer(fixedArray(named("i32"))), new Map())[0]?.message ?? "",
+    "Pointer type cannot target array type",
+  );
+  assertText(
+    checkTypeRef(fixedArray(named("i32"), "0"), new Map())[0]?.message ?? "",
+    "Array size must be greater than zero",
+  );
 });
 
-Deno.test("reports unsupported slice type refs", () => {
+Deno.test("accepts slice type refs", () => {
   const diagnostics = checkTypeRef(slice(named("i32")), new Map());
 
-  assertText(diagnostics[0]?.message ?? "", "Slice<T> requires slice lowering support");
+  assertLen(diagnostics.length, 0);
 });
 
 Deno.test("reports invalid record fields", () => {
-  const diagnostics = checkTypeRef(record([["x", named("void")], ["x", inferredArray(named("i32"))]]), new Map());
+  const diagnostics = checkTypeRef(
+    record([["x", named("void")], ["x", inferredArray(named("i32"))]]),
+    new Map(),
+  );
 
   assertText(diagnostics[0]?.message ?? "", "Field 'x' cannot have type 'void'");
   assertText(diagnostics[1]?.message ?? "", "Duplicate field 'x'");
@@ -59,13 +68,17 @@ function slice(element: TypeRef): TypeRef {
 }
 
 function record(fields: [Str, TypeRef][]): TypeRef {
-  return { kind: "RecordTypeRef", fields: fields.map(([name, type]) => ({ name, type, span })), span };
-}
-
-function assertText(actual: Str, expected: Str): void {
-  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+  return {
+    kind: "RecordTypeRef",
+    fields: fields.map(([name, type]) => ({ name, type, span })),
+    span,
+  };
 }
 
 function assertLen(actual: usize, expected: usize): void {
+  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+}
+
+function assertText(actual: Str, expected: Str): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }

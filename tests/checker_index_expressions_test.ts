@@ -12,15 +12,38 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks index expressions", () => {
-  const result = checkIndexExpression(indexExpr(identifier("items"), integer("0")), "i32[2]", resolveUsize);
+  const result = checkIndexExpression(
+    indexExpr(identifier("items"), integer("0")),
+    "i32[2]",
+    resolveUsize,
+  );
+
+  assertLen(result.diagnostics.length, 0);
+  assertText(result.type, "i32");
+});
+
+Deno.test("checks slice index expressions", () => {
+  const result = checkIndexExpression(
+    indexExpr(identifier("items"), integer("0")),
+    "Slice<i32>",
+    resolveUsize,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32");
 });
 
 Deno.test("reports invalid index expressions", () => {
-  const nonArray = checkIndexExpression(indexExpr(identifier("value"), integer("0")), "i32", resolveUsize);
-  const badIndex = checkIndexExpression(indexExpr(identifier("items"), integer("0")), "i32[2]", resolveF64);
+  const nonArray = checkIndexExpression(
+    indexExpr(identifier("value"), integer("0")),
+    "i32",
+    resolveUsize,
+  );
+  const badIndex = checkIndexExpression(
+    indexExpr(identifier("items"), integer("0")),
+    "i32[2]",
+    resolveF64,
+  );
 
   assertText(nonArray.diagnostics[0]?.message ?? "", "Cannot index non-array type 'i32'");
   assertText(badIndex.diagnostics[0]?.message ?? "", "Array index type 'f64' is not an integer");
@@ -34,7 +57,10 @@ function resolveF64(_expr: Expression): TypeName {
   return "f64";
 }
 
-function indexExpr(operand: Expression, index: Expression): Extract<Expression, { kind: "IndexExpr" }> {
+function indexExpr(
+  operand: Expression,
+  index: Expression,
+): Extract<Expression, { kind: "IndexExpr" }> {
   return { kind: "IndexExpr", operand, index, span };
 }
 

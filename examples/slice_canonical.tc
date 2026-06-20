@@ -1,0 +1,16 @@
+function sum(values: Slice<i32>): i32 {
+  let total: i32 = 0;
+  let index: usize = 0;
+
+  while (index < values.length()) {
+    total = total + values[index];
+    index = index + 1;
+  }
+
+  return total;
+}
+
+function main(): i32 {
+  const values: Array<i32, 2> = [40, 2];
+  return sum(values);
+}

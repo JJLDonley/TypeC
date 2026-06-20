@@ -21,9 +21,13 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
     case "ReferenceTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkReferenceElementType(type)];
     case "SliceTypeRef":
-      return [...checkTypeRef(type.element, typeAliases), ...checkSliceType(type)];
+      return checkTypeRef(type.element, typeAliases);
     case "FixedArrayTypeRef":
-      return [...checkTypeRef(type.element, typeAliases), ...checkArrayElementType(type), ...checkArraySize(type.sizeText, type)];
+      return [
+        ...checkTypeRef(type.element, typeAliases),
+        ...checkArrayElementType(type),
+        ...checkArraySize(type.sizeText, type),
+      ];
     case "InferredArrayTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkArrayElementType(type)];
     case "RecordTypeRef":
@@ -31,11 +35,10 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
   }
 }
 
-function checkSliceType(type: Extract<TypeRef, { kind: "SliceTypeRef" }>): Diagnostic[] {
-  return [{ message: "Slice<T> requires slice lowering support", span: type.span }];
-}
-
-function checkNamedType(type: Extract<TypeRef, { kind: "NamedTypeRef" }>, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function checkNamedType(
+  type: Extract<TypeRef, { kind: "NamedTypeRef" }>,
+  typeAliases: Map<Str, TypeRef>,
+): Diagnostic[] {
   if (primitiveTypes.has(type.name) || typeAliases.has(type.name)) return [];
   return [{ message: `Unknown type '${type.name}'`, span: type.span }];
 }
@@ -43,16 +46,31 @@ function checkNamedType(type: Extract<TypeRef, { kind: "NamedTypeRef" }>, typeAl
 function checkRecordType(type: RecordTypeRef, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const fields = new Set<Str>();
-  for (const field of type.fields) diagnostics.push(...checkRecordField(field, fields, typeAliases));
+  for (const field of type.fields) {
+    diagnostics.push(...checkRecordField(field, fields, typeAliases));
+  }
   return diagnostics;
 }
 
-function checkRecordField(field: RecordTypeRef["fields"][usize], fields: Set<Str>, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function checkRecordField(
+  field: RecordTypeRef["fields"][usize],
+  fields: Set<Str>,
+  typeAliases: Map<Str, TypeRef>,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  if (fields.has(field.name)) diagnostics.push({ message: `Duplicate field '${field.name}'`, span: field.span });
+  if (fields.has(field.name)) {
+    diagnostics.push({ message: `Duplicate field '${field.name}'`, span: field.span });
+  }
   fields.add(field.name);
   diagnostics.push(...checkTypeRef(field.type, typeAliases));
-  diagnostics.push(...checkValueType(field.type, `Field '${field.name}' cannot have type 'void'`, field.span));
-  if (field.type.kind === "InferredArrayTypeRef") diagnostics.push({ message: `Field '${field.name}' cannot have inferred array type`, span: field.span });
+  diagnostics.push(
+    ...checkValueType(field.type, `Field '${field.name}' cannot have type 'void'`, field.span),
+  );
+  if (field.type.kind === "InferredArrayTypeRef") {
+    diagnostics.push({
+      message: `Field '${field.name}' cannot have inferred array type`,
+      span: field.span,
+    });
+  }
   return diagnostics;
 }

@@ -5,7 +5,7 @@ import { expectedRecordType } from "emitter/record_types.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
 import { spanKey } from "checker/exprs.ts";
-import { parseArrayTypeName } from "checker/type_name_shapes.ts";
+import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -43,7 +43,7 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
     case "ArrayLiteralExpr":
       throw new Error("Array literals require an expected C type");
     case "IndexExpr":
-      return `${emitMemberOperand(expr.operand, context)}[${emitExpression(expr.index, context)}]`;
+      return emitIndexExpression(expr, context);
   }
 }
 
@@ -63,7 +63,18 @@ export function emitExpressionExpected(
   if (expr.kind === "StringLiteral" && expectedType === "void*") {
     return emitCStringVoidPointer(expr.text);
   }
+  const slice = parseSliceTypeName(expectedType);
+  if (slice || expectedType.startsWith("Slice_")) {
+    return emitSliceExpression(expr, expectedType, context);
+  }
   return emitExpression(expr, context);
+}
+
+function emitSliceExpression(expr: Expression, expectedType: Str, context: EmitContext): Str {
+  const actual = context.expressionTypes?.get(spanKey(expr.span))?.type ?? null;
+  const array = actual ? parseArrayTypeName(actual) : null;
+  if (array?.length === null || array === null) return emitExpression(expr, context);
+  return `(${expectedType}){ .data = ${emitExpression(expr, context)}, .length = ${array.length} }`;
 }
 
 function emitRecordLiteralExpression(
@@ -108,6 +119,21 @@ function emitArrayLiteralExpression(
   return `{ ${elements.join(", ")} }`;
 }
 
+function emitIndexExpression(
+  expr: Extract<Expression, { kind: "IndexExpr" }>,
+  context: EmitContext,
+): Str {
+  const operand = emitMemberOperand(expr.operand, context);
+  const index = emitExpression(expr.index, context);
+  if (isSliceExpression(expr.operand, context)) return `${operand}.data[${index}]`;
+  return `${operand}[${index}]`;
+}
+
+function isSliceExpression(expr: Expression, context: EmitContext): b8 {
+  const type = context.expressionTypes?.get(spanKey(expr.span))?.type ?? null;
+  return type !== null && parseSliceTypeName(type) !== null;
+}
+
 function emitBinaryExpression(
   expr: Extract<Expression, { kind: "BinaryExpr" }>,
   context: EmitContext,
@@ -137,7 +163,13 @@ function emitFieldAccessExpression(
   context: EmitContext,
 ): Str {
   if (isArrayDataFieldAccess(expr, context)) return emitMemberOperand(expr.operand, context);
+  if (isSliceDataFieldAccess(expr, context)) {
+    return `${emitMemberOperand(expr.operand, context)}.data`;
+  }
   if (isArrayLengthFieldAccess(expr, context)) return emitArrayLengthExpression(expr, context);
+  if (isSliceLengthFieldAccess(expr, context)) {
+    return `${emitMemberOperand(expr.operand, context)}.length`;
+  }
   return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
 }
 
@@ -149,12 +181,28 @@ function isArrayDataFieldAccess(
   return arrayOperandType(expr, context) !== null;
 }
 
+function isSliceDataFieldAccess(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): b8 {
+  if (expr.field !== "data") return false;
+  return sliceOperandType(expr, context) !== null;
+}
+
 function isArrayLengthFieldAccess(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   context: EmitContext,
 ): b8 {
   if (expr.field !== "length()") return false;
   return arrayOperandType(expr, context) !== null;
+}
+
+function isSliceLengthFieldAccess(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): b8 {
+  if (expr.field !== "length()") return false;
+  return sliceOperandType(expr, context) !== null;
 }
 
 function emitArrayLengthExpression(
@@ -172,8 +220,23 @@ function arrayOperandType(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   context: EmitContext,
 ): ReturnType<typeof parseArrayTypeName> {
-  const operandType = context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? null;
+  const operandType = operandTypeName(expr, context);
   return operandType === null ? null : parseArrayTypeName(operandType);
+}
+
+function sliceOperandType(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): ReturnType<typeof parseSliceTypeName> {
+  const operandType = operandTypeName(expr, context);
+  return operandType === null ? null : parseSliceTypeName(operandType);
+}
+
+function operandTypeName(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): Str | null {
+  return context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? null;
 }
 
 function emitPostfixPointerExpression(
