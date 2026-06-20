@@ -994,16 +994,16 @@ function main(): i32 {
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely
   and deterministically.
-- Variadic C functions use TypeScript-like rest syntax in extern declarations once variadic support
-  is implemented:
+- Variadic C functions use TypeScript-like rest syntax in extern declarations:
 
   ```ts
   extern function printf(format: Ptr<u8>, ...args): c_int;
   ```
 
-  Variadic arguments must be primitive C ABI scalar values or raw pointers after default C argument
-  promotions are defined by TypeC. Record values, arrays, slices, and TypeC-only types are not valid
-  variadic arguments.
+  Variadic arguments must already match C default-promotion-compatible TypeC types: `i32`, `u32`,
+  `i64`, `u64`, `usize`, `f64`, `c_int`, `c_uint`, `c_long`, `c_ulong`, `c_longlong`, `c_ulonglong`,
+  `c_double`, raw pointers, or arrays that decay to raw pointers. Record values, slices, TypeC-only
+  types, `bool`, narrow integer types, and `f32` are not valid variadic arguments.
 - Function-like C macros are not imported as functions. They remain unsupported unless a later phase
   defines a typed inline expansion model. Object-like macros are handled only by Phase 12 constant
   import rules.
@@ -1021,8 +1021,8 @@ function main(): i32 {
 6. Add nested fixed-array record field and parameter import for fully sized nested arrays.
 7. Add C function pointer type import using TypeScript-like function type syntax.
 8. Add callback parameter support for non-capturing TypeC functions and extern symbols.
-9. Add variadic extern declarations after rest syntax and C default-promotion checking are
-   implemented.
+9. Add variadic extern declarations using rest syntax and C default-promotion-compatible argument
+   checking.
 10. Add C enum import after enum representation is implemented.
 11. Add safe constant and simple macro import after constant semantics are implemented.
 12. Keep unsupported C signatures skipped with diagnostics/debug visibility, not guessed

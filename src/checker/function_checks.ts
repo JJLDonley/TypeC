@@ -7,12 +7,34 @@ import { checkMainFunction } from "checker/main.ts";
 
 type Str = string;
 
-export function checkFunctionHeader(fn: FunctionDecl, returnType: TypeName, aliases: Map<Str, TypeRef>): Diagnostic[] {
+export function checkFunctionHeader(
+  fn: FunctionDecl,
+  returnType: TypeName,
+  aliases: Map<Str, TypeRef>,
+): Diagnostic[] {
   return [
     ...checkFunctionReturnType(fn, returnType),
+    ...checkFunctionVariadic(fn),
     ...checkFunctionAbi(fn, aliases),
     ...checkFunctionEntrypoint(fn, returnType),
   ];
+}
+
+function checkFunctionVariadic(fn: FunctionDecl): Diagnostic[] {
+  if (fn.variadic !== true) return [];
+  if (!fn.external) {
+    return [{
+      message: `Function '${fn.name}' cannot be variadic unless it is extern`,
+      span: fn.span,
+    }];
+  }
+  if (fn.params.length === 0) {
+    return [{
+      message: `Variadic extern function '${fn.name}' requires at least one fixed parameter`,
+      span: fn.span,
+    }];
+  }
+  return [];
 }
 
 function checkFunctionAbi(fn: FunctionDecl, aliases: Map<Str, TypeRef>): Diagnostic[] {

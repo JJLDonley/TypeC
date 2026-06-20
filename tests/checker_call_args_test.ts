@@ -1,8 +1,5 @@
 import type { SourceSpan } from "core/diagnostics.ts";
-import {
-  checkCallArgumentType,
-  checkCallArity,
-} from "checker/call_args.ts";
+import { checkCallArgumentType, checkCallArity } from "checker/call_args.ts";
 
 type Str = string;
 type usize = number;
@@ -13,12 +10,12 @@ const span: SourceSpan = {
 };
 
 Deno.test("accepts valid call arguments", () => {
-  assertLen(checkCallArity(2, 2, "add", span).length, 0);
+  assertLen(checkCallArity(2, 2, false, "add", span).length, 0);
   assertLen(checkCallArgumentType("i32", "i32", 0, span).length, 0);
 });
 
 Deno.test("reports invalid call arguments", () => {
-  const arityDiagnostics = checkCallArity(1, 2, "add", span);
+  const arityDiagnostics = checkCallArity(1, 2, false, "add", span);
   const typeDiagnostics = checkCallArgumentType("f64", "i32", 1, span);
 
   assertText(arityDiagnostics[0]?.message ?? "", "Function 'add' expects 2 arguments, got 1");

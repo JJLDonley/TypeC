@@ -29,6 +29,10 @@ Deno.test("lexes function type arrow", () => {
   assertEqualText(tokenTexts("(x: i32) => i32"), ["(", "x", ":", "i32", ")", "=>", "i32", ""]);
 });
 
+Deno.test("lexes rest parameter operator", () => {
+  assertEqualText(tokenTexts("...args"), ["...", "args", ""]);
+});
+
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
   assertEqualText(tokens.map((token) => token.kind), [

@@ -12,27 +12,42 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks call expression types", () => {
-  const result = checkCallExpression(call("add", [integer("1")]), fn("add", ["i32"], "i32"), resolveExpected);
+  const result = checkCallExpression(
+    call("add", [integer("1")]),
+    fn("add", ["i32"], "i32"),
+    resolveExpected,
+    typeOf,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32");
 });
 
 Deno.test("reports unknown call expressions", () => {
-  const result = checkCallExpression(call("missing", []), undefined, resolveExpected);
+  const result = checkCallExpression(call("missing", []), undefined, resolveExpected, typeOf);
 
   assertText(result.diagnostics[0]?.message ?? "", "Unknown function 'missing'");
   assertText(result.type, "<error>");
 });
 
 Deno.test("reports call argument errors", () => {
-  const result = checkCallExpression(call("add", []), fn("add", ["i32"], "i32"), resolveExpected);
+  const result = checkCallExpression(
+    call("add", []),
+    fn("add", ["i32"], "i32"),
+    resolveExpected,
+    typeOf,
+  );
 
   assertText(result.diagnostics[0]?.message ?? "", "Function 'add' expects 1 arguments, got 0");
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {
   return expected;
+}
+
+function typeOf(expr: Expression): TypeName {
+  if (expr.kind === "IntegerLiteral") return "i32";
+  return "<error>";
 }
 
 function call(callee: Str, args: Expression[]): Extract<Expression, { kind: "CallExpr" }> {

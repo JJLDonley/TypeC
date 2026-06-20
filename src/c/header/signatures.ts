@@ -35,7 +35,8 @@ export function headerFunctionTypeCSignature(
     const params = fn.params.map((param) => mapCHeaderParamSignature(param.type, recordNames)).join(
       ",",
     );
-    return `${mapCHeaderType(fn.returnType, recordNames)}(${params})`;
+    const variadic = fn.functionType.includes("...") ? ",..." : "";
+    return `${mapCHeaderType(fn.returnType, recordNames)}(${params}${variadic})`;
   } catch (error) {
     if (error instanceof TypeCError) return null;
     throw error;

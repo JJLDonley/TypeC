@@ -37,6 +37,7 @@ export interface FunctionDecl {
   name: Str;
   cName?: Str | null;
   params: Param[];
+  variadic?: b8;
   returnType: TypeRef;
   body: BlockStmt | null;
   span: SourceSpan;

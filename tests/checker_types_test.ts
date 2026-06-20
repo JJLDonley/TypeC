@@ -12,6 +12,7 @@ import {
   isNumericType,
   maxF32,
 } from "checker/types.ts";
+import { isVariadicArgumentType } from "checker/variadic_args.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -61,6 +62,14 @@ Deno.test("parses shared checker type name shapes", () => {
   assertBigInt(parseArrayTypeName("u8[4]")?.length ?? 0n, 4n);
   assertSame(isPointerLikeTypeName("u8*"), true);
   assertText(pointeeTypeName("u8*"), "u8");
+});
+
+Deno.test("classifies C variadic argument types", () => {
+  assertSame(isVariadicArgumentType("i32"), true);
+  assertSame(isVariadicArgumentType("f64"), true);
+  assertSame(isVariadicArgumentType("u8*"), true);
+  assertSame(isVariadicArgumentType("i8"), false);
+  assertSame(isVariadicArgumentType("f32"), false);
 });
 
 Deno.test("checks assignability", () => {

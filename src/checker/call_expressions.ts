@@ -8,16 +8,22 @@ type Str = string;
 
 type CallExpr = Extract<Expression, { kind: "CallExpr" }>;
 type ExpectedTypeResolver = (expr: Expression, expected: TypeName) => TypeName;
+type TypeResolver = (expr: Expression) => TypeName;
 
 export interface CallExpressionCheck {
   diagnostics: Diagnostic[];
   type: TypeName;
 }
 
-export function checkCallExpression(expr: CallExpr, fn: FunctionDecl | undefined, resolveExpectedType: ExpectedTypeResolver): CallExpressionCheck {
+export function checkCallExpression(
+  expr: CallExpr,
+  fn: FunctionDecl | undefined,
+  resolveExpectedType: ExpectedTypeResolver,
+  resolveType: TypeResolver,
+): CallExpressionCheck {
   if (!fn) return unknownFunction(expr.callee, expr.span);
   return {
-    diagnostics: checkCallArguments(expr.args, fn, resolveExpectedType, expr.span),
+    diagnostics: checkCallArguments(expr.args, fn, resolveExpectedType, resolveType, expr.span),
     type: typeName(fn.returnType),
   };
 }

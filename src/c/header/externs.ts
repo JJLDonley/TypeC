@@ -48,8 +48,18 @@ function formatSupportedFunction(fn: CHeaderFunction, recordNames: Set<Str>): St
 }
 
 function formatFunction(fn: CHeaderFunction, recordNames: Set<Str>): Str {
-  const params = fn.params.map((param) => formatParam(param, recordNames)).join(", ");
+  const params = formatParams(fn, recordNames);
   return `extern function ${fn.name}(${params}): ${mapCHeaderType(fn.returnType, recordNames)};`;
+}
+
+function formatParams(fn: CHeaderFunction, recordNames: Set<Str>): Str {
+  const params = fn.params.map((param) => formatParam(param, recordNames));
+  if (isVariadicFunction(fn)) params.push("...args");
+  return params.join(", ");
+}
+
+function isVariadicFunction(fn: CHeaderFunction): b8 {
+  return fn.functionType.includes("...");
 }
 
 function formatParam(param: CHeaderParam, recordNames: Set<Str>): Str {

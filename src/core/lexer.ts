@@ -54,6 +54,12 @@ class Lexer {
         continue;
       }
 
+      if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
+        const text = this.advance() + this.advance() + this.advance();
+        this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
+        continue;
+      }
+
       if (ch === "." && (this.peek(1) === "*" || this.peek(1) === "&")) {
         const text = this.advance() + this.advance();
         this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });

@@ -15,10 +15,13 @@ import {
 } from "parser/declaration_modifiers.ts";
 import { span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
-import { parseParamsWith } from "parser/params.ts";
-
 type Str = string;
 type b8 = boolean;
+
+interface FunctionParamsParse {
+  params: CastParam[];
+  variadic: b8;
+}
 
 export interface DeclarationParser {
   diagnostics(): Diagnostic[];
@@ -137,7 +140,8 @@ function parseFunctionDeclaration(
       modifiers.exported,
       functionToken,
       name.text,
-      params,
+      params.params,
+      params.variadic,
       returnType,
     );
   }
@@ -147,19 +151,30 @@ function parseFunctionDeclaration(
     modifiers.external,
     functionToken,
     name.text,
-    params,
+    params.params,
+    params.variadic,
     returnType,
   );
 }
 
-function parseFunctionParams(parser: DeclarationParser): CastParam[] {
-  return parseParamsWith({
-    checkText: (text) => parser.checkText(text),
-    matchText: (text) => parser.matchText(text),
-    expectKind: (kind, message) => parser.expectKind(kind, message),
-    expectText: (text) => parser.expectText(text),
-    parseTypeRef: () => parser.parseTypeRef(),
-  });
+function parseFunctionParams(parser: DeclarationParser): FunctionParamsParse {
+  const params: CastParam[] = [];
+  if (parser.checkText(")")) return { params, variadic: false };
+  do {
+    if (parser.matchText("...")) {
+      parser.expectKind("identifier", "Expected rest parameter name");
+      return { params, variadic: true };
+    }
+    params.push(parseFunctionParam(parser));
+  } while (parser.matchText(","));
+  return { params, variadic: false };
+}
+
+function parseFunctionParam(parser: DeclarationParser): CastParam {
+  const name = parser.expectKind("identifier", "Expected parameter name");
+  parser.expectText(":");
+  const type = parser.parseTypeRef();
+  return { name: name.text, type, span: span(name.span.start, type.span.end) };
 }
 
 function parseExternFunction(
@@ -168,6 +183,7 @@ function parseExternFunction(
   functionToken: Token,
   name: Str,
   params: CastParam[],
+  variadic: b8,
   returnType: CastTypeRef,
 ): CastFunctionDecl {
   const semi = parser.expectText(";");
@@ -178,6 +194,7 @@ function parseExternFunction(
     name,
     cName: null,
     params,
+    variadic,
     returnType,
     body: null,
     span: span(functionToken.span.start, semi.span.end),
@@ -191,6 +208,7 @@ function parseBodyFunction(
   functionToken: Token,
   name: Str,
   params: CastParam[],
+  variadic: b8,
   returnType: CastTypeRef,
 ): CastFunctionDecl {
   const body = parser.parseBlock();
@@ -201,6 +219,7 @@ function parseBodyFunction(
     name,
     cName: null,
     params,
+    variadic,
     returnType,
     body,
     span: span(functionToken.span.start, body.span.end),

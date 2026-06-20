@@ -230,10 +230,10 @@ Header imports are virtual TypeC modules generated from clang AST output. Suppor
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
 safely. C `bool` and `_Bool` import as TypeC `bool`, which emits as `b8`.
 
-Planned C interop extensions are now specified in `TYPEC_PHASES.md`: variadic externs using
-`...args`, scoped C enum imports, and safe object-like macro / constant imports. Current header
-interop supports fully sized nested C arrays, function pointer type imports using TypeScript-like
-`(arg: T) => R`, and callback parameters passed compatible function symbols. Function-like macros,
+Planned C interop extensions are now specified in `TYPEC_PHASES.md`: scoped C enum imports and safe
+object-like macro / constant imports. Current header interop supports fully sized nested C arrays,
+function pointer type imports using TypeScript-like `(arg: T) => R`, callback parameters passed
+compatible function symbols, and variadic extern declarations using `...args`. Function-like macros,
 old-style declarations, array returns, unsafe macros, and unknown signatures remain skipped unless a
 later phase defines safe lowering.
 
@@ -257,6 +257,7 @@ T[N] record field     -> Array<T, N> / T[N]
 fixed-width scalars   -> i8/u8/i16/u16/i32/u32/i64/u64/f32/f64
 platform C scalars    -> explicit ABI aliases when required
 R (*)(T) parameter    -> (arg: T) => R callback parameter
+variadic ...          -> ...args rest parameter
 ```
 
 ## C Interop

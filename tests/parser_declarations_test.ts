@@ -86,6 +86,32 @@ Deno.test("parses extern function declarations", () => {
   assertBool(declaration.external, true);
 });
 
+Deno.test("parses variadic extern function declarations", () => {
+  const fixture = parserFixture([
+    keyword("extern"),
+    keyword("function"),
+    identifier("printf"),
+    punct("("),
+    identifier("format"),
+    punct(":"),
+    identifier("u8"),
+    punct("*"),
+    punct(","),
+    operator("..."),
+    identifier("args"),
+    punct(")"),
+    punct(":"),
+    identifier("c_int"),
+    punct(";"),
+  ]);
+
+  const declaration = parseDeclarationWith(fixture.parser);
+
+  assertText(declaration.kind, "FunctionDecl");
+  if (declaration.kind !== "FunctionDecl") throw new Error("Expected function");
+  assertBool(declaration.variadic === true, true);
+});
+
 Deno.test("rejects invalid declaration modifiers", () => {
   const fixture = parserFixture([
     keyword("extern"),
@@ -174,6 +200,10 @@ function identifier(value: Str): Token {
 
 function text(value: Str): Token {
   return token("string", value);
+}
+
+function operator(value: Str): Token {
+  return token("operator", value);
 }
 
 function punct(value: Str): Token {

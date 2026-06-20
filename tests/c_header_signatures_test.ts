@@ -15,6 +15,11 @@ Deno.test("builds TypeC header signatures", () => {
     "i32(i32,i32)",
   );
   assertText(headerFunctionTypeCSignature(fn("platform", "long", [])) ?? "", "c_long()");
+  assertText(
+    headerFunctionTypeCSignature(fn("log", "int", ["const char *"], "int (const char *, ...)")) ??
+      "",
+    "c_int(u8*,...)",
+  );
   assertText(headerFunctionTypeCSignature(fn("bad", "__unsupported_t", [])) ?? "", "");
 });
 

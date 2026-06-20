@@ -32,6 +32,7 @@ export function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
     name: fn.name,
     cName: fn.cName,
     params: fn.params.map(lowerParam),
+    variadic: fn.variadic,
     returnType: lowerTypeRef(fn.returnType),
     body: fn.body ? lowerBlockStmt(fn.body) : null,
     span: fn.span,

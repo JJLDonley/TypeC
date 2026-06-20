@@ -14,12 +14,8 @@ export function isIncludedHeaderFunction(fn: CHeaderFunction, includeDir: Str | 
 }
 
 export function isSupportedHeaderFunction(fn: CHeaderFunction): b8 {
-  return !isVariadicFunction(fn) && !isUnprototypedFunction(fn) && !hasFunctionPointerReturn(fn) &&
-    !hasArrayReturnType(fn) && !isStaticFunction(fn) && !fn.hasBody && isTypeCIdentifier(fn.name);
-}
-
-function isVariadicFunction(fn: CHeaderFunction): b8 {
-  return fn.functionType.includes("...");
+  return !isUnprototypedFunction(fn) && !hasFunctionPointerReturn(fn) && !hasArrayReturnType(fn) &&
+    !isStaticFunction(fn) && !fn.hasBody && isTypeCIdentifier(fn.name);
 }
 
 function isUnprototypedFunction(fn: CHeaderFunction): b8 {

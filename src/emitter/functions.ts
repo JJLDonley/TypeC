@@ -24,7 +24,10 @@ function emitFunctionStorage(fn: FunctionDecl): Str {
 }
 
 function emitParams(fn: FunctionDecl, context: EmitContext): Str {
-  if (fn.params.length === 0) return "void";
-  return fn.params.map((param) => emitCParamDeclarator(param.type, param.name, context.typeAliases))
-    .join(", ");
+  const params = fn.params.map((param) =>
+    emitCParamDeclarator(param.type, param.name, context.typeAliases)
+  );
+  if (fn.variadic === true) return [...params, "..."].join(", ");
+  if (params.length === 0) return "void";
+  return params.join(", ");
 }

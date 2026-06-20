@@ -203,6 +203,21 @@ Deno.test("emits C for header bool record fields and functions", async () => {
   assertIncludes(c, ".enabled = true");
 });
 
+Deno.test("emits C for variadic extern calls", () => {
+  const program = parse(lex(`
+    extern function log(format: u8*, ...args): c_int;
+    function main(): i32 {
+      log("%d", 42);
+      return 42;
+    }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertIncludes(c, "c_int log(u8* format, ...);");
+  assertIncludes(c, 'log((u8*)"%d", 42);');
+});
+
 Deno.test("emits C for header function pointer parameters", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

@@ -83,6 +83,7 @@ export * from "checker/type_shapes.ts";
 export * from "checker/type_validation.ts";
 export * from "checker/types.ts";
 export * from "checker/value_types.ts";
+export * from "checker/variadic_args.ts";
 
 export function check(program: ResolvedProgram): CheckedProgram {
   const checker = new Checker(program);
@@ -297,6 +298,7 @@ class Checker {
       expr,
       this.functions.get(expr.callee),
       (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;

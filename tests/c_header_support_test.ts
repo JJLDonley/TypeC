@@ -26,7 +26,7 @@ Deno.test("classifies supported header functions", () => {
         type: "const char *",
       }]),
     ),
-    false,
+    true,
   );
   assertSame(isSupportedHeaderFunction(fn("old", "/project/header.h", "void ()")), false);
   assertSame(

@@ -37,6 +37,7 @@ export interface CastFunctionDecl {
   name: Str;
   cName?: Str | null;
   params: CastParam[];
+  variadic?: b8;
   returnType: CastTypeRef;
   body: CastBlockStmt | null;
   span: SourceSpan;
