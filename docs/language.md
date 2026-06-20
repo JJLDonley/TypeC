@@ -156,9 +156,9 @@ slice.length()
 slice.data
 ```
 
-## Planned Header Interop
+## Header Interop
 
-Header dependencies should be usable without a hand-written ABI file:
+Header dependencies are usable without a hand-written ABI file:
 
 ```json
 {
@@ -185,6 +185,14 @@ Header imports are virtual TypeC modules generated from clang AST output. Suppor
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
 safely. Unsupported function pointers, callbacks, variadics, old-style declarations, array returns,
 unsafe macros, enums, constants, and unknown signatures are skipped until specified.
+
+Runnable examples:
+
+```bash
+deno run -A src/driver/main.ts run examples/c_header_record.tc
+deno run -A src/driver/main.ts run examples/c_header_namespace.tc
+deno run -A src/driver/main.ts run examples/c_header_project/main.tc
+```
 
 C header mapping goals:
 
