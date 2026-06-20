@@ -7,6 +7,15 @@ type Str = string;
 type b8 = boolean;
 
 export function supportedHeaderRecords(records: CHeaderRecord[]): CHeaderRecord[] {
+  let supported = records;
+  while (true) {
+    const next = supportPass(supported);
+    if (next.length === supported.length) return next;
+    supported = next;
+  }
+}
+
+function supportPass(records: CHeaderRecord[]): CHeaderRecord[] {
   const recordNames = new Set<Str>(records.map((record) => record.name));
   return records.filter((record) => isSupportedHeaderRecord(record, recordNames));
 }

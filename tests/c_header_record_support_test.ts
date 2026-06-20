@@ -13,6 +13,15 @@ Deno.test("keeps supported header records", () => {
   assertSame(records.length, 2);
 });
 
+Deno.test("skips records depending on unsupported records", () => {
+  const records = supportedHeaderRecords([
+    record("Bad", [["x", "__unsupported_t"]]),
+    record("Paint", [["bad", "Bad"]]),
+  ]);
+
+  assertSame(records.length, 0);
+});
+
 Deno.test("skips records with unsupported names fields or types", () => {
   const records = supportedHeaderRecords([
     record("bad-name", [["x", "int32_t"]]),

@@ -112,6 +112,21 @@ Deno.test("skips functions that use unsupported records", () => {
   assertExcludes(output, "use_bad");
 });
 
+Deno.test("skips functions using records with unsupported dependencies", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      typedefRecord("Bad", [field("x", "__unsupported_t")]),
+      typedefRecord("Paint", [field("bad", "Bad")]),
+      functionDecl("use_paint", "void (Paint)", [param("value", "Paint")]),
+    ],
+  });
+
+  assertExcludes(output, "export type Bad");
+  assertExcludes(output, "export type Paint");
+  assertExcludes(output, "use_paint");
+});
+
 Deno.test("generates dependent records in dependency order", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
