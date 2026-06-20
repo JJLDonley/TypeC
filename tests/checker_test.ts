@@ -470,6 +470,13 @@ Deno.test("rejects overflowing integer constant expressions", () => {
   );
 });
 
+Deno.test("rejects overflowing float constant expressions", () => {
+  assertCheckError(
+    `const BASE: f32 = 340000000000000000000000000000000000000.0; const BAD: f32 = BASE * 10.0; function main(): i32 { return 0; }`,
+    "Float constant '3.4e+39' is out of range for 'f32'",
+  );
+});
+
 Deno.test("rejects unary operators on nonnumeric constants", () => {
   assertCheckError(
     `const FLAG: bool = true; const BAD: bool = -FLAG; function main(): i32 { return 0; }`,

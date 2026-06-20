@@ -1,5 +1,5 @@
-import { evaluateIntegerConstant } from "checker/constant_values.ts";
-import { integerRange } from "checker/types.ts";
+import { evaluateFloatConstant, evaluateIntegerConstant } from "checker/constant_values.ts";
+import { integerRange, maxF32 } from "checker/types.ts";
 import type { ConstDecl, Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -20,6 +20,7 @@ export function checkConstantValue(
     ...checkConstantExpression(constant.initializer, availableConstants),
     ...checkConstantAssignable(constant, resolveExpectedType),
     ...checkConstantIntegerRange(constant.initializer, expectedType, availableConstants),
+    ...checkConstantFloatRange(constant.initializer, expectedType, availableConstants),
   ];
 }
 
@@ -42,6 +43,20 @@ function checkConstantIntegerRange(
   if (value === null || (value >= range.min && value <= range.max)) return [];
   return [{
     message: `Integer constant '${value}' is out of range for '${expectedType}'`,
+    span: expr.span,
+  }];
+}
+
+function checkConstantFloatRange(
+  expr: Expression,
+  expectedType: TypeName,
+  availableConstants: Map<Str, ConstDecl>,
+): Diagnostic[] {
+  if (expectedType !== "f32") return [];
+  const value = evaluateFloatConstant(expr, availableConstants);
+  if (value === null || Math.abs(value) <= maxF32) return [];
+  return [{
+    message: `Float constant '${value}' is out of range for 'f32'`,
     span: expr.span,
   }];
 }

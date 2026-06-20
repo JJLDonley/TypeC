@@ -2,6 +2,7 @@ import type { ConstDecl, Expression } from "core/ast.ts";
 
 type Str = string;
 type IntValue = bigint;
+type f64 = number;
 
 export function evaluateIntegerConstant(
   expr: Expression,
@@ -65,6 +66,88 @@ function evaluateBinaryIntegerConstant(
   const right = evaluateIntegerConstant(expr.right, constants);
   if (left === null || right === null) return null;
   return applyIntegerOperator(left, right, expr.operator);
+}
+
+export function evaluateFloatConstant(
+  expr: Expression,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  switch (expr.kind) {
+    case "FloatLiteral":
+      return expr.value;
+    case "IntegerLiteral":
+      return Number(expr.value);
+    case "IdentifierExpr":
+      return evaluateReferencedFloatConstant(expr.name, constants);
+    case "FieldAccessExpr":
+      return evaluateQualifiedFloatConstant(expr, constants);
+    case "UnaryExpr":
+      return evaluateUnaryFloatConstant(expr, constants);
+    case "BinaryExpr":
+      return evaluateBinaryFloatConstant(expr, constants);
+    case "BoolLiteral":
+    case "StringLiteral":
+    case "CallExpr":
+    case "PostfixPointerExpr":
+    case "RecordLiteralExpr":
+    case "ArrayLiteralExpr":
+    case "IndexExpr":
+      return null;
+  }
+}
+
+function evaluateReferencedFloatConstant(
+  name: Str,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  const constant = constants.get(name) ?? null;
+  if (constant === null) return null;
+  return evaluateFloatConstant(constant.initializer, constants);
+}
+
+function evaluateQualifiedFloatConstant(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  if (expr.operand.kind !== "IdentifierExpr") return null;
+  return evaluateReferencedFloatConstant(`${expr.operand.name}.${expr.field}`, constants);
+}
+
+function evaluateUnaryFloatConstant(
+  expr: Extract<Expression, { kind: "UnaryExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  const value = evaluateFloatConstant(expr.operand, constants);
+  if (value === null) return null;
+  if (expr.operator === "+") return value;
+  return -value;
+}
+
+function evaluateBinaryFloatConstant(
+  expr: Extract<Expression, { kind: "BinaryExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  const left = evaluateFloatConstant(expr.left, constants);
+  const right = evaluateFloatConstant(expr.right, constants);
+  if (left === null || right === null) return null;
+  return applyFloatOperator(left, right, expr.operator);
+}
+
+function applyFloatOperator(left: f64, right: f64, operator: Str): f64 | null {
+  switch (operator) {
+    case "+":
+      return left + right;
+    case "-":
+      return left - right;
+    case "*":
+      return left * right;
+    case "/":
+      return left / right;
+    case "%":
+      return left % right;
+    default:
+      return null;
+  }
 }
 
 function applyIntegerOperator(left: IntValue, right: IntValue, operator: Str): IntValue | null {
