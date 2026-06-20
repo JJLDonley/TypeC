@@ -1,14 +1,30 @@
 import type { CHeaderFunction } from "c/header/ast.ts";
-import { headerFunctionTypeCSignature, unambiguousHeaderFunctions, uniqueHeaderFunctions } from "c/header/signatures.ts";
+import {
+  headerFunctionTypeCSignature,
+  unambiguousHeaderFunctions,
+  uniqueHeaderFunctions,
+} from "c/header/signatures.ts";
 
 type Str = string;
 type b8 = boolean;
 type usize = number;
 
 Deno.test("builds TypeC header signatures", () => {
-  assertText(headerFunctionTypeCSignature(fn("add", "int32_t", ["int32_t", "int32_t"])) ?? "", "i32(i32,i32)");
+  assertText(
+    headerFunctionTypeCSignature(fn("add", "int32_t", ["int32_t", "int32_t"])) ?? "",
+    "i32(i32,i32)",
+  );
   assertText(headerFunctionTypeCSignature(fn("platform", "long", [])) ?? "", "c_long()");
   assertText(headerFunctionTypeCSignature(fn("bad", "__unsupported_t", [])) ?? "", "");
+});
+
+Deno.test("deduplicates equivalent array and pointer header signatures", () => {
+  const functions = uniqueHeaderFunctions(unambiguousHeaderFunctions([
+    fn("fill", "void", ["int32_t[4]"], "void (int32_t[4])"),
+    fn("fill", "void", ["int32_t *"], "void (int32_t *)"),
+  ]));
+
+  assertSame(functions.length, 1);
 });
 
 Deno.test("deduplicates equivalent header signatures", () => {
@@ -33,7 +49,12 @@ Deno.test("keeps only unambiguous header signatures", () => {
   assertText(functions[0]?.name ?? "", "ok");
 });
 
-function fn(name: Str, returnType: Str, paramTypes: Str[], functionType: Str | null = null): CHeaderFunction {
+function fn(
+  name: Str,
+  returnType: Str,
+  paramTypes: Str[],
+  functionType: Str | null = null,
+): CHeaderFunction {
   return {
     name,
     functionType: functionType ?? `${returnType} (${paramTypes.join(", ")})`,

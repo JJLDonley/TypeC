@@ -32,12 +32,20 @@ export function headerFunctionTypeCSignature(
   recordNames: Set<Str> = new Set<Str>(),
 ): Str | null {
   try {
-    const params = fn.params.map((param) => mapCHeaderType(param.type, recordNames)).join(",");
+    const params = fn.params.map((param) => mapCHeaderParamSignature(param.type, recordNames)).join(
+      ",",
+    );
     return `${mapCHeaderType(fn.returnType, recordNames)}(${params})`;
   } catch (error) {
     if (error instanceof TypeCError) return null;
     throw error;
   }
+}
+
+function mapCHeaderParamSignature(type: Str, recordNames: Set<Str>): Str {
+  const mapped = mapCHeaderType(type, recordNames);
+  if (mapped.endsWith("[]")) return `${mapped.slice(0, -2)}*`;
+  return mapped;
 }
 
 function headerFunctionSignatures(

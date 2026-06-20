@@ -31,6 +31,8 @@ Deno.test("generates externs from clang AST", () => {
       ]),
       functionDecl("alias_width", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("alias_width", "__int32_t (__int32_t)", [param("value", "__int32_t")]),
+      functionDecl("fill", "void (int32_t[4])", [param("items", "int32_t[4]")]),
+      functionDecl("fill", "void (int32_t *)", [param("items", "int32_t *")]),
       functionDecl("copy_ptr", "void *(void *, const void *)", [
         param("dst", "void *"),
         param("src", "const void *"),
@@ -74,6 +76,8 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "extern function add_internal(left: i32, right: u32): i32;");
   assertIncludes(output, "extern function alias_width(value: i32): i32;");
   assertSame(countOccurrences(output, "extern function alias_width"), 1);
+  assertIncludes(output, "extern function fill(items: i32[]): void;");
+  assertSame(countOccurrences(output, "extern function fill"), 1);
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function copy_text(dst: u8*, src: u8*): void;");
   assertIncludes(output, "extern function nullable_text(text: u8*): void;");
