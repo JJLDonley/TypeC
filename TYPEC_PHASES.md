@@ -966,6 +966,8 @@ function main(): i32 {
 - C typedef structs with C-compatible fields import as TypeC record aliases; namespace imports
   expose them as qualified TypeC types such as `RL.Color` while emitted C uses the original C
   typedef name.
+- Duplicate compatible header records collapse to one imported record; duplicate incompatible header
+  records are skipped safely.
 - C enums should import as namespaced integer-backed constants or enum types once enum semantics are
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely

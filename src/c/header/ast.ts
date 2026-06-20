@@ -1,5 +1,6 @@
 import { readHeaderFunction } from "c/header/function.ts";
 import { readHeaderRecord, readHeaderRecordDecl } from "c/header/records.ts";
+import { uniqueCompatibleHeaderRecords } from "c/header/record_uniqueness.ts";
 import { isJsonRecord, type JsonRecord } from "json/record.ts";
 import {
   isFalseJsonFlag,
@@ -63,7 +64,7 @@ function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]
 export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
   const records: CHeaderRecord[] = [];
   collectHeaderRecordsInto(value, records);
-  return uniqueHeaderRecords(records);
+  return uniqueCompatibleHeaderRecords(records);
 }
 
 function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {
@@ -78,10 +79,6 @@ function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): voi
   }
   const inner = value.inner;
   if (isJsonArray(inner)) { for (const child of inner) collectHeaderRecordsInto(child, records); }
-}
-
-function uniqueHeaderRecords(records: CHeaderRecord[]): CHeaderRecord[] {
-  return [...new Map(records.map((record) => [record.name, record])).values()];
 }
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
