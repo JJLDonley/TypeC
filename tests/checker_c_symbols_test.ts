@@ -1,6 +1,6 @@
-import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
-import { checkCFunctionSymbols } from "checker/c_symbols.ts";
+import { checkCFunctionSymbols, checkCTypeAliasSymbols } from "checker/c_symbols.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -38,6 +38,35 @@ Deno.test("rejects duplicate incompatible extern C symbols", () => {
   assertText(diagnostics[0]?.message ?? "", "Duplicate C function symbol 'tick'");
 });
 
+Deno.test("allows duplicate compatible C type aliases", () => {
+  const diagnostics = checkCTypeAliasSymbols([
+    alias("Color", "Color", [["r", named("u8")]]),
+    alias("Lib.Color", "Color", [["r", named("u8")]]),
+  ]);
+
+  assertSame(diagnostics.length, 0);
+});
+
+Deno.test("rejects duplicate incompatible C type aliases", () => {
+  const diagnostics = checkCTypeAliasSymbols([
+    alias("Color", "Color", [["r", named("u8")]]),
+    alias("Lib.Color", "Color", [["r", named("i32")]]),
+  ]);
+
+  assertText(diagnostics[0]?.message ?? "", "Duplicate C type symbol 'Color'");
+});
+
+Deno.test("compares nested C type aliases by emitted C names", () => {
+  const diagnostics = checkCTypeAliasSymbols([
+    alias("Inner", "Inner", [["x", named("i32")]]),
+    alias("Outer", "Outer", [["inner", named("Inner")]]),
+    alias("Lib.Inner", "Inner", [["x", named("i32")]]),
+    alias("Lib.Outer", "Outer", [["inner", named("Lib.Inner")]]),
+  ]);
+
+  assertSame(diagnostics.length, 0);
+});
+
 function fn(
   name: Str,
   cName: Str | null,
@@ -60,6 +89,21 @@ function fn(
 
 function param(name: Str, type: TypeRef): FunctionDecl["params"][usize] {
   return { name, type, span };
+}
+
+function alias(name: Str, cName: Str, fields: [Str, TypeRef][]): TypeAliasDecl {
+  return {
+    kind: "TypeAliasDecl",
+    exported: false,
+    name,
+    cName,
+    type: {
+      kind: "RecordTypeRef",
+      fields: fields.map(([fieldName, type]) => ({ name: fieldName, type, span })),
+      span,
+    },
+    span,
+  };
 }
 
 function named(name: Str): TypeRef {

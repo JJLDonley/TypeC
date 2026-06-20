@@ -1,5 +1,5 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -8,6 +8,13 @@ type b8 = boolean;
 export function checkCFunctionSymbols(functions: FunctionDecl[]): Diagnostic[] {
   return [...groupFunctionsByCName(functions).entries()].flatMap((entry) =>
     checkCFunctionGroup(entry)
+  );
+}
+
+export function checkCTypeAliasSymbols(typeAliases: TypeAliasDecl[]): Diagnostic[] {
+  const aliases = indexTypeAliases(typeAliases);
+  return [...groupTypeAliasesByCName(typeAliases).entries()].flatMap((entry) =>
+    checkCTypeAliasGroup(entry, aliases)
   );
 }
 
@@ -49,4 +56,66 @@ function sameType(left: TypeRef, right: TypeRef | undefined): b8 {
 
 function functionCName(fn: FunctionDecl): Str {
   return fn.cName ?? fn.name;
+}
+
+function indexTypeAliases(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl> {
+  return new Map<Str, TypeAliasDecl>(typeAliases.map((typeAlias) => [typeAlias.name, typeAlias]));
+}
+
+function groupTypeAliasesByCName(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl[]> {
+  const groups = new Map<Str, TypeAliasDecl[]>();
+  for (const typeAlias of typeAliases) addTypeAliasGroup(groups, typeAlias);
+  return groups;
+}
+
+function addTypeAliasGroup(groups: Map<Str, TypeAliasDecl[]>, typeAlias: TypeAliasDecl): void {
+  const name = typeAliasCName(typeAlias);
+  groups.set(name, [...(groups.get(name) ?? []), typeAlias]);
+}
+
+function checkCTypeAliasGroup(
+  [name, typeAliases]: [Str, TypeAliasDecl[]],
+  aliases: Map<Str, TypeAliasDecl>,
+): Diagnostic[] {
+  if (typeAliases.length < 2) return [];
+  if (typeAliases.every((typeAlias) => sameTypeAliasAbi(typeAlias, typeAliases[0], aliases))) {
+    return [];
+  }
+  return typeAliases.slice(1).map((typeAlias) => ({
+    message: `Duplicate C type symbol '${name}'`,
+    span: typeAlias.span,
+  }));
+}
+
+function sameTypeAliasAbi(
+  left: TypeAliasDecl,
+  right: TypeAliasDecl | undefined,
+  aliases: Map<Str, TypeAliasDecl>,
+): b8 {
+  return right !== undefined && cTypeShape(left.type, aliases) === cTypeShape(right.type, aliases);
+}
+
+function cTypeShape(type: TypeRef, aliases: Map<Str, TypeAliasDecl>): Str {
+  switch (type.kind) {
+    case "NamedTypeRef":
+      return aliases.get(type.name)?.cName ?? typeName(type);
+    case "PointerTypeRef":
+      return `${cTypeShape(type.element, aliases)}*`;
+    case "ReferenceTypeRef":
+      return `${cTypeShape(type.element, aliases)}&`;
+    case "SliceTypeRef":
+      return `Slice<${cTypeShape(type.element, aliases)}>`;
+    case "InferredArrayTypeRef":
+      return `${cTypeShape(type.element, aliases)}[]`;
+    case "FixedArrayTypeRef":
+      return `${cTypeShape(type.element, aliases)}[${type.sizeText}]`;
+    case "RecordTypeRef":
+      return `{${
+        type.fields.map((field) => `${field.name}:${cTypeShape(field.type, aliases)}`).join(";")
+      }}`;
+  }
+}
+
+function typeAliasCName(typeAlias: TypeAliasDecl): Str {
+  return typeAlias.cName ?? typeAlias.name;
 }
