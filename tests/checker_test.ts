@@ -456,6 +456,13 @@ Deno.test("rejects float literals outside target range", () => {
   );
 });
 
+Deno.test("rejects comparison operators in constants", () => {
+  assertCheckError(
+    `const BAD: bool = 1 < 2; function main(): i32 { return 0; }`,
+    "Expression is not valid in a compile-time constant",
+  );
+});
+
 Deno.test("rejects unary operators on nonnumeric constants", () => {
   assertCheckError(
     `const FLAG: bool = true; const BAD: bool = -FLAG; function main(): i32 { return 0; }`,

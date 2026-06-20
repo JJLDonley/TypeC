@@ -46,6 +46,27 @@ Deno.test("emits C for module constants", () => {
   assertIncludes(c, "return ANSWER;");
 });
 
+Deno.test("emits C for aggregate constants", () => {
+  const program = parse(lex(`
+    type Color = { r: u8; g: u8; b: u8; a: u8; };
+    const RAYWHITE: Color = { r: 245, g: 245, b: 245, a: 255 };
+    const VALUES: Array<i32, 2> = [40, 2];
+    const TITLE: Array<u8, 6> = "TypeC";
+    function main(): i32 {
+      return VALUES[1];
+    }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertIncludes(
+    c,
+    "static const Color RAYWHITE = (Color){ .r = 245, .g = 245, .b = 245, .a = 255 };",
+  );
+  assertIncludes(c, "static const i32 VALUES[2] = { 40, 2 };");
+  assertIncludes(c, 'static const u8 TITLE[6] = "TypeC";');
+});
+
 Deno.test("emits C for imported module constants", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/config.tc`, `export const ANSWER: i32 = 42;`);

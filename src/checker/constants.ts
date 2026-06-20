@@ -44,7 +44,8 @@ function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b
     case "UnaryExpr":
       return isConstantExpression(expr.operand, availableConstants);
     case "BinaryExpr":
-      return isConstantExpression(expr.left, availableConstants) &&
+      return isConstantBinaryOperator(expr.operator) &&
+        isConstantExpression(expr.left, availableConstants) &&
         isConstantExpression(expr.right, availableConstants);
     case "RecordLiteralExpr":
       return expr.fields.every((field) =>
@@ -59,6 +60,11 @@ function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b
     case "FieldAccessExpr":
       return isQualifiedConstantExpression(expr, availableConstants);
   }
+}
+
+function isConstantBinaryOperator(operator: Str): b8 {
+  return operator === "+" || operator === "-" || operator === "*" || operator === "/" ||
+    operator === "%";
 }
 
 function isQualifiedConstantExpression(
