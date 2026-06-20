@@ -19,10 +19,19 @@ Deno.test("emits required C prelude", () => {
     "typedef double   f64;",
     "typedef bool     b8;",
     "typedef size_t   usize;",
+    "typedef char c_char;",
+    "typedef signed char c_schar;",
+    "typedef unsigned char c_uchar;",
+    "typedef short c_short;",
+    "typedef unsigned short c_ushort;",
     "typedef int c_int;",
     "typedef unsigned int c_uint;",
     "typedef long c_long;",
     "typedef unsigned long c_ulong;",
+    "typedef long long c_longlong;",
+    "typedef unsigned long long c_ulonglong;",
+    "typedef float c_float;",
+    "typedef double c_double;",
   ]);
 });
 

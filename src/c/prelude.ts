@@ -1,10 +1,12 @@
 type Str = string;
 
-const cPreludeLines: Str[] = [
+const cPreludeIncludes: Str[] = [
   "#include <stdint.h>",
   "#include <stdbool.h>",
   "#include <stddef.h>",
-  "",
+];
+
+const fixedWidthAliases: Str[] = [
   "typedef uint8_t  u8;",
   "typedef uint16_t u16;",
   "typedef uint32_t u32;",
@@ -17,6 +19,9 @@ const cPreludeLines: Str[] = [
   "typedef double   f64;",
   "typedef bool     b8;",
   "typedef size_t   usize;",
+];
+
+const cAbiAliases: Str[] = [
   "typedef char c_char;",
   "typedef signed char c_schar;",
   "typedef unsigned char c_uchar;",
@@ -30,9 +35,8 @@ const cPreludeLines: Str[] = [
   "typedef unsigned long long c_ulonglong;",
   "typedef float c_float;",
   "typedef double c_double;",
-  "",
 ];
 
 export function emitCPrelude(): Str[] {
-  return [...cPreludeLines];
+  return [...cPreludeIncludes, "", ...fixedWidthAliases, ...cAbiAliases, ""];
 }
