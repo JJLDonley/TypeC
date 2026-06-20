@@ -953,8 +953,8 @@ function main(): i32 {
 - Header-generated modules can be imported by named imports or namespace imports.
 - Namespace imports are TypeC-only. Header imports emit references to the imported C symbol name;
   TypeC namespace imports emit predictable C-safe internal names to avoid collisions.
-- Emitted C function and type symbols must be unique, except repeated compatible declarations for
-  the same imported C symbol.
+- Emitted C function symbols, type symbols, and cross-kind ordinary identifiers must be unique,
+  except repeated compatible declarations for the same imported C symbol.
 - Supported C scalar types map to fixed-width TypeC names when the C type has fixed width.
 - Platform-width C scalar types map to explicit ABI aliases such as `c_int`, `c_uint`, `c_long`, and
   `c_ulong`; call sites emit those TypeC ABI aliases rather than raw C spellings.

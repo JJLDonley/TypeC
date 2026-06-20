@@ -6,6 +6,7 @@ import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
+import { checkCOrdinarySymbols as collectCOrdinarySymbolDiagnostics } from "checker/c_ordinary_symbols.ts";
 import {
   checkCFunctionSymbols as collectCFunctionSymbolDiagnostics,
   checkCTypeAliasSymbols as collectCTypeAliasSymbolDiagnostics,
@@ -61,6 +62,9 @@ class Checker {
       ...collectCFunctionSymbolDiagnostics(this.program.functions, this.program.typeAliases),
     );
     this.diagnostics.push(...collectCTypeAliasSymbolDiagnostics(this.program.typeAliases));
+    this.diagnostics.push(
+      ...collectCOrdinarySymbolDiagnostics(this.program.functions, this.program.typeAliases),
+    );
   }
 
   private checkFunction(fn: FunctionDecl): void {
