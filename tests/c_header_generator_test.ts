@@ -41,6 +41,7 @@ Deno.test("generates externs from clang AST", () => {
         param("dst", "char *restrict"),
         param("src", "const char *restrict"),
       ]),
+      functionDecl("enabled", "_Bool (bool)", [param("flag", "bool")]),
       functionDecl("nullable_text", "void (char * _Nullable)", [param("text", "char * _Nullable")]),
       functionDecl("use_keyword", "void (int32_t, int32_t)", [
         param("function", "int32_t"),
@@ -80,6 +81,7 @@ Deno.test("generates externs from clang AST", () => {
   assertSame(countOccurrences(output, "extern function fill"), 1);
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function copy_text(dst: u8*, src: u8*): void;");
+  assertIncludes(output, "extern function enabled(flag: bool): bool;");
   assertIncludes(output, "extern function nullable_text(text: u8*): void;");
   assertIncludes(
     output,

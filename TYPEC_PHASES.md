@@ -960,6 +960,7 @@ function main(): i32 {
 - Emitted C function symbols, type symbols, and cross-kind ordinary identifiers must be unique,
   except repeated compatible declarations for the same imported C symbol.
 - Supported C scalar types map to fixed-width TypeC names when the C type has fixed width.
+- C `bool` and `_Bool` map to TypeC `bool`, which emits as C `b8`.
 - Platform-width C scalar types map to explicit ABI aliases such as `c_int`, `c_uint`, `c_long`, and
   `c_ulong`; call sites emit those TypeC ABI aliases rather than raw C spellings.
 - Pointer types map recursively to TypeC `T*` / `Ptr<T>`.

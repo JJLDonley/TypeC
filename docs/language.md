@@ -202,8 +202,9 @@ import { Color } from "raylib";
 
 Header imports are virtual TypeC modules generated from clang AST output. Supported functions,
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
-safely. Unsupported function pointers, callbacks, variadics, old-style declarations, array returns,
-unsafe macros, enums, constants, and unknown signatures are skipped until specified.
+safely. C `bool` and `_Bool` import as TypeC `bool`, which emits as `b8`. Unsupported function
+pointers, callbacks, variadics, old-style declarations, array returns, unsafe macros, enums,
+constants, and unknown signatures are skipped until specified.
 
 Runnable examples:
 
