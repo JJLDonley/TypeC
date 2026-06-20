@@ -13,6 +13,7 @@ Deno.test("generates externs from clang AST", () => {
         field("b", "unsigned char"),
         field("a", "unsigned char"),
       ]),
+      functionDecl("draw", "void (Color)", [param("tint", "Color")]),
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [
         param("left", "int32_t"),
         param("right", "int32_t"),
@@ -65,6 +66,7 @@ Deno.test("generates externs from clang AST", () => {
   });
 
   assertIncludes(output, "export type Color = { r: u8; g: u8; b: u8; a: u8; };");
+  assertIncludes(output, "extern function draw(tint: Color): void;");
   assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
   assertExcludes(output, "extern function conflict");

@@ -8,8 +8,10 @@ import { directoryOf } from "paths";
 type Str = string;
 
 export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null = null): Str {
-  return `${formatHeaderRecordAliases(collectHeaderRecords(ast), includeDir)}${
-    formatHeaderExterns(collectHeaderFunctions(ast), includeDir)
+  const records = collectHeaderRecords(ast);
+  const recordNames = new Set<Str>(records.map((record) => record.name));
+  return `${formatHeaderRecordAliases(records, includeDir)}${
+    formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)
   }`;
 }
 

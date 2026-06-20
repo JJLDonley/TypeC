@@ -10,10 +10,12 @@ Deno.test("formats supported C header record aliases", () => {
       "unsigned char",
     ]]),
     record("Vec2", [["x", "float"], ["y", "float"]]),
+    record("Paint", [["tint", "Color"]]),
   ]);
 
   assertIncludes(output, "export type Color = { r: u8; g: u8; b: u8; a: u8; };");
   assertIncludes(output, "export type Vec2 = { x: f32; y: f32; };");
+  assertIncludes(output, "export type Paint = { tint: Color; };");
 });
 
 Deno.test("skips unsupported C header record aliases", () => {

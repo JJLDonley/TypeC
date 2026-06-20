@@ -16,11 +16,23 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("const char [static 8]"), "u8[]");
 });
 
+Deno.test("maps C header record types", () => {
+  const records = new Set<Str>(["Color"]);
+
+  assertSame(mapCHeaderType("Color", records), "Color");
+  assertSame(mapCHeaderType("struct Color *", records), "Color*");
+});
+
 Deno.test("rejects unsupported C header types", () => {
   try {
     mapCHeaderType("__unsupported_t");
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === "Unsupported C type '__unsupported_t'")) return;
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) =>
+        diagnostic.message === "Unsupported C type '__unsupported_t'"
+      )
+    ) return;
   }
   throw new Error("Expected unsupported C type error");
 });
