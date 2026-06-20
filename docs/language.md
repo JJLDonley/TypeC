@@ -182,9 +182,9 @@ function main(): i32 {
 ```
 
 Header imports are virtual TypeC modules generated from clang AST output. Supported functions,
-pointers, arrays, typedef structs, enums, and constants are imported when they can be represented
-safely. Unsupported function pointers, callbacks, variadics, old-style declarations, unsafe macros,
-and unknown signatures are skipped.
+pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
+safely. Unsupported function pointers, callbacks, variadics, old-style declarations, array returns,
+unsafe macros, enums, constants, and unknown signatures are skipped until specified.
 
 C header mapping goals:
 
@@ -194,6 +194,7 @@ const char*           -> Ptr<u8> / u8*
 uint8_t*              -> Ptr<u8> / u8*
 T*                    -> Ptr<T> / T*
 T[N] parameter        -> Ptr<T> / T[] ABI parameter
+T[N] record field     -> Array<T, N> / T[N]
 fixed-width scalars   -> i8/u8/i16/u16/i32/u32/i64/u64/f32/f64
 platform C scalars    -> explicit ABI aliases when required
 ```
