@@ -39,7 +39,8 @@ function hasArrayReturnType(fn: CHeaderFunction): b8 {
 }
 
 export function isSupportedHeaderConstant(constant: CHeaderConstant): b8 {
-  return isTypeCIdentifier(constant.name) && isConstType(constant.type);
+  return isTypeCIdentifier(constant.name) &&
+    (isConstType(constant.type) || isGeneratedMacroType(constant.type));
 }
 
 function isStaticFunction(fn: CHeaderFunction): b8 {
@@ -48,4 +49,8 @@ function isStaticFunction(fn: CHeaderFunction): b8 {
 
 function isConstType(type: Str): b8 {
   return type.includes("const");
+}
+
+function isGeneratedMacroType(type: Str): b8 {
+  return type === "i32" || type === "u32" || type === "i64" || type === "u64" || type === "f64";
 }

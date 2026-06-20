@@ -6,6 +6,7 @@ import {
 import { readClangHeaderAst } from "c/header/clang.ts";
 import { formatHeaderConstants } from "c/header/constants.ts";
 import { formatHeaderExterns } from "c/header/externs.ts";
+import { collectHeaderMacroConstants } from "c/header/macros.ts";
 import { formatHeaderRecordAliases } from "c/header/record_aliases.ts";
 import { selectHeaderRecords } from "c/header/record_selection.ts";
 import { supportedHeaderRecords } from "c/header/record_support.ts";
@@ -15,12 +16,21 @@ import { directoryOf } from "paths";
 type Str = string;
 
 export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null = null): Str {
+  return generateExternsFromHeaderParts(ast, [], includeDir);
+}
+
+function generateExternsFromHeaderParts(
+  ast: unknown,
+  macroConstants: ReturnType<typeof collectHeaderMacroConstants>,
+  includeDir: Str | null,
+): Str {
   const records = supportedHeaderRecords(
     selectHeaderRecords(collectHeaderRecords(ast), includeDir),
   );
   const recordNames = new Set<Str>(records.map((record) => record.name));
+  const constants = [...collectHeaderConstants(ast), ...macroConstants];
   return `${formatHeaderRecordAliases(records)}${
-    formatHeaderConstants(collectHeaderConstants(ast), includeDir, recordNames)
+    formatHeaderConstants(constants, includeDir, recordNames)
   }${formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)}`;
 }
 
@@ -29,6 +39,11 @@ export async function generateExternsFromHeader(
   compilerFlags: Str[] = [],
   projectDir: Str = Deno.cwd(),
 ): Promise<Str> {
-  const ast = await readClangHeaderAst(headerPath, headerCompilerFlags(compilerFlags, projectDir));
-  return generateExternsFromClangAst(ast, directoryOf(headerPath));
+  const flags = headerCompilerFlags(compilerFlags, projectDir);
+  const ast = await readClangHeaderAst(headerPath, flags);
+  const macroConstants = collectHeaderMacroConstants(
+    await Deno.readTextFile(headerPath),
+    headerPath,
+  );
+  return generateExternsFromHeaderParts(ast, macroConstants, directoryOf(headerPath));
 }
