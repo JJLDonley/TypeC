@@ -1,7 +1,7 @@
 import { readHeaderParams } from "c/header/params.ts";
 import type { CHeaderFunction } from "c/header/ast.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import { type JsonRecord, isJsonRecord } from "json/record.ts";
+import { isJsonRecord, type JsonRecord } from "json/record.ts";
 import { isJsonArray, isJsonText, readJsonText } from "json/values.ts";
 
 type Str = string;
@@ -20,7 +20,7 @@ function readFunction(value: JsonRecord): CHeaderFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
   const functionType = readJsonText(type.qualType, `Function '${value.name}' has no type`);
   return {
-    name: value.name as Str,
+    name: readJsonText(value.name, "Function has no name"),
     functionType,
     returnType: readReturnType(functionType),
     params: readHeaderParams(value.inner),

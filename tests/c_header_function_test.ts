@@ -36,7 +36,19 @@ Deno.test("reads included source files and function bodies", () => {
 
 Deno.test("skips malformed C header functions", () => {
   assertSame(readHeaderFunction({ kind: "FunctionDecl", name: "bad" }) === null, true);
-  assertSame(readHeaderFunction({ kind: "FunctionDecl", name: "bad", type: { qualType: "not a function" } }) === null, true);
+  assertSame(
+    readHeaderFunction({ kind: "FunctionDecl", name: 1, type: { qualType: "void (void)" } }) ===
+      null,
+    true,
+  );
+  assertSame(
+    readHeaderFunction({
+      kind: "FunctionDecl",
+      name: "bad",
+      type: { qualType: "not a function" },
+    }) === null,
+    true,
+  );
 });
 
 function param(name: Str, type: Str): unknown {
