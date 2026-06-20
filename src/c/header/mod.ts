@@ -9,6 +9,7 @@ export * from "c/header/params.ts";
 export * from "c/header/record_aliases.ts";
 export * from "c/header/record_order.ts";
 export * from "c/header/record_selection.ts";
+export * from "c/header/record_support.ts";
 export * from "c/header/record_uniqueness.ts";
 export * from "c/header/record_type_usage.ts";
 export * from "c/header/records.ts";

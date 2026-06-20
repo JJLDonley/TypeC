@@ -99,6 +99,19 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "set_callback");
 });
 
+Deno.test("skips functions that use unsupported records", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [
+      typedefRecord("Bad", [field("x", "__unsupported_t")]),
+      functionDecl("use_bad", "void (Bad)", [param("value", "Bad")]),
+    ],
+  });
+
+  assertExcludes(output, "export type Bad");
+  assertExcludes(output, "use_bad");
+});
+
 Deno.test("generates dependent records in dependency order", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
