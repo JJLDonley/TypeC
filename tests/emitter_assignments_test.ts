@@ -1,6 +1,7 @@
 import type { Expression, FunctionDecl, TypeAliasDecl } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
-import { emitAssignment, type LocalTypes } from "emitter/assignments.ts";
+import { emitAssignment } from "emitter/assignments.ts";
+import type { LocalTypes } from "emitter/local_types.ts";
 
 type Str = string;
 

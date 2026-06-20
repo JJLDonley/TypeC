@@ -1,9 +1,9 @@
 import type { Statement } from "core/ast.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
+import type { LocalTypes } from "emitter/local_types.ts";
 
 type Str = string;
-export type LocalTypes = Map<Str, Str>;
 
 type AssignmentStatement = Extract<Statement, { kind: "AssignmentStmt" }>;
 

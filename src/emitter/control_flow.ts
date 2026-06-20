@@ -1,8 +1,8 @@
 import type { Statement } from "core/ast.ts";
-import type { LocalTypes } from "emitter/assignments.ts";
 import { emitBracedBlock, emitIfElseBlock } from "emitter/blocks.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression } from "emitter/expressions.ts";
+import { childLocalTypes, type LocalTypes } from "emitter/local_types.ts";
 
 type Str = string;
 
@@ -63,6 +63,6 @@ function emitChildStatements(
   locals: LocalTypes,
   emitStatement: StatementEmitter,
 ): Str[] {
-  const childLocals = new Map(locals);
+  const childLocals = childLocalTypes(locals);
   return statements.map((child) => emitStatement(child, returnType, context, childLocals));
 }

@@ -1,9 +1,9 @@
 import type { Statement } from "core/ast.ts";
-import { emitAssignment, type LocalTypes } from "emitter/assignments.ts";
+import { emitAssignment } from "emitter/assignments.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitIf, emitWhile } from "emitter/control_flow.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
-import { emitCTypeName } from "emitter/type_names.ts";
+import { type LocalTypes, registerLocalType } from "emitter/local_types.ts";
 import { emitVarDecl } from "emitter/var_declarations.ts";
 
 type Str = string;
@@ -22,7 +22,7 @@ export function emitStatement(
     case "ExpressionStmt":
       return `${emitExpression(stmt.expression, context)};`;
     case "VarDeclStmt":
-      locals.set(stmt.name, emitCTypeName(stmt.type, context.typeAliases));
+      registerLocalType(locals, stmt.name, stmt.type, context.typeAliases);
       return emitVarDecl(stmt, context);
     case "AssignmentStmt":
       return emitAssignment(stmt, context, locals);
