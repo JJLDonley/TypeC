@@ -7,6 +7,7 @@ import { parse } from "parser";
 import { resolve } from "core/resolver.ts";
 
 type Str = string;
+type usize = number;
 
 Deno.test("tracks whether compiled source has main", async () => {
   const dir = await Deno.makeTempDir();
@@ -98,6 +99,23 @@ Deno.test("emits C calls for namespace header imports", async () => {
   assertIncludes(c, "void tick(void);");
   assertIncludes(c, "tick();");
   assertNotIncludes(c, "Lib.tick");
+});
+
+Deno.test("deduplicates direct and namespace header record imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `typedef struct Color { unsigned char r; unsigned char g; unsigned char b; unsigned char a; } Color;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Color } from "./lib.h"; import * as Lib from "./lib.h"; function main(): i32 { const a: Color = { r: 1, g: 2, b: 3, a: 4 }; const b: Lib.Color = { r: 1, g: 2, b: 3, a: 4 }; return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertCount(c, "} Color;", 1);
+  assertNotIncludes(c, "Lib.Color");
 });
 
 Deno.test("emits C for namespace header record imports", async () => {
@@ -365,6 +383,13 @@ function assertIncludes(haystack: Str, needle: Str): void {
 
 function assertNotIncludes(haystack: Str, needle: Str): void {
   if (haystack.includes(needle)) throw new Error(`Expected output not to include ${needle}`);
+}
+
+function assertCount(haystack: Str, needle: Str, expected: usize): void {
+  const actual = haystack.split(needle).length - 1;
+  if (actual !== expected) {
+    throw new Error(`Expected ${expected} occurrences of ${needle}, got ${actual}`);
+  }
 }
 
 function assertEqualText(actual: Str[], expected: Str[]): void {

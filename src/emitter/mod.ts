@@ -5,8 +5,8 @@ import { emitCType } from "c/type.ts";
 import { createEmitContext, type EmitContext } from "emitter/context.ts";
 import { emitFunctionPrototype, emitFunctionSignature } from "emitter/functions.ts";
 import { emitStatement } from "emitter/statements.ts";
+import { collectEmittedTypeAliases } from "emitter/type_alias_collection.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
-import { emitTypeAlias } from "emitter/type_aliases.ts";
 
 type Str = string;
 
@@ -14,8 +14,8 @@ export function emitC(program: CheckedProgram): Str {
   const out: Str[] = [];
   const context = createEmitContext(program);
   out.push(...emitCPrelude());
-  for (const typeAlias of program.typeAliases) {
-    out.push(emitTypeAlias(typeAlias, context));
+  for (const typeAlias of collectEmittedTypeAliases(program.typeAliases, context)) {
+    out.push(typeAlias.text);
     out.push("");
   }
   for (const fn of program.functions.filter((fn) => fn.external)) {
