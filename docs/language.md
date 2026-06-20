@@ -253,13 +253,20 @@ type information. C `char*` and `const char*` map to `Ptr<u8>` with `u8*` retain
 compact syntax.
 
 ```ts
-extern function memset(data: void*, value: i32, count: usize): void*;
+extern function memset(data: Ptr<void>, value: i32, count: usize): Ptr<void>;
 
 function main(): i32 {
-  const bytes: u8[] = [0, 0, 0];
+  const bytes: Array<u8> = [0, 0, 0];
   memset(bytes, 42, 3);
   return 42;
 }
+```
+
+Runnable examples:
+
+```bash
+deno run -A src/driver/main.ts run examples/c_void_pointer.tc
+deno run -A src/driver/main.ts run examples/c_void_pointer_canonical.tc
 ```
 
 ## Run
