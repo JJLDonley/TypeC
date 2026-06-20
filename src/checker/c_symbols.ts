@@ -5,9 +5,13 @@ import { typeName } from "core/type_ref.ts";
 type Str = string;
 type b8 = boolean;
 
-export function checkCFunctionSymbols(functions: FunctionDecl[]): Diagnostic[] {
+export function checkCFunctionSymbols(
+  functions: FunctionDecl[],
+  typeAliases: TypeAliasDecl[] = [],
+): Diagnostic[] {
+  const aliases = indexTypeAliases(typeAliases);
   return [...groupFunctionsByCName(functions).entries()].flatMap((entry) =>
-    checkCFunctionGroup(entry)
+    checkCFunctionGroup(entry, aliases)
   );
 }
 
@@ -29,29 +33,52 @@ function addFunctionGroup(groups: Map<Str, FunctionDecl[]>, fn: FunctionDecl): v
   groups.set(name, [...(groups.get(name) ?? []), fn]);
 }
 
-function checkCFunctionGroup([name, functions]: [Str, FunctionDecl[]]): Diagnostic[] {
+function checkCFunctionGroup(
+  [name, functions]: [Str, FunctionDecl[]],
+  aliases: Map<Str, TypeAliasDecl>,
+): Diagnostic[] {
   if (functions.length < 2) return [];
-  if (isCompatibleExternGroup(functions)) return [];
+  if (isCompatibleExternGroup(functions, aliases)) return [];
   return functions.slice(1).map((fn) => ({
     message: `Duplicate C function symbol '${name}'`,
     span: fn.span,
   }));
 }
 
-function isCompatibleExternGroup(functions: FunctionDecl[]): b8 {
+function isCompatibleExternGroup(functions: FunctionDecl[], aliases: Map<Str, TypeAliasDecl>): b8 {
   return functions.every((fn) => fn.external) &&
-    functions.every((fn) => sameFunctionAbi(fn, functions[0]));
+    functions.every((fn) => sameFunctionAbi(fn, functions[0], aliases));
 }
 
-function sameFunctionAbi(left: FunctionDecl, right: FunctionDecl | undefined): b8 {
+function sameFunctionAbi(
+  left: FunctionDecl,
+  right: FunctionDecl | undefined,
+  aliases: Map<Str, TypeAliasDecl>,
+): b8 {
   if (!right) return false;
-  if (typeName(left.returnType) !== typeName(right.returnType)) return false;
+  if (cTypeShape(left.returnType, aliases) !== cTypeShape(right.returnType, aliases)) return false;
   if (left.params.length !== right.params.length) return false;
-  return left.params.every((param, index) => sameType(param.type, right.params[index]?.type));
+  return left.params.every((param, index) =>
+    sameParamAbi(param.type, right.params[index]?.type, aliases)
+  );
 }
 
-function sameType(left: TypeRef, right: TypeRef | undefined): b8 {
-  return right !== undefined && typeName(left) === typeName(right);
+function sameParamAbi(
+  left: TypeRef,
+  right: TypeRef | undefined,
+  aliases: Map<Str, TypeAliasDecl>,
+): b8 {
+  return right !== undefined && cParamShape(left, aliases) === cParamShape(right, aliases);
+}
+
+function cParamShape(type: TypeRef, aliases: Map<Str, TypeAliasDecl>): Str {
+  switch (type.kind) {
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+      return `${cTypeShape(type.element, aliases)}*`;
+    default:
+      return cTypeShape(type, aliases);
+  }
 }
 
 function functionCName(fn: FunctionDecl): Str {
@@ -102,7 +129,7 @@ function cTypeShape(type: TypeRef, aliases: Map<Str, TypeAliasDecl>): Str {
     case "PointerTypeRef":
       return `${cTypeShape(type.element, aliases)}*`;
     case "ReferenceTypeRef":
-      return `${cTypeShape(type.element, aliases)}&`;
+      return `${cTypeShape(type.element, aliases)}*`;
     case "SliceTypeRef":
       return `Slice<${cTypeShape(type.element, aliases)}>`;
     case "InferredArrayTypeRef":

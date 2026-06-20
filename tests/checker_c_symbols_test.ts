@@ -38,6 +38,30 @@ Deno.test("rejects duplicate incompatible extern C symbols", () => {
   assertText(diagnostics[0]?.message ?? "", "Duplicate C function symbol 'tick'");
 });
 
+Deno.test("compares extern C function symbols by emitted ABI", () => {
+  const diagnostics = checkCFunctionSymbols([
+    fn("first", null, true, [param("values", fixedArray(named("i32"), "3"))], named("void")),
+    fn("Lib.first", "first", true, [param("values", inferredArray(named("i32")))], named("void")),
+    fn("use", null, true, [param("value", pointer(named("i32")))], named("void")),
+    fn("Lib.use", "use", true, [param("value", reference(named("i32")))], named("void")),
+  ]);
+
+  assertSame(diagnostics.length, 0);
+});
+
+Deno.test("compares extern C function aliases by emitted C names", () => {
+  const aliases = [
+    alias("Color", "Color", [["r", named("u8")]]),
+    alias("Lib.Color", "Color", [["r", named("u8")]]),
+  ];
+  const diagnostics = checkCFunctionSymbols([
+    fn("draw", null, true, [param("tint", named("Color"))], named("void")),
+    fn("Lib.draw", "draw", true, [param("tint", named("Lib.Color"))], named("void")),
+  ], aliases);
+
+  assertSame(diagnostics.length, 0);
+});
+
 Deno.test("allows duplicate compatible C type aliases", () => {
   const diagnostics = checkCTypeAliasSymbols([
     alias("Color", "Color", [["r", named("u8")]]),
@@ -108,6 +132,22 @@ function alias(name: Str, cName: Str, fields: [Str, TypeRef][]): TypeAliasDecl {
 
 function named(name: Str): TypeRef {
   return { kind: "NamedTypeRef", name, span };
+}
+
+function pointer(element: TypeRef): TypeRef {
+  return { kind: "PointerTypeRef", element, span };
+}
+
+function reference(element: TypeRef): TypeRef {
+  return { kind: "ReferenceTypeRef", element, span };
+}
+
+function inferredArray(element: TypeRef): TypeRef {
+  return { kind: "InferredArrayTypeRef", element, span };
+}
+
+function fixedArray(element: TypeRef, sizeText: Str): TypeRef {
+  return { kind: "FixedArrayTypeRef", element, sizeText, span };
 }
 
 function assertSame(actual: usize, expected: usize): void {

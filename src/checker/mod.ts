@@ -57,7 +57,9 @@ class Checker {
     this.functions = declarations.functions;
     this.typeAliases = declarations.typeAliases;
     this.diagnostics.push(...declarations.diagnostics);
-    this.diagnostics.push(...collectCFunctionSymbolDiagnostics(this.program.functions));
+    this.diagnostics.push(
+      ...collectCFunctionSymbolDiagnostics(this.program.functions, this.program.typeAliases),
+    );
     this.diagnostics.push(...collectCTypeAliasSymbolDiagnostics(this.program.typeAliases));
   }
 
