@@ -463,6 +463,13 @@ Deno.test("rejects comparison operators in constants", () => {
   );
 });
 
+Deno.test("rejects overflowing integer constant expressions", () => {
+  assertCheckError(
+    `const BAD: u8 = 255 + 1; function main(): i32 { return 0; }`,
+    "Integer constant '256' is out of range for 'u8'",
+  );
+});
+
 Deno.test("rejects unary operators on nonnumeric constants", () => {
   assertCheckError(
     `const FLAG: bool = true; const BAD: bool = -FLAG; function main(): i32 { return 0; }`,

@@ -120,14 +120,14 @@ class Checker {
   }
 
   private checkConstants(): void {
-    const available = new Set<Str>();
+    const available = new Map<Str, ConstDecl>();
     for (const constant of this.program.constants ?? []) {
       this.checkConstant(constant, available);
-      available.add(constant.name);
+      available.set(constant.name, constant);
     }
   }
 
-  private checkConstant(constant: ConstDecl, availableConstants: Set<Str>): void {
+  private checkConstant(constant: ConstDecl, availableConstants: Map<Str, ConstDecl>): void {
     this.diagnostics.push(
       ...checkConstantValue(
         constant,

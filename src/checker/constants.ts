@@ -1,3 +1,5 @@
+import { evaluateIntegerConstant } from "checker/constant_values.ts";
+import { integerRange } from "checker/types.ts";
 import type { ConstDecl, Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -10,12 +12,14 @@ type ExpectedTypeResolver = (expr: Expression, expected: TypeName) => TypeName;
 
 export function checkConstantValue(
   constant: ConstDecl,
-  availableConstants: Set<Str>,
+  availableConstants: Map<Str, ConstDecl>,
   resolveExpectedType: ExpectedTypeResolver,
 ): Diagnostic[] {
+  const expectedType = typeName(constant.type);
   return [
     ...checkConstantExpression(constant.initializer, availableConstants),
     ...checkConstantAssignable(constant, resolveExpectedType),
+    ...checkConstantIntegerRange(constant.initializer, expectedType, availableConstants),
   ];
 }
 
@@ -27,12 +31,30 @@ function checkConstantAssignable(
   return [];
 }
 
-function checkConstantExpression(expr: Expression, availableConstants: Set<Str>): Diagnostic[] {
+function checkConstantIntegerRange(
+  expr: Expression,
+  expectedType: TypeName,
+  availableConstants: Map<Str, ConstDecl>,
+): Diagnostic[] {
+  const range = integerRange(expectedType);
+  if (range === null) return [];
+  const value = evaluateIntegerConstant(expr, availableConstants);
+  if (value === null || (value >= range.min && value <= range.max)) return [];
+  return [{
+    message: `Integer constant '${value}' is out of range for '${expectedType}'`,
+    span: expr.span,
+  }];
+}
+
+function checkConstantExpression(
+  expr: Expression,
+  availableConstants: Map<Str, ConstDecl>,
+): Diagnostic[] {
   if (isConstantExpression(expr, availableConstants)) return [];
   return [{ message: `Expression is not valid in a compile-time constant`, span: expr.span }];
 }
 
-function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b8 {
+function isConstantExpression(expr: Expression, availableConstants: Map<Str, ConstDecl>): b8 {
   switch (expr.kind) {
     case "IntegerLiteral":
     case "FloatLiteral":
@@ -69,7 +91,7 @@ function isConstantBinaryOperator(operator: Str): b8 {
 
 function isQualifiedConstantExpression(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
-  availableConstants: Set<Str>,
+  availableConstants: Map<Str, ConstDecl>,
 ): b8 {
   if (expr.operand.kind !== "IdentifierExpr") return false;
   return availableConstants.has(`${expr.operand.name}.${expr.field}`);
