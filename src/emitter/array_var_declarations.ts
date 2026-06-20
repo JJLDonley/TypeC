@@ -1,8 +1,9 @@
-import type { Expression, Statement } from "core/ast.ts";
+import type { Expression, FixedArrayTypeRef, Statement } from "core/ast.ts";
 import { cStringByteLength } from "core/c_strings.ts";
-import { emitCType } from "c/type.ts";
+import { emitCDeclarator, emitCType } from "c/type.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpressionExpected } from "emitter/expressions.ts";
+import { emitCTypeName } from "emitter/type_names.ts";
 import { emitCStringLiteral } from "emitter/strings.ts";
 
 type Str = string;
@@ -40,11 +41,24 @@ function arrayDeclShape(stmt: VarDeclStatement, context: EmitContext): {
   expectedType: Str;
 } {
   if (!isArrayVarDecl(stmt)) throw new Error("Array declarations require array types");
-  const element = emitCType(stmt.type.element, context.typeAliases);
-  const length = arrayLength(stmt);
+  const type = concreteArrayDeclType(stmt);
   return {
-    declarator: arrayDeclarator(element, stmt.name, length),
-    expectedType: `${element}[${length}]`,
+    declarator: emitCDeclarator(type, stmt.name, context.typeAliases),
+    expectedType: emitCTypeName(type, context.typeAliases),
+  };
+}
+
+function concreteArrayDeclType(
+  stmt: VarDeclStatement & {
+    type: Extract<VarDeclStatement["type"], { kind: "InferredArrayTypeRef" | "FixedArrayTypeRef" }>;
+  },
+): FixedArrayTypeRef {
+  if (stmt.type.kind === "FixedArrayTypeRef") return stmt.type;
+  return {
+    kind: "FixedArrayTypeRef",
+    element: stmt.type.element,
+    sizeText: arrayLength(stmt),
+    span: stmt.type.span,
   };
 }
 

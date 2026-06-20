@@ -1,6 +1,7 @@
 import type { TypeAliasDecl, TypeRef } from "core/ast.ts";
 
 type Str = string;
+type usize = number;
 
 export type CTypeAliases = Map<Str, TypeAliasDecl>;
 
@@ -30,14 +31,9 @@ export function emitCDeclarator(
   name: Str,
   aliases: CTypeAliases = new Map<Str, TypeAliasDecl>(),
 ): Str {
-  switch (type.kind) {
-    case "InferredArrayTypeRef":
-      return `${emitCType(type.element, aliases)}* ${name}`;
-    case "FixedArrayTypeRef":
-      return `${emitCType(type.element, aliases)} ${name}[${type.sizeText}]`;
-    default:
-      return `${emitCType(type, aliases)} ${name}`;
-  }
+  if (type.kind === "FixedArrayTypeRef") return emitFixedArrayCDeclarator(type, name, aliases);
+  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element, aliases)}* ${name}`;
+  return `${emitCType(type, aliases)} ${name}`;
 }
 
 export function emitCParamDeclarator(
@@ -45,13 +41,65 @@ export function emitCParamDeclarator(
   name: Str,
   aliases: CTypeAliases = new Map<Str, TypeAliasDecl>(),
 ): Str {
-  switch (type.kind) {
-    case "InferredArrayTypeRef":
-    case "FixedArrayTypeRef":
-      return `${emitCType(type.element, aliases)}* ${name}`;
-    default:
-      return `${emitCType(type, aliases)} ${name}`;
+  if (type.kind === "FixedArrayTypeRef") return emitFixedArrayParamCDeclarator(type, name, aliases);
+  if (type.kind === "InferredArrayTypeRef") {
+    return emitInferredArrayParamCDeclarator(type, name, aliases);
   }
+  return `${emitCType(type, aliases)} ${name}`;
+}
+
+function emitInferredArrayParamCDeclarator(
+  type: Extract<TypeRef, { kind: "InferredArrayTypeRef" }>,
+  name: Str,
+  aliases: CTypeAliases,
+): Str {
+  if (type.element.kind !== "FixedArrayTypeRef") {
+    return `${emitCType(type.element, aliases)}* ${name}`;
+  }
+  const shape = fixedArrayShape(type.element);
+  return `${emitCType(shape.element, aliases)} (*${name})${arrayDimensions(shape.sizes)}`;
+}
+
+function emitFixedArrayCDeclarator(
+  type: Extract<TypeRef, { kind: "FixedArrayTypeRef" }>,
+  name: Str,
+  aliases: CTypeAliases,
+): Str {
+  const shape = fixedArrayShape(type);
+  return `${emitCType(shape.element, aliases)} ${name}${arrayDimensions(shape.sizes)}`;
+}
+
+function emitFixedArrayParamCDeclarator(
+  type: Extract<TypeRef, { kind: "FixedArrayTypeRef" }>,
+  name: Str,
+  aliases: CTypeAliases,
+): Str {
+  const shape = fixedArrayShape(type);
+  if (shape.sizes.length === 1) return `${emitCType(shape.element, aliases)}* ${name}`;
+  return `${emitCType(shape.element, aliases)} (*${name})${arrayDimensions(shape.sizes.slice(1))}`;
+}
+
+type FixedArrayShape = {
+  element: TypeRef;
+  sizes: Str[];
+};
+
+function fixedArrayShape(type: Extract<TypeRef, { kind: "FixedArrayTypeRef" }>): FixedArrayShape {
+  const sizes: Str[] = [];
+  let element: TypeRef = type;
+  while (element.kind === "FixedArrayTypeRef") {
+    sizes.push(element.sizeText);
+    element = element.element;
+  }
+  return { element, sizes };
+}
+
+function arrayDimensions(sizes: Str[]): Str {
+  return sizes.map(arrayDimension).join("");
+}
+
+function arrayDimension(size: Str, _index: usize): Str {
+  return `[${size}]`;
 }
 
 function emitNamedCType(name: Str, aliases: CTypeAliases): Str {

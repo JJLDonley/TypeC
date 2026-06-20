@@ -14,6 +14,7 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("unsigned long"), "c_ulong");
   assertSame(mapCHeaderType("int32_t[4]"), "i32[]");
   assertSame(mapCHeaderType("const char [static 8]"), "u8[]");
+  assertSame(mapCHeaderType("int32_t (*)[3]"), "Array<Array<i32, 3>>");
 });
 
 Deno.test("maps C header record types", () => {
@@ -23,9 +24,13 @@ Deno.test("maps C header record types", () => {
   assertSame(mapCHeaderType("struct Color *", records), "Color*");
 });
 
-Deno.test("rejects nested C array types", () => {
+Deno.test("maps fully fixed nested C array types", () => {
+  assertSame(mapCHeaderType("int32_t[2][3]"), "Array<Array<i32, 3>, 2>");
+});
+
+Deno.test("rejects unsized nested C array types", () => {
   try {
-    mapCHeaderType("int32_t[2][3]");
+    mapCHeaderType("int32_t[][3]");
   } catch (error) {
     if (error instanceof TypeCError) return;
   }

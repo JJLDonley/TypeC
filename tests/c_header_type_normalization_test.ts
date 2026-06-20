@@ -17,11 +17,13 @@ Deno.test("normalizes C header type spelling", () => {
 Deno.test("extracts C array element types", () => {
   assertSame(cArrayElementType("int32_t[4]") ?? "", "int32_t");
   assertSame(cArrayElementType("char[static 8]") ?? "", "char");
+  assertSame(cArrayElementType("int32_t[2][3]") ?? "", "int32_t[3]");
 });
 
 Deno.test("extracts C array sizes", () => {
   assertSame(cArrayType("int32_t[4]")?.size ?? "", "4");
   assertSame(cArrayType("char[static 8]")?.size ?? "", "static 8");
+  assertSame(cArrayType("int32_t[2][3]")?.size ?? "", "2");
 });
 
 Deno.test("detects fixed C array sizes", () => {

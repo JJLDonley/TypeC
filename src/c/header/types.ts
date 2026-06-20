@@ -1,4 +1,13 @@
-import { cArrayElementType, isNestedCArrayType } from "c/header/array_types.ts";
+import {
+  cArrayElementType,
+  cArrayShape,
+  cPointerToArrayShape,
+  isFixedCArraySize,
+  isFullyFixedCArrayType,
+  isNestedCArrayType,
+  typeCArrayType,
+} from "c/header/array_types.ts";
+import type { CPointerToArrayShape } from "c/header/array_types.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
 import { mapScalarCHeaderType } from "c/header/scalar_types.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
@@ -8,17 +17,38 @@ type Str = string;
 
 export function mapCHeaderType(type: Str, recordNames: Set<Str> = new Set<Str>()): Str {
   const normalized = normalizeCHeaderType(type);
+  const pointerArray = cPointerToArrayShape(normalized);
+  if (pointerArray) return mapCPointerToArrayHeaderType(pointerArray, type, recordNames);
   const arrayElement = cArrayElementType(normalized);
-  if (arrayElement) {
-    if (isNestedCArrayType(normalized)) throw unsupportedCHeaderType(type);
-    return `${mapCHeaderType(arrayElement, recordNames)}[]`;
-  }
+  if (arrayElement) return mapCArrayHeaderType(normalized, arrayElement, type, recordNames);
   if (normalized.endsWith("*")) return `${mapCHeaderType(normalized.slice(0, -1), recordNames)}*`;
   const record = mapRecordCHeaderType(normalized, recordNames);
   if (record) return record;
   const scalar = mapScalarCHeaderType(normalized);
   if (scalar) return scalar;
   throw unsupportedCHeaderType(type);
+}
+
+function mapCPointerToArrayHeaderType(
+  shape: CPointerToArrayShape,
+  original: Str,
+  recordNames: Set<Str>,
+): Str {
+  if (!shape.sizes.every(isFixedCArraySize)) throw unsupportedCHeaderType(original);
+  return `Array<${typeCArrayType(mapCHeaderType(shape.base, recordNames), shape.sizes)}>`;
+}
+
+function mapCArrayHeaderType(
+  normalized: Str,
+  arrayElement: Str,
+  original: Str,
+  recordNames: Set<Str>,
+): Str {
+  if (!isNestedCArrayType(normalized)) return `${mapCHeaderType(arrayElement, recordNames)}[]`;
+  if (!isFullyFixedCArrayType(normalized)) throw unsupportedCHeaderType(original);
+  const shape = cArrayShape(normalized);
+  if (shape === null) throw unsupportedCHeaderType(original);
+  return typeCArrayType(mapCHeaderType(shape.base, recordNames), shape.sizes);
 }
 
 function unsupportedCHeaderType(type: Str): TypeCError {

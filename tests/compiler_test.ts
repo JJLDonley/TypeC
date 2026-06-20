@@ -203,6 +203,41 @@ Deno.test("emits C for header bool record fields and functions", async () => {
   assertIncludes(c, ".enabled = true");
 });
 
+Deno.test("emits C for header nested fixed array parameters", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdint.h>\nvoid consume(int32_t cells[2][3]);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { consume } from "./lib.h"; function main(): i32 { const cells: Array<Array<i32, 3>, 2> = [[1, 2, 3], [4, 5, 6]]; consume(cells); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "void consume(i32 (*cells)[3]);");
+  assertIncludes(c, "i32 cells[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };");
+  assertIncludes(c, "consume(cells);");
+});
+
+Deno.test("emits C for header record nested fixed array fields", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdint.h>\ntypedef struct Matrix { int32_t cells[2][3]; } Matrix;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Matrix } from "./lib.h"; function main(): i32 { const m: Matrix = { cells: [[1, 2, 3], [4, 5, 6]] }; return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "i32 cells[2][3];");
+  assertIncludes(c, ".cells = { { 1, 2, 3 }, { 4, 5, 6 } }");
+});
+
 Deno.test("emits C for header record fixed array fields", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

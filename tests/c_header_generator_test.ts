@@ -13,6 +13,7 @@ Deno.test("generates externs from clang AST", () => {
         field("b", "unsigned char"),
         field("a", "unsigned char"),
       ]),
+      typedefRecord("Matrix", [field("cells", "int32_t[2][3]")]),
       functionDecl("draw", "void (Color)", [param("tint", "Color")]),
       functionDecl("add_i32", "int32_t (int32_t, int32_t)", [
         param("left", "int32_t"),
@@ -32,6 +33,7 @@ Deno.test("generates externs from clang AST", () => {
       functionDecl("alias_width", "int32_t (int32_t)", [param("value", "int32_t")]),
       functionDecl("alias_width", "__int32_t (__int32_t)", [param("value", "__int32_t")]),
       functionDecl("fill", "void (int32_t[4])", [param("items", "int32_t[4]")]),
+      functionDecl("consume", "void (int32_t (*)[3])", [param("items", "int32_t (*)[3]")]),
       functionDecl("fill", "void (int32_t *)", [param("items", "int32_t *")]),
       functionDecl("copy_ptr", "void *(void *, const void *)", [
         param("dst", "void *"),
@@ -69,6 +71,7 @@ Deno.test("generates externs from clang AST", () => {
   });
 
   assertIncludes(output, "export type Color = { r: u8; g: u8; b: u8; a: u8; };");
+  assertIncludes(output, "export type Matrix = { cells: Array<Array<i32, 3>, 2>; };");
   assertIncludes(output, "extern function draw(tint: Color): void;");
   assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
@@ -78,6 +81,7 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "extern function alias_width(value: i32): i32;");
   assertSame(countOccurrences(output, "extern function alias_width"), 1);
   assertIncludes(output, "extern function fill(items: i32[]): void;");
+  assertIncludes(output, "extern function consume(items: Array<Array<i32, 3>>): void;");
   assertSame(countOccurrences(output, "extern function fill"), 1);
   assertIncludes(output, "extern function copy_ptr(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function copy_text(dst: u8*, src: u8*): void;");
