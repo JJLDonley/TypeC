@@ -1,5 +1,7 @@
 import type { CHeaderFunction } from "c/header/ast.ts";
+import { cArrayElementType } from "c/header/array_types.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
+import { normalizeCHeaderType } from "c/header/type_normalization.ts";
 import { isPathWithinDir } from "paths";
 
 type Str = string;
@@ -12,7 +14,8 @@ export function isIncludedHeaderFunction(fn: CHeaderFunction, includeDir: Str | 
 }
 
 export function isSupportedHeaderFunction(fn: CHeaderFunction): b8 {
-  return !isVariadicFunction(fn) && !isUnprototypedFunction(fn) && !hasFunctionPointerType(fn) && !isStaticFunction(fn) && !fn.hasBody && isTypeCIdentifier(fn.name);
+  return !isVariadicFunction(fn) && !isUnprototypedFunction(fn) && !hasFunctionPointerType(fn) &&
+    !hasArrayReturnType(fn) && !isStaticFunction(fn) && !fn.hasBody && isTypeCIdentifier(fn.name);
 }
 
 function isVariadicFunction(fn: CHeaderFunction): b8 {
@@ -25,6 +28,10 @@ function isUnprototypedFunction(fn: CHeaderFunction): b8 {
 
 function hasFunctionPointerType(fn: CHeaderFunction): b8 {
   return fn.functionType.includes("(*") || fn.params.some((param) => param.type.includes("(*"));
+}
+
+function hasArrayReturnType(fn: CHeaderFunction): b8 {
+  return cArrayElementType(normalizeCHeaderType(fn.returnType)) !== null;
 }
 
 function isStaticFunction(fn: CHeaderFunction): b8 {

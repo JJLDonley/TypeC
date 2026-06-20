@@ -980,8 +980,8 @@ function main(): i32 {
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely
   and deterministically.
-- Function pointers, callbacks, variadics, old-style declarations, unsupported macros, and unsafe
-  signatures are skipped safely until explicitly specified.
+- Function pointers, callbacks, variadics, old-style declarations, array return types, unsupported
+  macros, and unsafe signatures are skipped safely until explicitly specified.
 
 ## Header Interop Implementation Order
 
