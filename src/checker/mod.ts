@@ -22,6 +22,7 @@ import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
+import { checkUnaryExpression } from "checker/unary_expressions.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStatementDispatch } from "checker/statements.ts";
 import { typeName } from "core/type_ref.ts";
@@ -83,6 +84,7 @@ export * from "checker/type_name_shapes.ts";
 export * from "checker/type_refs.ts";
 export * from "checker/type_shapes.ts";
 export * from "checker/type_validation.ts";
+export * from "checker/unary_expressions.ts";
 export * from "checker/types.ts";
 export * from "checker/value_types.ts";
 export * from "checker/variadic_args.ts";
@@ -284,6 +286,7 @@ class Checker {
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     const result = computeExpressionType(expr, {
       identifier: (name, span) => this.identifierType(name, locals, span),
+      unary: (value) => this.unaryType(value, locals),
       binary: (value) => this.binaryType(value, locals),
       call: (value) => this.callType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
@@ -296,6 +299,15 @@ class Checker {
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
     const result = checkIdentifierType(name, locals.get(name), this.constants.get(name), span);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private unaryType(
+    expr: Extract<Expression, { kind: "UnaryExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkUnaryExpression(expr, (value) => this.typeOf(value, locals));
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }

@@ -30,7 +30,10 @@ Deno.test("reports untyped aggregate expressions", () => {
   const array = computeExpressionType(arrayLiteral(), handlers());
 
   assertText(record.type, "<error>");
-  assertText(record.diagnostics[0]?.message ?? "", "Record literals require an expected record type");
+  assertText(
+    record.diagnostics[0]?.message ?? "",
+    "Record literals require an expected record type",
+  );
   assertText(array.type, "<error>");
   assertText(array.diagnostics[0]?.message ?? "", "Array literals require an expected array type");
 });
@@ -38,6 +41,7 @@ Deno.test("reports untyped aggregate expressions", () => {
 function handlers(): ExpressionTypeHandlers {
   return {
     identifier: resolveI64,
+    unary: resolveI64,
     binary: resolveI64,
     call: resolveI64,
     pointer: resolveI64,

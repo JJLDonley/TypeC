@@ -5,11 +5,15 @@ import { checkBasicExpression } from "checker/basic_expressions.ts";
 
 type Str = string;
 
-type BasicExpr = Extract<Expression, { kind: "IntegerLiteral" | "FloatLiteral" | "BoolLiteral" | "StringLiteral" }>;
+type BasicExpr = Extract<
+  Expression,
+  { kind: "IntegerLiteral" | "FloatLiteral" | "BoolLiteral" | "StringLiteral" }
+>;
 type NonBasicExpr = Exclude<Expression, BasicExpr>;
 
 export interface ExpressionTypeHandlers {
   identifier(name: Str, span: SourceSpan): TypeName;
+  unary(expr: Extract<Expression, { kind: "UnaryExpr" }>): TypeName;
   binary(expr: Extract<Expression, { kind: "BinaryExpr" }>): TypeName;
   call(expr: Extract<Expression, { kind: "CallExpr" }>): TypeName;
   pointer(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): TypeName;
@@ -22,17 +26,25 @@ export interface ExpressionTypeCheck {
   type: TypeName;
 }
 
-export function computeExpressionType(expr: Expression, handlers: ExpressionTypeHandlers): ExpressionTypeCheck {
+export function computeExpressionType(
+  expr: Expression,
+  handlers: ExpressionTypeHandlers,
+): ExpressionTypeCheck {
   const basic = checkBasicExpression(expr);
   if (basic.handled) return { diagnostics: basic.diagnostics, type: basic.type };
   if (!isNonBasicExpression(expr)) return { diagnostics: [], type: basic.type };
   return computeNonBasicExpressionType(expr, handlers);
 }
 
-function computeNonBasicExpressionType(expr: NonBasicExpr, handlers: ExpressionTypeHandlers): ExpressionTypeCheck {
+function computeNonBasicExpressionType(
+  expr: NonBasicExpr,
+  handlers: ExpressionTypeHandlers,
+): ExpressionTypeCheck {
   switch (expr.kind) {
     case "IdentifierExpr":
       return ok(handlers.identifier(expr.name, expr.span));
+    case "UnaryExpr":
+      return ok(handlers.unary(expr));
     case "BinaryExpr":
       return ok(handlers.binary(expr));
     case "CallExpr":
@@ -51,7 +63,11 @@ function computeNonBasicExpressionType(expr: NonBasicExpr, handlers: ExpressionT
 }
 
 function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
-  return expr.kind === "IdentifierExpr" || expr.kind === "BinaryExpr" || expr.kind === "CallExpr" || expr.kind === "PostfixPointerExpr" || expr.kind === "FieldAccessExpr" || expr.kind === "IndexExpr" || expr.kind === "RecordLiteralExpr" || expr.kind === "ArrayLiteralExpr";
+  return expr.kind === "IdentifierExpr" || expr.kind === "UnaryExpr" ||
+    expr.kind === "BinaryExpr" ||
+    expr.kind === "CallExpr" || expr.kind === "PostfixPointerExpr" ||
+    expr.kind === "FieldAccessExpr" || expr.kind === "IndexExpr" ||
+    expr.kind === "RecordLiteralExpr" || expr.kind === "ArrayLiteralExpr";
 }
 
 function ok(type: TypeName): ExpressionTypeCheck {

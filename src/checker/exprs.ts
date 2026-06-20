@@ -5,7 +5,8 @@ type Str = string;
 type b8 = boolean;
 
 export function isComparisonOperator(operator: Str): b8 {
-  return operator === "<" || operator === "<=" || operator === ">" || operator === ">=" || operator === "==" || operator === "!=";
+  return operator === "<" || operator === "<=" || operator === ">" || operator === ">=" ||
+    operator === "==" || operator === "!=";
 }
 
 export function isIntegerZeroLiteral(expr: Expression): b8 {
@@ -25,6 +26,7 @@ export function isAddressable(expr: Expression): b8 {
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "UnaryExpr":
     case "BinaryExpr":
     case "CallExpr":
     case "RecordLiteralExpr":

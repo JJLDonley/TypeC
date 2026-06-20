@@ -33,6 +33,7 @@ Deno.test("tracks project compiler flags", async () => {
 Deno.test("emits C for module constants", () => {
   const program = parse(lex(`
     const ANSWER: i32 = 42;
+    const NEGATIVE: i32 = -ANSWER;
     function main(): i32 {
       return ANSWER;
     }
@@ -41,6 +42,7 @@ Deno.test("emits C for module constants", () => {
   const c = emitC(check(resolve(program)));
 
   assertIncludes(c, "static const i32 ANSWER = 42;");
+  assertIncludes(c, "static const i32 NEGATIVE = -ANSWER;");
   assertIncludes(c, "return ANSWER;");
 });
 

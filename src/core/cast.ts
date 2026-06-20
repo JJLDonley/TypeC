@@ -189,6 +189,7 @@ export type CastExpression =
   | CastBoolLiteral
   | CastStringLiteral
   | CastIdentifierExpr
+  | CastUnaryExpr
   | CastBinaryExpr
   | CastCallExpr
   | CastPostfixPointerExpr
@@ -227,6 +228,13 @@ export interface CastStringLiteral {
 export interface CastIdentifierExpr {
   kind: "IdentifierExpr";
   name: Str;
+  span: SourceSpan;
+}
+
+export interface CastUnaryExpr {
+  kind: "UnaryExpr";
+  operator: "+" | "-";
+  operand: CastExpression;
   span: SourceSpan;
 }
 

@@ -106,6 +106,9 @@ class Resolver {
       case "IdentifierExpr":
         this.requireSymbol(scope, expression.name, expression.span);
         return;
+      case "UnaryExpr":
+        this.resolveExpression(expression.operand, scope);
+        return;
       case "BinaryExpr":
         this.resolveExpression(expression.left, scope);
         this.resolveExpression(expression.right, scope);

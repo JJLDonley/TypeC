@@ -24,6 +24,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitCStringLiteral(expr.text);
     case "IdentifierExpr":
       return emitIdentifierExpression(expr.name, context);
+    case "UnaryExpr":
+      return emitUnaryExpression(expr, context);
     case "BinaryExpr":
       return emitBinaryExpression(expr, context);
     case "CallExpr":
@@ -67,6 +69,18 @@ export function emitExpressionExpected(
   if (slice || expectedType.startsWith("Slice_")) {
     return emitSliceExpression(expr, expectedType, context);
   }
+  return emitExpression(expr, context);
+}
+
+function emitUnaryExpression(
+  expr: Extract<Expression, { kind: "UnaryExpr" }>,
+  context: EmitContext,
+): Str {
+  return `${expr.operator}${emitUnaryOperand(expr.operand, context)}`;
+}
+
+function emitUnaryOperand(expr: Expression, context: EmitContext): Str {
+  if (expr.kind === "BinaryExpr") return `(${emitExpression(expr, context)})`;
   return emitExpression(expr, context);
 }
 

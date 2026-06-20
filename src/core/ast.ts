@@ -189,6 +189,7 @@ export type Expression =
   | BoolLiteral
   | StringLiteral
   | IdentifierExpr
+  | UnaryExpr
   | BinaryExpr
   | CallExpr
   | PostfixPointerExpr
@@ -227,6 +228,13 @@ export interface StringLiteral {
 export interface IdentifierExpr {
   kind: "IdentifierExpr";
   name: Str;
+  span: SourceSpan;
+}
+
+export interface UnaryExpr {
+  kind: "UnaryExpr";
+  operator: "+" | "-";
+  operand: Expression;
   span: SourceSpan;
 }
 

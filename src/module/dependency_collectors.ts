@@ -71,6 +71,9 @@ function collectExpressionDeps(expression: Expression, selected: DependencySet):
     case "IdentifierExpr":
       selected.constants.add(expression.name);
       return;
+    case "UnaryExpr":
+      collectExpressionDeps(expression.operand, selected);
+      return;
     case "BinaryExpr":
       collectExpressionDeps(expression.left, selected);
       collectExpressionDeps(expression.right, selected);

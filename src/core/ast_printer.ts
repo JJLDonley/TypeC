@@ -1,4 +1,14 @@
-import type { BlockStmt, Expression, FunctionDecl, Param, Program, Statement, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type {
+  BlockStmt,
+  ConstDecl,
+  Expression,
+  FunctionDecl,
+  Param,
+  Program,
+  Statement,
+  TypeAliasDecl,
+  TypeRef,
+} from "core/ast.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -18,6 +28,7 @@ class AstPrinter {
     this.line("Program");
     this.indented(() => {
       for (const typeAlias of program.typeAliases) this.typeAliasDecl(typeAlias);
+      for (const constant of program.constants ?? []) this.constDecl(constant);
       for (const fn of program.functions) this.functionDecl(fn);
     });
   }
@@ -26,8 +37,17 @@ class AstPrinter {
     this.line(`TypeAliasDecl ${typeAlias.name} = ${this.type(typeAlias.type)}`);
   }
 
+  private constDecl(constant: ConstDecl): void {
+    this.line(`ConstDecl ${constant.name}: ${this.type(constant.type)}`);
+    this.indented(() => this.expression(constant.initializer));
+  }
+
   private functionDecl(fn: FunctionDecl): void {
-    this.line(`${fn.external ? "ExternFunctionDecl" : "FunctionDecl"} ${fn.name} -> ${this.type(fn.returnType)}`);
+    this.line(
+      `${fn.external ? "ExternFunctionDecl" : "FunctionDecl"} ${fn.name} -> ${
+        this.type(fn.returnType)
+      }`,
+    );
     this.indented(() => {
       this.params(fn.params);
       if (fn.body) this.block(fn.body);
@@ -62,7 +82,9 @@ class AstPrinter {
         this.indented(() => this.expression(statement.expression));
         return;
       case "VarDeclStmt":
-        this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`);
+        this.line(
+          `${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`,
+        );
         this.indented(() => this.expression(statement.initializer));
         return;
       case "AssignmentStmt":
@@ -103,6 +125,10 @@ class AstPrinter {
         return;
       case "IdentifierExpr":
         this.line(`IdentifierExpr ${expression.name}`);
+        return;
+      case "UnaryExpr":
+        this.line(`UnaryExpr ${expression.operator}`);
+        this.indented(() => this.expression(expression.operand));
         return;
       case "BinaryExpr":
         this.line(`BinaryExpr ${expression.operator}`);

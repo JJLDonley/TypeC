@@ -7,11 +7,12 @@ import type {
   FieldAccessExpr,
   FloatLiteral,
   IdentifierExpr,
-  StringLiteral,
   IndexExpr,
   IntegerLiteral,
   PostfixPointerExpr,
   RecordLiteralExpr,
+  StringLiteral,
+  UnaryExpr,
 } from "core/ast.ts";
 import type {
   CastArrayLiteralExpr,
@@ -22,11 +23,12 @@ import type {
   CastFieldAccessExpr,
   CastFloatLiteral,
   CastIdentifierExpr,
-  CastStringLiteral,
   CastIndexExpr,
   CastIntegerLiteral,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
+  CastStringLiteral,
+  CastUnaryExpr,
 } from "core/cast.ts";
 
 export function lowerExpression(expression: CastExpression): Expression {
@@ -41,6 +43,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerStringLiteral(expression);
     case "IdentifierExpr":
       return lowerIdentifierExpr(expression);
+    case "UnaryExpr":
+      return lowerUnaryExpr(expression);
     case "BinaryExpr":
       return lowerBinaryExpr(expression);
     case "CallExpr":
@@ -59,15 +63,30 @@ export function lowerExpression(expression: CastExpression): Expression {
 }
 
 function lowerIntegerLiteral(expression: CastIntegerLiteral): IntegerLiteral {
-  return { kind: "IntegerLiteral", value: expression.value, text: expression.text, span: expression.span };
+  return {
+    kind: "IntegerLiteral",
+    value: expression.value,
+    text: expression.text,
+    span: expression.span,
+  };
 }
 
 function lowerFloatLiteral(expression: CastFloatLiteral): FloatLiteral {
-  return { kind: "FloatLiteral", value: expression.value, text: expression.text, span: expression.span };
+  return {
+    kind: "FloatLiteral",
+    value: expression.value,
+    text: expression.text,
+    span: expression.span,
+  };
 }
 
 function lowerBoolLiteral(expression: CastBoolLiteral): BoolLiteral {
-  return { kind: "BoolLiteral", value: expression.value, text: expression.text, span: expression.span };
+  return {
+    kind: "BoolLiteral",
+    value: expression.value,
+    text: expression.text,
+    span: expression.span,
+  };
 }
 
 function lowerStringLiteral(expression: CastStringLiteral): StringLiteral {
@@ -76,6 +95,15 @@ function lowerStringLiteral(expression: CastStringLiteral): StringLiteral {
 
 function lowerIdentifierExpr(expression: CastIdentifierExpr): IdentifierExpr {
   return { kind: "IdentifierExpr", name: expression.name, span: expression.span };
+}
+
+function lowerUnaryExpr(expression: CastUnaryExpr): UnaryExpr {
+  return {
+    kind: "UnaryExpr",
+    operator: expression.operator,
+    operand: lowerExpression(expression.operand),
+    span: expression.span,
+  };
 }
 
 function lowerBinaryExpr(expression: CastBinaryExpr): BinaryExpr {
@@ -128,7 +156,11 @@ function lowerRecordLiteralExpr(expression: CastRecordLiteralExpr): RecordLitera
 }
 
 function lowerArrayLiteralExpr(expression: CastArrayLiteralExpr): ArrayLiteralExpr {
-  return { kind: "ArrayLiteralExpr", elements: expression.elements.map(lowerExpression), span: expression.span };
+  return {
+    kind: "ArrayLiteralExpr",
+    elements: expression.elements.map(lowerExpression),
+    span: expression.span,
+  };
 }
 
 function lowerIndexExpr(expression: CastIndexExpr): IndexExpr {

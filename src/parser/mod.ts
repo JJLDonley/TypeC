@@ -132,6 +132,7 @@ class Parser {
   private expressionParser(): ExpressionParser {
     return {
       check: (kind) => this.check(kind),
+      checkText: (text) => this.checkText(text),
       peek: () => this.peek(),
       advance: () => this.advance(),
       parsePostfixExpression: () => this.parsePostfixExpression(),

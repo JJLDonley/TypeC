@@ -41,6 +41,8 @@ function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b
       return true;
     case "IdentifierExpr":
       return availableConstants.has(expr.name);
+    case "UnaryExpr":
+      return isConstantExpression(expr.operand, availableConstants);
     case "BinaryExpr":
       return isConstantExpression(expr.left, availableConstants) &&
         isConstantExpression(expr.right, availableConstants);
