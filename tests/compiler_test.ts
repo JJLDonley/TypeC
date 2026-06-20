@@ -185,6 +185,24 @@ Deno.test("emits C for namespace header record fixed array fields", async () => 
   assertIncludes(c, ".rgba = { 1, 2, 3, 4 }");
 });
 
+Deno.test("emits C for header bool record fields and functions", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdbool.h>\ntypedef struct Flag { bool enabled; } Flag;\nbool is_enabled(Flag flag);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Flag, is_enabled } from "./lib.h"; function main(): i32 { const flag: Flag = { enabled: true }; if (is_enabled(flag)) { return 42; } return 0; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "b8 enabled;");
+  assertIncludes(c, "b8 is_enabled(Flag flag);");
+  assertIncludes(c, ".enabled = true");
+});
+
 Deno.test("emits C for header record fixed array fields", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

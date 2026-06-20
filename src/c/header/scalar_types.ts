@@ -6,8 +6,8 @@ const coreScalarTypes: ScalarTypeEntry[] = [
   ["void", "void"],
   ["float", "f32"],
   ["double", "f64"],
-  ["bool", "b8"],
-  ["_Bool", "b8"],
+  ["bool", "bool"],
+  ["_Bool", "bool"],
   ["size_t", "usize"],
 ];
 

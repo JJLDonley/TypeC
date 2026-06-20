@@ -8,7 +8,7 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("__uint64_t"), "u64");
   assertSame(mapCHeaderType("const char *restrict"), "u8*");
   assertSame(mapCHeaderType("void * _Nullable"), "void*");
-  assertSame(mapCHeaderType("_Bool"), "b8");
+  assertSame(mapCHeaderType("_Bool"), "bool");
   assertSame(mapCHeaderType("size_t"), "usize");
   assertSame(mapCHeaderType("int"), "c_int");
   assertSame(mapCHeaderType("unsigned long"), "c_ulong");

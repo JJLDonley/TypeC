@@ -43,7 +43,7 @@ Deno.test("maps scalar C header types", () => {
   assertSame(mapScalarCHeaderType("signed char") ?? "", "i8");
   assertSame(mapScalarCHeaderType("unsigned int") ?? "", "c_uint");
   assertSame(mapScalarCHeaderType("signed long long int") ?? "", "c_longlong");
-  assertSame(mapScalarCHeaderType("bool") ?? "", "b8");
+  assertSame(mapScalarCHeaderType("bool") ?? "", "bool");
   assertSame(mapScalarCHeaderType("size_t") ?? "", "usize");
 });
 
