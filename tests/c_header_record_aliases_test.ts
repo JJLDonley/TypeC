@@ -18,6 +18,15 @@ Deno.test("formats supported C header record aliases", () => {
   assertIncludes(output, "export type Paint = { tint: Color; };");
 });
 
+Deno.test("formats fixed C array record fields", () => {
+  const output = formatHeaderRecordAliases([
+    record("Color", [["r", "unsigned char"]]),
+    record("Palette", [["colors", "Color[4]"]]),
+  ]);
+
+  assertIncludes(output, "export type Palette = { colors: Color[4]; };");
+});
+
 Deno.test("skips unsupported C header record aliases", () => {
   const output = formatHeaderRecordAliases([
     record("bad-name", [["x", "int32_t"]]),

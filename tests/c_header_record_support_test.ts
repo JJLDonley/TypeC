@@ -13,6 +13,23 @@ Deno.test("keeps supported header records", () => {
   assertSame(records.length, 2);
 });
 
+Deno.test("keeps fixed array header record fields", () => {
+  const records = supportedHeaderRecords([
+    record("Color", [["r", "unsigned char"]]),
+    record("Palette", [["colors", "Color[4]"]]),
+  ]);
+
+  assertSame(records.length, 2);
+});
+
+Deno.test("skips unsized array header record fields", () => {
+  const records = supportedHeaderRecords([
+    record("Bad", [["items", "int32_t[]"]]),
+  ]);
+
+  assertSame(records.length, 0);
+});
+
 Deno.test("skips records depending on unsupported records", () => {
   const records = supportedHeaderRecords([
     record("Bad", [["x", "__unsupported_t"]]),

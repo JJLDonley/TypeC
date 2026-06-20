@@ -1,4 +1,4 @@
-import { cArrayElementType } from "c/header/array_types.ts";
+import { cArrayElementType, cArrayType, isFixedCArraySize } from "c/header/array_types.ts";
 import { mapScalarCHeaderType } from "c/header/scalar_types.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
 
@@ -12,6 +12,17 @@ Deno.test("normalizes C header type spelling", () => {
 Deno.test("extracts C array element types", () => {
   assertSame(cArrayElementType("int32_t[4]") ?? "", "int32_t");
   assertSame(cArrayElementType("char[static 8]") ?? "", "char");
+});
+
+Deno.test("extracts C array sizes", () => {
+  assertSame(cArrayType("int32_t[4]")?.size ?? "", "4");
+  assertSame(cArrayType("char[static 8]")?.size ?? "", "static 8");
+});
+
+Deno.test("detects fixed C array sizes", () => {
+  assertSame(isFixedCArraySize("4") ? "yes" : "no", "yes");
+  assertSame(isFixedCArraySize("static 8") ? "yes" : "no", "no");
+  assertSame(isFixedCArraySize("") ? "yes" : "no", "no");
 });
 
 Deno.test("maps scalar C header types", () => {

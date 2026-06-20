@@ -1,5 +1,5 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
-import { mapCHeaderType } from "c/header/types.ts";
+import { mapCHeaderRecordFieldType } from "c/header/record_field_types.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -55,7 +55,7 @@ function fieldDependencies(field: CHeaderRecordField, names: Set<Str>): Set<Str>
 
 function safeMapFieldType(field: CHeaderRecordField, names: Set<Str>): Str {
   try {
-    return mapCHeaderType(field.type, names);
+    return mapCHeaderRecordFieldType(field.type, names);
   } catch (error) {
     if (error instanceof TypeCError) return "";
     throw error;

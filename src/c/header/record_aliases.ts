@@ -1,7 +1,7 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
 import { selectHeaderRecords } from "c/header/record_selection.ts";
 import { supportedHeaderRecords } from "c/header/record_support.ts";
-import { mapCHeaderType } from "c/header/types.ts";
+import { mapCHeaderRecordFieldType } from "c/header/record_field_types.ts";
 
 type Str = string;
 
@@ -21,5 +21,5 @@ function formatRecord(record: CHeaderRecord, recordNames: Set<Str>): Str {
 }
 
 function formatRecordField(field: CHeaderRecordField, recordNames: Set<Str>): Str {
-  return `${field.name}: ${mapCHeaderType(field.type, recordNames)};`;
+  return `${field.name}: ${mapCHeaderRecordFieldType(field.type, recordNames)};`;
 }

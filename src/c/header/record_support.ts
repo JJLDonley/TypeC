@@ -1,6 +1,6 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
-import { mapCHeaderType } from "c/header/types.ts";
+import { mapCHeaderRecordFieldType } from "c/header/record_field_types.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -28,7 +28,7 @@ export function isSupportedHeaderRecord(record: CHeaderRecord, recordNames: Set<
 function isSupportedHeaderRecordField(field: CHeaderRecordField, recordNames: Set<Str>): b8 {
   if (!isTypeCIdentifier(field.name)) return false;
   try {
-    mapCHeaderType(field.type, recordNames);
+    mapCHeaderRecordFieldType(field.type, recordNames);
     return true;
   } catch (error) {
     if (error instanceof TypeCError) return false;
