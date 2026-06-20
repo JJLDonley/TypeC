@@ -4,9 +4,12 @@ import { emitCallExpression } from "emitter/calls.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
+import { spanKey } from "checker/exprs.ts";
+import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
+type b8 = boolean;
 type usize = number;
 
 export function emitExpression(expr: Expression, context: EmitContext): Str {
@@ -34,7 +37,7 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, context);
     case "FieldAccessExpr":
-      return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
+      return emitFieldAccessExpression(expr, context);
     case "RecordLiteralExpr":
       throw new Error("Record literals require an expected C type");
     case "ArrayLiteralExpr":
@@ -127,6 +130,23 @@ function emitBinaryOperand(
   if (child < parent) return `(${operand})`;
   if (side === "right" && child === parent) return `(${operand})`;
   return operand;
+}
+
+function emitFieldAccessExpression(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): Str {
+  if (isArrayDataFieldAccess(expr, context)) return emitMemberOperand(expr.operand, context);
+  return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
+}
+
+function isArrayDataFieldAccess(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): b8 {
+  if (expr.field !== "data") return false;
+  const operandType = context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? null;
+  return operandType !== null && parseArrayTypeName(operandType) !== null;
 }
 
 function emitPostfixPointerExpression(

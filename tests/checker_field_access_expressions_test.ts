@@ -18,15 +18,46 @@ Deno.test("checks field access expressions", () => {
   assertText(result.type, "i32");
 });
 
+Deno.test("checks array data field access expressions", () => {
+  const result = checkFieldAccessExpression(
+    fieldAccess(identifier("values"), "data"),
+    "i32[3]",
+    new Map<Str, TypeRef>(),
+  );
+
+  assertLen(result.diagnostics.length, 0);
+  assertText(result.type, "i32*");
+});
+
 Deno.test("reports invalid field access expressions", () => {
   const aliases = new Map<Str, TypeRef>();
   const result = checkFieldAccessExpression(fieldAccess(identifier("value"), "x"), "i32", aliases);
 
-  assertText(result.diagnostics[0]?.message ?? "", "Cannot access field 'x' on non-record type 'i32'");
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Cannot access field 'x' on non-record type 'i32'",
+  );
   assertText(result.type, "<error>");
 });
 
-function fieldAccess(operand: Expression, field: Str): Extract<Expression, { kind: "FieldAccessExpr" }> {
+Deno.test("reports invalid array field access expressions", () => {
+  const result = checkFieldAccessExpression(
+    fieldAccess(identifier("values"), "items"),
+    "i32[3]",
+    new Map<Str, TypeRef>(),
+  );
+
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Cannot access field 'items' on array type 'i32[3]'",
+  );
+  assertText(result.type, "<error>");
+});
+
+function fieldAccess(
+  operand: Expression,
+  field: Str,
+): Extract<Expression, { kind: "FieldAccessExpr" }> {
   return { kind: "FieldAccessExpr", operand, field, span };
 }
 

@@ -14,7 +14,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
 - Fixed arrays `T[N]` / `Array<T, N>`, inferred local arrays `T[]` / `Array<T>`, nested fixed
-  arrays, pointer-decayed parameter arrays, array literals, and indexing
+  arrays, `.data` array pointer access, pointer-decayed parameter arrays, array literals, and
+  indexing
 - Canonical pointer/reference types `Ptr<T>` and `Ref<T>` with equivalent compact `T*` and `T&`
   spellings
 - NUL-terminated C string literals as `u8[]`, decaying to `Ptr<u8>`, `u8*`, `u8[]`, `u8[N]`, or
@@ -170,9 +171,9 @@ T[N]  // Array<T, N>
 ```
 
 `T[]` is not slice syntax. Slices are spelled `Slice<T>`. Arrays may decay to `Ptr<T>` only when a
-raw pointer or C ABI parameter is expected. Fully sized nested C arrays are supported for header
-record fields and pointer-decayed parameters. Automatic array-to-slice coercion is planned, not yet
-implemented.
+raw pointer or C ABI parameter is expected. Array `.data` exposes the raw pointer for C interop.
+Fully sized nested C arrays are supported for header record fields and pointer-decayed parameters.
+Automatic array-to-slice coercion is planned, not yet implemented.
 
 Runnable canonical type examples:
 
