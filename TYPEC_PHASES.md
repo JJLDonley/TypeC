@@ -100,6 +100,16 @@ Define the exact TypeC subset before building too much compiler complexity.
 - memory model notes
 - examples in `examples/*.tc`
 
+## Syntax Style Policy
+
+TypeC should look like TypeScript whenever TypeScript has a clear equivalent syntax. Use
+TypeScript-like syntax for functions, variables, blocks, control flow, classes, methods, interfaces,
+generics, enums, and imports.
+
+When TypeScript has no suitable systems-language equivalent, prefer modern systems syntax inspired
+by Zig before inventing new syntax. This applies to explicit memory, arenas, pointer safety modes,
+and other low-level features that TypeScript does not model.
+
 ## Initial Syntax Style
 
 TypeC should look like TypeScript:
@@ -1083,7 +1093,7 @@ Phase 12 constants may use:
 - unary `+` and `-` for numeric literals and constant expressions
 - binary `+`, `-`, `*`, `/`, and `%` for numeric constant expressions
 - references to earlier module-level constants from the same module or imported modules
-- scoped enum members once Phase 13 is implemented
+- scoped enum members once Phase 14 is implemented
 
 Phase 12 constants must not use function calls, pointer operators, assignment, indexing, field
 access outside record literals, loops, conditionals, or runtime locals.
@@ -1135,7 +1145,77 @@ representation are skipped safely.
 
 ---
 
-# Phase 13: Enums
+# Phase 13: Switch Statements
+
+## Goal
+
+Add TypeScript-like `switch` statements for explicit multi-way branching over integer-like values
+and, once implemented, enum values.
+
+## Syntax
+
+Use TypeScript-like `switch`, `case`, `default`, and `break` syntax:
+
+```ts
+function classify(value: i32): i32 {
+  switch (value) {
+    case 0:
+      return 10;
+    case 1:
+      return 20;
+    default:
+      return 30;
+  }
+}
+```
+
+Enum switches use scoped enum members once Phase 14 is implemented:
+
+```ts
+switch (key) {
+  case Key.Space:
+    return 1;
+  case Key.Escape:
+    return 2;
+  default:
+    return 0;
+}
+```
+
+## Semantics
+
+- The switch expression must be an integer type, `bool`, or an enum type after enums exist.
+- Case labels must be compile-time constants assignable to the switch expression type.
+- Duplicate case values in the same switch are invalid.
+- `default` is optional and may appear at most once.
+- Case bodies are statement lists.
+- `break;` exits the nearest switch.
+- TypeC follows TypeScript/C-style case grouping syntax, but accidental fallthrough should not be
+  the default. Fallthrough semantics must be explicitly specified before implementation.
+
+## C Emission
+
+- Lower to a C `switch` only when TypeC semantics map directly and safely.
+- Emit fixed-width switch expressions and case labels.
+- Preserve explicit `break` and `return` behavior.
+- If TypeC chooses no implicit fallthrough, emit C control flow that enforces that rule.
+
+## Do
+
+- Keep syntax TypeScript-like.
+- Define fallthrough behavior before implementation.
+- Type-check case labels against the switch expression.
+- Keep lowering readable and deterministic.
+
+## Do Not
+
+- Do not add non-switch branching semantics.
+- Do not use dynamic type tests.
+- Do not allow case labels that require runtime evaluation.
+
+---
+
+# Phase 14: Enums
 
 ## Goal
 
@@ -1234,9 +1314,7 @@ const mode: i32 = RL.FLAG_WINDOW_RESIZABLE;
 
 ---
 
----
-
-# Phase 14: Classes and Methods
+# Phase 15: Classes and Methods
 
 ## Goal
 
@@ -1284,9 +1362,7 @@ by a later design update.
 
 ---
 
----
-
-# Phase 15: Interfaces
+# Phase 16: Interfaces
 
 ## Goal
 
@@ -1321,9 +1397,7 @@ TypeScript structural compatibility rules are not implied unless specified expli
 
 ---
 
----
-
-# Phase 16: Generics
+# Phase 17: Generics
 
 ## Goal
 
@@ -1343,7 +1417,7 @@ class Box<T> {
 }
 ```
 
-Generic constraints use TypeScript-like `extends` syntax only if Phase 15 interface constraints are
+Generic constraints use TypeScript-like `extends` syntax only if Phase 16 interface constraints are
 specified:
 
 ```ts
@@ -1368,9 +1442,7 @@ function drawAll<T extends Drawable>(items: Slice<T>): void {
 
 ---
 
----
-
-# Phase 17: Defer
+# Phase 18: Defer
 
 Implementation status: optional systems feature, not started.
 
@@ -1451,9 +1523,7 @@ return 0
 
 ---
 
----
-
-# Phase 18: Safe Pointer Modes
+# Phase 19: Safe Pointer Modes
 
 Implementation status: optional systems feature, not started.
 
@@ -1464,9 +1534,9 @@ behavior.
 
 ## Syntax Direction
 
-Use modern systems-language-style pointer annotations or type constructors that do not collide with
-TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a dedicated
-design update defines semantics, examples, lowering, and tests.
+Use Zig-inspired systems syntax for pointer annotations or type constructors that do not collide
+with TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a
+dedicated design update defines semantics, examples, lowering, and tests.
 
 Candidate syntax must make aliasing, nullability, mutability, and ownership visible at the type
 site. Do not repurpose TypeScript-only syntax for pointer modes.
@@ -1487,9 +1557,7 @@ site. Do not repurpose TypeScript-only syntax for pointer modes.
 
 ---
 
----
-
-# Phase 19: Arenas
+# Phase 20: Arenas
 
 Implementation status: optional systems feature, not started.
 
@@ -1499,9 +1567,9 @@ Add explicit region-style allocation as a standard memory-management pattern.
 
 ## Syntax Direction
 
-Use modern systems-language-style arena syntax that does not collide with TypeScript class,
-interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
-defines arena declarations, allocation calls, failure behavior, lowering, examples, and tests.
+Use Zig-inspired systems syntax that does not collide with TypeScript class, interface, or generic
+syntax. Exact syntax remains unspecified until a dedicated design update defines arena declarations,
+allocation calls, failure behavior, lowering, examples, and tests.
 
 The syntax must make arena lifetime explicit at allocation and cleanup sites.
 
@@ -1521,9 +1589,7 @@ The syntax must make arena lifetime explicit at allocation and cleanup sites.
 
 ---
 
----
-
-# Phase 20: Tagged Unions
+# Phase 21: Tagged Unions
 
 Implementation status: optional systems feature, not started.
 
@@ -1533,10 +1599,9 @@ Add sum types with explicit variants and payloads.
 
 ## Syntax Direction
 
-Use modern systems-language-style tagged union syntax that does not collide with TypeScript class,
-interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
-defines variant declarations, construction, access, exhaustiveness expectations, lowering, examples,
-and tests.
+Use Zig-inspired systems syntax that does not collide with TypeScript class, interface, or generic
+syntax. Exact syntax remains unspecified until a dedicated design update defines variant
+declarations, construction, access, exhaustiveness expectations, lowering, examples, and tests.
 
 Candidate syntax should make tags and payloads explicit and should lower predictably to a tag plus
 payload storage.
@@ -1553,8 +1618,6 @@ payload storage.
 - Do not rely on unspecified C layout.
 - Do not add implicit conversions between variants.
 - Do not implement before exact syntax is specified.
-
----
 
 ---
 

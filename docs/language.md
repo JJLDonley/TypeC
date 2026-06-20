@@ -122,9 +122,10 @@ only the initial core subset.
 
 Current stdlib modules are simple because many advanced features are not implemented yet. Completed
 features such as compile-time constants may be used in stdlib modules where they improve clarity,
-safety, or reuse. Essential later features such as enums, classes, methods, interfaces, and generics
-should be adopted after their phases are implemented. Optional systems features such as defer, safe
-pointers, arenas, and tagged unions should be adopted only when explicitly prioritized.
+safety, or reuse. Essential later features such as switch statements, enums, classes, methods,
+interfaces, and generics should be adopted after their phases are implemented. Optional systems
+features such as defer, safe pointers, arenas, and tagged unions should be adopted only when
+explicitly prioritized.
 
 ## Constants and Planned Enums
 
@@ -150,7 +151,7 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/constants.tc
 ```
 
-Phase 13 adds TypeScript-like scoped enums:
+Phase 13 adds TypeScript-like `switch` statements. Phase 14 adds TypeScript-like scoped enums:
 
 ```ts
 export enum Key {
