@@ -1,9 +1,26 @@
-import type { BlockStmt, Expression, FunctionDecl, Statement, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type {
+  BlockStmt,
+  ConstDecl,
+  Expression,
+  FunctionDecl,
+  Statement,
+  TypeAliasDecl,
+  TypeRef,
+} from "core/ast.ts";
 import type { DependencySet } from "module/dependency_index.ts";
 
-export function collectTypeAliasDeps(typeAlias: TypeAliasDecl | undefined, selected: DependencySet): void {
+export function collectTypeAliasDeps(
+  typeAlias: TypeAliasDecl | undefined,
+  selected: DependencySet,
+): void {
   if (!typeAlias) return;
   collectTypeDeps(typeAlias.type, selected);
+}
+
+export function collectConstDeps(constant: ConstDecl | undefined, selected: DependencySet): void {
+  if (!constant) return;
+  collectTypeDeps(constant.type, selected);
+  collectExpressionDeps(constant.initializer, selected);
 }
 
 export function collectFunctionDeps(fn: FunctionDecl | undefined, selected: DependencySet): void {
@@ -50,7 +67,9 @@ function collectExpressionDeps(expression: Expression, selected: DependencySet):
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+      return;
     case "IdentifierExpr":
+      selected.constants.add(expression.name);
       return;
     case "BinaryExpr":
       collectExpressionDeps(expression.left, selected);
@@ -87,6 +106,13 @@ function collectTypeDeps(type: TypeRef, selected: DependencySet): void {
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
       collectTypeDeps(type.element, selected);
+      return;
+    case "SliceTypeRef":
+      collectTypeDeps(type.element, selected);
+      return;
+    case "FunctionTypeRef":
+      for (const param of type.params) collectTypeDeps(param.type, selected);
+      collectTypeDeps(type.returnType, selected);
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeDeps(field.type, selected);

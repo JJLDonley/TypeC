@@ -1,6 +1,6 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import type { FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
+import type { ConstDecl, FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
 import { namespaceCName } from "module/c_names.ts";
 import { selectDependencyClosure } from "module/dependencies.ts";
 import { namespaceProgramFunctions } from "module/function_namespaces.ts";
@@ -20,6 +20,10 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
       ...imports.flatMap((program) => program.typeAliases),
       ...local.typeAliases,
     ]),
+    constants: uniqueRefs([
+      ...imports.flatMap((program) => program.constants ?? []),
+      ...(local.constants ?? []),
+    ]),
     functions: uniqueRefs([...imports.flatMap((program) => program.functions), ...local.functions]),
     span: local.span,
   };
@@ -27,9 +31,11 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
 
 export function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
   const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
+  const constants = names.flatMap((name) => selectConstant(program.constants ?? [], name));
   const functions = names.flatMap((name) => selectFunction(program.functions, name));
   const found = new Set<Str>([
     ...typeAliases.map((decl) => decl.name),
+    ...constants.map((decl) => decl.name),
     ...functions.map((decl) => decl.name),
   ]);
   const missing = names.filter((name) => !found.has(name));
@@ -41,6 +47,7 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
   return selectDependencyClosure(
     program,
     typeAliases.map((typeAlias) => typeAlias.name),
+    constants.map((constant) => constant.name),
     functions.map((fn) => fn.name),
   );
 }
@@ -49,6 +56,7 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
   const selected = selectDependencyClosure(
     program,
     exportedTypeNames(program),
+    exportedConstantNames(program),
     exportedFunctionNames(program),
   );
   const namespaced = namespaceProgramFunctions(
@@ -58,13 +66,22 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
   const typeAliases = namespaced.typeAliases.map((typeAlias) =>
     namespaceTypeAlias(typeAlias, namespace)
   );
+  const constants = (namespaced.constants ?? []).map((constant) =>
+    namespaceConstant(constant, namespace)
+  );
   const functions = namespaced.functions.map((fn) => namespaceFunction(fn, namespace));
-  return { kind: "Program", imports: [], typeAliases, functions, span: program.span };
+  return { kind: "Program", imports: [], typeAliases, constants, functions, span: program.span };
 }
 
 function exportedTypeNames(program: Program): Str[] {
   return program.typeAliases.filter((typeAlias) => typeAlias.exported).map((typeAlias) =>
     typeAlias.name
+  );
+}
+
+function exportedConstantNames(program: Program): Str[] {
+  return (program.constants ?? []).filter((constant) => constant.exported).map((constant) =>
+    constant.name
   );
 }
 
@@ -78,6 +95,15 @@ function namespaceTypeAlias(typeAlias: TypeAliasDecl, namespace: Str): TypeAlias
     exported: false,
     name: `${namespace}.${typeAlias.name}`,
     cName: typeAlias.cName ?? namespaceCName(namespace, typeAlias.name),
+  };
+}
+
+function namespaceConstant(constant: ConstDecl, namespace: Str): ConstDecl {
+  return {
+    ...constant,
+    exported: false,
+    name: `${namespace}.${constant.name}`,
+    cName: constant.cName ?? namespaceCName(namespace, constant.name),
   };
 }
 
@@ -100,6 +126,10 @@ function uniqueRefs<T>(items: T[]): T[] {
 
 function selectTypeAlias(typeAliases: TypeAliasDecl[], name: Str): TypeAliasDecl[] {
   return typeAliases.filter((typeAlias) => typeAlias.exported && typeAlias.name === name);
+}
+
+function selectConstant(constants: ConstDecl[], name: Str): ConstDecl[] {
+  return constants.filter((constant) => constant.exported && constant.name === name);
 }
 
 function selectFunction(functions: FunctionDecl[], name: Str): FunctionDecl[] {

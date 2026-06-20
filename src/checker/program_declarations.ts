@@ -1,5 +1,5 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { FunctionDecl, TypeRef } from "core/ast.ts";
+import type { ConstDecl, FunctionDecl, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkCOrdinarySymbols } from "checker/c_ordinary_symbols.ts";
 import { checkCFunctionSymbols, checkCTypeAliasSymbols } from "checker/c_symbols.ts";
@@ -9,6 +9,7 @@ type Str = string;
 
 export interface CheckedDeclarations {
   functions: Map<Str, FunctionDecl>;
+  constants: Map<Str, ConstDecl>;
   typeAliases: Map<Str, TypeRef>;
   diagnostics: Diagnostic[];
 }
@@ -17,6 +18,7 @@ export function collectProgramDeclarations(program: ResolvedProgram): CheckedDec
   const declarations = checkDeclarations(program);
   return {
     functions: declarations.functions,
+    constants: declarations.constants,
     typeAliases: declarations.typeAliases,
     diagnostics: [
       ...declarations.diagnostics,

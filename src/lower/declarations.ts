@@ -1,5 +1,12 @@
-import type { FunctionDecl, ImportDecl, Param, TypeAliasDecl } from "core/ast.ts";
-import type { CastFunctionDecl, CastImportDecl, CastParam, CastTypeAliasDecl } from "core/cast.ts";
+import type { ConstDecl, FunctionDecl, ImportDecl, Param, TypeAliasDecl } from "core/ast.ts";
+import type {
+  CastConstDecl,
+  CastFunctionDecl,
+  CastImportDecl,
+  CastParam,
+  CastTypeAliasDecl,
+} from "core/cast.ts";
+import { lowerExpression } from "lower/expressions.ts";
 import { lowerBlockStmt } from "lower/statements.ts";
 import { lowerTypeRef } from "lower/types.ts";
 
@@ -21,6 +28,18 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
     cName: typeAlias.cName,
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
+  };
+}
+
+export function lowerConstDecl(constant: CastConstDecl): ConstDecl {
+  return {
+    kind: "ConstDecl",
+    exported: constant.exported,
+    name: constant.name,
+    cName: constant.cName,
+    type: lowerTypeRef(constant.type),
+    initializer: lowerExpression(constant.initializer),
+    span: constant.span,
   };
 }
 

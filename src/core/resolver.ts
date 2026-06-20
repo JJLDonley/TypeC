@@ -20,18 +20,34 @@ class Resolver {
 
   resolve(): ResolvedProgram {
     this.declareTypes();
+    this.declareConstants();
     this.declareFunctions();
     for (const fn of this.program.functions) this.resolveFunction(fn);
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
-    return { ...this.program, symbols: this.scopeTable.getSymbols(), scopes: this.scopeTable.getScopes() };
+    return {
+      ...this.program,
+      symbols: this.scopeTable.getSymbols(),
+      scopes: this.scopeTable.getScopes(),
+    };
   }
 
   private declareTypes(): void {
-    for (const typeAlias of this.program.typeAliases) this.declare(this.globalScope, typeAlias.name, "type", typeAlias.span);
+    for (const typeAlias of this.program.typeAliases) {
+      this.declare(this.globalScope, typeAlias.name, "type", typeAlias.span);
+    }
+  }
+
+  private declareConstants(): void {
+    for (const constant of this.program.constants ?? []) {
+      this.resolveExpression(constant.initializer, this.globalScope);
+      this.declare(this.globalScope, constant.name, "constant", constant.span);
+    }
   }
 
   private declareFunctions(): void {
-    for (const fn of this.program.functions) this.declare(this.globalScope, fn.name, "function", fn.span);
+    for (const fn of this.program.functions) {
+      this.declare(this.globalScope, fn.name, "function", fn.span);
+    }
   }
 
   private resolveFunction(fn: FunctionDecl): void {

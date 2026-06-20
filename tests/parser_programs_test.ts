@@ -14,9 +14,26 @@ const sourceSpan = {
 
 Deno.test("parses program declarations", () => {
   const fixture = parserFixture([
-    keyword("import"), punct("{"), identifier("add"), punct("}"), keyword("from"), text("math"), punct(";"),
-    keyword("type"), identifier("Count"), punct("="), identifier("i32"), punct(";"),
-    keyword("function"), identifier("main"), punct("("), punct(")"), punct(":"), identifier("i32"), punct("{"), punct("}"),
+    keyword("import"),
+    punct("{"),
+    identifier("add"),
+    punct("}"),
+    keyword("from"),
+    text("math"),
+    punct(";"),
+    keyword("type"),
+    identifier("Count"),
+    punct("="),
+    identifier("i32"),
+    punct(";"),
+    keyword("function"),
+    identifier("main"),
+    punct("("),
+    punct(")"),
+    punct(":"),
+    identifier("i32"),
+    punct("{"),
+    punct("}"),
     eof(),
   ]);
 
@@ -29,7 +46,13 @@ Deno.test("parses program declarations", () => {
 
 Deno.test("throws after declaration diagnostics", () => {
   const fixture = parserFixture([
-    keyword("extern"), keyword("type"), identifier("Bad"), punct("="), identifier("i32"), punct(";"), eof(),
+    keyword("extern"),
+    keyword("type"),
+    identifier("Bad"),
+    punct("="),
+    identifier("i32"),
+    punct(";"),
+    eof(),
   ]);
 
   try {
@@ -73,6 +96,7 @@ function parserFixture(tokens: Token[]): ParserFixture {
     peek: () => peek(tokens, current),
     error: (token, message) => diagnostics.push({ message, span: token.span }),
     parseTypeRef: () => parseTypeRef(tokens, current, (next) => current = next),
+    parseExpression: () => parseExpression(tokens, current, (next) => current = next),
     parseBlock: () => parseBlock(tokens, current, (next) => current = next),
   };
   return {
@@ -91,6 +115,17 @@ function parseTypeRef(tokens: Token[], current: i32, setCurrent: (next: i32) => 
   if (token.kind !== "identifier") throw new Error("Expected type");
   setCurrent(current + 1);
   return { kind: "NamedTypeRef", name: token.text, span: sourceSpan };
+}
+
+function parseExpression(tokens: Token[], current: i32, setCurrent: (next: i32) => void) {
+  const token = peek(tokens, current);
+  setCurrent(current + 1);
+  return {
+    kind: "IntegerLiteral" as const,
+    value: BigInt(token.text),
+    text: token.text,
+    span: sourceSpan,
+  };
 }
 
 function parseBlock(tokens: Token[], current: i32, setCurrent: (next: i32) => void): CastBlockStmt {

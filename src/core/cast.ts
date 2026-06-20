@@ -9,6 +9,7 @@ export interface CastProgram {
   kind: "Program";
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
+  constants?: CastConstDecl[];
   functions: CastFunctionDecl[];
   span: SourceSpan;
 }
@@ -27,6 +28,16 @@ export interface CastTypeAliasDecl {
   name: Str;
   cName?: Str | null;
   type: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastConstDecl {
+  kind: "ConstDecl";
+  exported: b8;
+  name: Str;
+  cName?: Str | null;
+  type: CastTypeRef;
+  initializer: CastExpression;
   span: SourceSpan;
 }
 

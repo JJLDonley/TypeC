@@ -1,6 +1,7 @@
 import type { CheckedProgram } from "checker";
 import { emitCPrelude } from "c/prelude.ts";
 import { createEmitContext, type EmitContext } from "emitter/context.ts";
+import { emitConstantDefinition } from "emitter/constants.ts";
 import { emitFunctionDefinition } from "emitter/function_definitions.ts";
 import { collectFunctionPrototypes } from "emitter/function_prototypes.ts";
 import { collectSliceTypeDefinitions } from "emitter/slice_types.ts";
@@ -14,6 +15,7 @@ export function emitTranslationUnit(program: CheckedProgram): Str {
     ...emitCPrelude(),
     ...emitTypeAliasSection(program, context),
     ...emitSliceTypeSection(program, context),
+    ...emitConstantSection(program, context),
     ...emitFunctionPrototypeSection(program, context),
     "",
     ...emitFunctionDefinitionSection(program, context),
@@ -29,6 +31,12 @@ function emitTypeAliasSection(program: CheckedProgram, context: EmitContext): St
 
 function emitSliceTypeSection(program: CheckedProgram, context: EmitContext): Str[] {
   return collectSliceTypeDefinitions(program, context).flatMap((definition) => [definition, ""]);
+}
+
+function emitConstantSection(program: CheckedProgram, context: EmitContext): Str[] {
+  return (program.constants ?? []).flatMap((
+    constant,
+  ) => [emitConstantDefinition(constant, context), ""]);
 }
 
 function emitFunctionPrototypeSection(program: CheckedProgram, context: EmitContext): Str[] {

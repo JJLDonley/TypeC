@@ -30,6 +30,20 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for module constants", () => {
+  const program = parse(lex(`
+    const ANSWER: i32 = 42;
+    function main(): i32 {
+      return ANSWER;
+    }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertIncludes(c, "static const i32 ANSWER = 42;");
+  assertIncludes(c, "return ANSWER;");
+});
+
 Deno.test("emits C for namespace function dependencies", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

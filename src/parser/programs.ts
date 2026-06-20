@@ -1,8 +1,18 @@
 import { TypeCError } from "core/diagnostics.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { CastFunctionDecl, CastImportDecl, CastProgram, CastTypeAliasDecl } from "core/cast.ts";
+import type {
+  CastConstDecl,
+  CastFunctionDecl,
+  CastImportDecl,
+  CastProgram,
+  CastTypeAliasDecl,
+} from "core/cast.ts";
 import type { Token } from "core/token.ts";
-import { parseDeclarationWith, type CastDeclaration, type DeclarationParser } from "parser/declarations.ts";
+import {
+  type CastDeclaration,
+  type DeclarationParser,
+  parseDeclarationWith,
+} from "parser/declarations.ts";
 
 type b8 = boolean;
 
@@ -16,6 +26,7 @@ export interface ProgramParser {
 interface ProgramDeclarations {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
+  constants: CastConstDecl[];
   functions: CastFunctionDecl[];
 }
 
@@ -29,16 +40,19 @@ export function parseProgramWith(parser: ProgramParser): CastProgram {
 
 function parseProgramDeclarations(parser: ProgramParser): ProgramDeclarations {
   const declarations = emptyProgramDeclarations();
-  while (!parser.checkEof()) addDeclaration(declarations, parseDeclarationWith(parser.declarationParser()));
+  while (!parser.checkEof()) {
+    addDeclaration(declarations, parseDeclarationWith(parser.declarationParser()));
+  }
   return declarations;
 }
 
 function emptyProgramDeclarations(): ProgramDeclarations {
-  return { imports: [], typeAliases: [], functions: [] };
+  return { imports: [], typeAliases: [], constants: [], functions: [] };
 }
 
 function addDeclaration(declarations: ProgramDeclarations, declaration: CastDeclaration): void {
   if (declaration.kind === "ImportDecl") declarations.imports.push(declaration);
   if (declaration.kind === "TypeAliasDecl") declarations.typeAliases.push(declaration);
+  if (declaration.kind === "ConstDecl") declarations.constants.push(declaration);
   if (declaration.kind === "FunctionDecl") declarations.functions.push(declaration);
 }

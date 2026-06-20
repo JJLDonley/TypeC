@@ -23,7 +23,7 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
     case "StringLiteral":
       return emitCStringLiteral(expr.text);
     case "IdentifierExpr":
-      return expr.name;
+      return emitIdentifierExpression(expr.name, context);
     case "BinaryExpr":
       return emitBinaryExpression(expr, context);
     case "CallExpr":
@@ -68,6 +68,10 @@ export function emitExpressionExpected(
     return emitSliceExpression(expr, expectedType, context);
   }
   return emitExpression(expr, context);
+}
+
+function emitIdentifierExpression(name: Str, context: EmitContext): Str {
+  return context.constants?.get(name)?.cName ?? name;
 }
 
 function emitSliceExpression(expr: Expression, expectedType: Str, context: EmitContext): Str {

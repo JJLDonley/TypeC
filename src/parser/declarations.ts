@@ -1,6 +1,8 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type {
   CastBlockStmt,
+  CastConstDecl,
+  CastExpression,
   CastFunctionDecl,
   CastImportDecl,
   CastParam,
@@ -33,6 +35,7 @@ export interface DeclarationParser {
   peek(): Token;
   error(token: Token, message: Str): void;
   parseTypeRef(): CastTypeRef;
+  parseExpression(): CastExpression;
   parseBlock(): CastBlockStmt;
 }
 
@@ -43,12 +46,13 @@ export interface DeclarationModifiers {
   externToken: Token | null;
 }
 
-export type CastDeclaration = CastImportDecl | CastTypeAliasDecl | CastFunctionDecl;
+export type CastDeclaration = CastImportDecl | CastTypeAliasDecl | CastConstDecl | CastFunctionDecl;
 
 export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration {
   const modifiers = parseDeclarationModifiers(parser);
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
+  if (parser.checkText("const")) return parseConstDeclaration(parser, modifiers);
   return parseFunctionDeclaration(parser, modifiers);
 }
 
@@ -116,6 +120,29 @@ function parseTypeAliasDeclaration(
     exported: modifiers.exported,
     name: name.text,
     type,
+    span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseConstDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastConstDecl {
+  parser.diagnostics().push(...typeAliasModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("const");
+  const name = parser.expectKind("identifier", "Expected constant name");
+  parser.expectText(":");
+  const type = parser.parseTypeRef();
+  parser.expectText("=");
+  const initializer = parser.parseExpression();
+  const semi = parser.expectText(";");
+  return {
+    kind: "ConstDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    cName: null,
+    type,
+    initializer,
     span: span(start.span.start, semi.span.end),
   };
 }

@@ -10,14 +10,14 @@ type Str = string;
 type usize = number;
 
 Deno.test("resolves local identifier types", () => {
-  const result = checkIdentifierType("value", { type: "i32", mutable: false }, span);
+  const result = checkIdentifierType("value", { type: "i32", mutable: false }, undefined, span);
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32");
 });
 
 Deno.test("reports unknown identifiers", () => {
-  const result = checkIdentifierType("missing", undefined, span);
+  const result = checkIdentifierType("missing", undefined, undefined, span);
 
   assertLen(result.diagnostics.length, 1);
   assertText(result.diagnostics[0]?.message ?? "", "Unknown identifier 'missing'");

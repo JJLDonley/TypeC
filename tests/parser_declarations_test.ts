@@ -63,6 +63,25 @@ Deno.test("parses exported type aliases", () => {
   assertBool(declaration.exported, true);
 });
 
+Deno.test("parses module constant declarations", () => {
+  const fixture = parserFixture([
+    keyword("export"),
+    keyword("const"),
+    identifier("WIDTH"),
+    punct(":"),
+    identifier("i32"),
+    punct("="),
+    integer("800"),
+    punct(";"),
+  ]);
+
+  const declaration = parseDeclarationWith(fixture.parser);
+
+  assertText(declaration.kind, "ConstDecl");
+  if (declaration.kind !== "ConstDecl") throw new Error("Expected constant");
+  assertBool(declaration.exported, true);
+});
+
 Deno.test("parses extern function declarations", () => {
   const fixture = parserFixture([
     keyword("extern"),
@@ -161,6 +180,7 @@ function parserFixture(tokens: Token[]): ParserFixture {
     peek: () => peek(tokens, current),
     error: (token, message) => diagnostics.push({ message, span: token.span }),
     parseTypeRef: () => parseTypeRef(tokens, current, (next) => current = next),
+    parseExpression: () => parseExpression(tokens, current, (next) => current = next),
     parseBlock: () => parseBlock(tokens, current, (next) => current = next),
   };
   return { diagnostics, parser };
@@ -177,6 +197,17 @@ function parseTypeRef(tokens: Token[], current: i32, setCurrent: (next: i32) => 
   }
   setCurrent(next);
   return type;
+}
+
+function parseExpression(tokens: Token[], current: i32, setCurrent: (next: i32) => void) {
+  const token = peek(tokens, current);
+  setCurrent(current + 1);
+  return {
+    kind: "IntegerLiteral" as const,
+    value: BigInt(token.text),
+    text: token.text,
+    span: sourceSpan,
+  };
 }
 
 function parseBlock(tokens: Token[], current: i32, setCurrent: (next: i32) => void): CastBlockStmt {
@@ -196,6 +227,10 @@ function keyword(value: Str): Token {
 
 function identifier(value: Str): Token {
   return token("identifier", value);
+}
+
+function integer(value: Str): Token {
+  return token("integer", value);
 }
 
 function text(value: Str): Token {

@@ -8,8 +8,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Required parameter and return type annotations
 - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`,
   `f64`, `void`
-- `return expr;`, `return;`, function-call expression statements, `while`, assignment, `let`, and
-  `const` statements
+- Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
+  `return;`, function-call expression statements, `while`, and assignment statements
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
@@ -125,9 +125,9 @@ such as classes, methods, enums, generics, interfaces, tagged unions, pattern ma
 pointers, defer, arenas, and compile-time constants are completed, stdlib APIs should be updated to
 use them where they improve clarity, safety, or reuse.
 
-## Planned Constants and Enums
+## Constants and Planned Enums
 
-Phase 12 adds TypeScript-like module-level constants:
+Module-level constants use TypeScript-like syntax:
 
 ```ts
 export const SCREEN_WIDTH: i32 = 800;
@@ -145,7 +145,7 @@ export enum Key {
 const key: Key = Key.Space;
 ```
 
-These are specified in `TYPEC_PHASES.md` but are not implemented in the current prototype yet.
+Enums are specified in `TYPEC_PHASES.md` but are not implemented in the current prototype yet.
 
 ## Array, Slice, Pointer, and Reference Model
 

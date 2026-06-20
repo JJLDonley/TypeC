@@ -1,6 +1,6 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import type { Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
+import type { ConstDecl, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
@@ -8,6 +8,7 @@ import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
+import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
@@ -49,6 +50,7 @@ export * from "checker/call_expressions.ts";
 export * from "checker/calls.ts";
 export * from "checker/conditions.ts";
 export * from "checker/control_flow.ts";
+export * from "checker/constants.ts";
 export * from "checker/expected_expressions.ts";
 export * from "checker/expression_statements.ts";
 export * from "checker/expression_types.ts";
@@ -93,6 +95,7 @@ export function check(program: ResolvedProgram): CheckedProgram {
 class Checker {
   private diagnostics: Diagnostic[] = [];
   private functions = new Map<Str, FunctionDecl>();
+  private constants = new Map<Str, ConstDecl>();
   private typeAliases = new Map<Str, TypeRef>();
   private expressionTypes = new Map<Str, { type: TypeName }>();
 
@@ -100,6 +103,7 @@ class Checker {
 
   check(): CheckedProgram {
     this.collectFunctions();
+    for (const constant of this.program.constants ?? []) this.checkConstant(constant);
     for (const fn of this.program.functions) this.checkFunction(fn);
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
     return { ...this.program, expressionTypes: this.expressionTypes };
@@ -108,8 +112,18 @@ class Checker {
   private collectFunctions(): void {
     const declarations = collectProgramDeclarations(this.program);
     this.functions = declarations.functions;
+    this.constants = declarations.constants;
     this.typeAliases = declarations.typeAliases;
     this.diagnostics.push(...declarations.diagnostics);
+  }
+
+  private checkConstant(constant: ConstDecl): void {
+    this.diagnostics.push(
+      ...checkConstantValue(
+        constant,
+        (expr, expected) => this.typeOfExpected(expr, new Map<Str, LocalInfo>(), expected),
+      ),
+    );
   }
 
   private checkFunction(fn: FunctionDecl): void {
@@ -272,7 +286,7 @@ class Checker {
   }
 
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
-    const result = checkIdentifierType(name, locals.get(name), span);
+    const result = checkIdentifierType(name, locals.get(name), this.constants.get(name), span);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }

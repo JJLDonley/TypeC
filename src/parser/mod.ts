@@ -82,6 +82,7 @@ class Parser {
       peek: () => this.peek(),
       error: (token, message) => this.error(token, message),
       parseTypeRef: () => this.parseTypeRef(),
+      parseExpression: () => this.parseExpression(),
       parseBlock: () => this.parseBlock(),
     };
   }
