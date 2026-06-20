@@ -1,0 +1,4 @@
+function main(): i32 {
+  const values: Array<i32, 2> = [40, 2];
+  return values[0] + values[1];
+}
