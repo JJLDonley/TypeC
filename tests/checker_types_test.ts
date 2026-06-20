@@ -1,4 +1,18 @@
-import { integerRange, isAssignable, isFloatType, isIntegerType, isNumericType, isPointerLikeType, maxF32, parseArrayType } from "checker/types.ts";
+import {
+  isPointerLikeTypeName,
+  parseArrayTypeName,
+  pointeeTypeName,
+} from "checker/type_name_shapes.ts";
+import {
+  integerRange,
+  isAssignable,
+  isFloatType,
+  isIntegerType,
+  isNumericType,
+  isPointerLikeType,
+  maxF32,
+  parseArrayType,
+} from "checker/types.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -31,6 +45,13 @@ Deno.test("parses checker array types", () => {
   assertSame(inferred?.length === null, true);
   assertBigInt(fixed?.length ?? 0n, 3n);
   assertSame(parseArrayType("i32") === null, true);
+});
+
+Deno.test("parses shared checker type name shapes", () => {
+  assertText(parseArrayTypeName("u8[4]")?.element ?? "", "u8");
+  assertBigInt(parseArrayTypeName("u8[4]")?.length ?? 0n, 4n);
+  assertSame(isPointerLikeTypeName("u8*"), true);
+  assertText(pointeeTypeName("u8*"), "u8");
 });
 
 Deno.test("checks assignability", () => {

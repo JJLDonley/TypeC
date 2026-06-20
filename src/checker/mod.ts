@@ -75,6 +75,7 @@ export * from "checker/returns.ts";
 export * from "checker/statements.ts";
 export * from "checker/string_literals.ts";
 export * from "checker/type_alias_order.ts";
+export * from "checker/type_name_shapes.ts";
 export * from "checker/type_refs.ts";
 export * from "checker/type_shapes.ts";
 export * from "checker/type_validation.ts";

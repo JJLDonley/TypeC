@@ -1,38 +1,31 @@
 import type { TypeName } from "core/tast.ts";
+import {
+  isPointerLikeTypeName,
+  parseArrayTypeName,
+  pointeeTypeName,
+} from "checker/type_name_shapes.ts";
 
 type b8 = boolean;
-type IntLiteralValue = bigint;
 
 export function isPointerAssignable(actual: TypeName, expected: TypeName): b8 {
   if (isVoidPointerTarget(actual, expected)) return true;
-  if (isReferenceToPointerLike(actual, expected)) return pointeeType(actual) === pointeeType(expected);
+  if (isReferenceToPointerLike(actual, expected)) {
+    return pointeeTypeName(actual) === pointeeTypeName(expected);
+  }
   return false;
 }
 
 export function isArrayPointerAssignable(actual: TypeName, expected: TypeName): b8 {
-  const actualArray = parseArrayType(actual);
+  const actualArray = parseArrayTypeName(actual);
   if (!actualArray || !expected.endsWith("*")) return false;
-  return expected === "void*" || actualArray.element === pointeeType(expected);
-}
-
-function parseArrayType(type: TypeName): { element: TypeName; length: IntLiteralValue | null } | null {
-  const match = type.match(/^(.+)\[(\d*)\]$/);
-  if (!match) return null;
-  return { element: match[1], length: match[2] ? BigInt(match[2]) : null };
+  return expected === "void*" || actualArray.element === pointeeTypeName(expected);
 }
 
 function isVoidPointerTarget(actual: TypeName, expected: TypeName): b8 {
-  return expected === "void*" && isPointerLikeType(actual) && pointeeType(actual) !== "void";
+  return expected === "void*" && isPointerLikeTypeName(actual) &&
+    pointeeTypeName(actual) !== "void";
 }
 
 function isReferenceToPointerLike(actual: TypeName, expected: TypeName): b8 {
-  return actual.endsWith("&") && isPointerLikeType(expected);
-}
-
-function isPointerLikeType(type: TypeName): b8 {
-  return type.endsWith("*") || type.endsWith("&");
-}
-
-function pointeeType(type: TypeName): TypeName {
-  return type.slice(0, -1);
+  return actual.endsWith("&") && isPointerLikeTypeName(expected);
 }

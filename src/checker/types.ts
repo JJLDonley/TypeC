@@ -1,5 +1,10 @@
 import type { TypeName } from "core/tast.ts";
 import { isArrayPointerAssignable, isPointerAssignable } from "checker/pointer_compatibility.ts";
+import {
+  type ArrayTypeNameShape,
+  isPointerLikeTypeName,
+  parseArrayTypeName,
+} from "checker/type_name_shapes.ts";
 
 type Str = string;
 type f64 = number;
@@ -11,7 +16,19 @@ export interface IntegerRange {
   max: IntLiteralValue;
 }
 
-const numericTypes = new Set<Str>(["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64"]);
+const numericTypes = new Set<Str>([
+  "i8",
+  "i16",
+  "i32",
+  "i64",
+  "u8",
+  "u16",
+  "u32",
+  "u64",
+  "usize",
+  "f32",
+  "f64",
+]);
 const integerRanges = new Map<Str, IntegerRange>([
   ["i8", { min: -128n, max: 127n }],
   ["i16", { min: -32768n, max: 32767n }],
@@ -34,7 +51,8 @@ export function isNumericType(type: TypeName): b8 {
 }
 
 export function isIntegerType(type: TypeName): b8 {
-  return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" || type === "u16" || type === "u32" || type === "u64" || type === "usize";
+  return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" ||
+    type === "u16" || type === "u32" || type === "u64" || type === "usize";
 }
 
 export function isFloatType(type: TypeName): b8 {
@@ -45,18 +63,18 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (actual === expected) return true;
   const expectedArray = parseArrayType(expected);
   const actualArray = parseArrayType(actual);
-  if (expectedArray && actualArray) return expectedArray.element === actualArray.element && (expectedArray.length === null || expectedArray.length === actualArray.length);
+  if (expectedArray && actualArray) {
+    return expectedArray.element === actualArray.element &&
+      (expectedArray.length === null || expectedArray.length === actualArray.length);
+  }
   if (isArrayPointerAssignable(actual, expected)) return true;
   return isPointerAssignable(actual, expected);
 }
 
-export function parseArrayType(type: TypeName): { element: TypeName; length: IntLiteralValue | null } | null {
-  const match = type.match(/^(.+)\[(\d*)\]$/);
-  if (!match) return null;
-  return { element: match[1], length: match[2] ? BigInt(match[2]) : null };
+export function parseArrayType(type: TypeName): ArrayTypeNameShape | null {
+  return parseArrayTypeName(type);
 }
 
 export function isPointerLikeType(type: TypeName): b8 {
-  return type.endsWith("*") || type.endsWith("&");
+  return isPointerLikeTypeName(type);
 }
-
