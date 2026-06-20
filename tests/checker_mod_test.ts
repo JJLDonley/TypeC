@@ -1,4 +1,4 @@
-import { check, checkArrayIndex, isAssignable } from "checker";
+import { check, checkArrayIndex, isAssignable, parseArrayTypeName } from "checker";
 import type { Expression } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import { lex } from "core/lexer.ts";
@@ -12,6 +12,7 @@ Deno.test("exports checker public helpers", () => {
   assertText(typeof check, "function");
   assertText(`${isAssignable("i32", "i32")}`, "true");
   assertText(`${checkArrayIndex(integerLiteral(), "i32", null).length}`, "0");
+  assertText(parseArrayTypeName("i32[2]")?.element ?? "", "i32");
 });
 
 Deno.test("exports checker entrypoint", () => {
