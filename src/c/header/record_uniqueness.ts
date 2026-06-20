@@ -1,5 +1,5 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
-import { mapCHeaderType } from "c/header/types.ts";
+import { mapCHeaderRecordFieldType } from "c/header/record_field_types.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -47,7 +47,7 @@ function sameField(
 
 function fieldTypeShape(field: CHeaderRecordField, recordNames: Set<Str>): Str {
   try {
-    return mapCHeaderType(field.type, recordNames);
+    return mapCHeaderRecordFieldType(field.type, recordNames);
   } catch (error) {
     if (error instanceof TypeCError) return `unsupported:${field.type}`;
     throw error;

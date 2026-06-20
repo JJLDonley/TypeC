@@ -973,7 +973,8 @@ function main(): i32 {
 - Header functions without source locations may be imported when their signature references a known
   selected record, including pointer, qualifier, `struct T`, and array spellings.
 - Duplicate header records with equivalent mapped TypeC field layouts collapse to one imported
-  record; duplicate incompatible header records are skipped safely.
+  record; fixed array field sizes are part of compatibility; duplicate incompatible header records
+  are skipped safely.
 - Imported header records are emitted before records that depend on them when dependency order can
   be resolved; unresolved recursive record cycles are skipped safely.
 - C enums should import as namespaced integer-backed constants or enum types once enum semantics are

@@ -33,6 +33,27 @@ Deno.test("keeps duplicate header records with equivalent record field types", (
   assertSame(records.length, 2);
 });
 
+Deno.test("keeps duplicate header records with equivalent fixed array fields", () => {
+  const records = uniqueCompatibleHeaderRecords([
+    record("Palette", [["colors", "Color[4]"]], "/project/a.h"),
+    record("Palette", [["colors", "struct Color[4]"]], "/project/b.h"),
+    record("Color", [["r", "unsigned char"]], "/project/color.h"),
+  ]);
+
+  assertSame(records.length, 2);
+});
+
+Deno.test("drops duplicate header records with different fixed array sizes", () => {
+  const records = uniqueCompatibleHeaderRecords([
+    record("Palette", [["colors", "Color[4]"]], "/project/a.h"),
+    record("Palette", [["colors", "Color[8]"]], "/project/b.h"),
+    record("Color", [["r", "unsigned char"]], "/project/color.h"),
+  ]);
+
+  assertSame(records.length, 1);
+  assertText(records[0]?.name ?? "", "Color");
+});
+
 Deno.test("drops incompatible duplicate header records", () => {
   const records = uniqueCompatibleHeaderRecords([
     record("Color", [["r", "unsigned char"]], "/project/a.h"),
