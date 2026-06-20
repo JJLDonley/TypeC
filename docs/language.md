@@ -44,6 +44,21 @@ Relative project imports use `./` or `../` paths:
 import { add } from "./math.tc";
 ```
 
+Namespace imports are planned for TypeC modules and C header modules:
+
+```ts
+import * as RL from "raylib";
+
+function main(): i32 {
+  RL.InitWindow(800, 450, "TypeC");
+  RL.CloseWindow();
+  return 0;
+}
+```
+
+The namespace is a TypeC name-checking boundary. For C headers, emitted C uses the original C symbol
+name.
+
 Standard-library imports use `std/` paths:
 
 ```ts
@@ -139,6 +154,48 @@ array.length()
 array.data
 slice.length()
 slice.data
+```
+
+## Planned Header Interop
+
+Header dependencies should be usable without a hand-written ABI file:
+
+```json
+{
+  "dependencies": {
+    "raylib": "vendor/raylib.h"
+  },
+  "compiler": {
+    "flags": ["-Ivendor/raylib/include", "-Lvendor/raylib/lib", "-lraylib"]
+  }
+}
+```
+
+```ts
+import * as RL from "raylib";
+
+function main(): i32 {
+  RL.InitWindow(800, 450, "TypeC");
+  RL.CloseWindow();
+  return 0;
+}
+```
+
+Header imports are virtual TypeC modules generated from clang AST output. Supported functions,
+pointers, arrays, typedef structs, enums, and constants are imported when they can be represented
+safely. Unsupported function pointers, callbacks, variadics, old-style declarations, unsafe macros,
+and unknown signatures are skipped.
+
+C header mapping goals:
+
+```txt
+char*                 -> Ptr<u8> / u8*
+const char*           -> Ptr<u8> / u8*
+uint8_t*              -> Ptr<u8> / u8*
+T*                    -> Ptr<T> / T*
+T[N] parameter        -> Ptr<T> / T[] ABI parameter
+fixed-width scalars   -> i8/u8/i16/u16/i32/u32/i64/u64/f32/f64
+platform C scalars    -> explicit ABI aliases when required
 ```
 
 ## C Interop

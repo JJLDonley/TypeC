@@ -758,8 +758,11 @@ Support multi-file TypeC projects and standard-library imports.
 import { add } from "./math.tc";
 import { abs_i32 } from "std/math.tc";
 import { max_i32 } from "basic/math";
+import * as RL from "raylib";
 
 function main(): i32 {
+  RL.InitWindow(800, 450, "TypeC");
+  RL.CloseWindow();
   return add(abs_i32(1), max_i32(1, 2));
 }
 ```
@@ -785,6 +788,27 @@ targets use `.h` and are converted to explicit extern declarations through compi
 Project `-I`, `-isystem`, `-D`, and `-U` flags are used while reading headers; relative `-I` and
 `-isystem` paths are resolved from the project directory. `std/` targets cannot contain `..`
 segments. Project-relative dependency targets cannot escape the project with `..` segments.
+
+Namespace imports are planned for both TypeC and C header modules:
+
+```ts
+import * as Math from "basic/math";
+import * as RL from "raylib";
+```
+
+A namespace import binds the imported module under the chosen namespace. For C headers, the
+namespace is TypeC-only; emitted C calls use the original C symbol name unless a later ABI rule
+specifies mangling.
+
+```ts
+import * as RL from "raylib";
+
+function main(): i32 {
+  RL.InitWindow(800, 450, "TypeC");
+  RL.CloseWindow();
+  return 0;
+}
+```
 
 Compiler flag entries must be flags, not extra source files. They cannot override TypeC-controlled
 build behavior such as the C standard, output path, input language, program entrypoint, hosted C
@@ -818,6 +842,7 @@ Feature phases must include stdlib impact checks:
 - Support `std/` imports from the checked-in TypeC standard library.
 - Support `project.json` dependency aliases and compiler flags.
 - Support `project.json` aliases to C headers for generated extern declarations.
+- Support namespace imports (`import * as Name from "module"`) after they are implemented.
 - Treat stdlib modules as first-class TypeC modules that may use any completed language feature.
 
 ## Do Not
@@ -900,15 +925,60 @@ function main(): i32 {
 
 ## C Header Import Rules
 
-- Header-generated extern declarations must come from compiler AST output.
-- Supported C scalar types map to fixed-width TypeC names.
+Header imports are virtual TypeC modules generated from compiler AST output. They should let users
+write direct interop without a hand-written ABI file:
+
+```json
+{
+  "dependencies": {
+    "raylib": "vendor/raylib.h"
+  },
+  "compiler": {
+    "flags": ["-Ivendor/raylib/include", "-Lvendor/raylib/lib", "-lraylib"]
+  }
+}
+```
+
+```ts
+import * as RL from "raylib";
+
+function main(): i32 {
+  RL.InitWindow(800, 450, "TypeC");
+  RL.CloseWindow();
+  return 0;
+}
+```
+
+- Header-generated declarations must come from compiler AST output.
+- Header-generated modules can be imported by named imports or namespace imports.
+- Namespace imports are TypeC-only; emitted C references use the imported C symbol name.
+- Supported C scalar types map to fixed-width TypeC names when the C type has fixed width.
+- Platform-width C scalar types map to explicit ABI aliases such as `c_int`, `c_uint`, `c_long`, and
+  `c_ulong`; call sites emit those TypeC ABI aliases rather than raw C spellings.
 - Pointer types map recursively to TypeC `T*` / `Ptr<T>`.
+- `char*`, `const char*`, and `unsigned char*` map to `u8*` / `Ptr<u8>`.
 - `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type
   information.
 - C array parameters map to legacy TypeC `T[]` or `T*` / `Ptr<T>` and lower to C pointers.
-- Unsupported signatures are skipped safely.
-- Struct typedef import, macros/constants, function pointers, variadics, and callbacks require later
-  explicit phases unless already specified elsewhere in this document.
+- C typedef structs with C-compatible fields should import as namespaced extern records.
+- C enums should import as namespaced integer-backed constants or enum types once enum semantics are
+  specified.
+- C constants and simple object-like macros should import only when they can be represented safely
+  and deterministically.
+- Function pointers, callbacks, variadics, old-style declarations, unsupported macros, and unsafe
+  signatures are skipped safely until explicitly specified.
+
+## Header Interop Implementation Order
+
+1. Add namespace import syntax and module resolution: `import * as RL from "raylib"`.
+2. Resolve namespace-qualified function calls for existing TypeC and header-generated modules.
+3. Preserve original C symbol names during emission while using TypeC namespaces only for checking.
+4. Add C ABI alias types for platform-width C scalars and emit portable typedefs for them.
+5. Add C typedef struct import for C-compatible fields and namespaced field access.
+6. Add C enum import after enum representation is specified.
+7. Add safe constant and simple macro import after constant semantics are specified.
+8. Keep unsupported C signatures skipped with diagnostics/debug visibility, not guessed
+   declarations.
 
 ## Do
 
