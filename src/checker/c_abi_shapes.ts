@@ -32,6 +32,10 @@ export function cTypeShape(type: TypeRef, aliases: TypeAliasIndex): Str {
       return `${cTypeShape(type.element, aliases)}[]`;
     case "FixedArrayTypeRef":
       return `${cTypeShape(type.element, aliases)}[${type.sizeText}]`;
+    case "FunctionTypeRef":
+      return `(${
+        type.params.map((param) => `${param.name}:${cTypeShape(param.type, aliases)}`).join(",")
+      })=>${cTypeShape(type.returnType, aliases)}`;
     case "RecordTypeRef":
       return recordTypeShape(type, aliases);
   }

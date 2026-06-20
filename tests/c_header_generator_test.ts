@@ -102,7 +102,7 @@ Deno.test("generates externs from clang AST", () => {
   assertExcludes(output, "log_message");
   assertExcludes(output, "old_style");
   assertExcludes(output, "get_callback");
-  assertExcludes(output, "set_callback");
+  assertIncludes(output, "extern function set_callback(callback: (arg0: i32) => i32): void;");
 });
 
 Deno.test("skips functions that use unsupported records", () => {

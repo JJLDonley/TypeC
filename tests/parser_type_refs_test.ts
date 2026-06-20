@@ -74,6 +74,23 @@ Deno.test("parses canonical array type refs", () => {
   assertText(typeName(fixed), "i32[16]");
 });
 
+Deno.test("parses function type refs", () => {
+  const fn = parseTypeRefWith(
+    parserFor([
+      punct("("),
+      identifier("value"),
+      punct(":"),
+      identifier("i32"),
+      punct(")"),
+      operator("=>"),
+      identifier("i32"),
+      eof(),
+    ]),
+  );
+
+  assertText(typeName(fn), "(value: i32) => i32");
+});
+
 Deno.test("parses canonical slice type refs", () => {
   const slice = parseTypeRefWith(
     parserFor([identifier("Slice"), punct("<"), identifier("i32"), punct(">"), eof()]),
@@ -126,6 +143,10 @@ function typeName(type: CastTypeRef): Str {
       return `${typeName(type.element)}[]`;
     case "FixedArrayTypeRef":
       return `${typeName(type.element)}[${type.sizeText}]`;
+    case "FunctionTypeRef":
+      return `(${
+        type.params.map((param) => `${param.name}: ${typeName(param.type)}`).join(", ")
+      }) => ${typeName(type.returnType)}`;
     case "RecordTypeRef":
       return `{${type.fields.map((field) => `${field.name}:${typeName(field.type)}`).join(",")}}`;
   }
@@ -137,6 +158,10 @@ function identifier(text: Str): Token {
 
 function punct(text: Str): Token {
   return token("punctuation", text);
+}
+
+function operator(text: Str): Token {
+  return token("operator", text);
 }
 
 function integer(text: Str): Token {

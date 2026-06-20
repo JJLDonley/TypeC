@@ -22,6 +22,8 @@ export function emitCType(
       throw new Error("Cannot emit inferred array type without a declarator");
     case "FixedArrayTypeRef":
       throw new Error("Cannot emit fixed array type without a declarator");
+    case "FunctionTypeRef":
+      throw new Error("Cannot emit function pointer type without a declarator");
     case "RecordTypeRef":
       throw new Error("Record type literals must be emitted through a type alias");
   }
@@ -33,6 +35,7 @@ export function emitCDeclarator(
   aliases: CTypeAliases = new Map<Str, TypeAliasDecl>(),
 ): Str {
   if (type.kind === "FixedArrayTypeRef") return emitFixedArrayCDeclarator(type, name, aliases);
+  if (type.kind === "FunctionTypeRef") return emitFunctionPointerCDeclarator(type, name, aliases);
   if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element, aliases)}* ${name}`;
   return `${emitCType(type, aliases)} ${name}`;
 }
@@ -43,10 +46,20 @@ export function emitCParamDeclarator(
   aliases: CTypeAliases = new Map<Str, TypeAliasDecl>(),
 ): Str {
   if (type.kind === "FixedArrayTypeRef") return emitFixedArrayParamCDeclarator(type, name, aliases);
+  if (type.kind === "FunctionTypeRef") return emitFunctionPointerCDeclarator(type, name, aliases);
   if (type.kind === "InferredArrayTypeRef") {
     return emitInferredArrayParamCDeclarator(type, name, aliases);
   }
   return `${emitCType(type, aliases)} ${name}`;
+}
+
+function emitFunctionPointerCDeclarator(
+  type: Extract<TypeRef, { kind: "FunctionTypeRef" }>,
+  name: Str,
+  aliases: CTypeAliases,
+): Str {
+  const params = type.params.map((param) => emitCType(param.type, aliases)).join(", ");
+  return `${emitCType(type.returnType, aliases)} (*${name})(${params})`;
 }
 
 function emitInferredArrayParamCDeclarator(

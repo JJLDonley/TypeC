@@ -1,4 +1,4 @@
-import type { CastRecordField, CastTypeRef } from "core/cast.ts";
+import type { CastParam, CastRecordField, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { span } from "parser/helpers.ts";
 
@@ -17,6 +17,8 @@ export interface TypeRefParser {
 export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
   let type: CastTypeRef = parser.checkText("{")
     ? parseRecordTypeRef(parser)
+    : parser.checkText("(")
+    ? parseFunctionTypeRef(parser)
     : parseNamedTypeRef(parser);
 
   while (isTypePostfixStart(parser)) {
@@ -123,6 +125,35 @@ function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTyp
     sizeText: size.text,
     span: span(element.span.start, close.span.end),
   };
+}
+
+function parseFunctionTypeRef(parser: TypeRefParser): CastTypeRef {
+  const open = parser.expectText("(");
+  const params = parseFunctionTypeParams(parser);
+  parser.expectText("=>");
+  const returnType = parseTypeRefWith(parser);
+  return {
+    kind: "FunctionTypeRef",
+    params,
+    returnType,
+    span: span(open.span.start, returnType.span.end),
+  };
+}
+
+function parseFunctionTypeParams(parser: TypeRefParser): CastParam[] {
+  const params: CastParam[] = [];
+  if (!parser.checkText(")")) {
+    do params.push(parseFunctionTypeParam(parser)); while (parser.matchText(","));
+  }
+  parser.expectText(")");
+  return params;
+}
+
+function parseFunctionTypeParam(parser: TypeRefParser): CastParam {
+  const name = parser.expectKind("identifier", "Expected function type parameter name");
+  parser.expectText(":");
+  const type = parseTypeRefWith(parser);
+  return { name: name.text, type, span: span(name.span.start, type.span.end) };
 }
 
 function parseRecordTypeRef(parser: TypeRefParser): CastTypeRef {

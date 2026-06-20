@@ -42,6 +42,10 @@ function collectTypeSlices(type: TypeRef, elements: Map<Str, TypeRef>): void {
     case "FixedArrayTypeRef":
       collectTypeSlices(type.element, elements);
       return;
+    case "FunctionTypeRef":
+      for (const param of type.params) collectTypeSlices(param.type, elements);
+      collectTypeSlices(type.returnType, elements);
+      return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeSlices(field.type, elements);
       return;

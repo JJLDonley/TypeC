@@ -1,5 +1,5 @@
 import type { CHeaderFunction } from "c/header/ast.ts";
-import { cArrayElementType, cPointerToArrayShape } from "c/header/array_types.ts";
+import { cArrayElementType } from "c/header/array_types.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
 import { isPathWithinDir } from "paths";
@@ -14,7 +14,7 @@ export function isIncludedHeaderFunction(fn: CHeaderFunction, includeDir: Str | 
 }
 
 export function isSupportedHeaderFunction(fn: CHeaderFunction): b8 {
-  return !isVariadicFunction(fn) && !isUnprototypedFunction(fn) && !hasFunctionPointerType(fn) &&
+  return !isVariadicFunction(fn) && !isUnprototypedFunction(fn) && !hasFunctionPointerReturn(fn) &&
     !hasArrayReturnType(fn) && !isStaticFunction(fn) && !fn.hasBody && isTypeCIdentifier(fn.name);
 }
 
@@ -26,20 +26,8 @@ function isUnprototypedFunction(fn: CHeaderFunction): b8 {
   return fn.functionType.endsWith("()");
 }
 
-function hasFunctionPointerType(fn: CHeaderFunction): b8 {
-  if (isUnsupportedPointerFunctionType(fn.returnType)) return true;
-  if (fn.params.some((param) => isUnsupportedPointerFunctionType(param.type))) return true;
-  return fn.functionType.includes("(*") &&
-    !fn.params.some((param) => isPointerToArrayType(param.type));
-}
-
-function isUnsupportedPointerFunctionType(type: Str): b8 {
-  if (!type.includes("(*")) return false;
-  return !isPointerToArrayType(type);
-}
-
-function isPointerToArrayType(type: Str): b8 {
-  return cPointerToArrayShape(normalizeCHeaderType(type)) !== null;
+function hasFunctionPointerReturn(fn: CHeaderFunction): b8 {
+  return fn.functionType.includes("(*") && !fn.params.some((param) => param.type.includes("(*"));
 }
 
 function hasArrayReturnType(fn: CHeaderFunction): b8 {

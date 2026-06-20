@@ -963,9 +963,8 @@ function main(): i32 {
 - Platform-width C scalar types map to explicit ABI aliases such as `c_int`, `c_uint`, `c_long`, and
   `c_ulong`; call sites emit those TypeC ABI aliases rather than raw C spellings.
 - Pointer types map recursively to TypeC `T*` / `Ptr<T>`.
-- C function pointer types map to TypeScript-like function types once function pointer support is
-  implemented: `(arg: T) => R`. Function pointer values are raw C ABI pointers and cannot capture
-  TypeC local state.
+- C function pointer types map to TypeScript-like function types: `(arg: T) => R`. Function pointer
+  values are raw C ABI pointers and cannot capture TypeC local state.
 - C callback parameters accept only compatible external function symbols or non-capturing TypeC
   function declarations after callback support is implemented. Closures and captured locals are not
   part of the C ABI.
@@ -1021,7 +1020,7 @@ function main(): i32 {
 5. Add C typedef struct import for C-compatible fields, qualified namespace type references, and
    namespaced field access.
 6. Add nested fixed-array record field and parameter import for fully sized nested arrays.
-7. Add C function pointer type import after TypeScript-like function pointer parsing is implemented.
+7. Add C function pointer type import using TypeScript-like function type syntax.
 8. Add callback parameter support for non-capturing TypeC functions and extern symbols.
 9. Add variadic extern declarations after rest syntax and C default-promotion checking are
    implemented.

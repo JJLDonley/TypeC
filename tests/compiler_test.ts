@@ -203,6 +203,22 @@ Deno.test("emits C for header bool record fields and functions", async () => {
   assertIncludes(c, ".enabled = true");
 });
 
+Deno.test("emits C for header function pointer parameters", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `#include <stdint.h>\nvoid set_callback(int32_t (*callback)(int32_t));`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { set_callback } from "./lib.h"; function main(): i32 { return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "void set_callback(i32 (*callback)(i32));");
+});
+
 Deno.test("emits C for header nested fixed array parameters", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

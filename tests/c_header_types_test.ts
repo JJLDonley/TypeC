@@ -15,6 +15,7 @@ Deno.test("maps supported C header types", () => {
   assertSame(mapCHeaderType("int32_t[4]"), "i32[]");
   assertSame(mapCHeaderType("const char [static 8]"), "u8[]");
   assertSame(mapCHeaderType("int32_t (*)[3]"), "Array<Array<i32, 3>>");
+  assertSame(mapCHeaderType("int32_t (*)(int32_t)"), "(arg0: i32) => i32");
 });
 
 Deno.test("maps C header record types", () => {

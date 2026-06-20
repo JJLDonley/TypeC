@@ -47,6 +47,15 @@ function namespaceTypeRef(type: TypeRef, namespace: Str, aliases: Set<Str>): Typ
       return { ...type, element: namespaceTypeRef(type.element, namespace, aliases) };
     case "SliceTypeRef":
       return { ...type, element: namespaceTypeRef(type.element, namespace, aliases) };
+    case "FunctionTypeRef":
+      return {
+        ...type,
+        params: type.params.map((param) => ({
+          ...param,
+          type: namespaceTypeRef(param.type, namespace, aliases),
+        })),
+        returnType: namespaceTypeRef(type.returnType, namespace, aliases),
+      };
     case "RecordTypeRef":
       return {
         ...type,

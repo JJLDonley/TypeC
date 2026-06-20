@@ -5,12 +5,39 @@ type b8 = boolean;
 
 Deno.test("lexes low-level punctuation and postfix pointer operators", () => {
   const texts = tokenTexts("value.& ptr.* i32[] i32[16] T* T&");
-  assertEqualText(texts, ["value", ".&", "ptr", ".*", "i32", "[", "]", "i32", "[", "16", "]", "T", "*", "T", "&", ""]);
+  assertEqualText(texts, [
+    "value",
+    ".&",
+    "ptr",
+    ".*",
+    "i32",
+    "[",
+    "]",
+    "i32",
+    "[",
+    "16",
+    "]",
+    "T",
+    "*",
+    "T",
+    "&",
+    "",
+  ]);
+});
+
+Deno.test("lexes function type arrow", () => {
+  assertEqualText(tokenTexts("(x: i32) => i32"), ["(", "x", ":", "i32", ")", "=>", "i32", ""]);
 });
 
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
-  assertEqualText(tokens.map((token) => token.kind), ["integer", "float", "integer", "punctuation", "eof"]);
+  assertEqualText(tokens.map((token) => token.kind), [
+    "integer",
+    "float",
+    "integer",
+    "punctuation",
+    "eof",
+  ]);
   assertEqualText(tokens.map((token) => token.text), ["1", "2.5", "3", ".", ""]);
 });
 

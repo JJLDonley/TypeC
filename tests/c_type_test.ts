@@ -4,6 +4,11 @@ import { emitCDeclarator, emitCParamDeclarator, emitCType } from "c/type.ts";
 
 type Str = string;
 
+type ParamSpec = {
+  name: Str;
+  type: TypeRef;
+};
+
 Deno.test("maps primitive TypeC names one-to-one", () => {
   assertEquals(emitCType(namedType("i32")), "i32");
   assertEquals(emitCType(namedType("usize")), "usize");
@@ -29,6 +34,11 @@ Deno.test("emits slice types", () => {
     emitSliceCType(namedType("i32")),
     "typedef struct Slice_i32 { i32* data; usize length; } Slice_i32;",
   );
+});
+
+Deno.test("emits function pointer declarators", () => {
+  const type = functionType([{ name: "value", type: namedType("i32") }], namedType("i32"));
+  assertEquals(emitCParamDeclarator(type, "callback"), "i32 (*callback)(i32)");
 });
 
 Deno.test("emits fixed array declarators", () => {
@@ -59,6 +69,15 @@ Deno.test("emits array parameter declarators as pointers", () => {
   assertEquals(emitCParamDeclarator(nested, "values"), "i32 (*values)[3]");
   assertEquals(emitCParamDeclarator(inferredNested, "values"), "i32 (*values)[3]");
 });
+
+function functionType(params: ParamSpec[], returnType: TypeRef): TypeRef {
+  return {
+    kind: "FunctionTypeRef",
+    params: params.map((param) => ({ ...param, span: fakeSpan() })),
+    returnType,
+    span: fakeSpan(),
+  };
+}
 
 function fixedArray(element: TypeRef, sizeText: Str): TypeRef {
   return { kind: "FixedArrayTypeRef", element, sizeText, span: fakeSpan() };

@@ -36,6 +36,12 @@ Deno.test("classifies supported header functions", () => {
         type: "int32_t (*)(int32_t)",
       }]),
     ),
+    true,
+  );
+  assertSame(
+    isSupportedHeaderFunction(
+      fn("get_callback", "/project/header.h", "int32_t (*(void))(int32_t)"),
+    ),
     false,
   );
   assertSame(

@@ -28,11 +28,23 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
         ...checkArrayElementType(type),
         ...checkArraySize(type.sizeText, type),
       ];
+    case "FunctionTypeRef":
+      return checkFunctionType(type, typeAliases);
     case "InferredArrayTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkArrayElementType(type)];
     case "RecordTypeRef":
       return checkRecordType(type, typeAliases);
   }
+}
+
+function checkFunctionType(
+  type: Extract<TypeRef, { kind: "FunctionTypeRef" }>,
+  typeAliases: Map<Str, TypeRef>,
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const param of type.params) diagnostics.push(...checkTypeRef(param.type, typeAliases));
+  diagnostics.push(...checkTypeRef(type.returnType, typeAliases));
+  return diagnostics;
 }
 
 function checkNamedType(

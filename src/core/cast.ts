@@ -55,6 +55,7 @@ export type CastTypeRef =
   | CastSliceTypeRef
   | CastInferredArrayTypeRef
   | CastFixedArrayTypeRef
+  | CastFunctionTypeRef
   | CastRecordTypeRef;
 
 export interface CastNamedTypeRef {
@@ -91,6 +92,13 @@ export interface CastFixedArrayTypeRef {
   kind: "FixedArrayTypeRef";
   element: CastTypeRef;
   sizeText: Str;
+  span: SourceSpan;
+}
+
+export interface CastFunctionTypeRef {
+  kind: "FunctionTypeRef";
+  params: CastParam[];
+  returnType: CastTypeRef;
   span: SourceSpan;
 }
 

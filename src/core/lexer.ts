@@ -68,14 +68,21 @@ class Lexer {
 
       if ("+-*/=%<>!&".includes(ch)) {
         let text = this.advance();
-        if ((text === "=" || text === "!" || text === "<" || text === ">") && this.peek() === "=") {
+        if (text === "=" && this.peek() === ">") {
+          text += this.advance();
+        } else if (
+          (text === "=" || text === "!" || text === "<" || text === ">") && this.peek() === "="
+        ) {
           text += this.advance();
         }
         this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
         continue;
       }
 
-      this.diagnostics.push({ message: `Unexpected character '${ch}'`, span: { start, end: start } });
+      this.diagnostics.push({
+        message: `Unexpected character '${ch}'`,
+        span: { start, end: start },
+      });
       this.advance();
     }
 
@@ -103,7 +110,10 @@ class Lexer {
         this.advance();
         while (!this.isAtEnd() && !(this.peek() === "*" && this.peek(1) === "/")) this.advance();
         if (this.isAtEnd()) {
-          this.diagnostics.push({ message: "Unterminated block comment", span: { start, end: this.pos() } });
+          this.diagnostics.push({
+            message: "Unterminated block comment",
+            span: { start, end: this.pos() },
+          });
           return;
         }
         this.advance();
@@ -128,13 +138,19 @@ class Lexer {
     let text = "";
     while (!this.isAtEnd() && this.peek() !== '"') {
       if (this.peek() === "\n") {
-        this.diagnostics.push({ message: "Unterminated string literal", span: { start, end: this.pos() } });
+        this.diagnostics.push({
+          message: "Unterminated string literal",
+          span: { start, end: this.pos() },
+        });
         return text;
       }
       text += this.advance();
     }
     if (this.isAtEnd()) {
-      this.diagnostics.push({ message: "Unterminated string literal", span: { start, end: this.pos() } });
+      this.diagnostics.push({
+        message: "Unterminated string literal",
+        span: { start, end: this.pos() },
+      });
       return text;
     }
     this.advance();

@@ -1,5 +1,6 @@
 import type {
   FixedArrayTypeRef,
+  FunctionTypeRef,
   InferredArrayTypeRef,
   PointerTypeRef,
   RecordField,
@@ -10,6 +11,7 @@ import type {
 } from "core/ast.ts";
 import type {
   CastFixedArrayTypeRef,
+  CastFunctionTypeRef,
   CastInferredArrayTypeRef,
   CastPointerTypeRef,
   CastRecordField,
@@ -33,6 +35,8 @@ export function lowerTypeRef(type: CastTypeRef): TypeRef {
       return lowerInferredArrayTypeRef(type);
     case "FixedArrayTypeRef":
       return lowerFixedArrayTypeRef(type);
+    case "FunctionTypeRef":
+      return lowerFunctionTypeRef(type);
     case "RecordTypeRef":
       return lowerRecordTypeRef(type);
   }
@@ -59,6 +63,19 @@ function lowerFixedArrayTypeRef(type: CastFixedArrayTypeRef): FixedArrayTypeRef 
     kind: "FixedArrayTypeRef",
     element: lowerTypeRef(type.element),
     sizeText: type.sizeText,
+    span: type.span,
+  };
+}
+
+function lowerFunctionTypeRef(type: CastFunctionTypeRef): FunctionTypeRef {
+  return {
+    kind: "FunctionTypeRef",
+    params: type.params.map((param) => ({
+      name: param.name,
+      type: lowerTypeRef(param.type),
+      span: param.span,
+    })),
+    returnType: lowerTypeRef(type.returnType),
     span: type.span,
   };
 }

@@ -11,6 +11,12 @@ Deno.test("formats supported C header externs", () => {
     fn("copy", "void *", [{ name: "dst", type: "void *" }, { name: "src", type: "const void *" }]),
     fn("fill", "void", [{ name: "items", type: "int32_t[4]" }]),
     fn("nested", "void", [{ name: "items", type: "int32_t[2][3]" }]),
+    fn(
+      "set_callback",
+      "void",
+      [{ name: "callback", type: "int32_t (*)(int32_t)" }],
+      "void (int32_t (*)(int32_t))",
+    ),
     fn("platform", "int", [{ name: "value", type: "unsigned long" }]),
   ]);
 
@@ -18,6 +24,7 @@ Deno.test("formats supported C header externs", () => {
   assertIncludes(output, "extern function copy(dst: void*, src: void*): void*;");
   assertIncludes(output, "extern function fill(items: i32[]): void;");
   assertIncludes(output, "extern function nested(items: Array<Array<i32, 3>, 2>): void;");
+  assertIncludes(output, "extern function set_callback(callback: (arg0: i32) => i32): void;");
   assertIncludes(output, "extern function platform(value: c_ulong): c_int;");
 });
 
@@ -25,12 +32,7 @@ Deno.test("skips unsupported C header externs", () => {
   const output = formatHeaderExterns([
     fn("log", "int32_t", [{ name: "format", type: "const char *" }], "int32_t (const char *, ...)"),
     fn("old", "void", [], "void ()"),
-    fn(
-      "callback",
-      "void",
-      [{ name: "callback", type: "int32_t (*)(int32_t)" }],
-      "void (int32_t (*)(int32_t))",
-    ),
+    fn("get_callback", "int32_t", [], "int32_t (*(void))(int32_t)"),
     fn("helper", "int32_t", [], "int32_t (void)", "/project/header.h", "static"),
     fn("defined", "int32_t", [], "int32_t (void)", "/project/header.h", null, true),
     fn("export", "void", [], "void (void)"),

@@ -10,6 +10,7 @@ export function normalizeCHeaderType(type: Str): Str {
     .replace(/\b_Nonnull\b/g, "")
     .replace(/\b_Nullable\b/g, "")
     .replace(/\b_Null_unspecified\b/g, "")
+    .replace(/\s*\(\s*\*\s*\)\s*/g, "(*)")
     .replace(/\s*\*\s*/g, "*")
     .replace(/\s*\[\s*/g, "[")
     .replace(/\s*\]\s*/g, "]")

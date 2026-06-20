@@ -17,6 +17,8 @@ type Str = string;
 
 export function mapCHeaderType(type: Str, recordNames: Set<Str> = new Set<Str>()): Str {
   const normalized = normalizeCHeaderType(type);
+  const functionPointer = cFunctionPointerType(normalized);
+  if (functionPointer) return mapCFunctionPointerHeaderType(functionPointer, recordNames);
   const pointerArray = cPointerToArrayShape(normalized);
   if (pointerArray) return mapCPointerToArrayHeaderType(pointerArray, type, recordNames);
   const arrayElement = cArrayElementType(normalized);
@@ -27,6 +29,29 @@ export function mapCHeaderType(type: Str, recordNames: Set<Str> = new Set<Str>()
   const scalar = mapScalarCHeaderType(normalized);
   if (scalar) return scalar;
   throw unsupportedCHeaderType(type);
+}
+
+interface CFunctionPointerType {
+  returnType: Str;
+  params: Str[];
+}
+
+function cFunctionPointerType(type: Str): CFunctionPointerType | null {
+  const match = type.match(/^(.+)\(\*\)\((.*)\)$/);
+  if (!match) return null;
+  return { returnType: match[1].trim(), params: cFunctionPointerParams(match[2].trim()) };
+}
+
+function cFunctionPointerParams(params: Str): Str[] {
+  if (params === "" || params === "void") return [];
+  return params.split(",").map((param) => param.trim());
+}
+
+function mapCFunctionPointerHeaderType(type: CFunctionPointerType, recordNames: Set<Str>): Str {
+  const params = type.params.map((param, index) =>
+    `arg${index}: ${mapCHeaderType(param, recordNames)}`
+  ).join(", ");
+  return `(${params}) => ${mapCHeaderType(type.returnType, recordNames)}`;
 }
 
 function mapCPointerToArrayHeaderType(

@@ -55,6 +55,7 @@ export type TypeRef =
   | SliceTypeRef
   | InferredArrayTypeRef
   | FixedArrayTypeRef
+  | FunctionTypeRef
   | RecordTypeRef;
 
 export interface NamedTypeRef {
@@ -91,6 +92,13 @@ export interface FixedArrayTypeRef {
   kind: "FixedArrayTypeRef";
   element: TypeRef;
   sizeText: Str;
+  span: SourceSpan;
+}
+
+export interface FunctionTypeRef {
+  kind: "FunctionTypeRef";
+  params: Param[];
+  returnType: TypeRef;
   span: SourceSpan;
 }
 

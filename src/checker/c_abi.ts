@@ -19,6 +19,9 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
       return isCAbiTypeSeen(type.element, typeAliases, seen);
+    case "FunctionTypeRef":
+      return type.params.every((param) => isCAbiTypeSeen(param.type, typeAliases, seen)) &&
+        isCAbiTypeSeen(type.returnType, typeAliases, seen);
     case "ReferenceTypeRef":
     case "SliceTypeRef":
       return false;
@@ -34,6 +37,8 @@ function isCAbiNamedType(name: Str, typeAliases: Map<Str, TypeRef>, seen: Set<St
 }
 
 function isCAbiRecordFieldType(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set<Str>): b8 {
-  if (type.kind === "FixedArrayTypeRef") return isCAbiRecordFieldType(type.element, typeAliases, seen);
+  if (type.kind === "FixedArrayTypeRef") {
+    return isCAbiRecordFieldType(type.element, typeAliases, seen);
+  }
   return isCAbiTypeSeen(type, typeAliases, seen);
 }
