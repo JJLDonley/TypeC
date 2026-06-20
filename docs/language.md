@@ -127,12 +127,19 @@ use them where they improve clarity, safety, or reuse.
 
 ## Constants and Planned Enums
 
-Module-level constants use TypeScript-like syntax:
+Module-level constants use TypeScript-like syntax with explicit type annotations:
 
 ```ts
-export const SCREEN_WIDTH: i32 = 800;
+const SCREEN_WIDTH: i32 = 800;
+export const SCREEN_HEIGHT: i32 = SCREEN_WIDTH + 50;
 export const RAYWHITE: Color = { r: 245, g: 245, b: 245, a: 255 };
 ```
+
+Constants are compile-time values. Initializers may use literals, earlier constants, record
+literals, array literals, unary `+` / `-`, and numeric `+ - * / %`. Calls, pointer operators,
+indexing, and runtime locals are not compile-time constant expressions. Integer and `f32`
+expressions are checked against the annotated type, including inside record and array constants.
+Exported constants are visible to TypeC imports but are not exported as C ABI symbols.
 
 Phase 14 adds TypeScript-like scoped enums:
 
@@ -230,12 +237,13 @@ Header imports are virtual TypeC modules generated from clang AST output. Suppor
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
 safely. C `bool` and `_Bool` import as TypeC `bool`, which emits as `b8`.
 
-Planned C interop extensions are now specified in `TYPEC_PHASES.md`: scoped C enum imports and safe
-object-like macro / constant imports. Current header interop supports fully sized nested C arrays,
-function pointer type imports using TypeScript-like `(arg: T) => R`, callback parameters passed
-compatible function symbols, and variadic extern declarations using `...args`. Function-like macros,
-old-style declarations, array returns, unsafe macros, and unknown signatures remain skipped unless a
-later phase defines safe lowering.
+Current header interop supports fully sized nested C arrays, function pointer type imports using
+TypeScript-like `(arg: T) => R`, callback parameters passed compatible function symbols, variadic
+extern declarations using `...args`, deterministic `const` variables, and safe object-like macro
+constants. Header constants import through normal named or namespace imports. Supported macro values
+are limited to simple numeric, bool, and unescaped string object-like macros. Function-like macros,
+C enum imports, old-style declarations, array returns, unsafe macros, complex runtime constants, and
+unknown signatures remain skipped unless a later phase defines safe lowering.
 
 Runnable examples:
 
@@ -258,6 +266,8 @@ fixed-width scalars   -> i8/u8/i16/u16/i32/u32/i64/u64/f32/f64
 platform C scalars    -> explicit ABI aliases when required
 R (*)(T) parameter    -> (arg: T) => R callback parameter
 variadic ...          -> ...args rest parameter
+const variables       -> module constants when deterministic
+object-like macros    -> module constants when safely representable
 ```
 
 ## C Interop
