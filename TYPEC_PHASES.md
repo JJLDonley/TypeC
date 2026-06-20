@@ -903,9 +903,10 @@ function main(): i32 {
 - C array forms map to legacy `u8[]` / `Array<u8>` when preserved by the header AST and to `u8*` /
   `Ptr<u8>` after ABI decay.
 - TypeC string literals are NUL-terminated `Array<u8, N>` values and can decay to `u8*`, `Ptr<u8>`,
-  legacy `u8[]`, `u8[N]`, `Array<u8, N>`, `Slice<u8>`, or `void*` where expected.
-- Raw C ABI `T[]`/`T*`/`Ptr<T>` carries no length; APIs needing length should prefer `Slice<T>` or
-  pass an explicit `usize`.
+  legacy `u8[]`, `u8[N]`, `Array<u8, N>`, or `void*` where expected. `Slice<u8>` decay remains
+  blocked until slice lowering is implemented.
+- Raw C ABI `T[]`/`T*`/`Ptr<T>` carries no length; APIs needing length should pass an explicit
+  `usize` until `Slice<T>` lowering is implemented.
 - Array and slice return types remain invalid for C ABI externs unless a later phase defines
   ABI-safe aggregate return rules; return `T*` / `Ptr<T>` for pointer-return C APIs.
 
