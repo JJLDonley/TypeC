@@ -1,4 +1,4 @@
-import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type { ConstDecl, FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import { checkCOrdinarySymbols } from "checker/c_ordinary_symbols.ts";
 
@@ -27,6 +27,18 @@ Deno.test("rejects C name collisions across functions and aliases", () => {
   assertText(diagnostics[0]?.message ?? "", "Duplicate C ordinary symbol 'Color'");
 });
 
+Deno.test("rejects C constant ordinary symbol collisions", () => {
+  const diagnostics = checkCOrdinarySymbols(
+    [
+      fn("answer", null, false),
+    ],
+    [],
+    [constant("answer")],
+  );
+
+  assertText(diagnostics[0]?.message ?? "", "Duplicate C ordinary symbol 'answer'");
+});
+
 Deno.test("accepts distinct C function and type alias symbols", () => {
   const diagnostics = checkCOrdinarySymbols([
     fn("draw", null, true),
@@ -34,6 +46,18 @@ Deno.test("accepts distinct C function and type alias symbols", () => {
 
   assertSame(diagnostics.length, 0);
 });
+
+function constant(name: Str): ConstDecl {
+  return {
+    kind: "ConstDecl",
+    exported: false,
+    name,
+    cName: null,
+    type: named("i32"),
+    initializer: { kind: "IntegerLiteral", value: 1n, text: "1", span },
+    span,
+  };
+}
 
 function fn(name: Str, cName: Str | null, external: b8): FunctionDecl {
   return {

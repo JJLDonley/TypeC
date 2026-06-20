@@ -22,6 +22,7 @@ class Resolver {
     this.declareTypes();
     this.declareConstants();
     this.declareFunctions();
+    this.resolveConstants();
     for (const fn of this.program.functions) this.resolveFunction(fn);
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
     return {
@@ -39,8 +40,13 @@ class Resolver {
 
   private declareConstants(): void {
     for (const constant of this.program.constants ?? []) {
-      this.resolveExpression(constant.initializer, this.globalScope);
       this.declare(this.globalScope, constant.name, "constant", constant.span);
+    }
+  }
+
+  private resolveConstants(): void {
+    for (const constant of this.program.constants ?? []) {
+      this.resolveExpression(constant.initializer, this.globalScope);
     }
   }
 

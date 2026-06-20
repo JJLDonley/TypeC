@@ -103,7 +103,7 @@ class Checker {
 
   check(): CheckedProgram {
     this.collectFunctions();
-    for (const constant of this.program.constants ?? []) this.checkConstant(constant);
+    this.checkConstants();
     for (const fn of this.program.functions) this.checkFunction(fn);
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
     return { ...this.program, expressionTypes: this.expressionTypes };
@@ -117,10 +117,19 @@ class Checker {
     this.diagnostics.push(...declarations.diagnostics);
   }
 
-  private checkConstant(constant: ConstDecl): void {
+  private checkConstants(): void {
+    const available = new Set<Str>();
+    for (const constant of this.program.constants ?? []) {
+      this.checkConstant(constant, available);
+      available.add(constant.name);
+    }
+  }
+
+  private checkConstant(constant: ConstDecl, availableConstants: Set<Str>): void {
     this.diagnostics.push(
       ...checkConstantValue(
         constant,
+        availableConstants,
         (expr, expected) => this.typeOfExpected(expr, new Map<Str, LocalInfo>(), expected),
       ),
     );

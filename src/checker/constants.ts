@@ -3,16 +3,18 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { typeName } from "core/type_ref.ts";
 
+type Str = string;
 type b8 = boolean;
 
 type ExpectedTypeResolver = (expr: Expression, expected: TypeName) => TypeName;
 
 export function checkConstantValue(
   constant: ConstDecl,
+  availableConstants: Set<Str>,
   resolveExpectedType: ExpectedTypeResolver,
 ): Diagnostic[] {
   return [
-    ...checkConstantExpression(constant.initializer),
+    ...checkConstantExpression(constant.initializer, availableConstants),
     ...checkConstantAssignable(constant, resolveExpectedType),
   ];
 }
@@ -25,25 +27,29 @@ function checkConstantAssignable(
   return [];
 }
 
-function checkConstantExpression(expr: Expression): Diagnostic[] {
-  if (isConstantExpression(expr)) return [];
+function checkConstantExpression(expr: Expression, availableConstants: Set<Str>): Diagnostic[] {
+  if (isConstantExpression(expr, availableConstants)) return [];
   return [{ message: `Expression is not valid in a compile-time constant`, span: expr.span }];
 }
 
-function isConstantExpression(expr: Expression): b8 {
+function isConstantExpression(expr: Expression, availableConstants: Set<Str>): b8 {
   switch (expr.kind) {
     case "IntegerLiteral":
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
-    case "IdentifierExpr":
       return true;
+    case "IdentifierExpr":
+      return availableConstants.has(expr.name);
     case "BinaryExpr":
-      return isConstantExpression(expr.left) && isConstantExpression(expr.right);
+      return isConstantExpression(expr.left, availableConstants) &&
+        isConstantExpression(expr.right, availableConstants);
     case "RecordLiteralExpr":
-      return expr.fields.every((field) => isConstantExpression(field.expression));
+      return expr.fields.every((field) =>
+        isConstantExpression(field.expression, availableConstants)
+      );
     case "ArrayLiteralExpr":
-      return expr.elements.every(isConstantExpression);
+      return expr.elements.every((element) => isConstantExpression(element, availableConstants));
     case "CallExpr":
     case "PostfixPointerExpr":
     case "FieldAccessExpr":

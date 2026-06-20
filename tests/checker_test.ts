@@ -456,6 +456,20 @@ Deno.test("rejects float literals outside target range", () => {
   );
 });
 
+Deno.test("rejects constants that reference later constants", () => {
+  assertCheckError(
+    `const A: i32 = B; const B: i32 = 1; function main(): i32 { return A; }`,
+    "Expression is not valid in a compile-time constant",
+  );
+});
+
+Deno.test("rejects calls in compile-time constants", () => {
+  assertCheckError(
+    `function value(): i32 { return 1; } const A: i32 = value(); function main(): i32 { return A; }`,
+    "Expression is not valid in a compile-time constant",
+  );
+});
+
 Deno.test("rejects return mismatch", () => {
   assertCheckError(
     `function main(): i32 { return 1.5; }`,

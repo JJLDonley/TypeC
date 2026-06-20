@@ -1,12 +1,12 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type { ConstDecl, FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import {
   cParamShape,
   cTypeShape,
   indexTypeAliases,
   type TypeAliasIndex,
 } from "checker/c_abi_shapes.ts";
-import { functionCName, typeAliasCName } from "checker/c_symbol_names.ts";
+import { constantCName, functionCName, typeAliasCName } from "checker/c_symbol_names.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -26,6 +26,10 @@ export function checkCTypeAliasSymbols(typeAliases: TypeAliasDecl[]): Diagnostic
   return [...groupTypeAliasesByCName(typeAliases).entries()].flatMap((entry) =>
     checkCTypeAliasGroup(entry, aliases)
   );
+}
+
+export function checkCConstantSymbols(constants: ConstDecl[]): Diagnostic[] {
+  return [...groupConstantsByCName(constants).entries()].flatMap(checkCConstantGroup);
 }
 
 function groupFunctionsByCName(functions: FunctionDecl[]): Map<Str, FunctionDecl[]> {
@@ -75,6 +79,25 @@ function sameParamAbi(
   aliases: TypeAliasIndex,
 ): b8 {
   return right !== undefined && cParamShape(left, aliases) === cParamShape(right, aliases);
+}
+
+function groupConstantsByCName(constants: ConstDecl[]): Map<Str, ConstDecl[]> {
+  const groups = new Map<Str, ConstDecl[]>();
+  for (const constant of constants) addConstantGroup(groups, constant);
+  return groups;
+}
+
+function addConstantGroup(groups: Map<Str, ConstDecl[]>, constant: ConstDecl): void {
+  const name = constantCName(constant);
+  groups.set(name, [...(groups.get(name) ?? []), constant]);
+}
+
+function checkCConstantGroup([name, constants]: [Str, ConstDecl[]]): Diagnostic[] {
+  if (constants.length < 2) return [];
+  return constants.slice(1).map((constant) => ({
+    message: `Duplicate C constant symbol '${name}'`,
+    span: constant.span,
+  }));
 }
 
 function groupTypeAliasesByCName(typeAliases: TypeAliasDecl[]): Map<Str, TypeAliasDecl[]> {

@@ -2,7 +2,11 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { ConstDecl, FunctionDecl, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkCOrdinarySymbols } from "checker/c_ordinary_symbols.ts";
-import { checkCFunctionSymbols, checkCTypeAliasSymbols } from "checker/c_symbols.ts";
+import {
+  checkCConstantSymbols,
+  checkCFunctionSymbols,
+  checkCTypeAliasSymbols,
+} from "checker/c_symbols.ts";
 import { checkDeclarations } from "checker/declarations.ts";
 
 type Str = string;
@@ -24,7 +28,8 @@ export function collectProgramDeclarations(program: ResolvedProgram): CheckedDec
       ...declarations.diagnostics,
       ...checkCFunctionSymbols(program.functions, program.typeAliases),
       ...checkCTypeAliasSymbols(program.typeAliases),
-      ...checkCOrdinarySymbols(program.functions, program.typeAliases),
+      ...checkCConstantSymbols(program.constants ?? []),
+      ...checkCOrdinarySymbols(program.functions, program.typeAliases, program.constants ?? []),
     ],
   };
 }
