@@ -133,6 +133,23 @@ Deno.test("deduplicates direct and namespace header record imports", async () =>
   assertNotIncludes(c, "Lib.Color");
 });
 
+Deno.test("emits C for bare struct header records", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `struct Color { unsigned char r; }; void draw(struct Color c);`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Color, draw } from "./lib.h"; function main(): i32 { const c: Color = { r: 1 }; draw(c); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "typedef struct Color {");
+  assertIncludes(c, "void draw(Color c);");
+});
+
 Deno.test("emits C for header record fixed array fields", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

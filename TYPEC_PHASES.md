@@ -965,9 +965,10 @@ function main(): i32 {
 - C array parameters map to legacy TypeC `T[]` or `T*` / `Ptr<T>` and lower to C pointers. Header
   declarations that differ only by array-vs-pointer parameter spelling are treated as the same ABI
   signature. Nested C arrays are skipped safely until TypeC nested array ABI rules are specified.
-- C typedef structs with C-compatible fields import as TypeC record aliases; fixed-size C array
-  fields import as fixed TypeC arrays such as `T[N]`; namespace imports expose records as qualified
-  TypeC types such as `RL.Color` while emitted C uses the original C typedef name.
+- C typedef structs and bare struct records with C-compatible fields import as TypeC record aliases;
+  fixed-size C array fields import as fixed TypeC arrays such as `T[N]`; namespace imports expose
+  records as qualified TypeC types such as `RL.Color` while emitted C uses the original C typedef
+  name and preserves the C struct tag when needed.
 - Header functions using records are generated only for records that were selected and supported;
   records depending on unsupported records are skipped safely.
 - Header functions without source locations may be imported when their signature references a known

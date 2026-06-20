@@ -46,7 +46,10 @@ Deno.test("emits record aliases with C names", () => {
     span,
   };
 
-  assertText(emitTypeAlias(alias, context([["RL.Color", alias]])), "typedef struct {\n} Color;");
+  assertText(
+    emitTypeAlias(alias, context([["RL.Color", alias]])),
+    "typedef struct Color {\n} Color;",
+  );
 });
 
 Deno.test("rejects non-record aliases", () => {
