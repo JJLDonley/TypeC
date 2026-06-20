@@ -1,10 +1,9 @@
-import type { Expression, Statement } from "core/ast.ts";
-import { cStringByteLength } from "core/c_strings.ts";
+import type { Statement } from "core/ast.ts";
 import { emitCType } from "c/type.ts";
+import { emitArrayVarDecl } from "emitter/array_var_declarations.ts";
 import { emitBracedBlock, emitIfElseBlock } from "emitter/blocks.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
-import { emitCStringLiteral } from "emitter/strings.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -88,47 +87,5 @@ function emitVarDecl(stmt: Extract<Statement, { kind: "VarDeclStmt" }>, context:
     emitCType(stmt.type, context.typeAliases)
   } ${stmt.name} = ${
     emitExpressionExpected(stmt.initializer, emitCType(stmt.type, context.typeAliases), context)
-  };`;
-}
-
-function emitArrayVarDecl(
-  stmt: Extract<Statement, { kind: "VarDeclStmt" }>,
-  context: EmitContext,
-): Str {
-  if (stmt.initializer.kind === "StringLiteral") {
-    return emitStringArrayVarDecl({ ...stmt, initializer: stmt.initializer }, context);
-  }
-  if (stmt.initializer.kind !== "ArrayLiteralExpr") {
-    throw new Error("Array declarations require array-compatible literals");
-  }
-  const element =
-    stmt.type.kind === "InferredArrayTypeRef" || stmt.type.kind === "FixedArrayTypeRef"
-      ? emitCType(stmt.type.element, context.typeAliases)
-      : "";
-  const length = stmt.type.kind === "FixedArrayTypeRef"
-    ? stmt.type.sizeText
-    : String(stmt.initializer.elements.length);
-  const declarator = `${element} ${stmt.name}[${length}]`;
-  return `${stmt.mutable ? "" : "const "}${declarator} = ${
-    emitExpressionExpected(stmt.initializer, `${element}[${length}]`, context)
-  };`;
-}
-
-function emitStringArrayVarDecl(
-  stmt: Extract<Statement, { kind: "VarDeclStmt" }> & {
-    initializer: Extract<Expression, { kind: "StringLiteral" }>;
-  },
-  context: EmitContext,
-): Str {
-  if (stmt.type.kind !== "InferredArrayTypeRef" && stmt.type.kind !== "FixedArrayTypeRef") {
-    throw new Error("String array declarations require array types");
-  }
-  const element = emitCType(stmt.type.element, context.typeAliases);
-  const length = stmt.type.kind === "FixedArrayTypeRef"
-    ? stmt.type.sizeText
-    : String(cStringByteLength(stmt.initializer.text));
-  const declarator = `${element} ${stmt.name}[${length}]`;
-  return `${stmt.mutable ? "" : "const "}${declarator} = ${
-    emitCStringLiteral(stmt.initializer.text)
   };`;
 }
