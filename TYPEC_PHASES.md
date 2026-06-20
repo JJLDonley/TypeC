@@ -821,9 +821,10 @@ The standard library is normal TypeC code. It should use the strongest completed
 available.
 
 Early stdlib modules may start with the current core subset only because later features do not exist
-yet. As classes, methods, enums, generics, interfaces, tagged unions, safe pointers, defer, arenas,
-and compile-time constants become available, stdlib modules should be refactored to use those
-features where they make APIs clearer, safer, or more reusable.
+yet. As enums, classes, methods, interfaces, generics, and compile-time constants become available,
+stdlib modules should be refactored to use those features where they make APIs clearer, safer, or
+more reusable. Optional systems features such as defer, safe pointers, arenas, and tagged unions
+should be adopted only when they are explicitly prioritized.
 
 Feature phases must include stdlib impact checks:
 
@@ -1082,7 +1083,7 @@ Phase 12 constants may use:
 - unary `+` and `-` for numeric literals and constant expressions
 - binary `+`, `-`, `*`, `/`, and `%` for numeric constant expressions
 - references to earlier module-level constants from the same module or imported modules
-- scoped enum members once Phase 14 is implemented
+- scoped enum members once Phase 13 is implemented
 
 Phase 12 constants must not use function calls, pointer operators, assignment, indexing, field
 access outside record literals, loops, conditionals, or runtime locals.
@@ -1134,88 +1135,7 @@ representation are skipped safely.
 
 ---
 
-# Phase 13: Defer
-
-Implementation status: not started.
-
-## Goal
-
-Allow explicit scope-exit cleanup without hidden ownership semantics.
-
-## Syntax
-
-Use an explicit `defer` statement with a call expression:
-
-```ts
-function main(): i32 {
-  InitWindow(800, 450, "TypeC");
-  defer CloseWindow();
-
-  draw();
-  return 0;
-}
-```
-
-Only call-expression defers are in scope for this phase:
-
-```ts
-defer cleanup();
-defer release(handle);
-```
-
-## Semantics
-
-- `defer` is scope-specific.
-- A deferred call runs when execution leaves the block where the `defer` statement appears.
-- Deferred calls run first-in, last-out within that block.
-- A `defer` near the top of a function runs after later defers in the same function scope.
-- Local block defers run before outer block defers.
-- Deferred calls run on ordinary fallthrough and on `return` from the scope.
-
-Example execution order:
-
-```ts
-function main(): i32 {
-  defer CloseWindow();
-  defer StopAudio();
-  return 0;
-}
-```
-
-Execution order on return:
-
-```txt
-StopAudio()
-CloseWindow()
-return 0
-```
-
-## C Emission
-
-- Lower to explicit C statements at each scope exit.
-- Preserve first-in, last-out order by emitting deferred calls in reverse declaration order.
-- For `return expr;`, evaluate `expr` once into a temporary when required, run defers, then return
-  the stored value.
-- For `return;`, run defers before the C `return;`.
-- Nested block defers are emitted before outer block defers when control exits both scopes.
-
-## Do
-
-- Keep execution order precise and visible in emitted C.
-- Run deferred actions on all local exits from the scope.
-- Keep deferred calls type-checked like normal call statements.
-- Keep `defer CloseWindow();` as the primary syntax for resource cleanup.
-
-## Do Not
-
-- Do not implement exceptions.
-- Do not hide allocation or ownership behavior.
-- Do not defer arbitrary expressions in this phase.
-- Do not allow control flow that cannot be lowered clearly to C.
-
----
-
-# Phase 14: Enums
+# Phase 13: Enums
 
 ## Goal
 
@@ -1314,7 +1234,9 @@ const mode: i32 = RL.FLAG_WINDOW_RESIZABLE;
 
 ---
 
-# Phase 15: Classes and Methods
+---
+
+# Phase 14: Classes and Methods
 
 ## Goal
 
@@ -1362,69 +1284,9 @@ by a later design update.
 
 ---
 
-# Phase 16: Safe Pointer Modes
-
-## Goal
-
-Add stricter pointer categories or annotations that improve safety while preserving explicit memory
-behavior.
-
-## Syntax Direction
-
-Use modern systems-language-style pointer annotations or type constructors that do not collide with
-TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a dedicated
-design update defines semantics, examples, lowering, and tests.
-
-Candidate syntax must make aliasing, nullability, mutability, and ownership visible at the type
-site. Do not repurpose TypeScript-only syntax for pointer modes.
-
-## Do
-
-- Define each pointer mode's aliasing, nullability, and mutability rules.
-- Keep lowering to C explicit and auditable.
-- Reject unsafe conversions unless explicitly written and specified.
-- Preserve existing raw pointer interop rules.
-
-## Do Not
-
-- Do not promise memory safety without enforceable rules.
-- Do not infer ownership silently.
-- Do not break C ABI compatibility for raw pointers.
-- Do not implement before exact syntax is specified.
-
 ---
 
-# Phase 17: Arenas
-
-## Goal
-
-Add explicit region-style allocation as a standard memory-management pattern.
-
-## Syntax Direction
-
-Use modern systems-language-style arena syntax that does not collide with TypeScript class,
-interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
-defines arena declarations, allocation calls, failure behavior, lowering, examples, and tests.
-
-The syntax must make arena lifetime explicit at allocation and cleanup sites.
-
-## Do
-
-- Make arena lifetime explicit.
-- Define allocation failure behavior.
-- Lower to portable C runtime support only if specified.
-- Keep interaction with `defer` clear.
-
-## Do Not
-
-- Do not add garbage collection.
-- Do not hide allocation behind ordinary value construction.
-- Do not make arenas required for programs that do not use them.
-- Do not implement before exact syntax is specified.
-
----
-
-# Phase 18: Interfaces
+# Phase 15: Interfaces
 
 ## Goal
 
@@ -1459,7 +1321,9 @@ TypeScript structural compatibility rules are not implied unless specified expli
 
 ---
 
-# Phase 19: Generics
+---
+
+# Phase 16: Generics
 
 ## Goal
 
@@ -1479,7 +1343,7 @@ class Box<T> {
 }
 ```
 
-Generic constraints use TypeScript-like `extends` syntax only if Phase 18 interface constraints are
+Generic constraints use TypeScript-like `extends` syntax only if Phase 15 interface constraints are
 specified:
 
 ```ts
@@ -1504,7 +1368,164 @@ function drawAll<T extends Drawable>(items: Slice<T>): void {
 
 ---
 
+---
+
+# Phase 17: Defer
+
+Implementation status: optional systems feature, not started.
+
+## Goal
+
+Allow explicit scope-exit cleanup without hidden ownership semantics.
+
+## Syntax
+
+Use an explicit `defer` statement with a call expression:
+
+```ts
+function main(): i32 {
+  InitWindow(800, 450, "TypeC");
+  defer CloseWindow();
+
+  draw();
+  return 0;
+}
+```
+
+Only call-expression defers are in scope for this phase:
+
+```ts
+defer cleanup();
+defer release(handle);
+```
+
+## Semantics
+
+- `defer` is scope-specific.
+- A deferred call runs when execution leaves the block where the `defer` statement appears.
+- Deferred calls run first-in, last-out within that block.
+- A `defer` near the top of a function runs after later defers in the same function scope.
+- Local block defers run before outer block defers.
+- Deferred calls run on ordinary fallthrough and on `return` from the scope.
+
+Example execution order:
+
+```ts
+function main(): i32 {
+  defer CloseWindow();
+  defer StopAudio();
+  return 0;
+}
+```
+
+Execution order on return:
+
+```txt
+StopAudio()
+CloseWindow()
+return 0
+```
+
+## C Emission
+
+- Lower to explicit C statements at each scope exit.
+- Preserve first-in, last-out order by emitting deferred calls in reverse declaration order.
+- For `return expr;`, evaluate `expr` once into a temporary when required, run defers, then return
+  the stored value.
+- For `return;`, run defers before the C `return;`.
+- Nested block defers are emitted before outer block defers when control exits both scopes.
+
+## Do
+
+- Keep execution order precise and visible in emitted C.
+- Run deferred actions on all local exits from the scope.
+- Keep deferred calls type-checked like normal call statements.
+- Keep `defer CloseWindow();` as the primary syntax for resource cleanup.
+
+## Do Not
+
+- Do not implement exceptions.
+- Do not hide allocation or ownership behavior.
+- Do not defer arbitrary expressions in this phase.
+- Do not allow control flow that cannot be lowered clearly to C.
+
+---
+
+---
+
+# Phase 18: Safe Pointer Modes
+
+Implementation status: optional systems feature, not started.
+
+## Goal
+
+Add stricter pointer categories or annotations that improve safety while preserving explicit memory
+behavior.
+
+## Syntax Direction
+
+Use modern systems-language-style pointer annotations or type constructors that do not collide with
+TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a dedicated
+design update defines semantics, examples, lowering, and tests.
+
+Candidate syntax must make aliasing, nullability, mutability, and ownership visible at the type
+site. Do not repurpose TypeScript-only syntax for pointer modes.
+
+## Do
+
+- Define each pointer mode's aliasing, nullability, and mutability rules.
+- Keep lowering to C explicit and auditable.
+- Reject unsafe conversions unless explicitly written and specified.
+- Preserve existing raw pointer interop rules.
+
+## Do Not
+
+- Do not promise memory safety without enforceable rules.
+- Do not infer ownership silently.
+- Do not break C ABI compatibility for raw pointers.
+- Do not implement before exact syntax is specified.
+
+---
+
+---
+
+# Phase 19: Arenas
+
+Implementation status: optional systems feature, not started.
+
+## Goal
+
+Add explicit region-style allocation as a standard memory-management pattern.
+
+## Syntax Direction
+
+Use modern systems-language-style arena syntax that does not collide with TypeScript class,
+interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
+defines arena declarations, allocation calls, failure behavior, lowering, examples, and tests.
+
+The syntax must make arena lifetime explicit at allocation and cleanup sites.
+
+## Do
+
+- Make arena lifetime explicit.
+- Define allocation failure behavior.
+- Lower to portable C runtime support only if specified.
+- Keep interaction with `defer` clear.
+
+## Do Not
+
+- Do not add garbage collection.
+- Do not hide allocation behind ordinary value construction.
+- Do not make arenas required for programs that do not use them.
+- Do not implement before exact syntax is specified.
+
+---
+
+---
+
 # Phase 20: Tagged Unions
+
+Implementation status: optional systems feature, not started.
 
 ## Goal
 
@@ -1532,6 +1553,8 @@ payload storage.
 - Do not rely on unspecified C layout.
 - Do not add implicit conversions between variants.
 - Do not implement before exact syntax is specified.
+
+---
 
 ---
 
