@@ -418,6 +418,15 @@ Deno.test("emits C for canonical pointer reference and array syntax", () => {
   assertIncludes(c, "const i32 values[2] = { *p, *r + 2 };");
 });
 
+Deno.test("emits C for array length field access", () => {
+  const source =
+    `function main(): i32 { const values: Array<i32, 2> = [40, 2]; const len: usize = values.length(); return 42; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const usize len = 2;");
+  assertNotIncludes(c, "values.length");
+});
+
 Deno.test("emits C for array data field access", () => {
   const source =
     `extern function first(values: Ptr<i32>): i32; function main(): i32 { const values: Array<i32, 2> = [40, 2]; return first(values.data); }`;

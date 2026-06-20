@@ -6,6 +6,7 @@ import { parseFloatLiteral, span } from "parser/helpers.ts";
 
 type Str = string;
 type b8 = boolean;
+type i32 = number;
 
 export interface PrimaryExpressionParser {
   diagnostics(): Diagnostic[];
@@ -15,7 +16,7 @@ export interface PrimaryExpressionParser {
   advance(): Token;
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
-  peek(): Token;
+  peek(offset?: i32): Token;
   error(token: Token, message: Str): void;
   parseExpression(): CastExpression;
   parseArrayLiteral(): CastExpression;
@@ -72,10 +73,18 @@ function parseParenthesizedExpression(parser: PrimaryExpressionParser): CastExpr
 
 function parseIdentifierExpression(parser: PrimaryExpressionParser): CastExpression {
   const ident = parser.advance();
+  if (isPostfixLengthAccess(parser)) {
+    return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
+  }
   const namespaceCall = parseNamespaceCall(parser, ident);
   if (namespaceCall) return namespaceCall;
   if (!parser.matchText("(")) return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
   return parseCallExpression(parser, ident.text, ident.span.start);
+}
+
+function isPostfixLengthAccess(parser: PrimaryExpressionParser): b8 {
+  return parser.peek().text === "." && parser.peek(1).text === "length" &&
+    parser.peek(2).text === "(";
 }
 
 function parseNamespaceCall(

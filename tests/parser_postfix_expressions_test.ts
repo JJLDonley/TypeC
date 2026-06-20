@@ -1,6 +1,9 @@
 import type { CastExpression } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { parsePostfixExpressionWith, type PostfixExpressionParser } from "parser/postfix_expressions.ts";
+import {
+  parsePostfixExpressionWith,
+  type PostfixExpressionParser,
+} from "parser/postfix_expressions.ts";
 
 type Str = string;
 type i32 = number;
@@ -11,7 +14,13 @@ const sourceSpan = {
 };
 
 Deno.test("parses postfix field and pointer expressions", () => {
-  const parser = parserFor([identifier("value"), punct("."), identifier("field"), punct(".&"), eof()]);
+  const parser = parserFor([
+    identifier("value"),
+    punct("."),
+    identifier("field"),
+    punct(".&"),
+    eof(),
+  ]);
 
   const expr = parsePostfixExpressionWith(parser);
 
@@ -19,6 +28,23 @@ Deno.test("parses postfix field and pointer expressions", () => {
   if (expr.kind !== "PostfixPointerExpr") throw new Error("Expected postfix pointer");
   assertText(expr.operator, ".&");
   assertText(expr.operand.kind, "FieldAccessExpr");
+});
+
+Deno.test("parses postfix array length expressions", () => {
+  const parser = parserFor([
+    identifier("items"),
+    punct("."),
+    identifier("length"),
+    punct("("),
+    punct(")"),
+    eof(),
+  ]);
+
+  const expr = parsePostfixExpressionWith(parser);
+
+  assertText(expr.kind, "FieldAccessExpr");
+  if (expr.kind !== "FieldAccessExpr") throw new Error("Expected field access");
+  assertText(expr.field, "length()");
 });
 
 Deno.test("parses postfix index expressions", () => {
@@ -33,6 +59,11 @@ function parserFor(tokens: Token[]): PostfixExpressionParser {
   let current: i32 = 0;
   return {
     checkText: (text) => peek(tokens, current).text === text,
+    matchText: (text) => {
+      if (peek(tokens, current).text !== text) return false;
+      current += 1;
+      return true;
+    },
     advance: () => {
       current += 1;
       return peek(tokens, current - 1);

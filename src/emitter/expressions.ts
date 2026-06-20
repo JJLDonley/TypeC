@@ -137,6 +137,7 @@ function emitFieldAccessExpression(
   context: EmitContext,
 ): Str {
   if (isArrayDataFieldAccess(expr, context)) return emitMemberOperand(expr.operand, context);
+  if (isArrayLengthFieldAccess(expr, context)) return emitArrayLengthExpression(expr, context);
   return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
 }
 
@@ -145,8 +146,34 @@ function isArrayDataFieldAccess(
   context: EmitContext,
 ): b8 {
   if (expr.field !== "data") return false;
+  return arrayOperandType(expr, context) !== null;
+}
+
+function isArrayLengthFieldAccess(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): b8 {
+  if (expr.field !== "length()") return false;
+  return arrayOperandType(expr, context) !== null;
+}
+
+function emitArrayLengthExpression(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): Str {
+  const array = arrayOperandType(expr, context);
+  if (array?.length === null || array === null) {
+    throw new Error("Array length emission requires fixed array type");
+  }
+  return `${array.length}`;
+}
+
+function arrayOperandType(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  context: EmitContext,
+): ReturnType<typeof parseArrayTypeName> {
   const operandType = context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? null;
-  return operandType !== null && parseArrayTypeName(operandType) !== null;
+  return operandType === null ? null : parseArrayTypeName(operandType);
 }
 
 function emitPostfixPointerExpression(

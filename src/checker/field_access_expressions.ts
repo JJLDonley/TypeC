@@ -6,6 +6,7 @@ import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 
 type Str = string;
+type IntLiteralValue = bigint;
 
 type FieldAccessExpr = Extract<Expression, { kind: "FieldAccessExpr" }>;
 
@@ -36,9 +37,25 @@ function checkArrayFieldAccess(
   const array = parseArrayTypeName(operandType);
   if (array === null) return null;
   if (expr.field === "data") return { diagnostics: [], type: `${array.element}*` };
+  if (expr.field === "length()") return checkArrayLengthAccess(expr, operandType, array.length);
   return {
     diagnostics: [{
       message: `Cannot access field '${expr.field}' on array type '${operandType}'`,
+      span: expr.span,
+    }],
+    type: "<error>",
+  };
+}
+
+function checkArrayLengthAccess(
+  expr: FieldAccessExpr,
+  operandType: TypeName,
+  length: IntLiteralValue | null,
+): FieldAccessExpressionCheck {
+  if (length !== null) return { diagnostics: [], type: "usize" };
+  return {
+    diagnostics: [{
+      message: `Array length is unavailable for unsized array type '${operandType}'`,
       span: expr.span,
     }],
     type: "<error>",

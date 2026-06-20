@@ -144,6 +144,7 @@ class Parser {
   private postfixExpressionParser(): PostfixExpressionParser {
     return {
       checkText: (text) => this.checkText(text),
+      matchText: (text) => this.matchText(text),
       advance: () => this.advance(),
       expectText: (text) => this.expectText(text),
       expectKind: (kind, message) => this.expectKind(kind, message),
@@ -165,7 +166,7 @@ class Parser {
       advance: () => this.advance(),
       expectKind: (kind, message) => this.expectKind(kind, message),
       expectText: (text) => this.expectText(text),
-      peek: () => this.peek(),
+      peek: (offset = 0) => this.peek(offset),
       error: (token, message) => this.error(token, message),
       parseExpression: () => this.parseExpression(),
       parseArrayLiteral: () => this.parseArrayLiteral(),

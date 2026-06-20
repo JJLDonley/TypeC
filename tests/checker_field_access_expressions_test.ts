@@ -29,6 +29,17 @@ Deno.test("checks array data field access expressions", () => {
   assertText(result.type, "i32*");
 });
 
+Deno.test("checks array length field access expressions", () => {
+  const result = checkFieldAccessExpression(
+    fieldAccess(identifier("values"), "length()"),
+    "i32[3]",
+    new Map<Str, TypeRef>(),
+  );
+
+  assertLen(result.diagnostics.length, 0);
+  assertText(result.type, "usize");
+});
+
 Deno.test("reports invalid field access expressions", () => {
   const aliases = new Map<Str, TypeRef>();
   const result = checkFieldAccessExpression(fieldAccess(identifier("value"), "x"), "i32", aliases);
@@ -36,6 +47,20 @@ Deno.test("reports invalid field access expressions", () => {
   assertText(
     result.diagnostics[0]?.message ?? "",
     "Cannot access field 'x' on non-record type 'i32'",
+  );
+  assertText(result.type, "<error>");
+});
+
+Deno.test("reports unsized array length field access expressions", () => {
+  const result = checkFieldAccessExpression(
+    fieldAccess(identifier("values"), "length()"),
+    "i32[]",
+    new Map<Str, TypeRef>(),
+  );
+
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Array length is unavailable for unsized array type 'i32[]'",
   );
   assertText(result.type, "<error>");
 });

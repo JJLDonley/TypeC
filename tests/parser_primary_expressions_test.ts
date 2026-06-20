@@ -75,7 +75,7 @@ function parserFixture(tokens: Token[]): ParserFixture {
       current += 1;
       return next;
     },
-    peek: () => peek(tokens, current),
+    peek: (offset = 0) => peek(tokens, current + offset),
     error: (next, message) => diagnostics.push({ message, span: next.span }),
     parseExpression: () => parsePrimaryWith(parser),
     parseArrayLiteral: () => ({ kind: "ArrayLiteralExpr", elements: [], span: sourceSpan }),
