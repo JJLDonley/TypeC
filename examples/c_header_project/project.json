@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "gfx": "gfx.h"
+  },
+  "compiler": {
+    "flags": []
+  }
+}
