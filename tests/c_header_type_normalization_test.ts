@@ -1,4 +1,9 @@
-import { cArrayElementType, cArrayType, isFixedCArraySize } from "c/header/array_types.ts";
+import {
+  cArrayElementType,
+  cArrayType,
+  isFixedCArraySize,
+  isNestedCArrayType,
+} from "c/header/array_types.ts";
 import { mapScalarCHeaderType } from "c/header/scalar_types.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
 
@@ -23,6 +28,11 @@ Deno.test("detects fixed C array sizes", () => {
   assertSame(isFixedCArraySize("4") ? "yes" : "no", "yes");
   assertSame(isFixedCArraySize("static 8") ? "yes" : "no", "no");
   assertSame(isFixedCArraySize("") ? "yes" : "no", "no");
+});
+
+Deno.test("detects nested C array types", () => {
+  assertSame(isNestedCArrayType("int32_t[2]") ? "yes" : "no", "no");
+  assertSame(isNestedCArrayType("int32_t[2][3]") ? "yes" : "no", "yes");
 });
 
 Deno.test("maps scalar C header types", () => {

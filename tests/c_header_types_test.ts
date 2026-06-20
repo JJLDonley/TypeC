@@ -23,6 +23,15 @@ Deno.test("maps C header record types", () => {
   assertSame(mapCHeaderType("struct Color *", records), "Color*");
 });
 
+Deno.test("rejects nested C array types", () => {
+  try {
+    mapCHeaderType("int32_t[2][3]");
+  } catch (error) {
+    if (error instanceof TypeCError) return;
+  }
+  throw new Error("Expected nested C array type error");
+});
+
 Deno.test("rejects unsupported C header types", () => {
   try {
     mapCHeaderType("__unsupported_t");

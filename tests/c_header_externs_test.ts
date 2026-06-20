@@ -33,6 +33,7 @@ Deno.test("skips unsupported C header externs", () => {
     fn("defined", "int32_t", [], "int32_t (void)", "/project/header.h", null, true),
     fn("export", "void", [], "void (void)"),
     fn("bad_type", "__unsupported_t", [{ name: "value", type: "__unsupported_t" }]),
+    fn("nested_array", "void", [{ name: "items", type: "int32_t[2][3]" }]),
   ]);
 
   assertText(output, "");

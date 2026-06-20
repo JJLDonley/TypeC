@@ -16,6 +16,12 @@ export function cArrayType(type: Str): CArrayType | null {
   return { element: match[1], size: match[2] };
 }
 
+export function isNestedCArrayType(type: Str): b8 {
+  const array = cArrayType(type);
+  if (array === null) return false;
+  return cArrayType(array.element) !== null;
+}
+
 export function isFixedCArraySize(size: Str): b8 {
   return /^[0-9]+$/.test(size);
 }
