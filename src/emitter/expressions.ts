@@ -23,7 +23,13 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
     case "BinaryExpr":
       return emitBinaryExpression(expr, context);
     case "CallExpr":
-      return emitCallExpression(expr, context, emitExpression, emitExpressionExpected, emitArrayLiteralExpression);
+      return emitCallExpression(
+        expr,
+        context,
+        emitExpression,
+        emitExpressionExpected,
+        emitArrayLiteralExpression,
+      );
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, context);
     case "FieldAccessExpr":
@@ -37,40 +43,82 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
   }
 }
 
-export function emitExpressionExpected(expr: Expression, expectedType: Str, context: EmitContext): Str {
+export function emitExpressionExpected(
+  expr: Expression,
+  expectedType: Str,
+  context: EmitContext,
+): Str {
   if (expr.kind === "IntegerLiteral") return emitIntegerLiteralExpression(expr, expectedType);
-  if (expr.kind === "RecordLiteralExpr") return emitRecordLiteralExpression(expr, expectedType, context);
-  if (expr.kind === "ArrayLiteralExpr") return emitArrayLiteralExpression(expr, context, expectedType);
+  if (expr.kind === "RecordLiteralExpr") {
+    return emitRecordLiteralExpression(expr, expectedType, context);
+  }
+  if (expr.kind === "ArrayLiteralExpr") {
+    return emitArrayLiteralExpression(expr, context, expectedType);
+  }
   if (expr.kind === "StringLiteral" && expectedType === "u8*") return emitCStringPointer(expr.text);
-  if (expr.kind === "StringLiteral" && expectedType === "void*") return emitCStringVoidPointer(expr.text);
+  if (expr.kind === "StringLiteral" && expectedType === "void*") {
+    return emitCStringVoidPointer(expr.text);
+  }
   return emitExpression(expr, context);
 }
 
-function emitRecordLiteralExpression(expr: Extract<Expression, { kind: "RecordLiteralExpr" }>, expectedType: Str, context: EmitContext): Str {
+function emitRecordLiteralExpression(
+  expr: Extract<Expression, { kind: "RecordLiteralExpr" }>,
+  expectedType: Str,
+  context: EmitContext,
+): Str {
   const record = context.typeAliases.get(expectedType)?.type;
-  const fields = expr.fields.map((field) => emitRecordLiteralField(field, record?.kind === "RecordTypeRef" ? record : null, context)).join(", ");
+  const fields = expr.fields.map((field) =>
+    emitRecordLiteralField(field, record?.kind === "RecordTypeRef" ? record : null, context)
+  ).join(", ");
   return `(${expectedType}){ ${fields} }`;
 }
 
-function emitRecordLiteralField(field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize], record: RecordTypeRef | null, context: EmitContext): Str {
+function emitRecordLiteralField(
+  field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize],
+  record: RecordTypeRef | null,
+  context: EmitContext,
+): Str {
   const expected = record?.fields.find((candidate) => candidate.name === field.name);
-  const value = expected ? emitExpressionExpected(field.expression, emitCTypeName(expected.type), context) : emitExpression(field.expression, context);
+  const value = expected
+    ? emitExpressionExpected(
+      field.expression,
+      emitCTypeName(expected.type, context.typeAliases),
+      context,
+    )
+    : emitExpression(field.expression, context);
   return `.${field.name} = ${value}`;
 }
 
-function emitArrayLiteralExpression(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, context: EmitContext, expectedType: Str | null = null): Str {
+function emitArrayLiteralExpression(
+  expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>,
+  context: EmitContext,
+  expectedType: Str | null = null,
+): Str {
   const elementType = expectedType ? cArrayElementType(expectedType) : null;
-  const elements = expr.elements.map((element) => elementType ? emitExpressionExpected(element, elementType, context) : emitExpression(element, context));
+  const elements = expr.elements.map((element) =>
+    elementType
+      ? emitExpressionExpected(element, elementType, context)
+      : emitExpression(element, context)
+  );
   return `{ ${elements.join(", ")} }`;
 }
 
-function emitBinaryExpression(expr: Extract<Expression, { kind: "BinaryExpr" }>, context: EmitContext): Str {
+function emitBinaryExpression(
+  expr: Extract<Expression, { kind: "BinaryExpr" }>,
+  context: EmitContext,
+): Str {
   const left = emitBinaryOperand(expr.left, expr.operator, "left", context);
   const right = emitBinaryOperand(expr.right, expr.operator, "right", context);
   return `${left} ${expr.operator} ${right}`;
 }
 
-function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" | "right", context: EmitContext): Str {
+function emitBinaryOperand(
+  expr: Expression,
+  parentOperator: Str,
+  side: "left" | "right",
+  context: EmitContext,
+): Str {
   const operand = emitExpression(expr, context);
   if (expr.kind !== "BinaryExpr") return operand;
   const parent = cPrecedence(parentOperator);
@@ -80,7 +128,10 @@ function emitBinaryOperand(expr: Expression, parentOperator: Str, side: "left" |
   return operand;
 }
 
-function emitPostfixPointerExpression(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>, context: EmitContext): Str {
+function emitPostfixPointerExpression(
+  expr: Extract<Expression, { kind: "PostfixPointerExpr" }>,
+  context: EmitContext,
+): Str {
   const operand = emitExpression(expr.operand, context);
   if (expr.operator === ".&") return `&${operand}`;
   return `*${operand}`;

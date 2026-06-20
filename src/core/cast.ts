@@ -25,6 +25,7 @@ export interface CastTypeAliasDecl {
   kind: "TypeAliasDecl";
   exported: b8;
   name: Str;
+  cName?: Str | null;
   type: CastTypeRef;
   span: SourceSpan;
 }

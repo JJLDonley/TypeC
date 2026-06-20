@@ -25,6 +25,7 @@ export interface TypeAliasDecl {
   kind: "TypeAliasDecl";
   exported: b8;
   name: Str;
+  cName?: Str | null;
   type: TypeRef;
   span: SourceSpan;
 }

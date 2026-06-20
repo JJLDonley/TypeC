@@ -18,6 +18,7 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
     kind: "TypeAliasDecl",
     exported: typeAlias.exported,
     name: typeAlias.name,
+    cName: typeAlias.cName,
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
   };

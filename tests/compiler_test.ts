@@ -10,7 +10,10 @@ type Str = string;
 
 Deno.test("tracks whether compiled source has main", async () => {
   const dir = await Deno.makeTempDir();
-  await Deno.writeTextFile(`${dir}/lib.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await Deno.writeTextFile(
+    `${dir}/lib.tc`,
+    `export function add(a: i32, b: i32): i32 { return a + b; }`,
+  );
   await Deno.writeTextFile(`${dir}/main.tc`, `function main(): i32 { return 0; }`);
   const lib = await compileFile(`${dir}/lib.tc`, `${dir}/build`);
   const main = await compileFile(`${dir}/main.tc`, `${dir}/build`);
@@ -26,10 +29,28 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for namespace type aliases", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/types.tc`, `export type Pair = { left: i32; right: i32; };`);
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Types from "./types.tc"; function main(): i32 { const p: Types.Pair = { left: 1, right: 2 }; return p.left; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "} Pair;");
+  assertIncludes(c, "const Pair p = (Pair){ .left = 1, .right = 2 };");
+  assertNotIncludes(c, "Types.Pair");
+});
+
 Deno.test("emits C calls for namespace header imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(`${dir}/lib.h`, `void tick(void);`);
-  await Deno.writeTextFile(`${dir}/main.tc`, `import * as Lib from "./lib.h"; function main(): i32 { Lib.tick(); return 0; }`);
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h"; function main(): i32 { Lib.tick(); return 0; }`,
+  );
 
   const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
 
@@ -47,13 +68,15 @@ Deno.test("emits C prototypes for extern functions", () => {
 });
 
 Deno.test("emits extern prototypes before functions", () => {
-  const source = `function main(): i32 { return add(20, 22); } extern function add(a: i32, b: i32): i32;`;
+  const source =
+    `function main(): i32 { return add(20, 22); } extern function add(a: i32, b: i32): i32;`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertOrdered(c, "i32 add(i32 a, i32 b);", "i32 main(void)");
 });
 
 Deno.test("emits non-exported helpers with internal linkage", () => {
-  const source = `function helper(): i32 { return 1; } export function api(): i32 { return helper(); } function main(): i32 { return api(); }`;
+  const source =
+    `function helper(): i32 { return 1; } export function api(): i32 { return helper(); } function main(): i32 { return api(); }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "static i32 helper(void)");
   assertIncludes(c, "i32 api(void)");
@@ -81,7 +104,8 @@ Deno.test("emits C for minimal main", () => {
 });
 
 Deno.test("emits C for const and function call", () => {
-  const source = `function add(a: i32, b: i32): i32 { return a + b; }\nfunction main(): i32 { const x: i32 = add(20, 22); return x; }`;
+  const source =
+    `function add(a: i32, b: i32): i32 { return a + b; }\nfunction main(): i32 { const x: i32 = add(20, 22); return x; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "i32 add(i32 a, i32 b)");
   assertIncludes(c, "const i32 x = add(20, 22);");
@@ -107,7 +131,8 @@ Deno.test("emits C for postfix pointer expressions", () => {
 });
 
 Deno.test("emits C for field access through dereference", () => {
-  const source = `type Vec2 = { x: i32; y: i32; }; function main(): i32 { const v: Vec2 = { x: 1, y: 2 }; const p: Vec2* = v.&; return p.*.x; }`;
+  const source =
+    `type Vec2 = { x: i32; y: i32; }; function main(): i32 { const v: Vec2 = { x: 1, y: 2 }; const p: Vec2* = v.&; return p.*.x; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "return (*p).x;");
 });
@@ -129,39 +154,45 @@ Deno.test("emits C typedef for fixed array record fields", () => {
 });
 
 Deno.test("emits C for record literals with array fields", () => {
-  const source = `type Block = { values: i32[3]; }; function main(): i32 { const b: Block = { values: [1, 2, 3] }; return b.values[0]; }`;
+  const source =
+    `type Block = { values: i32[3]; }; function main(): i32 { const b: Block = { values: [1, 2, 3] }; return b.values[0]; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "const Block b = (Block){ .values = { 1, 2, 3 } };");
 });
 
 Deno.test("emits C for record literals and field access", () => {
-  const source = `type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const v: Vec2 = { x: 1.5, y: 2.5 }; return 0; }`;
+  const source =
+    `type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const v: Vec2 = { x: 1.5, y: 2.5 }; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "return v.x;");
   assertIncludes(c, "const Vec2 v = (Vec2){ .x = 1.5, .y = 2.5 };");
 });
 
 Deno.test("emits C for record literal arguments", () => {
-  const source = `type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const x: f64 = getX({ x: 1.5, y: 2.5 }); return 0; }`;
+  const source =
+    `type Vec2 = { x: f64; y: f64; }; function getX(v: Vec2): f64 { return v.x; } function main(): i32 { const x: f64 = getX({ x: 1.5, y: 2.5 }); return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "getX((Vec2){ .x = 1.5, .y = 2.5 })");
 });
 
 Deno.test("emits C for nested record literals", () => {
-  const source = `type Inner = { x: i32; }; type Outer = { inner: Inner; }; function main(): i32 { const o: Outer = { inner: { x: 42 } }; return o.inner.x; }`;
+  const source =
+    `type Inner = { x: i32; }; type Outer = { inner: Inner; }; function main(): i32 { const o: Outer = { inner: { x: 42 } }; return o.inner.x; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "const Outer o = (Outer){ .inner = (Inner){ .x = 42 } };");
 });
 
 Deno.test("emits C for functions returning records", () => {
-  const source = `type Vec2 = { x: f64; y: f64; }; function add(a: Vec2, b: Vec2): Vec2 { return { x: a.x + b.x, y: a.y + b.y }; }`;
+  const source =
+    `type Vec2 = { x: f64; y: f64; }; function add(a: Vec2, b: Vec2): Vec2 { return { x: a.x + b.x, y: a.y + b.y }; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "Vec2 add(Vec2 a, Vec2 b)");
   assertIncludes(c, "return (Vec2){ .x = a.x + b.x, .y = a.y + b.y };");
 });
 
 Deno.test("emits C for nested record returns", () => {
-  const source = `type Vec2 = { x: f64; y: f64; }; function choose(ok: bool): Vec2 { if (ok) { return { x: 1.0, y: 2.0 }; } return { x: 3.0, y: 4.0 }; }`;
+  const source =
+    `type Vec2 = { x: f64; y: f64; }; function choose(ok: bool): Vec2 { if (ok) { return { x: 1.0, y: 2.0 }; } return { x: 3.0, y: 4.0 }; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "return (Vec2){ .x = 1.0, .y = 2.0 };");
   assertIncludes(c, "return (Vec2){ .x = 3.0, .y = 4.0 };");
@@ -175,14 +206,16 @@ Deno.test("emits C for inferred arrays and indexing", () => {
 });
 
 Deno.test("emits C for fixed array parameters", () => {
-  const source = `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { const xs: i32[] = [1, 2, 3]; return first(xs); }`;
+  const source =
+    `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { const xs: i32[] = [1, 2, 3]; return first(xs); }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "i32 first(i32* values)");
   assertIncludes(c, "return first(xs);");
 });
 
 Deno.test("emits C for array literal arguments", () => {
-  const source = `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { return first([1, 2, 3]); }`;
+  const source =
+    `function first(values: i32[3]): i32 { return values[0]; } function main(): i32 { return first([1, 2, 3]); }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "return first((i32[3]){ 1, 2, 3 });");
 });
@@ -195,7 +228,8 @@ Deno.test("emits C for while and assignment", () => {
 });
 
 Deno.test("emits C for bool literals", () => {
-  const source = `function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`;
+  const source =
+    `function flag(): bool { return true; } function main(): i32 { const ok: bool = false; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "b8 flag(void)");
   assertIncludes(c, "return true;");
@@ -203,7 +237,8 @@ Deno.test("emits C for bool literals", () => {
 });
 
 Deno.test("emits C macros for wide integer literals", () => {
-  const source = `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;
+  const source =
+    `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "return UINT64_C(18446744073709551615);");
 });
@@ -216,9 +251,10 @@ Deno.test("emits C for if else statements", () => {
 });
 
 Deno.test("emits C string literals for u8 pointer calls", () => {
-  const source = `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;
+  const source =
+    `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "return puts((u8*)\"hello\");");
+  assertIncludes(c, 'return puts((u8*)"hello");');
 });
 
 Deno.test("emits C expression statements", () => {
@@ -228,32 +264,35 @@ Deno.test("emits C expression statements", () => {
 });
 
 Deno.test("emits C string literals for void pointer calls", () => {
-  const source = `extern function consume(data: void*): void; function main(): i32 { consume("hello"); return 0; }`;
+  const source =
+    `extern function consume(data: void*): void; function main(): i32 { consume("hello"); return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "consume((void*)\"hello\");");
+  assertIncludes(c, 'consume((void*)"hello");');
 });
 
 Deno.test("emits C string literals for fixed u8 array calls", () => {
-  const source = `extern function consume(data: u8[6]): void; function main(): i32 { consume("hello"); return 0; }`;
+  const source =
+    `extern function consume(data: u8[6]): void; function main(): i32 { consume("hello"); return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "consume((u8*)\"hello\");");
+  assertIncludes(c, 'consume((u8*)"hello");');
 });
 
 Deno.test("emits expected C string assignment expressions", () => {
   const source = `function main(): i32 { let data: void* = "one"; data = "two"; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "void* data = (void*)\"one\";");
-  assertIncludes(c, "data = (void*)\"two\";");
+  assertIncludes(c, 'void* data = (void*)"one";');
+  assertIncludes(c, 'data = (void*)"two";');
 });
 
 Deno.test("emits local C string arrays", () => {
   const source = `function main(): i32 { const text: u8[] = "hi"; return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
-  assertIncludes(c, "const u8 text[3] = \"hi\";");
+  assertIncludes(c, 'const u8 text[3] = "hi";');
 });
 
 Deno.test("emits inferred array parameters as C pointers", () => {
-  const source = `function first(values: i32[]): i32 { return values[0]; } function main(): i32 { const values: i32[] = [1, 2]; return first(values); }`;
+  const source =
+    `function first(values: i32[]): i32 { return values[0]; } function main(): i32 { const values: i32[] = [1, 2]; return first(values); }`;
   const c = emitC(check(resolve(parse(lex(source)))));
   assertIncludes(c, "static i32 first(i32* values)");
   assertIncludes(c, "return first(values);");
@@ -270,9 +309,13 @@ function assertNotIncludes(haystack: Str, needle: Str): void {
 function assertEqualText(actual: Str[], expected: Str[]): void {
   const sameLength = actual.length === expected.length;
   const sameItems = actual.every((value, index) => value === expected[index]);
-  if (!sameLength || !sameItems) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  if (!sameLength || !sameItems) {
+    throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
 }
 
 function assertOrdered(haystack: Str, first: Str, second: Str): void {
-  if (haystack.indexOf(first) >= haystack.indexOf(second)) throw new Error(`Expected ${first} before ${second}`);
+  if (haystack.indexOf(first) >= haystack.indexOf(second)) {
+    throw new Error(`Expected ${first} before ${second}`);
+  }
 }

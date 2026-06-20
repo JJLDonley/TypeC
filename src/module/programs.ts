@@ -43,10 +43,22 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
 }
 
 export function selectNamespaceImports(program: Program, namespace: Str): Program {
+  const typeAliases = program.typeAliases.filter((typeAlias) => typeAlias.exported).map((
+    typeAlias,
+  ) => namespaceTypeAlias(typeAlias, namespace));
   const functions = program.functions.filter((fn) => fn.exported).map((fn) =>
     namespaceFunction(fn, namespace)
   );
-  return { kind: "Program", imports: [], typeAliases: [], functions, span: program.span };
+  return { kind: "Program", imports: [], typeAliases, functions, span: program.span };
+}
+
+function namespaceTypeAlias(typeAlias: TypeAliasDecl, namespace: Str): TypeAliasDecl {
+  return {
+    ...typeAlias,
+    exported: false,
+    name: `${namespace}.${typeAlias.name}`,
+    cName: typeAlias.cName ?? typeAlias.name,
+  };
 }
 
 function namespaceFunction(fn: FunctionDecl, namespace: Str): FunctionDecl {

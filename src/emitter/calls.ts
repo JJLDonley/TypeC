@@ -45,11 +45,11 @@ function emitCallArg(
   emitArrayLiteralExpression: ArrayLiteralEmitter,
 ): Str {
   if (!param) return emitExpression(arg, context);
-  const expectedType = emitCTypeName(param.type);
+  const expectedType = emitCTypeName(param.type, context.typeAliases);
   if (arg.kind === "ArrayLiteralExpr") {
     return emitArrayCompoundLiteral(
       arg,
-      emitArrayArgumentType(param.type),
+      emitArrayArgumentType(param.type, context),
       context,
       emitArrayLiteralExpression,
     );
@@ -64,7 +64,7 @@ function isStringLiteralU8ArrayArgument(
 ): arg is Extract<Expression, { kind: "StringLiteral" }> {
   if (arg.kind !== "StringLiteral") return false;
   if (type.kind !== "FixedArrayTypeRef" && type.kind !== "InferredArrayTypeRef") return false;
-  return emitCType(type.element) === "u8";
+  return emitCType(type.element, new Map()) === "u8";
 }
 
 function emitArrayCompoundLiteral(
@@ -76,7 +76,12 @@ function emitArrayCompoundLiteral(
   return `(${expectedType})${emitArrayLiteralExpression(expr, context, expectedType)}`;
 }
 
-function emitArrayArgumentType(type: FunctionDecl["params"][usize]["type"]): Str {
-  if (type.kind === "InferredArrayTypeRef") return `${emitCType(type.element)}[]`;
-  return emitCTypeName(type);
+function emitArrayArgumentType(
+  type: FunctionDecl["params"][usize]["type"],
+  context: EmitContext,
+): Str {
+  if (type.kind === "InferredArrayTypeRef") {
+    return `${emitCType(type.element, context.typeAliases)}[]`;
+  }
+  return emitCTypeName(type, context.typeAliases);
 }

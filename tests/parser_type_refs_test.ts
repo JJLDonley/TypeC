@@ -19,31 +19,65 @@ Deno.test("parses postfix type refs", () => {
 });
 
 Deno.test("parses record type refs", () => {
-  const parser = parserFor([punct("{"), identifier("x"), punct(":"), identifier("i32"), punct(";"), punct("}"), eof()]);
+  const parser = parserFor([
+    punct("{"),
+    identifier("x"),
+    punct(":"),
+    identifier("i32"),
+    punct(";"),
+    punct("}"),
+    eof(),
+  ]);
 
   const type = parseTypeRefWith(parser);
 
   assertText(typeName(type), "{x:i32}");
 });
 
+Deno.test("parses qualified named type refs", () => {
+  const type = parseTypeRefWith(
+    parserFor([identifier("RL"), punct("."), identifier("Color"), eof()]),
+  );
+
+  assertText(typeName(type), "RL.Color");
+});
+
 Deno.test("parses canonical pointer and reference type refs", () => {
-  const pointer = parseTypeRefWith(parserFor([identifier("Ptr"), punct("<"), identifier("i32"), punct(">"), eof()]));
-  const reference = parseTypeRefWith(parserFor([identifier("Ref"), punct("<"), identifier("i32"), punct(">"), eof()]));
+  const pointer = parseTypeRefWith(
+    parserFor([identifier("Ptr"), punct("<"), identifier("i32"), punct(">"), eof()]),
+  );
+  const reference = parseTypeRefWith(
+    parserFor([identifier("Ref"), punct("<"), identifier("i32"), punct(">"), eof()]),
+  );
 
   assertText(typeName(pointer), "i32*");
   assertText(typeName(reference), "i32&");
 });
 
 Deno.test("parses canonical array type refs", () => {
-  const inferred = parseTypeRefWith(parserFor([identifier("Array"), punct("<"), identifier("i32"), punct(">"), eof()]));
-  const fixed = parseTypeRefWith(parserFor([identifier("Array"), punct("<"), identifier("i32"), punct(","), integer("16"), punct(">"), eof()]));
+  const inferred = parseTypeRefWith(
+    parserFor([identifier("Array"), punct("<"), identifier("i32"), punct(">"), eof()]),
+  );
+  const fixed = parseTypeRefWith(
+    parserFor([
+      identifier("Array"),
+      punct("<"),
+      identifier("i32"),
+      punct(","),
+      integer("16"),
+      punct(">"),
+      eof(),
+    ]),
+  );
 
   assertText(typeName(inferred), "i32[]");
   assertText(typeName(fixed), "i32[16]");
 });
 
 Deno.test("parses canonical slice type refs", () => {
-  const slice = parseTypeRefWith(parserFor([identifier("Slice"), punct("<"), identifier("i32"), punct(">"), eof()]));
+  const slice = parseTypeRefWith(
+    parserFor([identifier("Slice"), punct("<"), identifier("i32"), punct(">"), eof()]),
+  );
 
   assertText(typeName(slice), "Slice<i32>");
 });

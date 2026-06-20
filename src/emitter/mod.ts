@@ -15,11 +15,15 @@ export function emitC(program: CheckedProgram): Str {
   const context = createEmitContext(program);
   out.push(...emitCPrelude());
   for (const typeAlias of program.typeAliases) {
-    out.push(emitTypeAlias(typeAlias));
+    out.push(emitTypeAlias(typeAlias, context));
     out.push("");
   }
-  for (const fn of program.functions.filter((fn) => fn.external)) out.push(emitFunctionPrototype(fn));
-  for (const fn of program.functions.filter((fn) => !fn.external)) out.push(emitFunctionPrototype(fn));
+  for (const fn of program.functions.filter((fn) => fn.external)) {
+    out.push(emitFunctionPrototype(fn, context));
+  }
+  for (const fn of program.functions.filter((fn) => !fn.external)) {
+    out.push(emitFunctionPrototype(fn, context));
+  }
   out.push("");
   for (const fn of program.functions.filter((fn) => fn.body)) {
     out.push(emitFunctionDefinition(fn, context));
@@ -31,11 +35,15 @@ export function emitC(program: CheckedProgram): Str {
 function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): Str {
   if (!fn.body) throw new Error("Function definition requires a body");
   const out: Str[] = [];
-  out.push(`${emitFunctionSignature(fn)} {`);
-  const locals = new Map<Str, Str>(fn.params.map((param) => [param.name, emitCTypeName(param.type)]));
-  for (const stmt of fn.body.statements) out.push(`  ${emitStatement(stmt, emitCType(fn.returnType), context, locals)}`);
+  out.push(`${emitFunctionSignature(fn, context)} {`);
+  const locals = new Map<Str, Str>(
+    fn.params.map((param) => [param.name, emitCTypeName(param.type, context.typeAliases)]),
+  );
+  for (const stmt of fn.body.statements) {
+    out.push(
+      `  ${emitStatement(stmt, emitCType(fn.returnType, context.typeAliases), context, locals)}`,
+    );
+  }
   out.push("}");
   return out.join("\n");
 }
-
-

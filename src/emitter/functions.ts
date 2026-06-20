@@ -1,16 +1,17 @@
 import type { FunctionDecl } from "core/ast.ts";
 import { emitCParamDeclarator, emitCType } from "c/type.ts";
+import type { EmitContext } from "emitter/context.ts";
 
 type Str = string;
 
-export function emitFunctionPrototype(fn: FunctionDecl): Str {
-  return `${emitFunctionSignature(fn)};`;
+export function emitFunctionPrototype(fn: FunctionDecl, context: EmitContext): Str {
+  return `${emitFunctionSignature(fn, context)};`;
 }
 
-export function emitFunctionSignature(fn: FunctionDecl): Str {
-  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType)} ${emitFunctionCName(fn)}(${
-    emitParams(fn)
-  })`;
+export function emitFunctionSignature(fn: FunctionDecl, context: EmitContext): Str {
+  return `${emitFunctionStorage(fn)}${emitCType(fn.returnType, context.typeAliases)} ${
+    emitFunctionCName(fn)
+  }(${emitParams(fn, context)})`;
 }
 
 function emitFunctionCName(fn: FunctionDecl): Str {
@@ -22,7 +23,8 @@ function emitFunctionStorage(fn: FunctionDecl): Str {
   return "static ";
 }
 
-function emitParams(fn: FunctionDecl): Str {
+function emitParams(fn: FunctionDecl, context: EmitContext): Str {
   if (fn.params.length === 0) return "void";
-  return fn.params.map((param) => emitCParamDeclarator(param.type, param.name)).join(", ");
+  return fn.params.map((param) => emitCParamDeclarator(param.type, param.name, context.typeAliases))
+    .join(", ");
 }

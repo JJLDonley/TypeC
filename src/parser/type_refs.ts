@@ -15,15 +15,25 @@ export interface TypeRefParser {
 }
 
 export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
-  let type: CastTypeRef = parser.checkText("{") ? parseRecordTypeRef(parser) : parseNamedTypeRef(parser);
+  let type: CastTypeRef = parser.checkText("{")
+    ? parseRecordTypeRef(parser)
+    : parseNamedTypeRef(parser);
 
   while (isTypePostfixStart(parser)) {
     if (parser.matchText("*")) {
-      type = { kind: "PointerTypeRef", element: type, span: span(type.span.start, parser.previous().span.end) };
+      type = {
+        kind: "PointerTypeRef",
+        element: type,
+        span: span(type.span.start, parser.previous().span.end),
+      };
       continue;
     }
     if (parser.matchText("&")) {
-      type = { kind: "ReferenceTypeRef", element: type, span: span(type.span.start, parser.previous().span.end) };
+      type = {
+        kind: "ReferenceTypeRef",
+        element: type,
+        span: span(type.span.start, parser.previous().span.end),
+      };
       continue;
     }
     type = parseArrayTypeRef(parser, type);
@@ -34,8 +44,20 @@ export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
 
 function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
   const token = parser.expectKind("identifier", "Expected type name");
-  if (isCanonicalGenericType(token.text) && parser.matchText("<")) return parseCanonicalGenericTypeRef(parser, token);
+  if (isCanonicalGenericType(token.text) && parser.matchText("<")) {
+    return parseCanonicalGenericTypeRef(parser, token);
+  }
+  if (parser.matchText(".")) return parseQualifiedNamedTypeRef(parser, token);
   return { kind: "NamedTypeRef", name: token.text, span: token.span };
+}
+
+function parseQualifiedNamedTypeRef(parser: TypeRefParser, namespace: Token): CastTypeRef {
+  const member = parser.expectKind("identifier", "Expected qualified type name");
+  return {
+    kind: "NamedTypeRef",
+    name: `${namespace.text}.${member.text}`,
+    span: span(namespace.span.start, member.span.end),
+  };
 }
 
 function parseCanonicalGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
@@ -71,7 +93,12 @@ function parseArrayGenericTypeRef(parser: TypeRefParser, token: Token): CastType
   }
   const size = parser.expectKind("integer", "Expected array size");
   const close = parser.expectText(">");
-  return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(token.span.start, close.span.end) };
+  return {
+    kind: "FixedArrayTypeRef",
+    element,
+    sizeText: size.text,
+    span: span(token.span.start, close.span.end),
+  };
 }
 
 function isCanonicalGenericType(name: Str): b8 {
@@ -81,12 +108,21 @@ function isCanonicalGenericType(name: Str): b8 {
 function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
   parser.expectText("[");
   if (parser.matchText("]")) {
-    return { kind: "InferredArrayTypeRef", element, span: span(element.span.start, parser.previous().span.end) };
+    return {
+      kind: "InferredArrayTypeRef",
+      element,
+      span: span(element.span.start, parser.previous().span.end),
+    };
   }
 
   const size = parser.expectKind("integer", "Expected array size");
   const close = parser.expectText("]");
-  return { kind: "FixedArrayTypeRef", element, sizeText: size.text, span: span(element.span.start, close.span.end) };
+  return {
+    kind: "FixedArrayTypeRef",
+    element,
+    sizeText: size.text,
+    span: span(element.span.start, close.span.end),
+  };
 }
 
 function parseRecordTypeRef(parser: TypeRefParser): CastTypeRef {

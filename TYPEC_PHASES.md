@@ -960,7 +960,7 @@ function main(): i32 {
 - `void*` accepts C-compatible object pointer and array arguments; it carries no pointee type
   information.
 - C array parameters map to legacy TypeC `T[]` or `T*` / `Ptr<T>` and lower to C pointers.
-- C typedef structs with C-compatible fields should import as namespaced extern records.
+- C typedef structs with C-compatible fields import as TypeC record aliases; namespace imports expose them as qualified TypeC types such as `RL.Color` while emitted C uses the original C typedef name.
 - C enums should import as namespaced integer-backed constants or enum types once enum semantics are
   specified.
 - C constants and simple object-like macros should import only when they can be represented safely
@@ -974,7 +974,7 @@ function main(): i32 {
 2. Resolve namespace-qualified function calls for existing TypeC and header-generated modules.
 3. Preserve original C symbol names during emission while using TypeC namespaces only for checking.
 4. Add C ABI alias types for platform-width C scalars and emit portable typedefs for them.
-5. Add C typedef struct import for C-compatible fields and namespaced field access.
+5. Add C typedef struct import for C-compatible fields, qualified namespace type references, and namespaced field access.
 6. Add C enum import after enum representation is specified.
 7. Add safe constant and simple macro import after constant semantics are specified.
 8. Keep unsupported C signatures skipped with diagnostics/debug visibility, not guessed
