@@ -1,7 +1,17 @@
 type Str = string;
 
-const scalarTypeMap = new Map<Str, Str>([
+type ScalarTypeEntry = [Str, Str];
+
+const coreScalarTypes: ScalarTypeEntry[] = [
   ["void", "void"],
+  ["float", "f32"],
+  ["double", "f64"],
+  ["bool", "b8"],
+  ["_Bool", "b8"],
+  ["size_t", "usize"],
+];
+
+const fixedWidthScalarTypes: ScalarTypeEntry[] = [
   ["int8_t", "i8"],
   ["int16_t", "i16"],
   ["int32_t", "i32"],
@@ -18,9 +28,26 @@ const scalarTypeMap = new Map<Str, Str>([
   ["__uint16_t", "u16"],
   ["__uint32_t", "u32"],
   ["__uint64_t", "u64"],
+];
+
+const typeCScalarTypes: ScalarTypeEntry[] = [
+  ["i8", "i8"],
+  ["i16", "i16"],
+  ["i32", "i32"],
+  ["i64", "i64"],
+  ["u8", "u8"],
+  ["u16", "u16"],
+  ["u32", "u32"],
+  ["u64", "u64"],
+];
+
+const cCharScalarTypes: ScalarTypeEntry[] = [
   ["char", "u8"],
   ["signed char", "i8"],
   ["unsigned char", "u8"],
+];
+
+const platformScalarTypes: ScalarTypeEntry[] = [
   ["short", "c_short"],
   ["short int", "c_short"],
   ["signed short", "c_short"],
@@ -44,19 +71,14 @@ const scalarTypeMap = new Map<Str, Str>([
   ["signed long long int", "c_longlong"],
   ["unsigned long long", "c_ulonglong"],
   ["unsigned long long int", "c_ulonglong"],
-  ["i8", "i8"],
-  ["i16", "i16"],
-  ["i32", "i32"],
-  ["i64", "i64"],
-  ["u8", "u8"],
-  ["u16", "u16"],
-  ["u32", "u32"],
-  ["u64", "u64"],
-  ["float", "f32"],
-  ["double", "f64"],
-  ["bool", "b8"],
-  ["_Bool", "b8"],
-  ["size_t", "usize"],
+];
+
+const scalarTypeMap = new Map<Str, Str>([
+  ...coreScalarTypes,
+  ...fixedWidthScalarTypes,
+  ...typeCScalarTypes,
+  ...cCharScalarTypes,
+  ...platformScalarTypes,
 ]);
 
 export function mapScalarCHeaderType(type: Str): Str | null {

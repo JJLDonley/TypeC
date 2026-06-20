@@ -36,9 +36,15 @@ Deno.test("detects nested C array types", () => {
 });
 
 Deno.test("maps scalar C header types", () => {
+  assertSame(mapScalarCHeaderType("void") ?? "", "void");
   assertSame(mapScalarCHeaderType("uint32_t") ?? "", "u32");
+  assertSame(mapScalarCHeaderType("__int64_t") ?? "", "i64");
+  assertSame(mapScalarCHeaderType("i32") ?? "", "i32");
   assertSame(mapScalarCHeaderType("signed char") ?? "", "i8");
   assertSame(mapScalarCHeaderType("unsigned int") ?? "", "c_uint");
+  assertSame(mapScalarCHeaderType("signed long long int") ?? "", "c_longlong");
+  assertSame(mapScalarCHeaderType("bool") ?? "", "b8");
+  assertSame(mapScalarCHeaderType("size_t") ?? "", "usize");
 });
 
 function assertSame(actual: Str, expected: Str): void {
