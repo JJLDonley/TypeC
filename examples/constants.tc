@@ -1,0 +1,7 @@
+const BASE: i32 = 40;
+const ANSWER: i32 = BASE + 2;
+const NEGATIVE: i32 = -ANSWER;
+
+function main(): i32 {
+  return ANSWER;
+}

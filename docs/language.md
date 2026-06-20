@@ -141,6 +141,12 @@ indexing, and runtime locals are not compile-time constant expressions. Integer 
 expressions are checked against the annotated type, including inside record and array constants.
 Exported constants are visible to TypeC imports but are not exported as C ABI symbols.
 
+Runnable example:
+
+```bash
+deno run -A src/driver/main.ts run examples/constants.tc
+```
+
 Phase 14 adds TypeScript-like scoped enums:
 
 ```ts
