@@ -183,6 +183,12 @@ function main(): i32 {
 }
 ```
 
+Named imports from the same project dependency are also supported:
+
+```ts
+import { Color } from "raylib";
+```
+
 Header imports are virtual TypeC modules generated from clang AST output. Supported functions,
 pointers, arrays, typedef structs, and bare struct records are imported when they can be represented
 safely. Unsupported function pointers, callbacks, variadics, old-style declarations, array returns,
