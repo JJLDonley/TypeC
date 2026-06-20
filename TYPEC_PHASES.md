@@ -821,9 +821,9 @@ The standard library is normal TypeC code. It should use the strongest completed
 available.
 
 Early stdlib modules may start with the current core subset only because later features do not exist
-yet. As classes, methods, enums, generics, interfaces, tagged unions, pattern matching, safe
-pointers, defer, arenas, and compile-time constants become available, stdlib modules should be
-refactored to use those features where they make APIs clearer, safer, or more reusable.
+yet. As classes, methods, enums, generics, interfaces, tagged unions, safe pointers, defer, arenas,
+and compile-time constants become available, stdlib modules should be refactored to use those
+features where they make APIs clearer, safer, or more reusable.
 
 Feature phases must include stdlib impact checks:
 
@@ -1136,7 +1136,7 @@ representation are skipped safely.
 
 # Phase 13: Defer
 
-Implementation status: not started. This phase is blocked until syntax and lowering are specified.
+Implementation status: not started.
 
 ## Goal
 
@@ -1144,20 +1144,73 @@ Allow explicit scope-exit cleanup without hidden ownership semantics.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use an explicit `defer` statement with a call expression:
+
+```ts
+function main(): i32 {
+  InitWindow(800, 450, "TypeC");
+  defer CloseWindow();
+
+  draw();
+  return 0;
+}
+```
+
+Only call-expression defers are in scope for this phase:
+
+```ts
+defer cleanup();
+defer release(handle);
+```
+
+## Semantics
+
+- `defer` is scope-specific.
+- A deferred call runs when execution leaves the block where the `defer` statement appears.
+- Deferred calls run first-in, last-out within that block.
+- A `defer` near the top of a function runs after later defers in the same function scope.
+- Local block defers run before outer block defers.
+- Deferred calls run on ordinary fallthrough and on `return` from the scope.
+
+Example execution order:
+
+```ts
+function main(): i32 {
+  defer CloseWindow();
+  defer StopAudio();
+  return 0;
+}
+```
+
+Execution order on return:
+
+```txt
+StopAudio()
+CloseWindow()
+return 0
+```
+
+## C Emission
+
+- Lower to explicit C statements at each scope exit.
+- Preserve first-in, last-out order by emitting deferred calls in reverse declaration order.
+- For `return expr;`, evaluate `expr` once into a temporary when required, run defers, then return
+  the stored value.
+- For `return;`, run defers before the C `return;`.
+- Nested block defers are emitted before outer block defers when control exits both scopes.
 
 ## Do
 
-- Define execution order precisely.
-- Lower to explicit C statements.
+- Keep execution order precise and visible in emitted C.
 - Run deferred actions on all local exits from the scope.
-- Keep deferred expressions type-checked like normal statements.
+- Keep deferred calls type-checked like normal call statements.
+- Keep `defer CloseWindow();` as the primary syntax for resource cleanup.
 
 ## Do Not
 
 - Do not implement exceptions.
 - Do not hide allocation or ownership behavior.
+- Do not defer arbitrary expressions in this phase.
 - Do not allow control flow that cannot be lowered clearly to C.
 
 ---
@@ -1256,7 +1309,6 @@ const mode: i32 = RL.FLAG_WINDOW_RESIZABLE;
 ## Do Not
 
 - Do not add payloads in this phase.
-- Do not add pattern matching in this phase.
 - Do not rely on C enum implementation-defined sizes.
 - Do not add implicit integer-to-enum or enum-to-integer conversions.
 
@@ -1271,8 +1323,27 @@ functions.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use TypeScript-like `class` declarations and method syntax:
+
+```ts
+class Vec2 {
+  x: f64;
+  y: f64;
+
+  lengthSquared(): f64 {
+    return this.x * this.x + this.y * this.y;
+  }
+}
+
+function main(): i32 {
+  const v: Vec2 = { x: 3.0, y: 4.0 };
+  const d: f64 = v.lengthSquared();
+  return 0;
+}
+```
+
+Constructors, inheritance, access modifiers, and `new` are not part of this phase unless specified
+by a later design update.
 
 ## Do
 
@@ -1280,6 +1351,7 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 - Lower methods to explicit functions with an explicit receiver.
 - Reuse record field checking rules.
 - Keep dispatch static.
+- Keep syntax close to TypeScript class and method declarations.
 
 ## Do Not
 
@@ -1297,10 +1369,14 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 Add stricter pointer categories or annotations that improve safety while preserving explicit memory
 behavior.
 
-## Syntax
+## Syntax Direction
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use modern systems-language-style pointer annotations or type constructors that do not collide with
+TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a dedicated
+design update defines semantics, examples, lowering, and tests.
+
+Candidate syntax must make aliasing, nullability, mutability, and ownership visible at the type
+site. Do not repurpose TypeScript-only syntax for pointer modes.
 
 ## Do
 
@@ -1314,6 +1390,7 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 - Do not promise memory safety without enforceable rules.
 - Do not infer ownership silently.
 - Do not break C ABI compatibility for raw pointers.
+- Do not implement before exact syntax is specified.
 
 ---
 
@@ -1323,10 +1400,13 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 
 Add explicit region-style allocation as a standard memory-management pattern.
 
-## Syntax
+## Syntax Direction
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use modern systems-language-style arena syntax that does not collide with TypeScript class,
+interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
+defines arena declarations, allocation calls, failure behavior, lowering, examples, and tests.
+
+The syntax must make arena lifetime explicit at allocation and cleanup sites.
 
 ## Do
 
@@ -1340,6 +1420,7 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 - Do not add garbage collection.
 - Do not hide allocation behind ordinary value construction.
 - Do not make arenas required for programs that do not use them.
+- Do not implement before exact syntax is specified.
 
 ---
 
@@ -1351,8 +1432,16 @@ Add compile-time constraints for generic or static-dispatch code.
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use TypeScript-like `interface` declarations:
+
+```ts
+interface Drawable {
+  draw(): void;
+}
+```
+
+Interfaces are compile-time constraints in this phase. Runtime dispatch, dynamic objects, and
+TypeScript structural compatibility rules are not implied unless specified explicitly.
 
 ## Do
 
@@ -1360,12 +1449,13 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 - Define satisfaction rules structurally or nominally before implementation.
 - Require clear diagnostics for missing members.
 - Keep generated C monomorphic and explicit.
+- Keep syntax close to TypeScript interface declarations.
 
 ## Do Not
 
 - Do not add dynamic dispatch by accident.
 - Do not add runtime type information.
-- Do not copy TypeScript interface semantics blindly.
+- Do not copy TypeScript interface semantics blindly beyond syntax shape.
 
 ---
 
@@ -1377,8 +1467,26 @@ Allow reusable typed functions and data structures through compile-time instanti
 
 ## Syntax
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use TypeScript-like generic parameter syntax:
+
+```ts
+function first<T>(items: Slice<T>): T {
+  return items[0];
+}
+
+class Box<T> {
+  value: T;
+}
+```
+
+Generic constraints use TypeScript-like `extends` syntax only if Phase 18 interface constraints are
+specified:
+
+```ts
+function drawAll<T extends Drawable>(items: Slice<T>): void {
+  // body syntax depends on earlier implemented phases
+}
+```
 
 ## Do
 
@@ -1386,6 +1494,7 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 - Define generic type parameter constraints.
 - Emit deterministic C names for instantiations.
 - Keep diagnostics tied to source generic definitions and call sites.
+- Keep syntax close to TypeScript generic declarations.
 
 ## Do Not
 
@@ -1401,10 +1510,15 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 
 Add sum types with explicit variants and payloads.
 
-## Syntax
+## Syntax Direction
 
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
+Use modern systems-language-style tagged union syntax that does not collide with TypeScript class,
+interface, or generic syntax. Exact syntax remains unspecified until a dedicated design update
+defines variant declarations, construction, access, exhaustiveness expectations, lowering, examples,
+and tests.
+
+Candidate syntax should make tags and payloads explicit and should lower predictably to a tag plus
+payload storage.
 
 ## Do
 
@@ -1417,33 +1531,7 @@ update defines exact syntax, semantics, lowering, examples, and tests.
 
 - Do not rely on unspecified C layout.
 - Do not add implicit conversions between variants.
-- Do not require pattern matching in this phase.
-
----
-
-# Phase 21: Pattern Matching
-
-## Goal
-
-Add exhaustive branching over enums and tagged unions.
-
-## Syntax
-
-Syntax not specified in this phase document. Do not implement this phase until a dedicated design
-update defines exact syntax, semantics, lowering, examples, and tests.
-
-## Do
-
-- Define exhaustiveness rules.
-- Define binding and scope rules.
-- Lower to explicit C control flow.
-- Require all arms to be type-consistent.
-
-## Do Not
-
-- Do not add partial matching without diagnostics.
-- Do not add runtime reflection.
-- Do not implement before enums and tagged unions are stable.
+- Do not implement before exact syntax is specified.
 
 ---
 

@@ -123,8 +123,7 @@ only the initial core subset.
 Current stdlib modules are simple because many advanced features are not implemented yet. Completed
 features such as compile-time constants may be used in stdlib modules where they improve clarity,
 safety, or reuse. Later features such as classes, methods, enums, generics, interfaces, tagged
-unions, pattern matching, safe pointers, defer, and arenas should be adopted only after their phases
-are implemented.
+unions, safe pointers, defer, and arenas should be adopted only after their phases are implemented.
 
 ## Constants and Planned Enums
 
