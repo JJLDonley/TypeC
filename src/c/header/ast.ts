@@ -52,12 +52,7 @@ function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]
     const fn = readHeaderFunction(value);
     if (fn) functions.push(fn);
   }
-  const inner = value.inner;
-  if (isJsonArray(inner)) {
-    for (const child of inner) {
-      collectHeaderFunctionsInto(child, functions);
-    }
-  }
+  collectInner(value, (child) => collectHeaderFunctionsInto(child, functions));
 }
 
 export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
@@ -76,8 +71,13 @@ function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): voi
     const record = readHeaderRecordDecl(value);
     if (record) records.push(record);
   }
+  collectInner(value, (child) => collectHeaderRecordsInto(child, records));
+}
+
+function collectInner(value: JsonRecord, visit: (child: unknown) => void): void {
   const inner = value.inner;
-  if (isJsonArray(inner)) { for (const child of inner) collectHeaderRecordsInto(child, records); }
+  if (!isJsonArray(inner)) return;
+  for (const child of inner) visit(child);
 }
 
 function isHeaderDeclaration(value: JsonRecord): b8 {
