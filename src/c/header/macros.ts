@@ -63,7 +63,9 @@ function parseFloatMacroValue(value: Str): MacroValue | null {
   ) {
     return null;
   }
-  return { type: "f64", text: value.replace(/[fFlL]$/, "") };
+  const text = normalizeFloatLiteral(value.replace(/[fFlL]$/, ""));
+  if (text === null) return null;
+  return { type: "f64", text };
 }
 
 function parseIntegerMacroValue(value: Str): MacroValue | null {
@@ -74,7 +76,7 @@ function parseIntegerMacroValue(value: Str): MacroValue | null {
   const suffix = match[3];
   const type = integerMacroType(suffix, sign === "-");
   if (type === null) return null;
-  return { type, text: `${sign}${digits}` };
+  return { type, text: normalizeIntegerLiteral(sign, digits) };
 }
 
 function parseNumericExpressionMacroValue(value: Str): MacroValue | null {
@@ -117,8 +119,11 @@ function numericLiteralPattern(): RegExp {
 }
 
 function stripNumericSuffix(literal: Str): Str {
-  if (isFloatMacroLiteral(literal)) return literal.replace(/[fFlL]$/, "");
-  return literal.replace(/[uUlL]+$/, "");
+  if (isFloatMacroLiteral(literal)) {
+    return normalizeFloatLiteral(literal.replace(/[fFlL]$/, "")) ?? literal;
+  }
+  const bare = literal.replace(/[uUlL]+$/, "");
+  return normalizeIntegerLiteral("", bare);
 }
 
 function isFloatMacroLiteral(literal: Str): b8 {
@@ -128,6 +133,22 @@ function isFloatMacroLiteral(literal: Str): b8 {
 function integerLiteralSuffix(literal: Str): Str {
   const match = literal.match(/[uUlL]+$/);
   return match?.[0] ?? "";
+}
+
+function normalizeFloatLiteral(literal: Str): Str | null {
+  if (!/[eE]/.test(literal)) return literal;
+  const value = Number(literal);
+  if (!Number.isFinite(value)) return null;
+  const text = value.toString();
+  if (/[eE]/.test(text)) return null;
+  return text.includes(".") ? text : `${text}.0`;
+}
+
+function normalizeIntegerLiteral(sign: Str, digits: Str): Str {
+  const magnitude = digits.startsWith("0x") || digits.startsWith("0X")
+    ? BigInt(digits).toString()
+    : digits;
+  return `${sign}${magnitude}`;
 }
 
 function integerMacroType(suffix: Str, negative: b8): MacroValueType | null {
