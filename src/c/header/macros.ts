@@ -1,9 +1,9 @@
 import type { CHeaderConstant } from "c/header/ast.ts";
+import { stripHeaderTrailingComment } from "c/header/comments.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
 
 type Str = string;
 type b8 = boolean;
-type usize = number;
 
 type MacroValueType = "bool" | "u8*" | "i32" | "u32" | "i64" | "u64" | "f64";
 
@@ -34,25 +34,7 @@ function parseObjectLikeMacro(line: Str): ObjectLikeMacro | null {
   if (!isTypeCIdentifier(name)) return null;
   const rest = match[2];
   if (rest.startsWith("(")) return null;
-  return { name, value: removeTrailingComment(rest).trim() };
-}
-
-function removeTrailingComment(text: Str): Str {
-  const index = trailingCommentIndex(text);
-  if (index === null) return text.trimEnd();
-  return text.slice(0, index).trimEnd();
-}
-
-function trailingCommentIndex(text: Str): usize | null {
-  let quoted: b8 = false;
-  for (let index: usize = 0; index < text.length - 1; index += 1) {
-    const current = text[index];
-    if (current === '"') quoted = !quoted;
-    if (quoted || current !== "/") continue;
-    const next = text[index + 1];
-    if (next === "/" || next === "*") return index;
-  }
-  return null;
+  return { name, value: stripHeaderTrailingComment(rest).trim() };
 }
 
 interface MacroValue {
