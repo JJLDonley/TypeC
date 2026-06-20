@@ -101,6 +101,21 @@ Deno.test("emits C calls for namespace header imports", async () => {
   assertNotIncludes(c, "Lib.tick");
 });
 
+Deno.test("deduplicates direct and namespace header function imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(`${dir}/lib.h`, `void tick(void);`);
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { tick } from "./lib.h"; import * as Lib from "./lib.h"; function main(): i32 { tick(); Lib.tick(); return 42; }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertCount(c, "void tick(void);", 1);
+  assertCount(c, "tick();", 2);
+  assertNotIncludes(c, "Lib.tick");
+});
+
 Deno.test("deduplicates direct and namespace header record imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

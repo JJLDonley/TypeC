@@ -3,7 +3,8 @@ import type { CheckedProgram } from "checker";
 import { emitCPrelude } from "c/prelude.ts";
 import { emitCType } from "c/type.ts";
 import { createEmitContext, type EmitContext } from "emitter/context.ts";
-import { emitFunctionPrototype, emitFunctionSignature } from "emitter/functions.ts";
+import { collectFunctionPrototypes } from "emitter/function_prototypes.ts";
+import { emitFunctionSignature } from "emitter/functions.ts";
 import { emitStatement } from "emitter/statements.ts";
 import { collectEmittedTypeAliases } from "emitter/type_alias_collection.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
@@ -18,12 +19,8 @@ export function emitC(program: CheckedProgram): Str {
     out.push(typeAlias.text);
     out.push("");
   }
-  for (const fn of program.functions.filter((fn) => fn.external)) {
-    out.push(emitFunctionPrototype(fn, context));
-  }
-  for (const fn of program.functions.filter((fn) => !fn.external)) {
-    out.push(emitFunctionPrototype(fn, context));
-  }
+  out.push(...collectFunctionPrototypes(program.functions.filter((fn) => fn.external), context));
+  out.push(...collectFunctionPrototypes(program.functions.filter((fn) => !fn.external), context));
   out.push("");
   for (const fn of program.functions.filter((fn) => fn.body)) {
     out.push(emitFunctionDefinition(fn, context));
