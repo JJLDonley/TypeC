@@ -1,6 +1,7 @@
 import type { CHeaderFunction, CHeaderParam } from "c/header/ast.ts";
-import { mapCHeaderType } from "c/header/types.ts";
+import { typeUsesKnownRecord } from "c/header/record_type_usage.ts";
 import { unambiguousHeaderFunctions, uniqueHeaderFunctions } from "c/header/signatures.ts";
+import { mapCHeaderType } from "c/header/types.ts";
 import { isIncludedHeaderFunction, isSupportedHeaderFunction } from "c/header/support.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
@@ -34,14 +35,6 @@ function isUnlocatedKnownRecordFunction(
 function fnUsesKnownRecord(fn: CHeaderFunction, recordNames: Set<Str>): b8 {
   return typeUsesKnownRecord(fn.returnType, recordNames) ||
     fn.params.some((param) => typeUsesKnownRecord(param.type, recordNames));
-}
-
-function typeUsesKnownRecord(type: Str, recordNames: Set<Str>): b8 {
-  const withoutPointer = type.replaceAll("*", "").trim();
-  const name = withoutPointer.startsWith("struct ")
-    ? withoutPointer.slice("struct ".length)
-    : withoutPointer;
-  return recordNames.has(name);
 }
 
 function formatSupportedFunction(fn: CHeaderFunction, recordNames: Set<Str>): Str[] {

@@ -23,7 +23,12 @@ Deno.test("skips unsupported C header externs", () => {
   const output = formatHeaderExterns([
     fn("log", "int32_t", [{ name: "format", type: "const char *" }], "int32_t (const char *, ...)"),
     fn("old", "void", [], "void ()"),
-    fn("callback", "void", [{ name: "callback", type: "int32_t (*)(int32_t)" }], "void (int32_t (*)(int32_t))"),
+    fn(
+      "callback",
+      "void",
+      [{ name: "callback", type: "int32_t (*)(int32_t)" }],
+      "void (int32_t (*)(int32_t))",
+    ),
     fn("helper", "int32_t", [], "int32_t (void)", "/project/header.h", "static"),
     fn("defined", "int32_t", [], "int32_t (void)", "/project/header.h", null, true),
     fn("export", "void", [], "void (void)"),
@@ -33,12 +38,58 @@ Deno.test("skips unsupported C header externs", () => {
   assertText(output, "");
 });
 
+Deno.test("keeps unlocated functions using known records", () => {
+  const output = formatHeaderExterns(
+    [
+      fn("draw", "void", [{ name: "tint", type: "const Color *" }], "void (const Color *)", null),
+      fn(
+        "fill",
+        "void",
+        [{ name: "items", type: "struct Color[4]" }],
+        "void (struct Color[4])",
+        null,
+      ),
+      fn("skip", "void", [{ name: "value", type: "int32_t" }], "void (int32_t)", null),
+    ],
+    "/project/include",
+    new Set(["Color"]),
+  );
+
+  assertIncludes(output, "extern function draw(tint: Color*): void;");
+  assertIncludes(output, "extern function fill(items: Color[]): void;");
+  assertExcludes(output, "skip");
+});
+
 Deno.test("deduplicates and filters C header externs", () => {
   const output = formatHeaderExterns([
-    fn("same", "int32_t", [{ name: "value", type: "int32_t" }], "int32_t (int32_t)", "/project/include/math.h"),
-    fn("same", "__int32_t", [{ name: "value", type: "__int32_t" }], "__int32_t (__int32_t)", "/project/include/math.h"),
-    fn("conflict", "int32_t", [{ name: "value", type: "int32_t" }], "int32_t (int32_t)", "/project/include/math.h"),
-    fn("conflict", "int64_t", [{ name: "value", type: "int64_t" }], "int64_t (int64_t)", "/project/include/math.h"),
+    fn(
+      "same",
+      "int32_t",
+      [{ name: "value", type: "int32_t" }],
+      "int32_t (int32_t)",
+      "/project/include/math.h",
+    ),
+    fn(
+      "same",
+      "__int32_t",
+      [{ name: "value", type: "__int32_t" }],
+      "__int32_t (__int32_t)",
+      "/project/include/math.h",
+    ),
+    fn(
+      "conflict",
+      "int32_t",
+      [{ name: "value", type: "int32_t" }],
+      "int32_t (int32_t)",
+      "/project/include/math.h",
+    ),
+    fn(
+      "conflict",
+      "int64_t",
+      [{ name: "value", type: "int64_t" }],
+      "int64_t (int64_t)",
+      "/project/include/math.h",
+    ),
     fn("outside", "int32_t", [], "int32_t (void)", "/usr/include/math.h"),
   ], "/project/include");
 
@@ -47,8 +98,24 @@ Deno.test("deduplicates and filters C header externs", () => {
   assertExcludes(output, "outside");
 });
 
-function fn(name: Str, returnType: Str, params: CHeaderFunction["params"], functionType: Str | null = null, sourceFile: Str | null = "/project/header.h", storageClass: Str | null = null, hasBody: b8 = false): CHeaderFunction {
-  return { name, functionType: functionType ?? `${returnType} (${params.map((param) => param.type).join(", ")})`, returnType, params, sourceFile, storageClass, hasBody };
+function fn(
+  name: Str,
+  returnType: Str,
+  params: CHeaderFunction["params"],
+  functionType: Str | null = null,
+  sourceFile: Str | null = "/project/header.h",
+  storageClass: Str | null = null,
+  hasBody: b8 = false,
+): CHeaderFunction {
+  return {
+    name,
+    functionType: functionType ?? `${returnType} (${params.map((param) => param.type).join(", ")})`,
+    returnType,
+    params,
+    sourceFile,
+    storageClass,
+    hasBody,
+  };
 }
 
 function countOccurrences(haystack: Str, needle: Str): usize {
