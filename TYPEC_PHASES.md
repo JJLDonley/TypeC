@@ -1190,21 +1190,20 @@ switch (key) {
 - `default` is optional and may appear at most once.
 - Case bodies are statement lists.
 - `break;` exits the nearest switch.
-- Cases do not fall through implicitly. Reaching the end of a case body exits the switch.
+- Fallthrough follows TypeScript/C semantics: execution continues into the next case unless a
+  `break`, `return`, or other explicit control-flow exit is reached.
 - Multiple labels may share a body by placing labels next to each other with no intervening
   statements.
-- Explicit fallthrough is not part of this phase.
 
 ## C Emission
 
-- Lower to a C `switch` with generated `break;` statements to enforce no implicit fallthrough.
+- Lower to a C `switch` when TypeC semantics map directly and safely.
 - Emit fixed-width switch expressions and case labels.
-- Preserve explicit `break` and `return` behavior.
+- Preserve TypeScript/C fallthrough, explicit `break`, and `return` behavior.
 
 ## Do
 
-- Keep syntax TypeScript-like.
-- Enforce no implicit fallthrough.
+- Keep syntax and fallthrough behavior TypeScript-like.
 - Type-check case labels against the switch expression.
 - Keep lowering readable and deterministic.
 
@@ -1213,7 +1212,6 @@ switch (key) {
 - Do not add non-switch branching semantics.
 - Do not use dynamic type tests.
 - Do not allow case labels that require runtime evaluation.
-- Do not add explicit fallthrough in this phase.
 
 ---
 
