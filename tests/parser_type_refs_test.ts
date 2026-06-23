@@ -34,6 +34,26 @@ Deno.test("parses record type refs", () => {
   assertText(typeName(type), "{x:i32}");
 });
 
+Deno.test("parses comma-separated record type refs", () => {
+  const type = parseTypeRefWith(
+    parserFor([
+      punct("{"),
+      identifier("x"),
+      punct(":"),
+      identifier("i32"),
+      punct(","),
+      identifier("y"),
+      punct(":"),
+      identifier("i32"),
+      punct(","),
+      punct("}"),
+      eof(),
+    ]),
+  );
+
+  assertText(typeName(type), "{x:i32,y:i32}");
+});
+
 Deno.test("parses qualified named type refs", () => {
   const type = parseTypeRefWith(
     parserFor([identifier("RL"), punct("."), identifier("Color"), eof()]),

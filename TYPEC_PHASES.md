@@ -2600,6 +2600,47 @@ function make(x: i32, y: i32): Point {
 
 ---
 
+# Phase 35: TypeScript-Style Record Type Field Separators
+
+Status: Complete.
+
+## Goal
+
+Accept TypeScript-style comma-separated record type fields, including no delimiter after the last
+field.
+
+## Syntax
+
+```ts
+type Point = {
+  x: i32;
+  y: i32;
+};
+
+type Size = { width: i32; height: i32 };
+```
+
+## Semantics
+
+- Commas and semicolons are field separators only.
+- Separator spelling does not affect type checking, lowering, or emitted C.
+- Existing semicolon-separated record type fields remain valid.
+
+## Do
+
+- Accept `,` or `;` between record type fields.
+- Accept an optional trailing comma or semicolon before `}`.
+- Keep existing record field validation and C emission.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add optional record fields.
+- Do not add readonly modifiers.
+- Do not add index signatures, mapped types, or JavaScript object semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

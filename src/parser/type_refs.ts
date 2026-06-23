@@ -197,7 +197,12 @@ function parseFunctionTypeParam(parser: TypeRefParser): CastParam {
 function parseRecordTypeRef(parser: TypeRefParser): CastTypeRef {
   const open = parser.expectText("{");
   const fields: CastRecordField[] = [];
-  while (!parser.checkText("}") && !parser.check("eof")) fields.push(parseRecordField(parser));
+  while (!parser.checkText("}") && !parser.check("eof")) {
+    fields.push(parseRecordField(parser));
+    if (parseRecordFieldSeparator(parser)) continue;
+    if (parser.checkText("}")) break;
+    parser.expectText(";");
+  }
   const close = parser.expectText("}");
   return { kind: "RecordTypeRef", fields, span: span(open.span.start, close.span.end) };
 }
@@ -206,8 +211,11 @@ function parseRecordField(parser: TypeRefParser): CastRecordField {
   const name = parser.expectKind("identifier", "Expected field name");
   parser.expectText(":");
   const type = parseTypeRefWith(parser);
-  const semi = parser.expectText(";");
-  return { name: name.text, type, span: span(name.span.start, semi.span.end) };
+  return { name: name.text, type, span: span(name.span.start, type.span.end) };
+}
+
+function parseRecordFieldSeparator(parser: TypeRefParser): b8 {
+  return parser.matchText(";") || parser.matchText(",");
 }
 
 function isTypePostfixStart(parser: TypeRefParser): b8 {

@@ -1060,6 +1060,14 @@ Deno.test("emits C typedef for record aliases", () => {
   assertOrdered(c, "  f32 x;", "  f32 y;");
 });
 
+Deno.test("emits C typedef for comma-separated record aliases", () => {
+  const source = `type Vec2 = { x: f32, y: f32, }; function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "  f32 x;");
+  assertIncludes(c, "  f32 y;");
+  assertOrdered(c, "  f32 x;", "  f32 y;");
+});
+
 Deno.test("emits C typedef for fixed array record fields", () => {
   const source = `type Block = { values: i32[3]; }; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));
