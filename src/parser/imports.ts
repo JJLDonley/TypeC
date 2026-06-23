@@ -1,4 +1,6 @@
+import type { CastImportSpecifier } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
+import { span } from "parser/helpers.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -11,8 +13,8 @@ export interface ImportNameParser {
   error(token: Token, message: Str): void;
 }
 
-export function parseImportNamesWith(parser: ImportNameParser): Str[] {
-  const names: Str[] = [];
+export function parseImportNamesWith(parser: ImportNameParser): CastImportSpecifier[] {
+  const names: CastImportSpecifier[] = [];
   const seen = new Set<Str>();
   if (parser.checkText("}")) {
     parser.error(parser.peek(), "Import must name at least one symbol");
@@ -22,9 +24,20 @@ export function parseImportNamesWith(parser: ImportNameParser): Str[] {
   return names;
 }
 
-function parseImportName(parser: ImportNameParser, names: Str[], seen: Set<Str>): void {
-  const name = parser.expectKind("identifier", "Expected imported name");
-  if (seen.has(name.text)) parser.error(name, `Duplicate imported name '${name.text}'`);
-  seen.add(name.text);
-  names.push(name.text);
+function parseImportName(
+  parser: ImportNameParser,
+  names: CastImportSpecifier[],
+  seen: Set<Str>,
+): void {
+  const imported = parser.expectKind("identifier", "Expected imported name");
+  const local = parser.matchText("as")
+    ? parser.expectKind("identifier", "Expected local import name")
+    : imported;
+  if (seen.has(local.text)) parser.error(local, `Duplicate imported name '${local.text}'`);
+  seen.add(local.text);
+  names.push({
+    imported: imported.text,
+    local: local.text,
+    span: span(imported.span.start, local.span.end),
+  });
 }

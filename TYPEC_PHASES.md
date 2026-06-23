@@ -2685,6 +2685,49 @@ function apply(cb: (value: i32) => i32, value: (i32)): i32 {
 
 ---
 
+# Phase 37: Named Import Aliases
+
+Status: Complete.
+
+## Goal
+
+Accept TypeScript-style aliases in named imports while keeping imports fully static.
+
+## Syntax
+
+```ts
+import { add as plus, sub } from "./math.tc";
+
+function main(): i32 {
+  return plus(2, sub(4, 1));
+}
+```
+
+## Semantics
+
+- `import { exported as local }` imports the exported symbol named `exported` and binds it locally
+  as `local`.
+- `import { name }` remains equivalent to `import { name as name }`.
+- Duplicate local import names in one import list are rejected.
+- Aliases are compile-time names only; no runtime object or dynamic lookup is created.
+- Namespace imports remain unchanged.
+
+## Do
+
+- Parse named import specifiers with optional `as` aliases.
+- Preserve existing named import behavior.
+- Select imported exports by exported name, then expose aliased roots under the local name.
+- Add parser, module loader, and compile tests.
+
+## Do Not
+
+- Do not add default imports.
+- Do not add namespace alias changes.
+- Do not add re-exports.
+- Do not add JavaScript module runtime semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

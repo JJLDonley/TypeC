@@ -30,7 +30,7 @@ Deno.test("selects exported imports", () => {
     export function origin(): Point { return { x: 0, y: 0 }; }
     function hidden(): i32 { return 1; }
   `));
-  const selected = selectImports(program, ["Point", "origin"], program.span);
+  const selected = selectImports(program, [specifier("Point"), specifier("origin")], program.span);
 
   assertSame(selected.typeAliases.length, 1);
   assertSame(selected.functions.length, 1);
@@ -41,10 +41,23 @@ Deno.test("selects exported imports", () => {
 Deno.test("rejects missing exports", () => {
   const program = parse(lex(`function hidden(): i32 { return 1; }`));
   assertModuleError(
-    () => selectImports(program, ["hidden"], program.span),
+    () => selectImports(program, [specifier("hidden")], program.span),
     "Module does not export 'hidden'",
   );
 });
+
+function specifier(
+  name: Str,
+): { imported: Str; local: Str; span: ReturnType<typeof parse>["span"] } {
+  return { imported: name, local: name, span: zeroSpan() };
+}
+
+function zeroSpan(): ReturnType<typeof parse>["span"] {
+  return {
+    start: { offset: 0, line: 1, column: 1 },
+    end: { offset: 0, line: 1, column: 1 },
+  };
+}
 
 function assertModuleError(run: () => void, message: Str): void {
   try {

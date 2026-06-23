@@ -20,9 +20,15 @@ export interface CastProgram {
 
 export interface CastImportDecl {
   kind: "ImportDecl";
-  names: Str[];
+  names: CastImportSpecifier[];
   namespace?: Str | null;
   path: Str;
+  span: SourceSpan;
+}
+
+export interface CastImportSpecifier {
+  imported: Str;
+  local: Str;
   span: SourceSpan;
 }
 

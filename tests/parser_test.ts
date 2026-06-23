@@ -29,7 +29,7 @@ Deno.test("parses imports", () => {
     lex(`import { add } from "./math.tc"; function main(): i32 { return add(1, 2); }`),
   );
   if (program.imports.length !== 1) throw new Error("Expected one import");
-  if (program.imports[0].names[0] !== "add") throw new Error("Expected add import");
+  if (program.imports[0].names[0]?.local !== "add") throw new Error("Expected add import");
 });
 
 Deno.test("parses namespace imports and calls", () => {

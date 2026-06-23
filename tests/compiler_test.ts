@@ -463,6 +463,23 @@ Deno.test("emits C for namespace function dependencies", async () => {
   assertNotIncludes(c, "Math.");
 });
 
+Deno.test("emits C for aliased named imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/math.tc`,
+    `export function inc(value: i32): i32 { return value + 1; }`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { inc as bump } from "./math.tc"; function main(): i32 { return bump(1); }`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "i32 bump(i32 value)");
+  assertIncludes(c, "return bump(1);");
+});
+
 Deno.test("emits distinct C names for repeated namespace imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

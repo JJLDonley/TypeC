@@ -16,9 +16,18 @@ Deno.test("collects merged import requests", () => {
 
   assertSame(requests.length, 2);
   assertText(requests[0]?.path ?? "", "/project/math.tc");
-  assertText([...(requests[0]?.names ?? [])].join(","), "add,sub");
+  assertText(formatNames([...(requests[0]?.names.values() ?? [])]), "add:add,sub:sub");
   assertSuffix(requests[1]?.path ?? "", "/std/math.tc");
-  assertText([...(requests[1]?.names ?? [])].join(","), "max_i32");
+  assertText(formatNames([...(requests[1]?.names.values() ?? [])]), "max_i32:max_i32");
+});
+
+Deno.test("collects aliased import requests", () => {
+  const program = parse(lex(`
+    import { add as plus } from "./math.tc";
+  `));
+  const requests = collectImportRequests("/project/main.tc", program, projectConfig());
+
+  assertText(formatNames([...(requests[0]?.names.values() ?? [])]), "add:plus");
 });
 
 Deno.test("collects namespace import requests", () => {
@@ -38,6 +47,10 @@ function projectConfig(): ProjectConfig {
     dependencies: new Map<Str, Str>([["basic/math", "std/math.tc"]]),
     compilerFlags: [],
   };
+}
+
+function formatNames(names: { imported: Str; local: Str }[]): Str {
+  return names.map((name) => `${name.imported}:${name.local}`).join(",");
 }
 
 function assertSame(actual: usize, expected: usize): void {

@@ -11,6 +11,7 @@ import type {
   CastFunctionDecl,
   CastGenericParam,
   CastImportDecl,
+  CastImportSpecifier,
   CastInterfaceDecl,
   CastInterfaceMethod,
   CastParam,
@@ -112,7 +113,7 @@ function parseImportDeclaration(
   };
 }
 
-function parseNamedImport(parser: DeclarationParser): Str[] {
+function parseNamedImport(parser: DeclarationParser): CastImportSpecifier[] {
   parser.expectText("{");
   const names = parseImportNamesWith({
     checkText: (text) => parser.checkText(text),

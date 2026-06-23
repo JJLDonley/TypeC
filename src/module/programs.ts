@@ -4,6 +4,7 @@ import type {
   ConstDecl,
   EnumDecl,
   FunctionDecl,
+  ImportSpecifier,
   InterfaceDecl,
   Program,
   TaggedUnionDecl,
@@ -49,28 +50,34 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
   };
 }
 
-export function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
-  const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
-  const interfaces = names.flatMap((name) => selectInterface(program.interfaces ?? [], name));
-  const taggedUnions = names.flatMap((name) => selectTaggedUnion(program.taggedUnions ?? [], name));
-  const enums = names.flatMap((name) => selectEnum(program.enums ?? [], name));
-  const constants = names.flatMap((name) => selectConstant(program.constants ?? [], name));
-  const functions = names.flatMap((name) => selectFunction(program.functions, name));
-  const found = new Set<Str>([
-    ...typeAliases.map((decl) => decl.name),
-    ...interfaces.map((decl) => decl.name),
-    ...taggedUnions.map((decl) => decl.name),
-    ...enums.map((decl) => decl.name),
-    ...constants.map((decl) => decl.name),
-    ...functions.map((decl) => decl.name),
-  ]);
-  const missing = names.filter((name) => !found.has(name));
-  if (missing.length > 0) {
-    throw new TypeCError(
-      missing.map((name) => ({ message: `Module does not export '${name}'`, span })),
-    );
+export function selectImports(
+  program: Program,
+  specifiers: ImportSpecifier[],
+  span: Diagnostic["span"],
+): Program {
+  const selected = specifiers.map((specifier) => selectImport(program, specifier, span));
+  return mergeProgram(emptyProgram(program), selected);
+}
+
+function selectImport(
+  program: Program,
+  specifier: ImportSpecifier,
+  span: Diagnostic["span"],
+): Program {
+  const imported = specifier.imported;
+  const typeAliases = selectTypeAlias(program.typeAliases, imported);
+  const interfaces = selectInterface(program.interfaces ?? [], imported);
+  const taggedUnions = selectTaggedUnion(program.taggedUnions ?? [], imported);
+  const enums = selectEnum(program.enums ?? [], imported);
+  const constants = selectConstant(program.constants ?? [], imported);
+  const functions = selectFunction(program.functions, imported);
+  if (
+    typeAliases.length + interfaces.length + taggedUnions.length + enums.length +
+        constants.length + functions.length === 0
+  ) {
+    throw new TypeCError([{ message: `Module does not export '${imported}'`, span }]);
   }
-  return selectDependencyClosure(
+  const selected = selectDependencyClosure(
     program,
     [
       ...typeAliases.map((typeAlias) => typeAlias.name),
@@ -81,6 +88,56 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
     constants.map((constant) => constant.name),
     functions.map((fn) => fn.name),
   );
+  return aliasImportRoots(selected, specifier);
+}
+
+function emptyProgram(program: Program): Program {
+  return {
+    kind: "Program",
+    imports: [],
+    typeAliases: [],
+    interfaces: [],
+    taggedUnions: [],
+    enums: [],
+    constants: [],
+    functions: [],
+    span: program.span,
+  };
+}
+
+function aliasImportRoots(program: Program, specifier: ImportSpecifier): Program {
+  if (specifier.imported === specifier.local) return program;
+  return {
+    ...program,
+    typeAliases: program.typeAliases.map((typeAlias) =>
+      typeAlias.name === specifier.imported
+        ? { ...typeAlias, exported: false, name: specifier.local }
+        : typeAlias
+    ),
+    interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
+      interfaceDecl.name === specifier.imported
+        ? { ...interfaceDecl, exported: false, name: specifier.local }
+        : interfaceDecl
+    ),
+    taggedUnions: (program.taggedUnions ?? []).map((unionDecl) =>
+      unionDecl.name === specifier.imported
+        ? { ...unionDecl, exported: false, name: specifier.local }
+        : unionDecl
+    ),
+    enums: (program.enums ?? []).map((enumDecl) =>
+      enumDecl.name === specifier.imported
+        ? { ...enumDecl, exported: false, name: specifier.local }
+        : enumDecl
+    ),
+    constants: (program.constants ?? []).map((constant) =>
+      constant.name === specifier.imported
+        ? { ...constant, exported: false, name: specifier.local }
+        : constant
+    ),
+    functions: program.functions.map((fn) =>
+      fn.name === specifier.imported ? aliasFunction(fn, specifier.local) : fn
+    ),
+  };
 }
 
 export function selectNamespaceImports(
@@ -234,6 +291,15 @@ function namespaceFunction(fn: FunctionDecl, namespace: Str): FunctionDecl {
     exported: false,
     name: `${namespace}.${fn.name}`,
     cName: fn.cName ?? namespaceFunctionCName(fn, namespace),
+  };
+}
+
+function aliasFunction(fn: FunctionDecl, local: Str): FunctionDecl {
+  return {
+    ...fn,
+    exported: false,
+    name: local,
+    cName: fn.external ? fn.cName ?? fn.name : fn.cName,
   };
 }
 

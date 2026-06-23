@@ -19,9 +19,15 @@ export interface Program {
 
 export interface ImportDecl {
   kind: "ImportDecl";
-  names: Str[];
+  names: ImportSpecifier[];
   namespace?: Str | null;
   path: Str;
+  span: SourceSpan;
+}
+
+export interface ImportSpecifier {
+  imported: Str;
+  local: Str;
   span: SourceSpan;
 }
 

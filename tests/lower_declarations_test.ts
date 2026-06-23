@@ -17,7 +17,12 @@ const span: SourceSpan = {
 };
 
 Deno.test("lowers import declarations", () => {
-  const decl: CastImportDecl = { kind: "ImportDecl", names: ["add"], path: "./math.tc", span };
+  const decl: CastImportDecl = {
+    kind: "ImportDecl",
+    names: [{ imported: "add", local: "add", span }],
+    path: "./math.tc",
+    span,
+  };
   assertText(lowerImportDecl(decl).path, "./math.tc");
 });
 

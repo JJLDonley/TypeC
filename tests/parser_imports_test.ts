@@ -17,12 +17,35 @@ Deno.test("parses import names", () => {
 
   const names = parseImportNamesWith(parser);
 
-  assertText(names.join(","), "add,sub");
+  assertText(formatNames(names), "add:add,sub:sub");
+  assertLen(parser.diagnostics.length, 0);
+});
+
+Deno.test("parses aliased import names", () => {
+  const parser = parserFor([
+    identifier("add"),
+    identifier("as"),
+    identifier("plus"),
+    punct(","),
+    identifier("sub"),
+    punct("}"),
+  ]);
+
+  const names = parseImportNamesWith(parser);
+
+  assertText(formatNames(names), "add:plus,sub:sub");
   assertLen(parser.diagnostics.length, 0);
 });
 
 Deno.test("reports duplicate and empty import names", () => {
-  const duplicate = parserFor([identifier("add"), punct(","), identifier("add"), punct("}")]);
+  const duplicate = parserFor([
+    identifier("add"),
+    punct(","),
+    identifier("sub"),
+    identifier("as"),
+    identifier("add"),
+    punct("}"),
+  ]);
   const empty = parserFor([punct("}")]);
 
   parseImportNamesWith(duplicate);
@@ -75,6 +98,10 @@ function eof(): Token {
 
 function token(kind: TokenKind, text: Str): Token {
   return { kind, text, span };
+}
+
+function formatNames(names: { imported: Str; local: Str }[]): Str {
+  return names.map((name) => `${name.imported}:${name.local}`).join(",");
 }
 
 function assertText(actual: Str, expected: Str): void {
