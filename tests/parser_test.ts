@@ -1,7 +1,7 @@
 import type { BlockStmt } from "core/ast.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { lex } from "core/lexer.ts";
-import { parse } from "parser";
+import { parse, parseCast } from "parser";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -127,6 +127,18 @@ Deno.test("parses generic function declarations and calls", () => {
     throw new Error("Expected generic call");
   }
   if ((statement.expression.typeArgs ?? []).length !== 1) throw new Error("Expected type argument");
+});
+
+Deno.test("parses class implements declarations", () => {
+  const program = parseCast(
+    lex(
+      `interface Drawable { draw(): void; } class Ship implements Drawable { draw(): void { return; } } function main(): i32 { return 0; }`,
+    ),
+  );
+
+  const classes = program.classes ?? [];
+  if (classes.length !== 1) throw new Error("Expected class declaration");
+  if ((classes[0].implements ?? []).length !== 1) throw new Error("Expected implemented interface");
 });
 
 Deno.test("parses interface declarations", () => {

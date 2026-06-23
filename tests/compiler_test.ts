@@ -301,6 +301,27 @@ Deno.test("rejects invalid generic function calls", () => {
   );
 });
 
+Deno.test("checks explicit class implements declarations", () => {
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(`
+    interface Drawable { draw(): void; }
+    class Ship implements Drawable { draw(): void { return; } }
+    function main(): i32 { const ship: Ship = {}; ship.draw(); return 0; }
+  `))))));
+
+  assertIncludes(c, "Ship_draw");
+});
+
+Deno.test("rejects unsatisfied class implements declarations", () => {
+  assertCompileError(
+    `interface Drawable { draw(): void; } class Ship implements Drawable { value: i32; } function main(): i32 { return 0; }`,
+    "Type 'Ship' does not satisfy 'Drawable': missing method 'draw'",
+  );
+  assertCompileError(
+    `class Ship implements Missing { value: i32; } function main(): i32 { return 0; }`,
+    "Unknown interface 'Missing'",
+  );
+});
+
 Deno.test("compiles interface example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/interface.tc", dir);

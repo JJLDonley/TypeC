@@ -6,8 +6,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 
 > Important: TypeC now supports general assignment targets such as `obj.x = value`,
 > `arr[i] = value`, `obj.pos.x += dx`, and basic `for` loops. Remaining major TypeScript-style
-> ergonomic gaps include constructors, `implements`, and class inheritance. See
-> `docs/ts-feature-analysis.md` for the detailed support/gap matrix.
+> ergonomic gaps include constructors and class inheritance. See `docs/ts-feature-analysis.md` for
+> the detailed support/gap matrix.
 
 - Function declarations
 - Required parameter and return type annotations
@@ -36,13 +36,14 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phases through 39 are implemented. The current TypeScript-like syntax includes basic `for` loops,
-general assignment lvalue targets, optional chaining, non-null assertions, nullish coalescing,
-bitwise operators, logical binary operators, compound local assignments, statement-only local
-increment/decrement, do-while, else-if, empty statements, trailing commas, numeric separators,
-single-quoted strings, record literal shorthand, comma-separated record type fields, parenthesized
-type refs, and named import aliases. Additional JavaScript runtime operators such as `typeof`,
-`void`, `delete`, and `await` remain unsupported unless a future static TypeC meaning is specified.
+Phases through 40 are implemented. The current TypeScript-like syntax includes class `implements`,
+basic `for` loops, general assignment lvalue targets, optional chaining, non-null assertions,
+nullish coalescing, bitwise operators, logical binary operators, compound local assignments,
+statement-only local increment/decrement, do-while, else-if, empty statements, trailing commas,
+numeric separators, single-quoted strings, record literal shorthand, comma-separated record type
+fields, parenthesized type refs, and named import aliases. Additional JavaScript runtime operators
+such as `typeof`, `void`, `delete`, and `await` remain unsupported unless a future static TypeC
+meaning is specified.
 
 ## Example
 
@@ -430,7 +431,8 @@ interface Drawable {
 
 Interfaces have no runtime representation and emit no C. Interface names are not value types.
 Interface method signatures are validated for duplicate names and known parameter/return types.
-Generic constraints can use interfaces, but classes cannot yet declare `implements InterfaceName`.
+Generic constraints can use interfaces, and classes can explicitly declare compile-time-only
+`implements InterfaceName` contracts.
 
 ## Classes and Methods
 
@@ -450,11 +452,11 @@ const v: Vec2 = { x: 3.0, y: 4.0 };
 const d: f64 = v.lengthSquared();
 ```
 
-Constructors, inheritance, access modifiers, static members, `implements`, and `new` are not
-implemented. Methods dispatch statically and lower to C functions with an explicit receiver
-argument. Class values use existing record literal initialization. General field assignment is
-implemented, so methods can mutate fields, but constructor, inheritance, and dispatch semantics are
-not implemented.
+Constructors, inheritance, access modifiers, static members, and `new` are not implemented. Methods
+dispatch statically and lower to C functions with an explicit receiver argument. Class values use
+existing record literal initialization. General field assignment is implemented, so methods can
+mutate fields. `implements` is a static contract only; it does not add interface values, vtables,
+inheritance, or runtime dispatch.
 
 ## Enums
 

@@ -159,6 +159,7 @@ function parseClassDeclaration(
   const start = parser.expectText("class");
   const name = parser.expectKind("identifier", "Expected class name");
   const genericParams = parseGenericParams(parser);
+  const implemented = parseClassImplements(parser);
   parser.expectText("{");
   const members = parseClassMembers(parser, modifiers.exported);
   const close = parser.expectText("}");
@@ -167,10 +168,18 @@ function parseClassDeclaration(
     exported: modifiers.exported,
     name: name.text,
     genericParams,
+    implements: implemented,
     fields: members.fields,
     methods: members.methods,
     span: span(start.span.start, close.span.end),
   };
+}
+
+function parseClassImplements(parser: DeclarationParser): CastTypeRef[] {
+  if (!parser.matchText("implements")) return [];
+  const interfaces: CastTypeRef[] = [];
+  do interfaces.push(parser.parseTypeRef()); while (parser.matchText(","));
+  return interfaces;
 }
 
 function parseClassMembers(

@@ -18,8 +18,7 @@ arr[i] = value;
 obj.pos.x += dx;
 ```
 
-The largest remaining ergonomic gaps are constructors, explicit `implements`, and class
-inheritance/dispatch.
+The largest remaining ergonomic gaps are constructors and class inheritance/dispatch.
 
 ## Support Matrix
 
@@ -74,12 +73,12 @@ inheritance/dispatch.
 | Tagged unions                       | Implemented        | Explicit `union` declarations, not TS `A \| B` type unions.                                           |
 | TS union types `A \| B`             | Not implemented    | Use tagged unions instead.                                                                            |
 | Intersection types `A & B`          | Not implemented    | Not yet specified.                                                                                    |
-| Classes                             | Partial            | Static layout and methods lower to records/functions; no constructors, inheritance, or `implements`.  |
+| Classes                             | Partial            | Static layout and methods lower to records/functions; no constructors or inheritance.                 |
 | Class fields                        | Partial            | Static layout, initialization, and field assignment; no constructors/inheritance.                     |
 | Class methods                       | Partial            | Calls and mutation through fields work; no constructors/inheritance/dispatch.                         |
 | `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                               |
 | Constructors                        | Not implemented    | Use record literals for initialization.                                                               |
-| Class `implements`                  | Not implemented    | Important future static-contract feature.                                                             |
+| Class `implements`                  | Implemented        | Explicit static interface contracts; no runtime dispatch.                                             |
 | Class inheritance `extends`         | Not implemented    | No superclass/prototype model.                                                                        |
 | Method overriding                   | Not implemented    | Requires inheritance/dispatch design.                                                                 |
 | Interfaces                          | Partial            | Static method signatures for generic constraints; not runtime values.                                 |
@@ -109,13 +108,12 @@ inheritance/dispatch.
 
 ## Most important missing phases
 
-1. **Class `implements`**: explicit static contracts.
-2. **Constructors**: structured initialization without record-literal-only construction.
-3. **Inheritance or composition support**: only after a strict static/C layout spec.
+1. **Constructors**: structured initialization without record-literal-only construction.
+2. **Inheritance or composition support**: only after a strict static/C layout spec.
 
 ## Latest documented phase
 
-Latest completed phase: **Phase 39 — Basic `for` Loops**.
+Latest completed phase: **Phase 40 — Class `implements`**.
 
 Run the compiler with:
 

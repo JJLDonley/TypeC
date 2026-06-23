@@ -32,6 +32,7 @@ export const keywords = new Set([
   "type",
   "class",
   "interface",
+  "implements",
   "import",
   "export",
 ]);

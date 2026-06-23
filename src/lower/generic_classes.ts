@@ -52,10 +52,15 @@ export function instantiateGenericClasses(program: CastProgram): CastProgram {
   const templates = genericClassTemplates(program.classes ?? []);
   const diagnostics = genericClassParamDiagnostics(program.classes ?? []);
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
-  if (templates.size === 0) return program;
   const concrete = concreteClassTemplates(program.classes ?? []);
   const instantiator = new GenericClassInstantiator(templates, concrete, program.interfaces ?? []);
-  return instantiator.rewriteProgram(program);
+  const rewritten = templates.size === 0 ? program : instantiator.rewriteProgram(program);
+  const implementationDiagnostics = classImplementationDiagnostics(
+    rewritten.classes ?? [],
+    rewritten.interfaces ?? [],
+  );
+  if (implementationDiagnostics.length > 0) throw new TypeCError(implementationDiagnostics);
+  return rewritten;
 }
 
 function genericClassTemplates(classes: CastClassDecl[]): Map<Str, CastClassDecl> {
@@ -146,6 +151,7 @@ class GenericClassInstantiator {
     return {
       ...classDecl,
       genericParams: [],
+      implements: classDecl.implements?.map((value) => this.rewriteTypeRef(value)) ?? [],
       fields: classDecl.fields.map((field) => ({
         ...field,
         type: this.rewriteTypeRef(field.type),
@@ -493,6 +499,8 @@ class GenericClassInstantiator {
       exported: false,
       name,
       genericParams: [],
+      implements: template.implements?.map((value) => substituteTypeRef(value, substitutions)) ??
+        [],
       fields: template.fields.map((field) => ({
         ...field,
         type: substituteTypeRef(field.type, substitutions),
@@ -678,6 +686,27 @@ function substituteParam(param: CastParam, substitutions: CastTypeSubstitutions)
 function substituteTypeRef(type: CastTypeRef, substitutions: CastTypeSubstitutions): CastTypeRef {
   if (type.kind === "NamedTypeRef") return substitutions.get(type.name) ?? type;
   return rewriteTypeChildren(type, (child) => substituteTypeRef(child, substitutions));
+}
+
+function classImplementationDiagnostics(
+  classes: CastClassDecl[],
+  interfaces: CastInterfaceDecl[],
+): Diagnostic[] {
+  return classes.flatMap((classDecl) =>
+    (classDecl.implements ?? []).flatMap((implemented) => {
+      if (implemented.kind !== "NamedTypeRef") {
+        return [{
+          message: "Class implements entries must be interface names",
+          span: implemented.span,
+        }];
+      }
+      const interfaceDecl = interfaces.find((candidate) => candidate.name === implemented.name);
+      if (!interfaceDecl) {
+        return [{ message: `Unknown interface '${implemented.name}'`, span: implemented.span }];
+      }
+      return missingCastInterfaceMethods(classDecl, interfaceDecl, implemented.span);
+    })
+  );
 }
 
 function missingCastInterfaceMethods(

@@ -2833,6 +2833,67 @@ statement, or empty. The condition is required and must be `bool`. The update ma
 
 ---
 
+# Phase 40: Class `implements`
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style explicit static interface implementation declarations for classes.
+
+## Syntax
+
+```ts
+interface Drawable {
+  draw(): void;
+}
+
+class Ship implements Drawable {
+  draw(): void {
+    return;
+  }
+}
+```
+
+Multiple interfaces may be listed with commas:
+
+```ts
+class Ship implements Drawable, Updatable {
+  draw(): void {
+    return;
+  }
+  update(dt: f64): void {
+    return;
+  }
+}
+```
+
+## Semantics
+
+- `implements` is a compile-time contract only.
+- A class satisfies an interface when it has every interface method with matching parameter count,
+  parameter types, and return type.
+- Instance receiver `this` is not written in interface method signatures.
+- Generic class instantiations are checked after type substitution.
+- `implements` does not create a value type, trait object, vtable, runtime dispatch, inheritance, or
+  implicit conversion.
+
+## Do
+
+- Parse `class Name implements InterfaceName { ... }` and comma-separated interface lists.
+- Check unknown interface names and missing/mismatched methods.
+- Reuse existing interface/generic constraint structural method compatibility rules.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add runtime dispatch or vtables.
+- Do not add interface-typed values.
+- Do not add inheritance or `extends` for classes.
+- Do not add constructors or `new`.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
