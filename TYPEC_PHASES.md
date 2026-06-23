@@ -1684,7 +1684,7 @@ in Phase 20.
 
 # Phase 21: Tagged Unions
 
-Status: In progress. Minimal explicit `union` subset specified before implementation.
+Status: Complete. Minimal explicit `union` subset implemented.
 
 ## Goal
 
