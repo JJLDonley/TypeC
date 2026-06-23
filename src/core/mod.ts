@@ -7,6 +7,7 @@ export * from "core/diagnostics.ts";
 export * from "core/entrypoint.ts";
 export * from "core/enums.ts";
 export * from "core/lexer.ts";
+export * from "core/optional_types.ts";
 export * from "core/qualified_names.ts";
 export * from "core/rast.ts";
 export * from "core/resolver.ts";

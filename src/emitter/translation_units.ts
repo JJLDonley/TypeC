@@ -7,6 +7,7 @@ import { emitEnumConstantDefinitions, emitEnumTypeDefinition } from "emitter/enu
 import { emitFunctionDefinition } from "emitter/function_definitions.ts";
 import { emitTaggedUnionConstants, emitTaggedUnionTypeDefinition } from "emitter/tagged_unions.ts";
 import { collectFunctionPrototypes } from "emitter/function_prototypes.ts";
+import { collectOptionalTypeDefinitions } from "emitter/optional_types.ts";
 import { collectSliceTypeDefinitions } from "emitter/slice_types.ts";
 import { collectEmittedTypeAliases } from "emitter/type_alias_collection.ts";
 
@@ -20,6 +21,7 @@ export function emitTranslationUnit(program: CheckedProgram): Str {
     ...emitTypeAliasSection(program, context),
     ...emitEnumTypeSection(program),
     ...emitTaggedUnionTypeSection(program, context),
+    ...emitOptionalTypeSection(program, context),
     ...emitSliceTypeSection(program, context),
     ...emitConstantSection(program, context),
     ...emitFunctionPrototypeSection(program, context),
@@ -46,6 +48,10 @@ function emitTaggedUnionTypeSection(program: CheckedProgram, context: EmitContex
     ...emitTaggedUnionConstants(unionDecl),
     "",
   ]);
+}
+
+function emitOptionalTypeSection(program: CheckedProgram, context: EmitContext): Str[] {
+  return collectOptionalTypeDefinitions(program, context).flatMap((definition) => [definition, ""]);
 }
 
 function emitSliceTypeSection(program: CheckedProgram, context: EmitContext): Str[] {

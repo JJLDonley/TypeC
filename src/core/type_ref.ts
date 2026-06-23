@@ -1,9 +1,12 @@
 import type { TypeRef } from "core/ast.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 
 type Str = string;
 type b8 = boolean;
 
 export function typeName(type: TypeRef): Str {
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) return `${typeName(optionalElement)}?`;
   switch (type.kind) {
     case "NamedTypeRef": {
       const args = type.typeArgs?.map(typeName).join(", ") ?? "";

@@ -1,5 +1,7 @@
 import type { TypeAliasDecl, TypeRef } from "core/ast.ts";
+import { optionalCTypeName } from "c/optional_names.ts";
 import { sliceCTypeName } from "c/slice_names.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 
 type Str = string;
 type usize = number;
@@ -12,7 +14,7 @@ export function emitCType(
 ): Str {
   switch (type.kind) {
     case "NamedTypeRef":
-      return emitNamedCType(type.name, aliases);
+      return emitNamedCType(type, aliases);
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":
@@ -117,9 +119,14 @@ function arrayDimension(size: Str, _index: usize): Str {
   return `[${size}]`;
 }
 
-function emitNamedCType(name: Str, aliases: CTypeAliases): Str {
-  if (name === "Arena") return "__typec_arena*";
-  const alias = aliases.get(name);
+function emitNamedCType(
+  type: Extract<TypeRef, { kind: "NamedTypeRef" }>,
+  aliases: CTypeAliases,
+): Str {
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) return optionalCTypeName(optionalElement);
+  if (type.name === "Arena") return "__typec_arena*";
+  const alias = aliases.get(type.name);
   if (alias?.cName) return alias.cName;
-  return name === "bool" ? "b8" : name;
+  return type.name === "bool" ? "b8" : type.name;
 }

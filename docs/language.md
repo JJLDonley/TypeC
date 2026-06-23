@@ -29,9 +29,9 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phase 23 has started. Logical `!`, `!!`, and ternary `? :` are implemented. Planned remaining
-expression syntax includes optional chaining `?.`, nullish coalescing `??`, Elvis `?:`, postfix
-non-null assertion `expr!`, and optional `T?` type spelling. Additional TypeScript unary/update
+Phase 23 has started. Logical `!`, `!!`, ternary `? :`, and optional `T?` type spelling are
+implemented. Planned remaining expression syntax includes optional chaining `?.`, nullish coalescing
+`??`, Elvis `?:`, and postfix non-null assertion `expr!`. Additional TypeScript unary/update
 syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly
 rejected as described below.
 
@@ -173,7 +173,8 @@ T?
 ```
 
 `T?` is shorthand for an explicit `Optional<T>` value. Optional values are real static values, not
-implicit JavaScript `undefined`. `T?` is not allowed for `void`.
+implicit JavaScript `undefined`. `T?` is implemented for type positions and is not allowed for
+`void`. Optional value constructors are not implemented yet.
 
 ### Optional chaining
 

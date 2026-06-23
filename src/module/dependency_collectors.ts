@@ -10,6 +10,7 @@ import type {
   TypeAliasDecl,
   TypeRef,
 } from "core/ast.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import type { DependencySet } from "module/dependency_index.ts";
 
 export type Str = string;
@@ -208,10 +209,16 @@ function collectTypeDeps(
   ignoredTypes: Set<Str> = new Set(),
 ): void {
   switch (type.kind) {
-    case "NamedTypeRef":
+    case "NamedTypeRef": {
+      const optionalElement = optionalTypeElement(type);
+      if (optionalElement !== null) {
+        collectTypeDeps(optionalElement, selected, ignoredTypes);
+        return;
+      }
       if (!ignoredTypes.has(type.name)) selected.types.add(type.name);
       for (const typeArg of type.typeArgs ?? []) collectTypeDeps(typeArg, selected, ignoredTypes);
       return;
+    }
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":

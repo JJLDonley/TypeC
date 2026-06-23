@@ -23,6 +23,7 @@ export * from "emitter/function_prototypes.ts";
 export * from "emitter/functions.ts";
 export * from "emitter/helpers.ts";
 export * from "emitter/local_types.ts";
+export * from "emitter/optional_types.ts";
 export * from "emitter/record_types.ts";
 export * from "emitter/return_statements.ts";
 export * from "emitter/statements.ts";

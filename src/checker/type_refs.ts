@@ -1,5 +1,6 @@
 import type { TypeRef } from "core/ast.ts";
 import { isBuiltinArenaTypeName } from "checker/arenas.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { primitiveTypes } from "core/token.ts";
 
 type Str = string;
@@ -11,6 +12,8 @@ export function isArrayTypeRef(type: TypeRef): b8 {
 
 export function isVoidValueType(type: TypeRef): b8 {
   if (isVoidNamedType(type)) return true;
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) return isVoidValueType(optionalElement);
   if (
     type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef" ||
     type.kind === "SliceTypeRef" || type.kind === "SafePointerTypeRef"
@@ -30,9 +33,15 @@ export function collectTypeAliasRefs(type: TypeRef): Set<Str> {
 
 function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
   switch (type.kind) {
-    case "NamedTypeRef":
+    case "NamedTypeRef": {
+      const optionalElement = optionalTypeElement(type);
+      if (optionalElement !== null) {
+        collectTypeAliasRefsInto(optionalElement, refs);
+        return;
+      }
       if (!primitiveTypes.has(type.name) && !isBuiltinArenaTypeName(type.name)) refs.add(type.name);
       return;
+    }
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":

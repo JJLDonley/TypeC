@@ -1,5 +1,6 @@
 import type { CastParam, CastRecordField, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
+import { optionalTypeRefWithEnd } from "core/optional_types.ts";
 import { span } from "parser/helpers.ts";
 
 type Str = string;
@@ -36,6 +37,10 @@ export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
         element: type,
         span: span(type.span.start, parser.previous().span.end),
       };
+      continue;
+    }
+    if (parser.matchText("?")) {
+      type = optionalTypeRefWithEnd(type, parser.previous().span.end);
       continue;
     }
     type = parseArrayTypeRef(parser, type);
@@ -194,5 +199,6 @@ function parseRecordField(parser: TypeRefParser): CastRecordField {
 }
 
 function isTypePostfixStart(parser: TypeRefParser): b8 {
-  return parser.checkText("*") || parser.checkText("&") || parser.checkText("[");
+  return parser.checkText("*") || parser.checkText("&") || parser.checkText("[") ||
+    parser.checkText("?");
 }

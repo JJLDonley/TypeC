@@ -1,6 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { RecordTypeRef, TypeRef } from "core/ast.ts";
 import { isBuiltinArenaTypeName } from "checker/arenas.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { primitiveTypes } from "core/token.ts";
 import {
   checkArrayElementType,
@@ -54,6 +55,8 @@ function checkNamedType(
   type: Extract<TypeRef, { kind: "NamedTypeRef" }>,
   typeAliases: Map<Str, TypeRef>,
 ): Diagnostic[] {
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) return checkOptionalType(type, optionalElement, typeAliases);
   if ((type.typeArgs ?? []).length > 0) {
     return [{ message: `Uninstantiated generic type '${type.name}'`, span: type.span }];
   }
@@ -63,6 +66,18 @@ function checkNamedType(
     return [];
   }
   return [{ message: `Unknown type '${type.name}'`, span: type.span }];
+}
+
+function checkOptionalType(
+  type: Extract<TypeRef, { kind: "NamedTypeRef" }>,
+  element: TypeRef,
+  typeAliases: Map<Str, TypeRef>,
+): Diagnostic[] {
+  const diagnostics = checkTypeRef(element, typeAliases);
+  if (element.kind === "NamedTypeRef" && element.name === "void") {
+    diagnostics.push({ message: "Optional type cannot contain 'void'", span: type.span });
+  }
+  return diagnostics;
 }
 
 function checkRecordType(type: RecordTypeRef, typeAliases: Map<Str, TypeRef>): Diagnostic[] {

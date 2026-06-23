@@ -1164,6 +1164,14 @@ Deno.test("emits C for conditional expressions", () => {
   assertIncludes(c, "return flag ? a : b;");
 });
 
+Deno.test("emits C for optional type spelling", () => {
+  const source =
+    `function keep(value: i32?): i32? { return value; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "typedef struct Optional_i32 { b8 present; i32 value; } Optional_i32;");
+  assertIncludes(c, "Optional_i32 keep(Optional_i32 value)");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

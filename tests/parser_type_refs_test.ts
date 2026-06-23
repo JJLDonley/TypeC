@@ -107,6 +107,16 @@ Deno.test("parses canonical slice type refs", () => {
   assertText(typeName(slice), "Slice<i32>");
 });
 
+Deno.test("parses optional type spelling", () => {
+  const optional = parseTypeRefWith(parserFor([identifier("i32"), punct("?"), eof()]));
+  const optionalArray = parseTypeRefWith(
+    parserFor([identifier("i32"), punct("?"), punct("["), punct("]"), eof()]),
+  );
+
+  assertText(typeName(optional), "i32?");
+  assertText(typeName(optionalArray), "i32?[]");
+});
+
 function parserFor(tokens: Token[]): TypeRefParser {
   let current: i32 = 0;
   return {
@@ -139,8 +149,11 @@ function peek(tokens: Token[], index: i32): Token {
 
 function typeName(type: CastTypeRef): Str {
   switch (type.kind) {
-    case "NamedTypeRef":
+    case "NamedTypeRef": {
+      const args = type.typeArgs ?? [];
+      if (type.name === "Optional" && args.length === 1) return `${typeName(args[0]!)}?`;
       return type.name;
+    }
     case "PointerTypeRef":
       return `${typeName(type.element)}*`;
     case "ReferenceTypeRef":

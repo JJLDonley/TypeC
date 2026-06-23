@@ -1803,7 +1803,8 @@ deno run -A src/driver/main.ts lsp
 
 # Phase 23: TypeScript-Style Expression Operators
 
-Status: In progress. Logical `!` / `!!` and ternary `? :` subsets implemented.
+Status: In progress. Logical `!` / `!!`, ternary `? :`, and optional type spelling `T?` subsets
+implemented.
 
 ## Goal
 
@@ -1894,8 +1895,9 @@ Optional type spelling:
 
 - `T?` is shorthand for `Optional<T>`.
 - Optional values are explicit values, not implicit `null` or `undefined`.
+- `T?` is implemented for type positions; value constructors are not implemented yet.
 - Phase 23 may introduce explicit `some(value)` / `none<T>()` constructors or equivalent documented
-  constructors before implementation.
+  constructors before value construction is implemented.
 - `T?` is not allowed for `void`.
 
 Optional chaining:

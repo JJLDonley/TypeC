@@ -36,6 +36,14 @@ Deno.test("accepts slice type refs", () => {
   assertLen(diagnostics.length, 0);
 });
 
+Deno.test("checks optional type refs", () => {
+  assertLen(checkTypeRef(optional(named("i32")), new Map()).length, 0);
+  assertText(
+    checkTypeRef(optional(named("void")), new Map())[0]?.message ?? "",
+    "Optional type cannot contain 'void'",
+  );
+});
+
 Deno.test("reports invalid record fields", () => {
   const diagnostics = checkTypeRef(
     record([["x", named("void")], ["x", inferredArray(named("i32"))]]),
@@ -65,6 +73,10 @@ function inferredArray(element: TypeRef): TypeRef {
 
 function slice(element: TypeRef): TypeRef {
   return { kind: "SliceTypeRef", element, span };
+}
+
+function optional(element: TypeRef): TypeRef {
+  return { kind: "NamedTypeRef", name: "Optional", typeArgs: [element], span };
 }
 
 function record(fields: [Str, TypeRef][]): TypeRef {
