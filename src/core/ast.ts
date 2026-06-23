@@ -204,6 +204,7 @@ export type Statement =
   | BreakStmt
   | VarDeclStmt
   | AssignmentStmt
+  | IncDecStmt
   | SwitchStmt
   | WhileStmt
   | IfStmt;
@@ -259,6 +260,15 @@ export interface AssignmentStmt {
   name: Str;
   operator: AssignmentOperator;
   expression: Expression;
+  span: SourceSpan;
+}
+
+export type IncDecOperator = "++" | "--";
+
+export interface IncDecStmt {
+  kind: "IncDecStmt";
+  name: Str;
+  operator: IncDecOperator;
   span: SourceSpan;
 }
 

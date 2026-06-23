@@ -22,6 +22,7 @@ import { checkFieldAccessExpression } from "checker/field_access_expressions.ts"
 import { checkFunctionHeader as collectFunctionHeaderDiagnostics } from "checker/function_checks.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
+import { checkIncDec as collectIncDecDiagnostics } from "checker/inc_dec.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
@@ -194,6 +195,7 @@ class Checker {
       breakStatement: (span) => this.checkBreak(span, inSwitch),
       variableDeclaration: (value) => this.checkVarDecl(value, locals),
       assignment: (value) => this.checkAssignment(value, locals),
+      incDec: (value) => this.checkIncDec(value, locals),
       switchStatement: (value) => this.checkSwitch(value, locals, returnType),
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
       ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
@@ -258,6 +260,13 @@ class Checker {
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
       ),
     );
+  }
+
+  private checkIncDec(
+    stmt: Extract<Statement, { kind: "IncDecStmt" }>,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    this.diagnostics.push(...collectIncDecDiagnostics(stmt, locals.get(stmt.name)));
   }
 
   private checkSwitch(

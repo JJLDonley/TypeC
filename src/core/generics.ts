@@ -90,6 +90,8 @@ function statementGenericCallDiagnostics(
       return expressionGenericCallDiagnostics(statement.initializer, templates);
     case "AssignmentStmt":
       return expressionGenericCallDiagnostics(statement.expression, templates);
+    case "IncDecStmt":
+      return [];
     case "SwitchStmt":
       return [
         ...expressionGenericCallDiagnostics(statement.expression, templates),
@@ -311,6 +313,8 @@ class GenericInstantiator {
         return { ...statement, initializer: this.rewriteExpr(statement.initializer) };
       case "AssignmentStmt":
         return { ...statement, expression: this.rewriteExpr(statement.expression) };
+      case "IncDecStmt":
+        return statement;
       case "SwitchStmt":
         return {
           ...statement,
@@ -440,6 +444,7 @@ function substituteStatement(statement: Statement, substitutions: TypeSubstituti
     case "ExpressionStmt":
     case "BreakStmt":
     case "AssignmentStmt":
+    case "IncDecStmt":
       return statement;
     case "VarDeclStmt":
       return { ...statement, type: substituteTypeRef(statement.type, substitutions) };

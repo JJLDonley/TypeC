@@ -72,6 +72,10 @@ Deno.test("lexes compound assignment operators", () => {
   ]);
 });
 
+Deno.test("lexes increment and decrement operators", () => {
+  assertEqualText(tokenTexts("a++ --b"), ["a", "++", "--", "b", ""]);
+});
+
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
   assertEqualText(tokens.map((token) => token.kind), [

@@ -108,6 +108,8 @@ function collectStatementDeps(
     case "AssignmentStmt":
       collectExpressionDeps(statement.expression, selected, ignoredTypes);
       return;
+    case "IncDecStmt":
+      return;
     case "SwitchStmt":
       collectSwitchDeps(statement, selected, ignoredTypes);
       return;

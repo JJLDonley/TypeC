@@ -17,6 +17,7 @@ Deno.test("dispatches statement checks", () => {
   assertDispatch(breakStmt(), "break");
   assertDispatch(varDecl(), "var");
   assertDispatch(assignment(), "assign");
+  assertDispatch(incDec(), "incDec");
   assertDispatch(switchStmt(), "switch");
   assertDispatch(whileStmt(), "while");
   assertDispatch(ifStmt(), "if");
@@ -37,6 +38,7 @@ function handlers(calls: Str[]): StatementCheckHandlers {
     breakStatement: () => calls.push("break"),
     variableDeclaration: () => calls.push("var"),
     assignment: () => calls.push("assign"),
+    incDec: () => calls.push("incDec"),
     switchStatement: () => calls.push("switch"),
     whileStatement: () => calls.push("while"),
     ifStatement: () => calls.push("if"),
@@ -72,6 +74,10 @@ function varDecl(): Statement {
 
 function assignment(): Statement {
   return { kind: "AssignmentStmt", operator: "=", name: "x", expression: integer("1"), span };
+}
+
+function incDec(): Statement {
+  return { kind: "IncDecStmt", operator: "++", name: "x", span };
 }
 
 function switchStmt(): Statement {

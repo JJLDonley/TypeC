@@ -41,6 +41,8 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
       return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, functions) };
     case "AssignmentStmt":
       return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
+    case "IncDecStmt":
+      return stmt;
     case "SwitchStmt":
       return {
         ...stmt,

@@ -3,6 +3,7 @@ import type { SourceSpan } from "core/diagnostics.ts";
 
 type VarDeclStmt = Extract<Statement, { kind: "VarDeclStmt" }>;
 type AssignmentStmt = Extract<Statement, { kind: "AssignmentStmt" }>;
+type IncDecStmt = Extract<Statement, { kind: "IncDecStmt" }>;
 type SwitchStmt = Extract<Statement, { kind: "SwitchStmt" }>;
 type WhileStmt = Extract<Statement, { kind: "WhileStmt" }>;
 type IfStmt = Extract<Statement, { kind: "IfStmt" }>;
@@ -14,6 +15,7 @@ export interface StatementCheckHandlers {
   breakStatement(span: SourceSpan): void;
   variableDeclaration(stmt: VarDeclStmt): void;
   assignment(stmt: AssignmentStmt): void;
+  incDec(stmt: IncDecStmt): void;
   switchStatement(stmt: SwitchStmt): void;
   whileStatement(stmt: WhileStmt): void;
   ifStatement(stmt: IfStmt): void;
@@ -38,6 +40,9 @@ export function checkStatementDispatch(stmt: Statement, handlers: StatementCheck
       return;
     case "AssignmentStmt":
       handlers.assignment(stmt);
+      return;
+    case "IncDecStmt":
+      handlers.incDec(stmt);
       return;
     case "SwitchStmt":
       handlers.switchStatement(stmt);

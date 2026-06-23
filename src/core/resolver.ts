@@ -116,6 +116,9 @@ class Resolver {
         this.requireSymbol(scope, statement.name, statement.span);
         this.resolveExpression(statement.expression, scope);
         return;
+      case "IncDecStmt":
+        this.requireSymbol(scope, statement.name, statement.span);
+        return;
       case "SwitchStmt":
         this.resolveExpression(statement.expression, scope);
         for (const switchCase of statement.cases) {

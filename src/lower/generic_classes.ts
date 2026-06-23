@@ -206,6 +206,8 @@ class GenericClassInstantiator {
         return this.rewriteVarDecl(statement);
       case "AssignmentStmt":
         return this.rewriteAssignment(statement);
+      case "IncDecStmt":
+        return statement;
       case "SwitchStmt":
         return this.rewriteSwitch(statement);
       case "WhileStmt":
@@ -581,6 +583,7 @@ function substituteStatement(
     case "ExpressionStmt":
     case "BreakStmt":
     case "AssignmentStmt":
+    case "IncDecStmt":
       return statement;
     case "VarDeclStmt":
       return { ...statement, type: substituteTypeRef(statement.type, substitutions) };

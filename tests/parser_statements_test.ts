@@ -53,6 +53,19 @@ Deno.test("parses compound assignment statements", () => {
   assertText(stmt.operator, "+=");
 });
 
+Deno.test("parses increment and decrement statements", () => {
+  const postfix = parseStatementWith(parserFor([identifier("x"), operator("++"), punct(";")]));
+  const prefix = parseStatementWith(parserFor([operator("--"), identifier("y"), punct(";")]));
+
+  assertText(postfix.kind, "IncDecStmt");
+  assertText(prefix.kind, "IncDecStmt");
+  if (postfix.kind !== "IncDecStmt" || prefix.kind !== "IncDecStmt") {
+    throw new Error("Expected inc dec statements");
+  }
+  assertText(postfix.operator, "++");
+  assertText(prefix.operator, "--");
+});
+
 Deno.test("parses break statements", () => {
   const stmt = parseStatementWith(parserFor([keyword("break"), punct(";")]));
 

@@ -1222,6 +1222,14 @@ Deno.test("emits C for compound assignments", () => {
   assertIncludes(c, "bits >>= 1;");
 });
 
+Deno.test("emits C for increment and decrement statements", () => {
+  const source =
+    `function update(value: i32): i32 { let current: i32 = value; current++; --current; return current; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "current++;");
+  assertIncludes(c, "current--;");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

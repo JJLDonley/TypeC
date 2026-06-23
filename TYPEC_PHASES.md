@@ -2211,6 +2211,66 @@ function mask(value: u32): u32 {
 
 ---
 
+# Phase 27: Increment and Decrement Statements
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style `++` and `--` syntax for local integer mutation without adding
+expression-valued assignment semantics.
+
+## Syntax
+
+```ts
+value++;
+value--;
+++value;
+--value;
+```
+
+## Semantics
+
+- Increment and decrement are statements, not expressions.
+- The target must be an existing mutable local variable.
+- The target type must be an integer type.
+- Array variables remain non-assignable.
+- `value++` and `++value` have the same statement effect: `value += 1`.
+- `value--` and `--value` have the same statement effect: `value -= 1`.
+- TypeC does not expose JavaScript prefix/postfix result-value differences.
+- TypeC does not add JavaScript coercions, wrapping promises, or dynamic property mutation.
+
+## Examples
+
+```ts
+function next(value: i32): i32 {
+  let current: i32 = value;
+  current++;
+  return current;
+}
+
+function previous(value: u32): u32 {
+  let current: u32 = value;
+  --current;
+  return current;
+}
+```
+
+## Do
+
+- Parse prefix and postfix forms only as statements.
+- Check mutability and integer target type statically.
+- Emit direct C `++` / `--` statements after checking.
+- Add lexer, parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add `++` / `--` expressions.
+- Do not permit fields, indexes, pointers, or arbitrary lvalues in this phase.
+- Do not add implicit conversions.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

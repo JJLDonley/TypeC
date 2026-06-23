@@ -4,6 +4,7 @@ import type {
   DeferStmt,
   ExpressionStmt,
   IfStmt,
+  IncDecStmt,
   Statement,
   SwitchStmt,
   VarDeclStmt,
@@ -15,6 +16,7 @@ import type {
   CastDeferStmt,
   CastExpressionStmt,
   CastIfStmt,
+  CastIncDecStmt,
   CastStatement,
   CastSwitchStmt,
   CastVarDeclStmt,
@@ -49,6 +51,8 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerVarDeclStmt(statement);
     case "AssignmentStmt":
       return lowerAssignmentStmt(statement);
+    case "IncDecStmt":
+      return lowerIncDecStmt(statement);
     case "SwitchStmt":
       return lowerSwitchStmt(statement);
     case "WhileStmt":
@@ -90,6 +94,15 @@ function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
     name: statement.name,
     operator: statement.operator,
     expression: lowerExpression(statement.expression),
+    span: statement.span,
+  };
+}
+
+function lowerIncDecStmt(statement: CastIncDecStmt): IncDecStmt {
+  return {
+    kind: "IncDecStmt",
+    name: statement.name,
+    operator: statement.operator,
     span: statement.span,
   };
 }

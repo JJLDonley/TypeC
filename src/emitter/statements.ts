@@ -6,6 +6,7 @@ import { emitConstantExpressionExpected } from "emitter/constant_expressions.ts"
 import type { EmitContext } from "emitter/context.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 import { emitExpressionStatement } from "emitter/expression_statements.ts";
+import { emitIncDec } from "emitter/inc_dec.ts";
 import { childLocalTypes, type LocalTypes, registerLocalType } from "emitter/local_types.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 import { emitVarDecl } from "emitter/var_declarations.ts";
@@ -85,6 +86,8 @@ function emitStatementWithDefers(
       return [emitVarDecl(stmt, context)];
     case "AssignmentStmt":
       return [emitAssignment(stmt, context, locals)];
+    case "IncDecStmt":
+      return [emitIncDec(stmt)];
     case "SwitchStmt":
       return [emitSwitchWithDefers(stmt, returnType, context, locals, defers)];
     case "WhileStmt":

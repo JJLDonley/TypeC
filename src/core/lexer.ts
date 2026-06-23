@@ -151,6 +151,7 @@ class Lexer {
       while (this.peek() === text[0] && text.length < 3) text += this.advance();
       return this.withAssignmentSuffix(text);
     }
+    if (this.isIncDecPrefix(text) && this.peek() === text) return text + this.advance();
     if (this.isLogicalPrefix(text) && this.peek() === text) return text + this.advance();
     if (this.isEqualityPrefix(text) && this.peek() === "=") return text + this.advance();
     return this.withAssignmentSuffix(text);
@@ -169,6 +170,10 @@ class Lexer {
 
   private isShiftPrefix(text: Str): b8 {
     return (text === "<" && this.peek() === "<") || (text === ">" && this.peek() === ">");
+  }
+
+  private isIncDecPrefix(text: Str): b8 {
+    return text === "+" || text === "-";
   }
 
   private isLogicalPrefix(text: Str): b8 {

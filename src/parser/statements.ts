@@ -2,6 +2,7 @@ import type {
   CastAssignmentOperator,
   CastBlockStmt,
   CastExpression,
+  CastIncDecOperator,
   CastStatement,
   CastSwitchCase,
   CastSwitchDefaultCase,
@@ -37,6 +38,7 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("if")) return parseIf(parser);
   if (parser.checkText("while")) return parseWhile(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
+  if (isIncDecStart(parser)) return parseIncDec(parser);
   if (isAssignmentStart(parser)) return parseAssignment(parser);
   return parseExpressionStatement(parser);
 }
@@ -177,6 +179,46 @@ function parseAssignmentOperator(parser: StatementParser): CastAssignmentOperato
   return "=";
 }
 
+function parseIncDec(parser: StatementParser): CastStatement {
+  return isIncDecOperator(parser.peek().text)
+    ? parsePrefixIncDec(parser)
+    : parsePostfixIncDec(parser);
+}
+
+function parsePrefixIncDec(parser: StatementParser): CastStatement {
+  const operatorToken = parser.advance();
+  const operator = parseIncDecOperator(operatorToken);
+  const name = parser.expectKind("identifier", "Expected increment target");
+  const semi = parser.expectText(";");
+  return {
+    kind: "IncDecStmt",
+    name: name.text,
+    operator,
+    span: span(operatorToken.span.start, semi.span.end),
+  };
+}
+
+function parsePostfixIncDec(parser: StatementParser): CastStatement {
+  const name = parser.expectKind("identifier", "Expected increment target");
+  const operator = parseIncDecOperator(parser.advance());
+  const semi = parser.expectText(";");
+  return {
+    kind: "IncDecStmt",
+    name: name.text,
+    operator,
+    span: span(name.span.start, semi.span.end),
+  };
+}
+
+function parseIncDecOperator(token: Token): CastIncDecOperator {
+  if (isIncDecOperator(token.text)) return token.text;
+  return "++";
+}
+
+function isIncDecOperator(text: Str): text is CastIncDecOperator {
+  return text === "++" || text === "--";
+}
+
 function isAssignmentOperator(text: Str): text is CastAssignmentOperator {
   return text === "=" || text === "+=" || text === "-=" || text === "*=" || text === "/=" ||
     text === "%=" || text === "<<=" || text === ">>=" || text === ">>>=" || text === "&=" ||
@@ -207,4 +249,16 @@ function isVariableDeclarationStart(parser: StatementParser): b8 {
 
 function isAssignmentStart(parser: StatementParser): b8 {
   return parser.check("identifier") && isAssignmentOperator(parser.peek(1).text);
+}
+
+function isIncDecStart(parser: StatementParser): b8 {
+  return isPrefixIncDecStart(parser) || isPostfixIncDecStart(parser);
+}
+
+function isPrefixIncDecStart(parser: StatementParser): b8 {
+  return isIncDecOperator(parser.peek().text) && parser.peek(1).kind === "identifier";
+}
+
+function isPostfixIncDecStart(parser: StatementParser): b8 {
+  return parser.check("identifier") && isIncDecOperator(parser.peek(1).text);
 }

@@ -230,6 +230,7 @@ export type CastStatement =
   | CastBreakStmt
   | CastVarDeclStmt
   | CastAssignmentStmt
+  | CastIncDecStmt
   | CastSwitchStmt
   | CastWhileStmt
   | CastIfStmt;
@@ -285,6 +286,15 @@ export interface CastAssignmentStmt {
   name: Str;
   operator: CastAssignmentOperator;
   expression: CastExpression;
+  span: SourceSpan;
+}
+
+export type CastIncDecOperator = "++" | "--";
+
+export interface CastIncDecStmt {
+  kind: "IncDecStmt";
+  name: Str;
+  operator: CastIncDecOperator;
   span: SourceSpan;
 }
 

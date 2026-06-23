@@ -38,6 +38,8 @@ function collectStatement(statement: Statement, namespace: Str, members: Set<Str
     case "AssignmentStmt":
       collectExpression(statement.expression, namespace, members);
       return;
+    case "IncDecStmt":
+      return;
     case "SwitchStmt":
       collectExpression(statement.expression, namespace, members);
       for (const switchCase of statement.cases) {

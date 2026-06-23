@@ -118,6 +118,8 @@ function statementUsesArena(stmt: Statement): b8 {
       return typeUsesArena(stmt.type) || expressionUsesArena(stmt.initializer);
     case "AssignmentStmt":
       return expressionUsesArena(stmt.expression);
+    case "IncDecStmt":
+      return false;
     case "SwitchStmt":
       return expressionUsesArena(stmt.expression) ||
         stmt.cases.some((caseStmt) =>
