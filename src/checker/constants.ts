@@ -2,6 +2,7 @@ import { checkConstantIntegerDivision } from "checker/constant_division.ts";
 import { checkConstantRanges } from "checker/constant_ranges.ts";
 import type { ConstDecl, Expression, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { TypeName } from "core/tast.ts";
 import { typeName } from "core/type_ref.ts";
 
@@ -83,6 +84,6 @@ function isQualifiedConstantExpression(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   availableConstants: Map<Str, ConstDecl>,
 ): b8 {
-  if (expr.operand.kind !== "IdentifierExpr") return false;
-  return availableConstants.has(`${expr.operand.name}.${expr.field}`);
+  const name = qualifiedExpressionName(expr);
+  return name !== null && availableConstants.has(name);
 }

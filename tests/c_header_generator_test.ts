@@ -56,6 +56,11 @@ Deno.test("generates externs from clang AST", () => {
       constVarDecl("ENABLED", "const bool", "1"),
       constVarDecl("TITLE", "const char *", '"TypeC"', "StringLiteral"),
       constVarDecl("BYTES", "const unsigned char[3]", '"hi"', "StringLiteral"),
+      enumDecl("KeyboardKey", [
+        enumConstant("KEY_NULL", "0"),
+        enumConstant("KEY_SPACE", "32"),
+        enumConstant("KEY_ESCAPE"),
+      ]),
       constVarDecl("DUPLICATE", "const int32_t", "1"),
       constVarDecl("DUPLICATE", "const int32_t", "1"),
       constVarDecl("CONFLICT_CONST", "const int32_t", "1"),
@@ -110,6 +115,10 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "export const ENABLED: bool = true;");
   assertIncludes(output, 'export const TITLE: u8* = "TypeC";');
   assertIncludes(output, 'export const BYTES: Array<u8, 3> = "hi";');
+  assertIncludes(output, "export enum KeyboardKey {");
+  assertIncludes(output, "KEY_NULL = 0,");
+  assertIncludes(output, "KEY_SPACE = 32,");
+  assertIncludes(output, "KEY_ESCAPE = 33,");
   assertSame(countOccurrences(output, "export const DUPLICATE"), 1);
   assertExcludes(output, "CONFLICT_CONST");
   assertExcludes(output, "BAD_TYPE");
@@ -159,14 +168,18 @@ Deno.test("skips unsupported C enum and value declarations", () => {
   const output = generateExternsFromClangAst({
     kind: "TranslationUnitDecl",
     inner: [
-      enumDecl("Mode", [enumConstant("MODE_ON")]),
+      enumDecl("i32", [enumConstant("MODE_ON")]),
+      enumDecl("Mode", [enumConstant("i32")]),
+      enumDecl("Wide", [enumConstant("TOO_BIG", "2147483648")]),
       varDecl("LIMIT", "const int"),
       functionDecl("tick", "void (void)", []),
     ],
   });
 
   assertIncludes(output, "extern function tick(): void;");
-  assertExcludes(output, "Mode");
+  assertExcludes(output, "export enum i32");
+  assertExcludes(output, "export enum Mode");
+  assertExcludes(output, "export enum Wide");
   assertExcludes(output, "MODE_ON");
   assertExcludes(output, "LIMIT");
 });
@@ -256,8 +269,9 @@ function enumDecl(name: Str, inner: unknown[]): unknown {
   return { kind: "EnumDecl", name, inner };
 }
 
-function enumConstant(name: Str): unknown {
-  return { kind: "EnumConstantDecl", name };
+function enumConstant(name: Str, value: Str | null = null): unknown {
+  const inner = value === null ? [] : [{ kind: "ConstantExpr", value }];
+  return { kind: "EnumConstantDecl", name, inner };
 }
 
 function varDecl(name: Str, qualType: Str): unknown {

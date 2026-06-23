@@ -193,7 +193,8 @@ const key: Key = Key.Space;
 
 Enum members are scoped and have the enum type, not raw `i32`. Raw integers are not implicitly
 assignable to enum types, and enum values are not implicitly assignable to integer types. Duplicate
-member names are invalid. Duplicate member values are allowed.
+member names are invalid. Duplicate member values are allowed. Named C header enums import as scoped
+namespace enum types when all member values are deterministic `i32` values.
 
 Runnable example:
 
@@ -288,9 +289,10 @@ Current header interop supports fully sized nested C arrays, function pointer ty
 TypeScript-like `(arg: T) => R`, callback parameters passed compatible function symbols, variadic
 extern declarations using `...args`, deterministic `const` variables, and safe object-like macro
 constants. Header constants import through normal named or namespace imports. Supported macro values
-are limited to simple numeric, bool, and unescaped string object-like macros. Function-like macros,
-C enum imports, old-style declarations, array returns, unsafe macros, complex runtime constants, and
-unknown signatures remain skipped unless a later phase defines safe lowering.
+are limited to simple numeric, bool, and unescaped string object-like macros. Named C enums import
+as scoped namespace enum types when their values are deterministic and fit in `i32`. Function-like
+macros, old-style declarations, array returns, unsafe macros, complex runtime constants, and unknown
+signatures remain skipped unless a later phase defines safe lowering.
 
 Runnable examples:
 

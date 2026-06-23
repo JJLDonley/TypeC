@@ -4,6 +4,7 @@ export * from "c/header/clang.ts";
 export * from "c/header/comments.ts";
 export * from "c/header/constant_types.ts";
 export * from "c/header/constants.ts";
+export * from "c/header/enums.ts";
 export * from "c/header/externs.ts";
 export * from "c/header/flags.ts";
 export * from "c/header/function.ts";

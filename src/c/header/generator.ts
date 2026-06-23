@@ -1,10 +1,12 @@
 import {
   collectHeaderConstants,
+  collectHeaderEnums,
   collectHeaderFunctions,
   collectHeaderRecords,
 } from "c/header/ast.ts";
 import { readClangHeaderAst } from "c/header/clang.ts";
 import { formatHeaderConstants } from "c/header/constants.ts";
+import { formatHeaderEnums } from "c/header/enums.ts";
 import { formatHeaderExterns } from "c/header/externs.ts";
 import { collectHeaderMacroConstants } from "c/header/macros.ts";
 import { formatHeaderRecordAliases } from "c/header/record_aliases.ts";
@@ -30,8 +32,10 @@ function generateExternsFromHeaderParts(
   const recordNames = new Set<Str>(records.map((record) => record.name));
   const constants = [...collectHeaderConstants(ast), ...macroConstants];
   return `${formatHeaderRecordAliases(records)}${
-    formatHeaderConstants(constants, includeDir, recordNames)
-  }${formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)}`;
+    formatHeaderEnums(collectHeaderEnums(ast), includeDir)
+  }${formatHeaderConstants(constants, includeDir, recordNames)}${
+    formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)
+  }`;
 }
 
 export async function generateExternsFromHeader(

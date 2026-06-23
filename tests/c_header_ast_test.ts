@@ -1,5 +1,6 @@
 import {
   collectHeaderConstants,
+  collectHeaderEnums,
   collectHeaderFunctions,
   collectHeaderRecords,
 } from "c/header/ast.ts";
@@ -112,6 +113,27 @@ Deno.test("collects C header constants from clang AST", () => {
   assertText(constants[2].value, '"TypeC"');
 });
 
+Deno.test("collects C header enums from clang AST", () => {
+  const enums = collectHeaderEnums({
+    kind: "TranslationUnitDecl",
+    inner: [
+      enumDecl("KeyboardKey", [
+        enumConstant("KEY_NULL", "0"),
+        enumConstant("KEY_SPACE", "32"),
+        enumConstant("KEY_ESCAPE"),
+      ], "/project/raylib.h"),
+    ],
+  });
+
+  assertSame(enums.length, 1);
+  assertText(enums[0].name, "KeyboardKey");
+  assertText(enums[0].members[0].name, "KEY_NULL");
+  assertText(enums[0].members[0].value, "0");
+  assertText(enums[0].members[1].value, "32");
+  assertText(enums[0].members[2].value, "33");
+  assertText(enums[0].sourceFile ?? "", "/project/raylib.h");
+});
+
 Deno.test("reads C header function metadata", () => {
   const functions = collectHeaderFunctions({
     kind: "TranslationUnitDecl",
@@ -167,6 +189,15 @@ function field(name: Str, qualType: Str): unknown {
 
 function varDecl(name: Str, qualType: Str, initializer: unknown, file: Str): unknown {
   return { kind: "VarDecl", name, type: { qualType }, loc: { file }, inner: [initializer] };
+}
+
+function enumDecl(name: Str, inner: unknown[], file: Str): unknown {
+  return { kind: "EnumDecl", name, loc: { file }, inner };
+}
+
+function enumConstant(name: Str, value: Str | null = null): unknown {
+  const inner = value === null ? [] : [{ kind: "ConstantExpr", value }];
+  return { kind: "EnumConstantDecl", name, inner };
 }
 
 function literal(kind: Str, value: Str): unknown {

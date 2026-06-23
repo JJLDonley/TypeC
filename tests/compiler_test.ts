@@ -231,6 +231,37 @@ Deno.test("emits C calls for namespace header imports", async () => {
   assertNotIncludes(c, "Lib.tick");
 });
 
+Deno.test("emits C for namespace header enum imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.h`,
+    `typedef enum KeyboardKey { KEY_NULL = 0, KEY_SPACE = 32, KEY_ESCAPE } KeyboardKey;`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import * as Lib from "./lib.h";
+function classify(key: Lib.KeyboardKey): i32 {
+  switch (key) {
+    case Lib.KeyboardKey.KEY_SPACE:
+      return 42;
+    default:
+      return 0;
+  }
+}
+function main(): i32 {
+  const key: Lib.KeyboardKey = Lib.KeyboardKey.KEY_SPACE;
+  return classify(key);
+}`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "typedef i32 Lib_KeyboardKey;");
+  assertIncludes(c, "static const Lib_KeyboardKey Lib_KeyboardKey_KEY_SPACE = 32;");
+  assertIncludes(c, "const Lib_KeyboardKey key = Lib_KeyboardKey_KEY_SPACE;");
+  assertIncludes(c, "case 32:");
+});
+
 Deno.test("emits C for header constant imports", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(

@@ -1,6 +1,7 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { ConstDecl, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
@@ -423,11 +424,4 @@ class Checker {
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
-}
-
-function qualifiedExpressionName(
-  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
-): Str | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  return `${expr.operand.name}.${expr.field}`;
 }

@@ -1,4 +1,5 @@
 import type { ConstDecl, Expression, RecordTypeRef } from "core/ast.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 import { cArrayElementType, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
@@ -60,8 +61,9 @@ function emitQualifiedConstantReference(
   expectedType: Str,
   context: EmitContext,
 ): Str {
-  if (expr.operand.kind !== "IdentifierExpr") throw new Error("Unsupported constant field access");
-  return emitConstantReference(`${expr.operand.name}.${expr.field}`, expectedType, context);
+  const name = qualifiedExpressionName(expr);
+  if (name === null) throw new Error("Unsupported constant field access");
+  return emitConstantReference(name, expectedType, context);
 }
 
 function emitConstantInitializer(

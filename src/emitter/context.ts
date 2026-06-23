@@ -1,4 +1,4 @@
-import type { ConstDecl, FunctionDecl, TypeAliasDecl } from "core/ast.ts";
+import type { ConstDecl, EnumDecl, FunctionDecl, TypeAliasDecl } from "core/ast.ts";
 import { collectEnumConstants } from "emitter/enums.ts";
 import type { CheckedProgram } from "checker";
 import type { ExpressionTypeInfo } from "core/tast.ts";
@@ -20,9 +20,30 @@ export function createEmitContext(program: CheckedProgram): EmitContext {
     constants.set(constant.name, constant);
   }
   return {
-    typeAliases: new Map(program.typeAliases.map((typeAlias) => [typeAlias.name, typeAlias])),
+    typeAliases: createTypeAliasMap(program.typeAliases, program.enums ?? []),
     constants,
     functions: new Map(program.functions.map((fn) => [fn.name, fn])),
     expressionTypes: program.expressionTypes,
+  };
+}
+
+function createTypeAliasMap(
+  typeAliases: TypeAliasDecl[],
+  enums: EnumDecl[],
+): Map<Str, TypeAliasDecl> {
+  return new Map<Str, TypeAliasDecl>([
+    ...typeAliases.map((typeAlias): [Str, TypeAliasDecl] => [typeAlias.name, typeAlias]),
+    ...enums.map((enumDecl): [Str, TypeAliasDecl] => [enumDecl.name, enumTypeAlias(enumDecl)]),
+  ]);
+}
+
+function enumTypeAlias(enumDecl: EnumDecl): TypeAliasDecl {
+  return {
+    kind: "TypeAliasDecl",
+    exported: enumDecl.exported,
+    name: enumDecl.name,
+    cName: enumDecl.cName ?? enumDecl.name,
+    type: { kind: "NamedTypeRef", name: "i32", span: enumDecl.span },
+    span: enumDecl.span,
   };
 }

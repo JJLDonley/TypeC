@@ -11,6 +11,7 @@ import {
 
 type Str = string;
 type b8 = boolean;
+type i32 = number;
 
 export interface CHeaderParam {
   name: Str;
@@ -45,6 +46,17 @@ export interface CHeaderConstant {
   sourceFile: Str | null;
 }
 
+export interface CHeaderEnumMember {
+  name: Str;
+  value: Str;
+}
+
+export interface CHeaderEnum {
+  name: Str;
+  members: CHeaderEnumMember[];
+  sourceFile: Str | null;
+}
+
 export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
   const functions: CHeaderFunction[] = [];
   collectHeaderFunctionsInto(value, functions);
@@ -74,6 +86,12 @@ export function collectHeaderConstants(value: unknown): CHeaderConstant[] {
   return constants;
 }
 
+export function collectHeaderEnums(value: unknown): CHeaderEnum[] {
+  const enums: CHeaderEnum[] = [];
+  collectHeaderEnumsInto(value, enums);
+  return enums;
+}
+
 function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {
   if (!isJsonRecord(value)) return;
   if (value.kind === "TypedefDecl" && hasName(value) && isHeaderDeclaration(value)) {
@@ -94,6 +112,15 @@ function collectHeaderConstantsInto(value: unknown, constants: CHeaderConstant[]
     if (constant) constants.push(constant);
   }
   collectInner(value, (child) => collectHeaderConstantsInto(child, constants));
+}
+
+function collectHeaderEnumsInto(value: unknown, enums: CHeaderEnum[]): void {
+  if (!isJsonRecord(value)) return;
+  if (value.kind === "EnumDecl" && hasName(value) && isHeaderDeclaration(value)) {
+    const enumDecl = readHeaderEnum(value);
+    if (enumDecl) enums.push(enumDecl);
+  }
+  collectInner(value, (child) => collectHeaderEnumsInto(child, enums));
 }
 
 function collectInner(value: JsonRecord, visit: (child: unknown) => void): void {
@@ -170,6 +197,43 @@ function isStringLiteralText(value: Str): b8 {
 
 function isSimpleStringLiteralText(value: Str): b8 {
   return /^"[^"\\\r\n]*"$/.test(value);
+}
+
+function readHeaderEnum(value: JsonRecord): CHeaderEnum | null {
+  if (!isJsonText(value.name)) return null;
+  const members = readHeaderEnumMembers(value.inner);
+  if (members === null) return null;
+  return { name: value.name, members, sourceFile: readSourceFile(value) };
+}
+
+function readHeaderEnumMembers(inner: unknown): CHeaderEnumMember[] | null {
+  if (!isJsonArray(inner)) return null;
+  const members: CHeaderEnumMember[] = [];
+  let previous: i32 = -1;
+  for (const child of inner) {
+    const member = readHeaderEnumMember(child, previous);
+    if (member === null) return null;
+    previous = Number(member.value);
+    members.push(member);
+  }
+  return members;
+}
+
+function readHeaderEnumMember(value: unknown, previous: i32): CHeaderEnumMember | null {
+  if (!isJsonRecord(value) || value.kind !== "EnumConstantDecl" || !isJsonText(value.name)) {
+    return null;
+  }
+  const constantValue = readHeaderEnumConstantValue(value.inner) ?? `${previous + 1}`;
+  return { name: value.name, value: constantValue };
+}
+
+function readHeaderEnumConstantValue(inner: unknown): Str | null {
+  if (!isJsonArray(inner) || inner.length === 0) return null;
+  const value = inner[0];
+  if (!isJsonRecord(value) || value.kind !== "ConstantExpr" || !isJsonText(value.value)) {
+    return null;
+  }
+  return value.value;
 }
 
 function readSourceFile(value: JsonRecord): Str | null {

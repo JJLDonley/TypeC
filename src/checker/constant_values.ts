@@ -1,4 +1,5 @@
 import type { ConstDecl, Expression } from "core/ast.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 
 type Str = string;
 type IntValue = bigint;
@@ -79,16 +80,16 @@ function evaluateQualifiedIntegerConstant(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   constants: Map<Str, ConstDecl>,
 ): IntValue | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  return evaluateReferencedIntegerConstant(`${expr.operand.name}.${expr.field}`, constants);
+  const name = qualifiedExpressionName(expr);
+  return name === null ? null : evaluateReferencedIntegerConstant(name, constants);
 }
 
 function evaluateQualifiedBoolConstant(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   constants: Map<Str, ConstDecl>,
 ): b8 | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  return evaluateReferencedBoolConstant(`${expr.operand.name}.${expr.field}`, constants);
+  const name = qualifiedExpressionName(expr);
+  return name === null ? null : evaluateReferencedBoolConstant(name, constants);
 }
 
 function evaluateUnaryIntegerConstant(
@@ -152,8 +153,8 @@ function evaluateQualifiedFloatConstant(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   constants: Map<Str, ConstDecl>,
 ): f64 | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  return evaluateReferencedFloatConstant(`${expr.operand.name}.${expr.field}`, constants);
+  const name = qualifiedExpressionName(expr);
+  return name === null ? null : evaluateReferencedFloatConstant(name, constants);
 }
 
 function evaluateUnaryFloatConstant(

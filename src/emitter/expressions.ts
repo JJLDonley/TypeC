@@ -1,4 +1,5 @@
 import type { Expression, RecordTypeRef } from "core/ast.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCallExpression } from "emitter/calls.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
@@ -197,9 +198,8 @@ function emitQualifiedConstantExpression(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   context: EmitContext,
 ): Str | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  const name = `${expr.operand.name}.${expr.field}`;
-  return context.constants?.get(name)?.cName ?? null;
+  const name = qualifiedExpressionName(expr);
+  return name === null ? null : context.constants?.get(name)?.cName ?? null;
 }
 
 function isArrayDataFieldAccess(

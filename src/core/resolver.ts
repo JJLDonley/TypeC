@@ -2,6 +2,7 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, Program, Statement } from "core/ast.ts";
 import { enumMemberSymbolName } from "core/enums.ts";
+import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram, SymbolKind } from "core/rast.ts";
 import { type Scope, ScopeTable } from "core/scope.ts";
 
@@ -187,11 +188,4 @@ class Resolver {
     if (this.scopeTable.lookup(scope, name)) return;
     this.diagnostics.push({ message: `Unknown identifier '${name}'`, span });
   }
-}
-
-function qualifiedExpressionName(
-  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
-): Str | null {
-  if (expr.operand.kind !== "IdentifierExpr") return null;
-  return `${expr.operand.name}.${expr.field}`;
 }
