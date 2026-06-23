@@ -38,6 +38,8 @@
     "json/": "./src/json/",
     "driver": "./src/driver/mod.ts",
     "driver/": "./src/driver/",
+    "lsp": "./src/lsp/mod.ts",
+    "lsp/": "./src/lsp/",
     "paths": "./src/path/mod.ts",
     "paths/": "./src/path/"
   }

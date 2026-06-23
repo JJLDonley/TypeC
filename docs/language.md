@@ -117,6 +117,18 @@ Then source can import through the alias:
 import { abs_i32 } from "basic/math";
 ```
 
+## Language Server
+
+The prototype includes a minimal LSP server for editor diagnostics:
+
+```bash
+deno run -A src/driver/main.ts lsp
+```
+
+The current LSP supports document open/change/close and publishes lexical/syntax diagnostics from
+in-memory text. It does not compile, execute, format, complete, hover, or provide semantic
+diagnostics.
+
 ## Standard Library
 
 The standard library is written in TypeC and is expected to use the full completed language, not

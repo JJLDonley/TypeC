@@ -6,7 +6,14 @@ Deno.test("parses valid CLI request", () => {
   const request = parseCliArgs(["build", "examples/main.tc"]);
   if (!request) throw new Error("Expected CLI request");
   assertEquals(request.command, "build");
-  assertEquals(request.inputPath, "examples/main.tc");
+  assertEquals(request.inputPath ?? "", "examples/main.tc");
+});
+
+Deno.test("parses LSP CLI request", () => {
+  const request = parseCliArgs(["lsp"]);
+  if (!request) throw new Error("Expected CLI request");
+  assertEquals(request.command, "lsp");
+  assertEquals(request.inputPath ?? "", "");
 });
 
 Deno.test("rejects invalid CLI request", () => {
@@ -19,7 +26,7 @@ Deno.test("rejects invalid CLI request", () => {
 Deno.test("prints usage", () => {
   assertEquals(
     usageText(),
-    "Usage: deno run -A src/driver/main.ts <build|run|emit-c|emit-ast|watch> <file.tc>",
+    "Usage: deno run -A src/driver/main.ts <build|run|emit-c|emit-ast|watch> <file.tc> | lsp",
   );
 });
 

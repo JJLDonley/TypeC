@@ -6,6 +6,7 @@ import { missingMainMessage } from "core/entrypoint.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
 import { runExecutable } from "driver/runner.ts";
+import { runLspServer } from "lsp/stdio.ts";
 import { watchFile } from "driver/watch.ts";
 
 type Str = string;
@@ -19,20 +20,23 @@ async function main(args: Str[]): Promise<void> {
 
 async function execute(request: CliRequest): Promise<void> {
   switch (request.command) {
+    case "lsp":
+      await runLspServer();
+      return;
     case "watch":
-      await watchFile(request.inputPath);
+      await watchFile(requireInputPath(request));
       return;
     case "emit-ast":
-      await emitAst(request.inputPath);
+      await emitAst(requireInputPath(request));
       return;
     case "emit-c":
-      await emitC(request.inputPath);
+      await emitC(requireInputPath(request));
       return;
     case "build":
-      await build(request.inputPath);
+      await build(requireInputPath(request));
       return;
     case "run":
-      await run(request.inputPath);
+      await run(requireInputPath(request));
       return;
   }
 }
@@ -59,6 +63,11 @@ async function run(inputPath: Str): Promise<void> {
   await buildNative(result);
   console.log(`Built ${result.exePath}`);
   await runExecutable(result.exePath);
+}
+
+function requireInputPath(request: CliRequest): Str {
+  if (request.inputPath) return request.inputPath;
+  usage();
 }
 
 function requireMain(hasMain: b8): void {

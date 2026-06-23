@@ -1741,6 +1741,66 @@ a C compound literal setting `tag` and, for payload variants, the corresponding 
 
 ---
 
+# Phase 22: Language Server Protocol
+
+Status: Complete. Minimal editor diagnostics subset implemented.
+
+## Goal
+
+Add a small LSP server so editors can validate TypeC files while editing.
+
+## Protocol
+
+Phase 22 implements a JSON-RPC 2.0 Language Server Protocol server over stdio.
+
+Supported client messages:
+
+- `initialize`
+- `initialized`
+- `shutdown`
+- `exit`
+- `textDocument/didOpen`
+- `textDocument/didChange`
+- `textDocument/didClose`
+
+Server output:
+
+- `initialize` response with full text-document sync
+- `textDocument/publishDiagnostics` notifications
+
+## Diagnostics
+
+Diagnostics are computed from the in-memory document text with the completed lexer and parser. This
+phase reports lexical and syntactic diagnostics only. It does not run module loading, name
+resolution, type checking, C emission, or native compilation from the LSP.
+
+LSP ranges are zero-based. TypeC compiler diagnostics are one-based internally and are converted at
+the LSP boundary.
+
+## CLI
+
+The driver adds:
+
+```bash
+deno run -A src/driver/main.ts lsp
+```
+
+## Do
+
+- Keep the LSP transport separate from diagnostics.
+- Keep JSON-RPC framing reusable and testable.
+- Use only portable stdio and JSON-RPC protocol behavior.
+- Publish empty diagnostics when a document becomes valid.
+
+## Do Not
+
+- Do not add new TypeC language syntax.
+- Do not implement autocomplete, hover, go-to-definition, formatting, or semantic diagnostics in
+  this phase.
+- Do not compile or execute user programs from the LSP.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
