@@ -175,6 +175,7 @@ export interface BlockStmt {
 
 export type Statement =
   | ReturnStmt
+  | DeferStmt
   | ExpressionStmt
   | BreakStmt
   | VarDeclStmt
@@ -186,6 +187,12 @@ export type Statement =
 export interface ReturnStmt {
   kind: "ReturnStmt";
   expression: Expression | null;
+  span: SourceSpan;
+}
+
+export interface DeferStmt {
+  kind: "DeferStmt";
+  expression: Expression;
   span: SourceSpan;
 }
 

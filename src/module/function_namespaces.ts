@@ -31,6 +31,8 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
       return stmt.expression
         ? { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) }
         : stmt;
+    case "DeferStmt":
+      return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
     case "ExpressionStmt":
       return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
     case "BreakStmt":

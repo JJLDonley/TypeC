@@ -104,6 +104,10 @@ class AstPrinter {
           this.indented(() => this.expression(expression));
         }
         return;
+      case "DeferStmt":
+        this.line("DeferStmt");
+        this.indented(() => this.expression(statement.expression));
+        return;
       case "ExpressionStmt":
         this.line("ExpressionStmt");
         this.indented(() => this.expression(statement.expression));

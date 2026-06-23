@@ -2,7 +2,7 @@ import type { FunctionDecl } from "core/ast.ts";
 import { emitCType } from "c/type.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitFunctionSignature } from "emitter/functions.ts";
-import { emitStatement } from "emitter/statements.ts";
+import { emitStatements } from "emitter/statements.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -12,8 +12,15 @@ export function emitFunctionDefinition(fn: FunctionDecl, context: EmitContext): 
   const out: Str[] = [];
   out.push(`${emitFunctionSignature(fn, context)} {`);
   const locals = functionParamLocals(fn, context);
-  for (const stmt of fn.body.statements) {
-    out.push(`  ${emitStatement(stmt, functionReturnType(fn, context), context, locals)}`);
+  for (
+    const line of emitStatements(
+      fn.body.statements,
+      functionReturnType(fn, context),
+      context,
+      locals,
+    )
+  ) {
+    out.push(`  ${line}`);
   }
   out.push("}");
   return out.join("\n");

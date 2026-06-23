@@ -87,6 +87,16 @@ function main(): i32 { const v: Vec2 = { x: 1.0 }; const d: f64 = v.lengthSquare
   if (local.initializer.method !== "lengthSquared") throw new Error("Expected method name");
 });
 
+Deno.test("parses defer statements", () => {
+  const program = parse(
+    lex(
+      `function cleanup(): void { return; } function main(): i32 { defer cleanup(); return 42; }`,
+    ),
+  );
+  const statement = program.functions[1].body?.statements[0];
+  if (statement?.kind !== "DeferStmt") throw new Error("Expected defer statement");
+});
+
 Deno.test("parses generic class declarations and type refs", () => {
   const program = parse(
     lex(

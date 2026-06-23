@@ -1506,7 +1506,7 @@ function main(): i32 {
 
 # Phase 18: Defer
 
-Implementation status: optional systems feature, not started.
+Status: Complete.
 
 ## Goal
 

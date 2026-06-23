@@ -201,6 +201,7 @@ export interface CastBlockStmt {
 
 export type CastStatement =
   | CastReturnStmt
+  | CastDeferStmt
   | CastExpressionStmt
   | CastBreakStmt
   | CastVarDeclStmt
@@ -212,6 +213,12 @@ export type CastStatement =
 export interface CastReturnStmt {
   kind: "ReturnStmt";
   expression: CastExpression | null;
+  span: SourceSpan;
+}
+
+export interface CastDeferStmt {
+  kind: "DeferStmt";
+  expression: CastExpression;
   span: SourceSpan;
 }
 

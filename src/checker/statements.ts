@@ -9,6 +9,7 @@ type IfStmt = Extract<Statement, { kind: "IfStmt" }>;
 
 export interface StatementCheckHandlers {
   returnStatement(expr: Expression | null, span: SourceSpan): void;
+  deferStatement(expr: Expression, span: SourceSpan): void;
   expressionStatement(expr: Expression): void;
   breakStatement(span: SourceSpan): void;
   variableDeclaration(stmt: VarDeclStmt): void;
@@ -22,6 +23,9 @@ export function checkStatementDispatch(stmt: Statement, handlers: StatementCheck
   switch (stmt.kind) {
     case "ReturnStmt":
       handlers.returnStatement(stmt.expression, stmt.span);
+      return;
+    case "DeferStmt":
+      handlers.deferStatement(stmt.expression, stmt.span);
       return;
     case "ExpressionStmt":
       handlers.expressionStatement(stmt.expression);

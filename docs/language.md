@@ -178,6 +178,21 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Defer
+
+TypeC supports scope-exit cleanup with call-expression `defer` statements:
+
+```ts
+function main(): i32 {
+  defer cleanup();
+  return 42;
+}
+```
+
+Deferred calls run in first-in, last-out order when their scope exits. They lower to explicit C
+statements before `return`, `break`, or ordinary fallthrough. Return values are evaluated before
+running deferred calls.
+
 ## Generics
 
 TypeC supports explicit generic function instantiation:

@@ -80,6 +80,8 @@ function statementGenericCallDiagnostics(
       return statement.expression
         ? expressionGenericCallDiagnostics(statement.expression, templates)
         : [];
+    case "DeferStmt":
+      return expressionGenericCallDiagnostics(statement.expression, templates);
     case "ExpressionStmt":
       return expressionGenericCallDiagnostics(statement.expression, templates);
     case "BreakStmt":
@@ -276,6 +278,8 @@ class GenericInstantiator {
           ...statement,
           expression: statement.expression ? this.rewriteExpr(statement.expression) : null,
         };
+      case "DeferStmt":
+        return { ...statement, expression: this.rewriteExpr(statement.expression) };
       case "ExpressionStmt":
         return { ...statement, expression: this.rewriteExpr(statement.expression) };
       case "BreakStmt":
@@ -382,6 +386,7 @@ function substituteBlock(block: BlockStmt, substitutions: TypeSubstitutions): Bl
 function substituteStatement(statement: Statement, substitutions: TypeSubstitutions): Statement {
   switch (statement.kind) {
     case "ReturnStmt":
+    case "DeferStmt":
     case "ExpressionStmt":
     case "BreakStmt":
     case "AssignmentStmt":

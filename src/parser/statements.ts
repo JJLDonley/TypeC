@@ -30,6 +30,7 @@ export interface StatementParser {
 
 export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("return")) return parseReturn(parser);
+  if (parser.checkText("defer")) return parseDefer(parser);
   if (parser.checkText("break")) return parseBreak(parser);
   if (parser.checkText("switch")) return parseSwitch(parser);
   if (parser.checkText("if")) return parseIf(parser);
@@ -50,6 +51,16 @@ function parseReturn(parser: StatementParser): CastStatement {
   const expression = parser.checkText(";") ? null : parser.parseExpression();
   const semi = parser.expectText(";");
   return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
+}
+
+function parseDefer(parser: StatementParser): CastStatement {
+  const start = parser.expectText("defer");
+  const expression = parser.parseExpression();
+  const semi = parser.expectText(";");
+  if (expression.kind !== "CallExpr" && expression.kind !== "MethodCallExpr") {
+    parser.error(start, "Defer statement requires a call expression");
+  }
+  return { kind: "DeferStmt", expression, span: span(start.span.start, semi.span.end) };
 }
 
 function parseBreak(parser: StatementParser): CastStatement {

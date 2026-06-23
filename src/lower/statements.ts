@@ -1,6 +1,7 @@
 import type {
   AssignmentStmt,
   BlockStmt,
+  DeferStmt,
   ExpressionStmt,
   IfStmt,
   Statement,
@@ -11,6 +12,7 @@ import type {
 import type {
   CastAssignmentStmt,
   CastBlockStmt,
+  CastDeferStmt,
   CastExpressionStmt,
   CastIfStmt,
   CastStatement,
@@ -37,6 +39,8 @@ function lowerStatement(statement: CastStatement): Statement {
         expression: statement.expression ? lowerExpression(statement.expression) : null,
         span: statement.span,
       };
+    case "DeferStmt":
+      return lowerDeferStmt(statement);
     case "ExpressionStmt":
       return lowerExpressionStmt(statement);
     case "BreakStmt":
@@ -52,6 +56,14 @@ function lowerStatement(statement: CastStatement): Statement {
     case "IfStmt":
       return lowerIfStmt(statement);
   }
+}
+
+function lowerDeferStmt(statement: CastDeferStmt): DeferStmt {
+  return {
+    kind: "DeferStmt",
+    expression: lowerExpression(statement.expression),
+    span: statement.span,
+  };
 }
 
 function lowerExpressionStmt(statement: CastExpressionStmt): ExpressionStmt {

@@ -171,6 +171,7 @@ class Checker {
   ): void {
     checkStatementDispatch(stmt, {
       returnStatement: (expr, span) => this.checkReturn(expr, locals, returnType, span),
+      deferStatement: (expr, span) => this.checkDefer(expr, locals, span),
       expressionStatement: (expr) => this.checkExpressionStatement(expr, locals),
       breakStatement: (span) => this.checkBreak(span, inSwitch),
       variableDeclaration: (value) => this.checkVarDecl(value, locals),
@@ -179,6 +180,14 @@ class Checker {
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
       ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
     });
+  }
+
+  private checkDefer(expr: Expression, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
+    if (expr.kind !== "CallExpr" && expr.kind !== "MethodCallExpr") {
+      this.diagnostics.push({ message: "Defer statement requires a call expression", span });
+      return;
+    }
+    this.typeOf(expr, locals);
   }
 
   private checkExpressionStatement(expr: Expression, locals: Map<Str, LocalInfo>): void {

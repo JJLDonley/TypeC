@@ -32,6 +32,49 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for defer before return", () => {
+  const source =
+    `function cleanup(): void { return; } function main(): i32 { defer cleanup(); return 42; }`;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 __typec_return_");
+  assertInOrder(c, "i32 __typec_return_", "cleanup();", "return __typec_return_");
+});
+
+Deno.test("rejects non-call defers", () => {
+  assertCompileError(
+    `function main(): i32 { defer 1 + 2; return 0; }`,
+    "Defer statement requires a call expression",
+  );
+});
+
+Deno.test("emits switch-local defers before break", () => {
+  const source = `
+    function outer(): void { return; }
+    function inner(): void { return; }
+    function main(): i32 {
+      defer outer();
+      switch (1) {
+        case 1:
+          defer inner();
+          break;
+      }
+      return 42;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertInOrder(c, "case 1:", "inner();", "break;", "outer();");
+  assertNotInOrder(c, "case 1:", "outer();", "break;");
+});
+
+Deno.test("compiles defer example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/defer.tc", dir);
+
+  assertIncludes(result.cSource, "cleanup();");
+});
+
 Deno.test("emits C for module constants", () => {
   const program = parse(lex(`
     const ANSWER: i32 = 42;
@@ -1096,6 +1139,24 @@ function assertIncludes(haystack: Str, needle: Str): void {
 
 function assertNotIncludes(haystack: Str, needle: Str): void {
   if (haystack.includes(needle)) throw new Error(`Expected output not to include ${needle}`);
+}
+
+function assertInOrder(haystack: Str, ...needles: Str[]): void {
+  let offset: usize = 0;
+  for (const needle of needles) {
+    const index = haystack.indexOf(needle, offset);
+    if (index < 0) throw new Error(`Expected output to include ${needle} after offset ${offset}`);
+    offset = index + needle.length;
+  }
+}
+
+function assertNotInOrder(haystack: Str, ...needles: Str[]): void {
+  try {
+    assertInOrder(haystack, ...needles);
+  } catch {
+    return;
+  }
+  throw new Error(`Expected output not to include ordered sequence ${needles.join(" -> ")}`);
 }
 
 function assertCount(haystack: Str, needle: Str, expected: usize): void {

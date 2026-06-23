@@ -81,6 +81,9 @@ function collectStatementDeps(
     case "ReturnStmt":
       if (statement.expression) collectExpressionDeps(statement.expression, selected, ignoredTypes);
       return;
+    case "DeferStmt":
+      collectExpressionDeps(statement.expression, selected, ignoredTypes);
+      return;
     case "ExpressionStmt":
       collectExpressionDeps(statement.expression, selected, ignoredTypes);
       return;

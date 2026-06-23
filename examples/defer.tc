@@ -1,0 +1,8 @@
+function cleanup(): void {
+  return;
+}
+
+function main(): i32 {
+  defer cleanup();
+  return 42;
+}

@@ -95,6 +95,9 @@ class Resolver {
       case "ReturnStmt":
         if (statement.expression) this.resolveExpression(statement.expression, scope);
         return;
+      case "DeferStmt":
+        this.resolveExpression(statement.expression, scope);
+        return;
       case "ExpressionStmt":
         this.resolveExpression(statement.expression, scope);
         return;
