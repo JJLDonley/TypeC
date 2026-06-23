@@ -235,6 +235,7 @@ export type Expression =
   | UnaryExpr
   | BinaryExpr
   | CallExpr
+  | MethodCallExpr
   | PostfixPointerExpr
   | FieldAccessExpr
   | RecordLiteralExpr
@@ -292,6 +293,14 @@ export interface BinaryExpr {
 export interface CallExpr {
   kind: "CallExpr";
   callee: Str;
+  args: Expression[];
+  span: SourceSpan;
+}
+
+export interface MethodCallExpr {
+  kind: "MethodCallExpr";
+  receiver: Expression;
+  method: Str;
   args: Expression[];
   span: SourceSpan;
 }

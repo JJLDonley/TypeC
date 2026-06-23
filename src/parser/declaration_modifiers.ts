@@ -30,6 +30,11 @@ export function enumModifierDiagnostics(externToken: Token | null): Diagnostic[]
   return [{ message: "Enums cannot be extern", span: externToken.span }];
 }
 
+export function classModifierDiagnostics(externToken: Token | null): Diagnostic[] {
+  if (!externToken) return [];
+  return [{ message: "Classes cannot be extern", span: externToken.span }];
+}
+
 export function functionModifierDiagnostics(
   exportToken: Token | null,
   externToken: Token | null,

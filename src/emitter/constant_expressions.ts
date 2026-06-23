@@ -35,6 +35,7 @@ export function emitConstantExpressionExpected(
     case "FieldAccessExpr":
       return emitQualifiedConstantReference(expr, expectedType, context);
     case "CallExpr":
+    case "MethodCallExpr":
     case "PostfixPointerExpr":
     case "IndexExpr":
       throw new Error("Unsupported compile-time constant expression");

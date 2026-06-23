@@ -179,6 +179,13 @@ class AstPrinter {
           for (const arg of expression.args) this.expression(arg);
         });
         return;
+      case "MethodCallExpr":
+        this.line(`MethodCallExpr ${expression.method}`);
+        this.indented(() => {
+          this.expression(expression.receiver);
+          for (const arg of expression.args) this.expression(arg);
+        });
+        return;
       case "PostfixPointerExpr":
         this.line(`PostfixPointerExpr ${expression.operator}`);
         this.indented(() => this.expression(expression.operand));

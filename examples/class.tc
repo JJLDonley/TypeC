@@ -1,0 +1,17 @@
+class Vec2 {
+  x: f64;
+  y: f64;
+
+  lengthSquared(): f64 {
+    return this.x * this.x + this.y * this.y;
+  }
+}
+
+function main(): i32 {
+  const v: Vec2 = { x: 3.0, y: 4.0 };
+  const d: f64 = v.lengthSquared();
+  if (d == 25.0) {
+    return 42;
+  }
+  return 0;
+}

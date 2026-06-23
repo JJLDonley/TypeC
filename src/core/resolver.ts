@@ -151,6 +151,12 @@ class Resolver {
         this.requireSymbol(this.globalScope, expression.callee, expression.span);
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
+      case "MethodCallExpr":
+        if (!this.resolveMethodFunction(expression, scope)) {
+          this.resolveExpression(expression.receiver, scope);
+        }
+        for (const arg of expression.args) this.resolveExpression(arg, scope);
+        return;
       case "PostfixPointerExpr":
         this.resolveExpression(expression.operand, scope);
         return;
@@ -169,6 +175,15 @@ class Resolver {
         this.resolveExpression(expression.index, scope);
         return;
     }
+  }
+
+  private resolveMethodFunction(
+    expression: Extract<Expression, { kind: "MethodCallExpr" }>,
+    scope: Scope,
+  ): b8 {
+    if (expression.receiver.kind !== "IdentifierExpr") return false;
+    const name = `${expression.receiver.name}.${expression.method}`;
+    return this.scopeTable.lookup(scope, name) !== null;
   }
 
   private resolveQualifiedSymbol(

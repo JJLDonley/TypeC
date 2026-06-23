@@ -1,3 +1,4 @@
+import { classMethodFunction, classTypeAlias } from "core/classes.ts";
 import type {
   ConstDecl,
   EnumDecl,
@@ -7,6 +8,7 @@ import type {
   TypeAliasDecl,
 } from "core/ast.ts";
 import type {
+  CastClassDecl,
   CastConstDecl,
   CastEnumDecl,
   CastFunctionDecl,
@@ -37,6 +39,30 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
   };
+}
+
+export function lowerClassTypeAlias(classDecl: CastClassDecl): TypeAliasDecl {
+  return classTypeAlias(classDecl, {
+    kind: "RecordTypeRef",
+    fields: classDecl.fields.map((field) => ({
+      name: field.name,
+      type: lowerTypeRef(field.type),
+      span: field.span,
+    })),
+    span: classDecl.span,
+  });
+}
+
+export function lowerClassMethods(classDecl: CastClassDecl): FunctionDecl[] {
+  return classDecl.methods.map((method) =>
+    classMethodFunction(
+      classDecl,
+      method,
+      method.params.map(lowerParam),
+      lowerTypeRef(method.returnType),
+      lowerBlockStmt(method.body),
+    )
+  );
 }
 
 export function lowerEnumDecl(enumDecl: CastEnumDecl): EnumDecl {

@@ -102,6 +102,10 @@ function collectExpressionDeps(expression: Expression, selected: DependencySet):
       selected.functions.add(expression.callee);
       for (const arg of expression.args) collectExpressionDeps(arg, selected);
       return;
+    case "MethodCallExpr":
+      collectExpressionDeps(expression.receiver, selected);
+      for (const arg of expression.args) collectExpressionDeps(arg, selected);
+      return;
     case "PostfixPointerExpr":
     case "FieldAccessExpr":
       collectExpressionDeps(expression.operand, selected);

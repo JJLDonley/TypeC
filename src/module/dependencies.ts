@@ -39,12 +39,23 @@ function collectPass(selected: DependencySet, index: ProgramDependencyIndex): b8
   for (const name of [...selected.types]) {
     collectTypeAliasDeps(index.types.get(name), selected);
     collectEnumDeps(index.enums.get(name), selected);
+    collectTypeMethodDeps(name, index, selected);
   }
   for (const name of [...selected.constants]) collectConstDeps(index.constants.get(name), selected);
   for (const name of [...selected.functions]) {
     collectFunctionDeps(index.functions.get(name), selected);
   }
   return dependencyCount(selected) !== before;
+}
+
+function collectTypeMethodDeps(
+  typeName: Str,
+  index: ProgramDependencyIndex,
+  selected: DependencySet,
+): void {
+  for (const name of index.functions.keys()) {
+    if (name.startsWith(`${typeName}.`)) selected.functions.add(name);
+  }
 }
 
 function dependencyCount(selected: DependencySet): usize {

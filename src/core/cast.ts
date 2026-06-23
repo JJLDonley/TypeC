@@ -9,6 +9,7 @@ export interface CastProgram {
   kind: "Program";
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
+  classes?: CastClassDecl[];
   enums?: CastEnumDecl[];
   constants?: CastConstDecl[];
   functions: CastFunctionDecl[];
@@ -29,6 +30,30 @@ export interface CastTypeAliasDecl {
   name: Str;
   cName?: Str | null;
   type: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastClassDecl {
+  kind: "ClassDecl";
+  exported: b8;
+  name: Str;
+  fields: CastClassField[];
+  methods: CastClassMethod[];
+  span: SourceSpan;
+}
+
+export interface CastClassField {
+  name: Str;
+  type: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastClassMethod {
+  exported: b8;
+  name: Str;
+  params: CastParam[];
+  returnType: CastTypeRef;
+  body: CastBlockStmt;
   span: SourceSpan;
 }
 
@@ -235,6 +260,7 @@ export type CastExpression =
   | CastUnaryExpr
   | CastBinaryExpr
   | CastCallExpr
+  | CastMethodCallExpr
   | CastPostfixPointerExpr
   | CastFieldAccessExpr
   | CastRecordLiteralExpr
@@ -292,6 +318,14 @@ export interface CastBinaryExpr {
 export interface CastCallExpr {
   kind: "CallExpr";
   callee: Str;
+  args: CastExpression[];
+  span: SourceSpan;
+}
+
+export interface CastMethodCallExpr {
+  kind: "MethodCallExpr";
+  receiver: CastExpression;
+  method: Str;
   args: CastExpression[];
   span: SourceSpan;
 }

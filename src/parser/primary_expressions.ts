@@ -93,15 +93,24 @@ function parseNamespaceCall(
 ): CastExpression | null {
   if (!parser.matchText(".")) return null;
   const member = parser.expectKind("identifier", "Expected namespace member");
+  const receiver = { kind: "IdentifierExpr" as const, name: namespace.text, span: namespace.span };
   if (!parser.matchText("(")) {
     return {
       kind: "FieldAccessExpr",
-      operand: { kind: "IdentifierExpr", name: namespace.text, span: namespace.span },
+      operand: receiver,
       field: member.text,
       span: span(namespace.span.start, member.span.end),
     };
   }
-  return parseCallExpression(parser, `${namespace.text}.${member.text}`, namespace.span.start);
+  const args = parseCallArguments(parser);
+  const close = parser.expectText(")");
+  return {
+    kind: "MethodCallExpr",
+    receiver,
+    method: member.text,
+    args,
+    span: span(namespace.span.start, close.span.end),
+  };
 }
 
 function parseCallExpression(

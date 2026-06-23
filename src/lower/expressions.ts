@@ -9,6 +9,7 @@ import type {
   IdentifierExpr,
   IndexExpr,
   IntegerLiteral,
+  MethodCallExpr,
   PostfixPointerExpr,
   RecordLiteralExpr,
   StringLiteral,
@@ -25,6 +26,7 @@ import type {
   CastIdentifierExpr,
   CastIndexExpr,
   CastIntegerLiteral,
+  CastMethodCallExpr,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
   CastStringLiteral,
@@ -49,6 +51,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerBinaryExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
+    case "MethodCallExpr":
+      return lowerMethodCallExpr(expression);
     case "PostfixPointerExpr":
       return lowerPostfixPointerExpr(expression);
     case "FieldAccessExpr":
@@ -120,6 +124,16 @@ function lowerCallExpr(expression: CastCallExpr): CallExpr {
   return {
     kind: "CallExpr",
     callee: expression.callee,
+    args: expression.args.map(lowerExpression),
+    span: expression.span,
+  };
+}
+
+function lowerMethodCallExpr(expression: CastMethodCallExpr): MethodCallExpr {
+  return {
+    kind: "MethodCallExpr",
+    receiver: lowerExpression(expression.receiver),
+    method: expression.method,
     args: expression.args.map(lowerExpression),
     span: expression.span,
   };

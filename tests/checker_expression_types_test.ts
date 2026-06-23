@@ -44,6 +44,7 @@ function handlers(): ExpressionTypeHandlers {
     unary: resolveI64,
     binary: resolveI64,
     call: resolveI64,
+    methodCall: resolveI64,
     pointer: resolveI64,
     fieldAccess: resolveI64,
     index: resolveI64,

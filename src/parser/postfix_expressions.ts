@@ -41,12 +41,37 @@ function parseFieldAccess(
       span: span(operand.span.start, close.span.end),
     };
   }
+  if (parser.matchText("(")) return parseMethodCall(parser, operand, field);
   return {
     kind: "FieldAccessExpr",
     operand,
     field: field.text,
     span: span(operand.span.start, field.span.end),
   };
+}
+
+function parseMethodCall(
+  parser: PostfixExpressionParser,
+  receiver: CastExpression,
+  method: Token,
+): CastExpression {
+  const args = parseCallArguments(parser);
+  const close = parser.expectText(")");
+  return {
+    kind: "MethodCallExpr",
+    receiver,
+    method: method.text,
+    args,
+    span: span(receiver.span.start, close.span.end),
+  };
+}
+
+function parseCallArguments(parser: PostfixExpressionParser): CastExpression[] {
+  const args: CastExpression[] = [];
+  if (!parser.checkText(")")) {
+    do args.push(parser.parseExpression()); while (parser.matchText(","));
+  }
+  return args;
 }
 
 function parseIndexAccess(

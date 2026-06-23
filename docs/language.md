@@ -178,6 +178,28 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Classes and Methods
+
+TypeC supports TypeScript-like classes as static-layout record types with instance methods:
+
+```ts
+class Vec2 {
+  x: f64;
+  y: f64;
+
+  lengthSquared(): f64 {
+    return this.x * this.x + this.y * this.y;
+  }
+}
+
+const v: Vec2 = { x: 3.0, y: 4.0 };
+const d: f64 = v.lengthSquared();
+```
+
+Constructors, inheritance, access modifiers, static members, and `new` are not part of this phase.
+Methods dispatch statically and lower to C functions with an explicit receiver argument. Class
+values use existing record literal initialization.
+
 ## Enums
 
 TypeC supports TypeScript-like scoped enums with default `i32` backing representation:

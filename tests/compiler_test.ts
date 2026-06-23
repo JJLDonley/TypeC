@@ -65,6 +65,64 @@ Deno.test("emits C for enums", () => {
   assertIncludes(c, "const Key key = Key_Space;");
 });
 
+Deno.test("emits C for classes and methods", () => {
+  const program = parse(lex(`
+    class Vec2 {
+      x: f64;
+      y: f64;
+      lengthSquared(): f64 {
+        return this.x * this.x + this.y * this.y;
+      }
+    }
+    function main(): i32 {
+      const v: Vec2 = { x: 3.0, y: 4.0 };
+      const d: f64 = v.lengthSquared();
+      return 42;
+    }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertIncludes(c, "typedef struct {");
+  assertIncludes(c, "f64 x;");
+  assertIncludes(c, "f64 y;");
+  assertIncludes(c, "} Vec2;");
+  assertIncludes(c, "static f64 Vec2_lengthSquared(Vec2 this)");
+  assertIncludes(c, "this.x * this.x + this.y * this.y");
+  assertIncludes(c, "const f64 d = Vec2_lengthSquared(v);");
+});
+
+Deno.test("emits C for imported class methods", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.writeTextFile(
+    `${dir}/lib.tc`,
+    `export class Vec2 { x: f64; y: f64; lengthSquared(): f64 { return this.x * this.x + this.y * this.y; } }`,
+  );
+  await Deno.writeTextFile(
+    `${dir}/main.tc`,
+    `import { Vec2 } from "./lib.tc";
+function main(): i32 {
+  const v: Vec2 = { x: 3.0, y: 4.0 };
+  const d: f64 = v.lengthSquared();
+  if (d == 25.0) { return 42; }
+  return 0;
+}`,
+  );
+
+  const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
+
+  assertIncludes(c, "f64 Vec2_lengthSquared(Vec2 this)");
+  assertIncludes(c, "Vec2_lengthSquared(v)");
+});
+
+Deno.test("compiles class example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/class.tc", dir);
+
+  assertIncludes(result.cSource, "static f64 Vec2_lengthSquared(Vec2 this)");
+  assertIncludes(result.cSource, "Vec2_lengthSquared(v)");
+});
+
 Deno.test("compiles enum example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/enum.tc", dir);

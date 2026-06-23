@@ -38,10 +38,10 @@ Deno.test("parses namespace imports and calls", () => {
   );
   if (program.imports[0].namespace !== "Math") throw new Error("Expected namespace import");
   const statement = requireBody(program.functions[0].body).statements[0];
-  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") {
+  if (statement.kind !== "ReturnStmt" || statement.expression?.kind !== "MethodCallExpr") {
     throw new Error("Expected namespace call");
   }
-  if (statement.expression.callee !== "Math.add") throw new Error("Expected namespace callee");
+  if (statement.expression.method !== "add") throw new Error("Expected namespace method");
 });
 
 Deno.test("rejects empty imports", () => {
@@ -56,6 +56,35 @@ Deno.test("rejects duplicate import names", () => {
     `import { add, add } from "./math.tc"; function main(): i32 { return 0; }`,
     "Duplicate imported name 'add'",
   );
+});
+
+Deno.test("parses class declarations", () => {
+  const program = parse(
+    lex(`class Vec2 { x: f64; y: f64; lengthSquared(): f64 { return this.x; } }
+function main(): i32 { const v: Vec2 = { x: 1.0, y: 2.0 }; return 0; }`),
+  );
+  if (program.typeAliases.length !== 1) throw new Error("Expected class type alias");
+  if (program.typeAliases[0].name !== "Vec2") throw new Error("Expected class type name");
+  if (program.functions.length !== 2) throw new Error("Expected method and main functions");
+  const method = program.functions.find((fn) => fn.name === "Vec2.lengthSquared");
+  if (!method) throw new Error("Expected method");
+  const methodReturn = requireBody(method.body).statements[0];
+  if (methodReturn.kind !== "ReturnStmt") throw new Error("Expected method return");
+  if (methodReturn.expression?.kind !== "FieldAccessExpr") throw new Error("Expected this field");
+});
+
+Deno.test("parses method call expressions", () => {
+  const program = parse(
+    lex(`class Vec2 { x: f64; lengthSquared(): f64 { return this.x; } }
+function main(): i32 { const v: Vec2 = { x: 1.0 }; const d: f64 = v.lengthSquared(); return 0; }`),
+  );
+  const main = program.functions.find((fn) => fn.name === "main");
+  if (!main) throw new Error("Expected main");
+  const statements = requireBody(main.body).statements;
+  const local = statements[1];
+  if (local.kind !== "VarDeclStmt") throw new Error("Expected local declaration");
+  if (local.initializer.kind !== "MethodCallExpr") throw new Error("Expected method call");
+  if (local.initializer.method !== "lengthSquared") throw new Error("Expected method name");
 });
 
 Deno.test("parses enum declarations", () => {

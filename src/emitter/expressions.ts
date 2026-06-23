@@ -1,4 +1,5 @@
 import type { Expression, RecordTypeRef } from "core/ast.ts";
+import { classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCallExpression } from "emitter/calls.ts";
@@ -37,6 +38,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
         emitExpressionExpected,
         emitArrayLiteralExpression,
       );
+    case "MethodCallExpr":
+      return emitMethodCallExpression(expr, context);
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, context);
     case "FieldAccessExpr":
@@ -71,6 +74,31 @@ export function emitExpressionExpected(
     return emitSliceExpression(expr, expectedType, context);
   }
   return emitExpression(expr, context);
+}
+
+function emitMethodCallExpression(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  context: EmitContext,
+): Str {
+  const namespaceCall = emitNamespaceCallExpression(expr, context);
+  if (namespaceCall !== null) return namespaceCall;
+  const receiverType = context.expressionTypes?.get(spanKey(expr.receiver.span))?.type ?? "<error>";
+  const methodName = classMethodName(receiverType, expr.method);
+  const functionName = context.functions.get(methodName)?.cName ?? methodName;
+  const args = [expr.receiver, ...expr.args].map((arg) => emitExpression(arg, context));
+  return `${functionName}(${args.join(", ")})`;
+}
+
+function emitNamespaceCallExpression(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  context: EmitContext,
+): Str | null {
+  if (expr.receiver.kind !== "IdentifierExpr") return null;
+  const callee = `${expr.receiver.name}.${expr.method}`;
+  const fn = context.functions.get(callee) ?? null;
+  if (fn === null) return null;
+  const args = expr.args.map((arg) => emitExpression(arg, context));
+  return `${fn.cName ?? fn.name}(${args.join(", ")})`;
 }
 
 function emitUnaryExpression(

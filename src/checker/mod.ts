@@ -1,6 +1,7 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { ConstDecl, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
+import { classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
@@ -335,6 +336,7 @@ class Checker {
       unary: (value) => this.unaryType(value, locals),
       binary: (value) => this.binaryType(value, locals),
       call: (value) => this.callType(value, locals),
+      methodCall: (value) => this.methodCallType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
       fieldAccess: (value) => this.fieldAccessType(value, locals),
       index: (value) => this.indexType(value, locals),
@@ -379,6 +381,47 @@ class Checker {
     const result = checkCallExpression(
       expr,
       this.functions.get(expr.callee),
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private methodCallType(
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const namespaceCall = this.namespaceCallType(expr, locals);
+    if (namespaceCall !== null) return namespaceCall;
+    const receiverType = this.typeOf(expr.receiver, locals);
+    const methodName = classMethodName(receiverType, expr.method);
+    const result = checkCallExpression(
+      {
+        kind: "CallExpr",
+        callee: methodName,
+        args: [expr.receiver, ...expr.args],
+        span: expr.span,
+      },
+      this.functions.get(methodName),
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private namespaceCallType(
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName | null {
+    if (expr.receiver.kind !== "IdentifierExpr") return null;
+    const callee = `${expr.receiver.name}.${expr.method}`;
+    const fn = this.functions.get(callee);
+    if (!fn) return null;
+    const result = checkCallExpression(
+      { kind: "CallExpr", callee, args: expr.args, span: expr.span },
+      fn,
       (arg, expected) => this.typeOfExpected(arg, locals, expected),
       (arg) => this.typeOf(arg, locals),
     );

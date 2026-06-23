@@ -85,6 +85,12 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         callee: namespaceCallee(expr.callee, namespace, functions),
         args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
       };
+    case "MethodCallExpr":
+      return {
+        ...expr,
+        receiver: namespaceExpression(expr.receiver, namespace, functions),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+      };
     case "UnaryExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
     case "BinaryExpr":

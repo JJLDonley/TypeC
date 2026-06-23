@@ -1320,6 +1320,8 @@ const mode: i32 = RL.FLAG_WINDOW_RESIZABLE;
 
 # Phase 15: Classes and Methods
 
+Status: Complete.
+
 ## Goal
 
 Add static-layout data types with associated functions, lowered predictably to records and
@@ -1346,8 +1348,18 @@ function main(): i32 {
 }
 ```
 
-Constructors, inheritance, access modifiers, and `new` are not part of this phase unless specified
-by a later design update.
+Constructors, inheritance, access modifiers, static members, and `new` are not part of this phase
+unless specified by a later design update.
+
+## Semantics
+
+- A class declaration defines a nominal record-shaped type with the declared fields.
+- A method declaration lowers to a function named by the class scope with an explicit `this`
+  receiver parameter of the class type.
+- A method call `value.method(args)` resolves statically from the receiver type and emits a direct C
+  function call with `value` passed as the first argument.
+- Method bodies may access fields through `this.field`.
+- Class values are initialized with existing record literal syntax.
 
 ## Do
 

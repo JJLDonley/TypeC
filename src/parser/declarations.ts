@@ -1,6 +1,9 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type {
   CastBlockStmt,
+  CastClassDecl,
+  CastClassField,
+  CastClassMethod,
   CastConstDecl,
   CastEnumDecl,
   CastEnumMember,
@@ -13,6 +16,7 @@ import type {
 } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import {
+  classModifierDiagnostics,
   constModifierDiagnostics,
   enumModifierDiagnostics,
   functionModifierDiagnostics,
@@ -53,6 +57,7 @@ export interface DeclarationModifiers {
 export type CastDeclaration =
   | CastImportDecl
   | CastTypeAliasDecl
+  | CastClassDecl
   | CastEnumDecl
   | CastConstDecl
   | CastFunctionDecl;
@@ -61,6 +66,7 @@ export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration
   const modifiers = parseDeclarationModifiers(parser);
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
+  if (parser.checkText("class")) return parseClassDeclaration(parser, modifiers);
   if (parser.checkText("enum")) return parseEnumDeclaration(parser, modifiers);
   if (parser.checkText("const")) return parseConstDeclaration(parser, modifiers);
   return parseFunctionDeclaration(parser, modifiers);
@@ -131,6 +137,68 @@ function parseTypeAliasDeclaration(
     name: name.text,
     type,
     span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseClassDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastClassDecl {
+  parser.diagnostics().push(...classModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("class");
+  const name = parser.expectKind("identifier", "Expected class name");
+  parser.expectText("{");
+  const members = parseClassMembers(parser, modifiers.exported);
+  const close = parser.expectText("}");
+  return {
+    kind: "ClassDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    fields: members.fields,
+    methods: members.methods,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseClassMembers(
+  parser: DeclarationParser,
+  exported: b8,
+): { fields: CastClassField[]; methods: CastClassMethod[] } {
+  const fields: CastClassField[] = [];
+  const methods: CastClassMethod[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    const name = parser.expectKind("identifier", "Expected class member name");
+    if (parser.checkText("(")) methods.push(parseClassMethod(parser, exported, name));
+    else fields.push(parseClassField(parser, name));
+  }
+  return { fields, methods };
+}
+
+function parseClassField(parser: DeclarationParser, name: Token): CastClassField {
+  parser.expectText(":");
+  const type = parser.parseTypeRef();
+  const semi = parser.expectText(";");
+  return { name: name.text, type, span: span(name.span.start, semi.span.end) };
+}
+
+function parseClassMethod(
+  parser: DeclarationParser,
+  exported: b8,
+  name: Token,
+): CastClassMethod {
+  parser.expectText("(");
+  const params = parseFunctionParams(parser);
+  parser.expectText(")");
+  parser.expectText(":");
+  const returnType = parser.parseTypeRef();
+  const body = parser.parseBlock();
+  return {
+    exported,
+    name: name.text,
+    params: params.params,
+    returnType,
+    body,
+    span: span(name.span.start, body.span.end),
   };
 }
 

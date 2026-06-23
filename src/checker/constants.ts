@@ -67,6 +67,7 @@ export function isConstantExpression(
     case "ArrayLiteralExpr":
       return expr.elements.every((element) => isConstantExpression(element, availableConstants));
     case "CallExpr":
+    case "MethodCallExpr":
     case "PostfixPointerExpr":
     case "IndexExpr":
       return false;
