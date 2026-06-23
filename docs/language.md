@@ -178,6 +178,24 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Arenas
+
+TypeC supports explicit region allocation with a built-in opaque `Arena` handle:
+
+```ts
+function main(): i32 {
+  const arena: Arena = arenaCreate();
+  defer arenaDestroy(arena);
+  const value: SafePtr<i32> = arenaAlloc(arena, 1);
+  return 42;
+}
+```
+
+`arenaAlloc(arena, count)` requires an expected `SafePtr<T>` target type and allocates `count`
+contiguous `T` values. Allocation failure aborts through portable C `abort()`. Arena allocations are
+released together by `arenaDestroy`; individual frees and hidden ownership inference are not part of
+this phase.
+
 ## Defer
 
 TypeC supports scope-exit cleanup with call-expression `defer` statements:

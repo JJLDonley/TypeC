@@ -1,4 +1,5 @@
 import type { TypeRef } from "core/ast.ts";
+import { isBuiltinArenaTypeName } from "checker/arenas.ts";
 import { primitiveTypes } from "core/token.ts";
 
 type Str = string;
@@ -30,7 +31,7 @@ export function collectTypeAliasRefs(type: TypeRef): Set<Str> {
 function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
   switch (type.kind) {
     case "NamedTypeRef":
-      if (!primitiveTypes.has(type.name)) refs.add(type.name);
+      if (!primitiveTypes.has(type.name) && !isBuiltinArenaTypeName(type.name)) refs.add(type.name);
       return;
     case "PointerTypeRef":
     case "ReferenceTypeRef":

@@ -118,6 +118,7 @@ function arrayDimension(size: Str, _index: usize): Str {
 }
 
 function emitNamedCType(name: Str, aliases: CTypeAliases): Str {
+  if (name === "Arena") return "__typec_arena*";
   const alias = aliases.get(name);
   if (alias?.cName) return alias.cName;
   return name === "bool" ? "b8" : name;

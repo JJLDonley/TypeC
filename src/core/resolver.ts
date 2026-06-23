@@ -9,6 +9,8 @@ import { type Scope, ScopeTable } from "core/scope.ts";
 type Str = string;
 type b8 = boolean;
 
+const builtinFunctions = new Set<Str>(["arenaCreate", "arenaDestroy", "arenaAlloc"]);
+
 export function resolve(program: Program): ResolvedProgram {
   const resolver = new Resolver(program);
   return resolver.resolve();
@@ -154,7 +156,9 @@ class Resolver {
         this.resolveExpression(expression.right, scope);
         return;
       case "CallExpr":
-        this.requireSymbol(this.globalScope, expression.callee, expression.span);
+        if (!builtinFunctions.has(expression.callee)) {
+          this.requireSymbol(this.globalScope, expression.callee, expression.span);
+        }
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "MethodCallExpr":

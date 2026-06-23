@@ -32,6 +32,42 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for arenas", () => {
+  const source = `
+    function main(): i32 {
+      const arena: Arena = arenaCreate();
+      defer arenaDestroy(arena);
+      const value: SafePtr<i32> = arenaAlloc(arena, 1);
+      return 42;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "typedef struct __typec_arena");
+  assertIncludes(c, "__typec_arena* arena = __typec_arena_create();");
+  assertIncludes(c, "const i32* value = ((i32*)__typec_arena_alloc(arena, sizeof(i32) * 1));");
+  assertInOrder(
+    c,
+    "i32 __typec_return_",
+    "__typec_arena_destroy(arena);",
+    "return __typec_return_",
+  );
+});
+
+Deno.test("rejects arena allocation without safe pointer target", () => {
+  assertCompileError(
+    `function main(): i32 { const arena: Arena = arenaCreate(); arenaAlloc(arena, 1); arenaDestroy(arena); return 0; }`,
+    "arenaAlloc requires expected SafePtr<T> target type",
+  );
+});
+
+Deno.test("compiles arena example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/arena.tc", dir);
+
+  assertIncludes(result.cSource, "__typec_arena_alloc");
+});
+
 Deno.test("emits C for safe pointers", () => {
   const source = `
     function read(value: SafePtr<i32>): i32 { return value.*; }

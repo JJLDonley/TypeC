@@ -1,5 +1,6 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { RecordTypeRef, TypeRef } from "core/ast.ts";
+import { isBuiltinArenaTypeName } from "checker/arenas.ts";
 import { primitiveTypes } from "core/token.ts";
 import {
   checkArrayElementType,
@@ -56,7 +57,11 @@ function checkNamedType(
   if ((type.typeArgs ?? []).length > 0) {
     return [{ message: `Uninstantiated generic type '${type.name}'`, span: type.span }];
   }
-  if (primitiveTypes.has(type.name) || typeAliases.has(type.name)) return [];
+  if (
+    primitiveTypes.has(type.name) || isBuiltinArenaTypeName(type.name) || typeAliases.has(type.name)
+  ) {
+    return [];
+  }
   return [{ message: `Unknown type '${type.name}'`, span: type.span }];
 }
 

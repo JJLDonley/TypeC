@@ -1,6 +1,7 @@
 import type { CheckedProgram } from "checker";
 import { emitCPrelude } from "c/prelude.ts";
 import { createEmitContext, type EmitContext } from "emitter/context.ts";
+import { emitArenaRuntimeSection } from "emitter/arenas.ts";
 import { emitConstantDefinition } from "emitter/constants.ts";
 import { emitEnumConstantDefinitions, emitEnumTypeDefinition } from "emitter/enums.ts";
 import { emitFunctionDefinition } from "emitter/function_definitions.ts";
@@ -14,6 +15,7 @@ export function emitTranslationUnit(program: CheckedProgram): Str {
   const context = createEmitContext(program);
   return [
     ...emitCPrelude(),
+    ...emitArenaRuntimeSection(program),
     ...emitTypeAliasSection(program, context),
     ...emitEnumTypeSection(program),
     ...emitSliceTypeSection(program, context),

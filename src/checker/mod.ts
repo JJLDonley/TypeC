@@ -5,6 +5,7 @@ import { classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
+import { checkArenaCall, checkExpectedArenaCall } from "checker/arenas.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
@@ -313,6 +314,17 @@ class Checker {
     locals: Map<Str, LocalInfo>,
     expected: TypeName,
   ): TypeName {
+    const arena = checkExpectedArenaCall(
+      expr,
+      expected,
+      (value) => this.typeOf(value, locals),
+      (value, target) => this.typeOfExpected(value, locals, target),
+    );
+    if (arena.handled) {
+      this.diagnostics.push(...arena.diagnostics);
+      this.expressionTypes.set(spanKey(expr.span), { type: arena.type });
+      return arena.type;
+    }
     const callback = this.globalCallbackType(expr, locals, expected);
     if (callback?.handled) {
       this.diagnostics.push(...callback.diagnostics);
@@ -388,6 +400,15 @@ class Checker {
     expr: Extract<Expression, { kind: "CallExpr" }>,
     locals: Map<Str, LocalInfo>,
   ): TypeName {
+    const arena = checkArenaCall(
+      expr,
+      (arg) => this.typeOf(arg, locals),
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+    );
+    if (arena.handled) {
+      this.diagnostics.push(...arena.diagnostics);
+      return arena.type;
+    }
     const result = checkCallExpression(
       expr,
       this.functions.get(expr.callee),

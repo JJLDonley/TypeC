@@ -1,5 +1,6 @@
 import type { Expression, FunctionDecl } from "core/ast.ts";
 import { emitCType } from "c/type.ts";
+import { emitArenaCallExpression } from "emitter/arenas.ts";
 import { spanKey } from "checker/exprs.ts";
 import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import type { EmitContext } from "emitter/context.ts";
@@ -24,6 +25,8 @@ export function emitCallExpression(
   emitExpressionExpected: ExpectedExpressionEmitter,
   emitArrayLiteralExpression: ArrayLiteralEmitter,
 ): Str {
+  const arenaCall = emitArenaCallExpression(expr, context, emitExpression);
+  if (arenaCall !== null) return arenaCall;
   const fn = context.functions.get(expr.callee);
   const args = expr.args.map((arg, index) =>
     emitCallArg(

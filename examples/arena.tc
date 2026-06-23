@@ -1,0 +1,6 @@
+function main(): i32 {
+  const arena: Arena = arenaCreate();
+  defer arenaDestroy(arena);
+  const value: SafePtr<i32> = arenaAlloc(arena, 1);
+  return 42;
+}

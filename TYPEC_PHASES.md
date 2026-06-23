@@ -1635,19 +1635,36 @@ No other pointer modes are specified in Phase 19.
 
 # Phase 20: Arenas
 
-Implementation status: optional systems feature, not started.
+Status: Complete.
 
 ## Goal
 
 Add explicit region-style allocation as a standard memory-management pattern.
 
-## Syntax Direction
+## Syntax
 
-Use Zig-inspired systems syntax that does not collide with TypeScript class, interface, or generic
-syntax. Exact syntax remains unspecified until a dedicated design update defines arena declarations,
-allocation calls, failure behavior, lowering, examples, and tests.
+Phase 20 introduces one built-in arena handle type and three built-in functions:
 
-The syntax must make arena lifetime explicit at allocation and cleanup sites.
+```ts
+const arena: Arena = arenaCreate();
+defer arenaDestroy(arena);
+const value: SafePtr<i32> = arenaAlloc(arena, 1);
+```
+
+- `Arena` is an opaque non-owning handle in TypeC source; emitted C represents it as a pointer to a
+  TypeC runtime arena object.
+- `arenaCreate(): Arena` creates an arena handle.
+- `arenaDestroy(arena: Arena): void` releases every allocation owned by the arena and the arena
+  handle itself. It is intended to be paired with `defer` at the creation scope.
+- `arenaAlloc(arena: Arena, count: usize)` requires an expected `SafePtr<T>` target type and returns
+  storage for `count` contiguous `T` values.
+- Allocation failure aborts the process through portable C `abort()`; Phase 20 does not add nullable
+  pointers, exceptions, or result types.
+- Arena allocation is non-GC region allocation. Individual arena allocations cannot be freed.
+- `arenaAlloc` lowers to an explicit runtime allocation call using `sizeof(T) * count`.
+
+No other arena declarations, allocation forms, failure modes, or ownership inference are specified
+in Phase 20.
 
 ## Do
 
