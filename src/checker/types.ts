@@ -26,8 +26,21 @@ const numericTypes = new Set<Str>([
   "u32",
   "u64",
   "usize",
+  "c_char",
+  "c_schar",
+  "c_uchar",
+  "c_short",
+  "c_ushort",
+  "c_int",
+  "c_uint",
+  "c_long",
+  "c_ulong",
+  "c_longlong",
+  "c_ulonglong",
   "f32",
   "f64",
+  "c_float",
+  "c_double",
 ]);
 const integerRanges = new Map<Str, IntegerRange>([
   ["i8", { min: -128n, max: 127n }],
@@ -38,6 +51,17 @@ const integerRanges = new Map<Str, IntegerRange>([
   ["u16", { min: 0n, max: 65535n }],
   ["u32", { min: 0n, max: 4294967295n }],
   ["u64", { min: 0n, max: 18446744073709551615n }],
+  ["c_char", { min: -128n, max: 127n }],
+  ["c_schar", { min: -128n, max: 127n }],
+  ["c_uchar", { min: 0n, max: 255n }],
+  ["c_short", { min: -32768n, max: 32767n }],
+  ["c_ushort", { min: 0n, max: 65535n }],
+  ["c_int", { min: -2147483648n, max: 2147483647n }],
+  ["c_uint", { min: 0n, max: 4294967295n }],
+  ["c_long", { min: -9223372036854775808n, max: 9223372036854775807n }],
+  ["c_ulong", { min: 0n, max: 18446744073709551615n }],
+  ["c_longlong", { min: -9223372036854775808n, max: 9223372036854775807n }],
+  ["c_ulonglong", { min: 0n, max: 18446744073709551615n }],
 ]);
 
 export const maxF32: f64 = 3.4028234663852886e38;
@@ -52,11 +76,14 @@ export function isNumericType(type: TypeName): b8 {
 
 export function isIntegerType(type: TypeName): b8 {
   return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" ||
-    type === "u16" || type === "u32" || type === "u64" || type === "usize";
+    type === "u16" || type === "u32" || type === "u64" || type === "usize" ||
+    type === "c_char" || type === "c_schar" || type === "c_uchar" || type === "c_short" ||
+    type === "c_ushort" || type === "c_int" || type === "c_uint" || type === "c_long" ||
+    type === "c_ulong" || type === "c_longlong" || type === "c_ulonglong";
 }
 
 export function isFloatType(type: TypeName): b8 {
-  return type === "f32" || type === "f64";
+  return type === "f32" || type === "f64" || type === "c_float" || type === "c_double";
 }
 
 export function isAssignable(actual: TypeName, expected: TypeName): b8 {

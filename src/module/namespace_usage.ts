@@ -81,6 +81,7 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
       collectExpression(expression.right, namespace, members);
       return;
     case "CallExpr":
+      collectQualifiedName(expression.callee, namespace, members);
       for (const typeArg of expression.typeArgs ?? []) collectType(typeArg, namespace, members);
       for (const arg of expression.args) collectExpression(arg, namespace, members);
       return;
@@ -148,6 +149,10 @@ function collectType(type: TypeRef, namespace: Str, members: Set<Str>): void {
 }
 
 function collectNamedType(name: Str, namespace: Str, members: Set<Str>): void {
+  collectQualifiedName(name, namespace, members);
+}
+
+function collectQualifiedName(name: Str, namespace: Str, members: Set<Str>): void {
   const prefix = `${namespace}.`;
   if (!name.startsWith(prefix)) return;
   const member = name.slice(prefix.length).split(".")[0];

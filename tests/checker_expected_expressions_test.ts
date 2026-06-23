@@ -14,6 +14,7 @@ const span: SourceSpan = {
 
 Deno.test("checks expected primitive expressions", () => {
   const intResult = checkExpectedExpression(integer("1"), "i64", aliases(), resolveExpected);
+  const cIntResult = checkExpectedExpression(integer("1"), "c_int", aliases(), resolveExpected);
   const floatResult = checkExpectedExpression(float("1.0"), "f32", aliases(), resolveExpected);
   const stringResult = checkExpectedExpression(
     stringLiteral("hi"),
@@ -24,6 +25,8 @@ Deno.test("checks expected primitive expressions", () => {
 
   assertHandled(intResult.handled);
   assertText(intResult.type, "i64");
+  assertHandled(cIntResult.handled);
+  assertText(cIntResult.type, "c_int");
   assertHandled(floatResult.handled);
   assertText(floatResult.type, "f32");
   assertHandled(stringResult.handled);
