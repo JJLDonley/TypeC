@@ -2949,6 +2949,59 @@ function main(): i32 {
 
 ---
 
+# Phase 42: Static Class Inheritance
+
+Status: Complete.
+
+## Goal
+
+Add a narrow, static `extends` subset for class field/method reuse without JavaScript prototype
+semantics or runtime dispatch.
+
+## Syntax
+
+```ts
+class Entity {
+  x: i32;
+  move(dx: i32): void {
+    this.x += dx;
+  }
+}
+
+class Ship extends Entity {
+  hp: i32;
+}
+```
+
+## Semantics
+
+- A class may extend one concrete class.
+- Inherited fields are flattened into the child record layout before child fields.
+- Inherited methods are copied for static dispatch on the child type unless the child declares a
+  method with the same name.
+- Child classes do not inherit constructors; each class still needs its own constructor for
+  `new Class(...)`.
+- There is no implicit subtype conversion from child to parent.
+- There are no prototypes, vtables, virtual dispatch, `super`, protected/private access rules, or
+  JavaScript runtime semantics.
+
+## Do
+
+- Parse `class Child extends Parent { ... }` and `class Child extends Parent implements I { ... }`.
+- Reject unknown base classes and inheritance cycles.
+- Flatten inherited fields and copy inherited methods during class lowering.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add runtime dispatch or vtables.
+- Do not add `super`.
+- Do not inherit constructors.
+- Do not add implicit subtyping or interface values.
+- Do not copy JavaScript prototype behavior.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

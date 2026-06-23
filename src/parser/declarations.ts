@@ -160,6 +160,7 @@ function parseClassDeclaration(
   const start = parser.expectText("class");
   const name = parser.expectKind("identifier", "Expected class name");
   const genericParams = parseGenericParams(parser);
+  const baseClass = parseClassExtends(parser);
   const implemented = parseClassImplements(parser);
   parser.expectText("{");
   const members = parseClassMembers(parser, modifiers.exported);
@@ -169,12 +170,18 @@ function parseClassDeclaration(
     exported: modifiers.exported,
     name: name.text,
     genericParams,
+    extends: baseClass,
     implements: implemented,
     fields: members.fields,
     constructorDecl: members.constructorDecl,
     methods: members.methods,
     span: span(start.span.start, close.span.end),
   };
+}
+
+function parseClassExtends(parser: DeclarationParser): CastTypeRef | null {
+  if (!parser.matchText("extends")) return null;
+  return parser.parseTypeRef();
 }
 
 function parseClassImplements(parser: DeclarationParser): CastTypeRef[] {

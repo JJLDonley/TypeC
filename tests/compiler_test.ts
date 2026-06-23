@@ -330,6 +330,44 @@ Deno.test("compiles interface example", async () => {
   assertIncludes(result.cSource, "Point_lengthSquared");
 });
 
+Deno.test("emits C for static class inheritance", () => {
+  const source = `
+    class Entity {
+      x: i32;
+      shifted(dx: i32): i32 { return this.x + dx; }
+    }
+    class Ship extends Entity {
+      hp: i32;
+      constructor(x: i32, hp: i32) {
+        this.x = x;
+        this.hp = hp;
+      }
+    }
+    function main(): i32 {
+      const ship: Ship = new Ship(1, 2);
+      return ship.shifted(3) + ship.hp;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "typedef struct {");
+  assertInOrder(c, "i32 x;", "i32 hp;");
+  assertIncludes(c, "static i32 Ship_shifted(Ship this, i32 dx)");
+  assertIncludes(c, "const Ship ship = Ship_new(1, 2);");
+  assertIncludes(c, "Ship_shifted(ship, 3)");
+});
+
+Deno.test("rejects invalid class inheritance", () => {
+  assertCompileError(
+    `class Ship extends Missing { hp: i32; } function main(): i32 { return 0; }`,
+    "Unknown base class 'Missing'",
+  );
+  assertCompileError(
+    `class A extends B { a: i32; } class B extends A { b: i32; } function main(): i32 { return 0; }`,
+    "Inheritance cycle involving 'A'",
+  );
+});
+
 Deno.test("emits C for class constructors and new expressions", () => {
   const source = `
     class Point {

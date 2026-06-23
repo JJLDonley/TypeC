@@ -18,7 +18,7 @@ arr[i] = value;
 obj.pos.x += dx;
 ```
 
-The largest remaining ergonomic gap is class inheritance/dispatch.
+The largest remaining ergonomic gap is runtime dispatch/interface values.
 
 ## Support Matrix
 
@@ -73,14 +73,14 @@ The largest remaining ergonomic gap is class inheritance/dispatch.
 | Tagged unions                       | Implemented        | Explicit `union` declarations, not TS `A \| B` type unions.                                           |
 | TS union types `A \| B`             | Not implemented    | Use tagged unions instead.                                                                            |
 | Intersection types `A & B`          | Not implemented    | Not yet specified.                                                                                    |
-| Classes                             | Partial            | Static layout, constructors, and methods lower to records/functions; no inheritance.                  |
-| Class fields                        | Partial            | Static layout, constructor initialization, and field assignment; no inheritance.                      |
-| Class methods                       | Partial            | Calls and mutation through fields work; no inheritance/dispatch.                                      |
+| Classes                             | Partial            | Static layout, constructors, methods, and static inheritance lower to records/functions.              |
+| Class fields                        | Partial            | Static layout, constructor initialization, field assignment, and inherited field flattening.          |
+| Class methods                       | Partial            | Calls and inherited method reuse work; dispatch is static, not virtual.                               |
 | `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                               |
 | Constructors                        | Implemented subset | Value-returning `new Class(...)`; no heap allocation, overloads, `super`, or parameter properties.    |
 | Class `implements`                  | Implemented        | Explicit static interface contracts; no runtime dispatch.                                             |
-| Class inheritance `extends`         | Not implemented    | No superclass/prototype model.                                                                        |
-| Method overriding                   | Not implemented    | Requires inheritance/dispatch design.                                                                 |
+| Class inheritance `extends`         | Partial            | Single concrete static base class; fields flatten and methods copy; no prototypes/subtyping/`super`.  |
+| Method overriding                   | Partial            | Child method with same name replaces copied base method for static dispatch only.                     |
 | Interfaces                          | Partial            | Static method signatures for generic constraints; not runtime values.                                 |
 | Generics                            | Partial            | Compile-time generics/monomorphization; limited inference.                                            |
 | Generic constraints                 | Implemented        | `T extends InterfaceName` style constraints.                                                          |

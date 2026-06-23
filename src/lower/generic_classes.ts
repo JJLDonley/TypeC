@@ -56,12 +56,15 @@ export function instantiateGenericClasses(program: CastProgram): CastProgram {
   const concrete = concreteClassTemplates(program.classes ?? []);
   const instantiator = new GenericClassInstantiator(templates, concrete, program.interfaces ?? []);
   const rewritten = templates.size === 0 ? program : instantiator.rewriteProgram(program);
+  const inheritance = resolveClassInheritance(rewritten.classes ?? []);
+  if (inheritance.diagnostics.length > 0) throw new TypeCError(inheritance.diagnostics);
+  const inherited = { ...rewritten, classes: inheritance.classes };
   const implementationDiagnostics = classImplementationDiagnostics(
-    rewritten.classes ?? [],
-    rewritten.interfaces ?? [],
+    inherited.classes ?? [],
+    inherited.interfaces ?? [],
   );
   if (implementationDiagnostics.length > 0) throw new TypeCError(implementationDiagnostics);
-  return rewritten;
+  return inherited;
 }
 
 function genericClassTemplates(classes: CastClassDecl[]): Map<Str, CastClassDecl> {
@@ -152,6 +155,7 @@ class GenericClassInstantiator {
     return {
       ...classDecl,
       genericParams: [],
+      extends: classDecl.extends ? this.rewriteTypeRef(classDecl.extends) : null,
       implements: classDecl.implements?.map((value) => this.rewriteTypeRef(value)) ?? [],
       fields: classDecl.fields.map((field) => ({
         ...field,
@@ -524,6 +528,7 @@ class GenericClassInstantiator {
       exported: false,
       name,
       genericParams: [],
+      extends: template.extends ? substituteTypeRef(template.extends, substitutions) : null,
       implements: template.implements?.map((value) => substituteTypeRef(value, substitutions)) ??
         [],
       fields: template.fields.map((field) => ({
@@ -720,6 +725,90 @@ function substituteParam(param: CastParam, substitutions: CastTypeSubstitutions)
 function substituteTypeRef(type: CastTypeRef, substitutions: CastTypeSubstitutions): CastTypeRef {
   if (type.kind === "NamedTypeRef") return substitutions.get(type.name) ?? type;
   return rewriteTypeChildren(type, (child) => substituteTypeRef(child, substitutions));
+}
+
+interface ClassInheritanceResult {
+  classes: CastClassDecl[];
+  diagnostics: Diagnostic[];
+}
+
+function resolveClassInheritance(classes: CastClassDecl[]): ClassInheritanceResult {
+  const resolver = new ClassInheritanceResolver(classes);
+  return resolver.resolve();
+}
+
+class ClassInheritanceResolver {
+  private diagnostics: Diagnostic[] = [];
+  private resolved = new Map<Str, CastClassDecl>();
+  private classMap: Map<Str, CastClassDecl>;
+
+  constructor(private classes: CastClassDecl[]) {
+    this.classMap = new Map(classes.map((classDecl) => [classDecl.name, classDecl]));
+  }
+
+  resolve(): ClassInheritanceResult {
+    const resolved = this.classes.map((classDecl) => this.resolveClass(classDecl, []));
+    return { classes: resolved, diagnostics: this.diagnostics };
+  }
+
+  private resolveClass(classDecl: CastClassDecl, stack: Str[]): CastClassDecl {
+    const existing = this.resolved.get(classDecl.name);
+    if (existing) return existing;
+    if (stack.includes(classDecl.name)) {
+      this.diagnostics.push({
+        message: `Inheritance cycle involving '${classDecl.name}'`,
+        span: classDecl.span,
+      });
+      return classDecl;
+    }
+    if (!classDecl.extends) {
+      this.resolved.set(classDecl.name, classDecl);
+      return classDecl;
+    }
+    const baseRef = classDecl.extends;
+    if (baseRef.kind !== "NamedTypeRef" || (baseRef.typeArgs ?? []).length > 0) {
+      this.diagnostics.push({
+        message: "Class extends entries must be concrete class names",
+        span: baseRef.span,
+      });
+      this.resolved.set(classDecl.name, classDecl);
+      return classDecl;
+    }
+    const base = this.classMap.get(baseRef.name) ?? null;
+    if (base === null) {
+      this.diagnostics.push({
+        message: `Unknown base class '${baseRef.name}'`,
+        span: baseRef.span,
+      });
+      this.resolved.set(classDecl.name, classDecl);
+      return classDecl;
+    }
+    const resolvedBase = this.resolveClass(base, [...stack, classDecl.name]);
+    const inherited = this.inheritClass(classDecl, resolvedBase);
+    this.resolved.set(classDecl.name, inherited);
+    return inherited;
+  }
+
+  private inheritClass(classDecl: CastClassDecl, base: CastClassDecl): CastClassDecl {
+    const ownFields = new Set(classDecl.fields.map((field) => field.name));
+    const conflictingField = base.fields.find((field) => ownFields.has(field.name));
+    if (conflictingField) {
+      this.diagnostics.push({
+        message:
+          `Class '${classDecl.name}' field '${conflictingField.name}' conflicts with inherited field`,
+        span: conflictingField.span,
+      });
+    }
+    const ownMethods = new Set(classDecl.methods.map((method) => method.name));
+    return {
+      ...classDecl,
+      fields: [...base.fields, ...classDecl.fields],
+      methods: [
+        ...base.methods.filter((method) => !ownMethods.has(method.name)),
+        ...classDecl.methods,
+      ],
+    };
+  }
 }
 
 function classImplementationDiagnostics(

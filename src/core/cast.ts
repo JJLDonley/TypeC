@@ -46,6 +46,7 @@ export interface CastClassDecl {
   exported: b8;
   name: Str;
   genericParams?: CastGenericParam[];
+  extends?: CastTypeRef | null;
   implements?: CastTypeRef[];
   fields: CastClassField[];
   constructorDecl: CastClassConstructor | null;

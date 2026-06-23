@@ -129,6 +129,17 @@ Deno.test("parses generic function declarations and calls", () => {
   if ((statement.expression.typeArgs ?? []).length !== 1) throw new Error("Expected type argument");
 });
 
+Deno.test("parses class extends declarations", () => {
+  const program = parseCast(
+    lex(
+      `class Entity { x: i32; } class Ship extends Entity { hp: i32; } function main(): i32 { return 0; }`,
+    ),
+  );
+
+  const ship = (program.classes ?? [])[1];
+  if (!ship?.extends) throw new Error("Expected base class");
+});
+
 Deno.test("parses class constructors and new expressions", () => {
   const program = parseCast(
     lex(
