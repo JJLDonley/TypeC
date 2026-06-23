@@ -22,6 +22,7 @@ import type {
   CastReturnStmt,
   CastStatement,
   CastSwitchStmt,
+  CastTaggedUnionDecl,
   CastTypeAliasDecl,
   CastTypeRef,
   CastUnaryExpr,
@@ -106,6 +107,9 @@ class GenericClassInstantiator {
       interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
         this.rewriteInterface(interfaceDecl)
       ),
+      taggedUnions: (program.taggedUnions ?? []).map((unionDecl) =>
+        this.rewriteTaggedUnion(unionDecl)
+      ),
       constants: (program.constants ?? []).map((constant) => this.rewriteConst(constant)),
       functions: program.functions.map((fn) => this.rewriteFunction(fn)),
     };
@@ -118,6 +122,16 @@ class GenericClassInstantiator {
 
   private rewriteTypeAlias(typeAlias: CastTypeAliasDecl): CastTypeAliasDecl {
     return { ...typeAlias, type: this.rewriteTypeRef(typeAlias.type) };
+  }
+
+  private rewriteTaggedUnion(unionDecl: CastTaggedUnionDecl): CastTaggedUnionDecl {
+    return {
+      ...unionDecl,
+      variants: unionDecl.variants.map((variant) => ({
+        ...variant,
+        payload: variant.payload ? this.rewriteTypeRef(variant.payload) : null,
+      })),
+    };
   }
 
   private rewriteClass(classDecl: CastClassDecl): CastClassDecl {

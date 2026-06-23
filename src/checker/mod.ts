@@ -29,6 +29,10 @@ import { checkReturnStatement as collectReturnStatementDiagnostics } from "check
 import { checkUnaryExpression } from "checker/unary_expressions.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStatementDispatch } from "checker/statements.ts";
+import {
+  checkTaggedUnionConstructor,
+  checkTaggedUnionFieldAccess,
+} from "checker/tagged_union_expressions.ts";
 import { checkSwitchStatement } from "checker/switch_statements.ts";
 import { typeName } from "core/type_ref.ts";
 
@@ -423,6 +427,15 @@ class Checker {
     expr: Extract<Expression, { kind: "MethodCallExpr" }>,
     locals: Map<Str, LocalInfo>,
   ): TypeName {
+    const unionConstructor = checkTaggedUnionConstructor(
+      expr,
+      this.program.taggedUnions ?? [],
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+    );
+    if (unionConstructor.handled) {
+      this.diagnostics.push(...unionConstructor.diagnostics);
+      return unionConstructor.type;
+    }
     const namespaceCall = this.namespaceCallType(expr, locals);
     if (namespaceCall !== null) return namespaceCall;
     const receiverType = this.typeOf(expr.receiver, locals);
@@ -467,6 +480,11 @@ class Checker {
     const constant = this.qualifiedConstant(expr);
     if (constant) return typeName(constant.type);
     const operand = this.typeOf(expr.operand, locals);
+    const unionAccess = checkTaggedUnionFieldAccess(expr, operand, this.program.taggedUnions ?? []);
+    if (unionAccess.handled) {
+      this.diagnostics.push(...unionAccess.diagnostics);
+      return unionAccess.type;
+    }
     const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
     this.diagnostics.push(...result.diagnostics);
     return result.type;

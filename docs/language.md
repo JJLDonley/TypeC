@@ -178,6 +178,30 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Tagged Unions
+
+TypeC supports explicit tagged union declarations:
+
+```ts
+union MaybeI32 {
+  Some: i32;
+  None;
+}
+
+function main(): i32 {
+  const value: MaybeI32 = MaybeI32.Some(42);
+  switch (value.tag) {
+    case 0:
+      return value.Some;
+    default:
+      return 0;
+  }
+}
+```
+
+Variants are constructed with qualified calls. Payload access is explicit through a field named
+after the variant. This phase does not add pattern matching or exhaustiveness checking.
+
 ## Arenas
 
 TypeC supports explicit region allocation with a built-in opaque `Arena` handle:

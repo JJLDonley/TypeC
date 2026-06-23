@@ -6,6 +6,7 @@ import type {
   ImportDecl,
   InterfaceDecl,
   Param,
+  TaggedUnionDecl,
   TypeAliasDecl,
 } from "core/ast.ts";
 import type {
@@ -16,6 +17,7 @@ import type {
   CastImportDecl,
   CastInterfaceDecl,
   CastParam,
+  CastTaggedUnionDecl,
   CastTypeAliasDecl,
 } from "core/cast.ts";
 import { lowerExpression } from "lower/expressions.ts";
@@ -79,6 +81,22 @@ export function lowerInterfaceDecl(interfaceDecl: CastInterfaceDecl): InterfaceD
       span: method.span,
     })),
     span: interfaceDecl.span,
+  };
+}
+
+export function lowerTaggedUnionDecl(unionDecl: CastTaggedUnionDecl): TaggedUnionDecl {
+  return {
+    kind: "TaggedUnionDecl",
+    exported: unionDecl.exported,
+    name: unionDecl.name,
+    cName: unionDecl.cName,
+    variants: unionDecl.variants.map((variant) => ({
+      name: variant.name,
+      cName: variant.cName,
+      payload: variant.payload ? lowerTypeRef(variant.payload) : null,
+      span: variant.span,
+    })),
+    span: unionDecl.span,
   };
 }
 

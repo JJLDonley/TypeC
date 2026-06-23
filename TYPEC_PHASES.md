@@ -1684,20 +1684,47 @@ in Phase 20.
 
 # Phase 21: Tagged Unions
 
-Implementation status: optional systems feature, not started.
+Status: In progress. Minimal explicit `union` subset specified before implementation.
 
 ## Goal
 
 Add sum types with explicit variants and payloads.
 
-## Syntax Direction
+## Syntax
 
-Use Zig-inspired systems syntax that does not collide with TypeScript class, interface, or generic
-syntax. Exact syntax remains unspecified until a dedicated design update defines variant
-declarations, construction, access, exhaustiveness expectations, lowering, examples, and tests.
+Phase 21 introduces one tagged union declaration form:
 
-Candidate syntax should make tags and payloads explicit and should lower predictably to a tag plus
-payload storage.
+```ts
+union MaybeI32 {
+  Some: i32;
+  None;
+}
+```
+
+Construction is explicit through qualified variant calls:
+
+```ts
+const value: MaybeI32 = MaybeI32.Some(42);
+const empty: MaybeI32 = MaybeI32.None();
+```
+
+Access is explicit through fields:
+
+```ts
+value.tag; // i32 tag value
+value.Some; // payload field for payload variants
+```
+
+Phase 21 does not add pattern matching or exhaustiveness checking. Existing `switch` may switch on
+`.tag`. Payload access is unchecked at runtime in this minimal phase; programs must check `.tag`
+first when needed.
+
+## Representation
+
+A tagged union lowers to a C struct with an `i32 tag` field and a C `union data` field. Each variant
+gets a deterministic `i32` tag constant in declaration order starting at zero. Payload variants
+store payloads in `data.<Variant>`. Payload-free variants have no payload field. Construction emits
+a C compound literal setting `tag` and, for payload variants, the corresponding payload field.
 
 ## Do
 

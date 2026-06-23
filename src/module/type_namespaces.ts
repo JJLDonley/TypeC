@@ -1,4 +1,11 @@
-import type { FunctionDecl, InterfaceDecl, Program, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type {
+  FunctionDecl,
+  InterfaceDecl,
+  Program,
+  TaggedUnionDecl,
+  TypeAliasDecl,
+  TypeRef,
+} from "core/ast.ts";
 
 type Str = string;
 
@@ -7,6 +14,7 @@ export function namespaceProgramTypes(program: Program, namespace: Str): Program
     ...program.typeAliases.map((typeAlias) => typeAlias.name),
     ...(program.interfaces ?? []).map((interfaceDecl) => interfaceDecl.name),
     ...(program.enums ?? []).map((enumDecl) => enumDecl.name),
+    ...(program.taggedUnions ?? []).map((unionDecl) => unionDecl.name),
   ]);
   return {
     ...program,
@@ -15,6 +23,9 @@ export function namespaceProgramTypes(program: Program, namespace: Str): Program
     ),
     interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
       namespaceInterface(interfaceDecl, namespace, aliases)
+    ),
+    taggedUnions: (program.taggedUnions ?? []).map((unionDecl) =>
+      namespaceTaggedUnion(unionDecl, namespace, aliases)
     ),
     functions: program.functions.map((fn) => namespaceFunctionTypes(fn, namespace, aliases)),
   };
@@ -45,6 +56,20 @@ function namespaceInterface(
         type: namespaceTypeRef(param.type, namespace, aliases),
       })),
       returnType: namespaceTypeRef(method.returnType, namespace, aliases),
+    })),
+  };
+}
+
+function namespaceTaggedUnion(
+  unionDecl: TaggedUnionDecl,
+  namespace: Str,
+  aliases: Set<Str>,
+): TaggedUnionDecl {
+  return {
+    ...unionDecl,
+    variants: unionDecl.variants.map((variant) => ({
+      ...variant,
+      payload: variant.payload ? namespaceTypeRef(variant.payload, namespace, aliases) : null,
     })),
   };
 }

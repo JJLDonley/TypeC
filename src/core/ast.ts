@@ -10,6 +10,7 @@ export interface Program {
   imports: ImportDecl[];
   typeAliases: TypeAliasDecl[];
   interfaces?: InterfaceDecl[];
+  taggedUnions?: TaggedUnionDecl[];
   enums?: EnumDecl[];
   constants?: ConstDecl[];
   functions: FunctionDecl[];
@@ -45,6 +46,22 @@ export interface InterfaceMethod {
   name: Str;
   params: Param[];
   returnType: TypeRef;
+  span: SourceSpan;
+}
+
+export interface TaggedUnionDecl {
+  kind: "TaggedUnionDecl";
+  exported: b8;
+  name: Str;
+  cName?: Str | null;
+  variants: TaggedUnionVariant[];
+  span: SourceSpan;
+}
+
+export interface TaggedUnionVariant {
+  name: Str;
+  cName?: Str | null;
+  payload: TypeRef | null;
   span: SourceSpan;
 }
 

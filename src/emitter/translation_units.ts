@@ -5,6 +5,7 @@ import { emitArenaRuntimeSection } from "emitter/arenas.ts";
 import { emitConstantDefinition } from "emitter/constants.ts";
 import { emitEnumConstantDefinitions, emitEnumTypeDefinition } from "emitter/enums.ts";
 import { emitFunctionDefinition } from "emitter/function_definitions.ts";
+import { emitTaggedUnionConstants, emitTaggedUnionTypeDefinition } from "emitter/tagged_unions.ts";
 import { collectFunctionPrototypes } from "emitter/function_prototypes.ts";
 import { collectSliceTypeDefinitions } from "emitter/slice_types.ts";
 import { collectEmittedTypeAliases } from "emitter/type_alias_collection.ts";
@@ -18,6 +19,7 @@ export function emitTranslationUnit(program: CheckedProgram): Str {
     ...emitArenaRuntimeSection(program),
     ...emitTypeAliasSection(program, context),
     ...emitEnumTypeSection(program),
+    ...emitTaggedUnionTypeSection(program, context),
     ...emitSliceTypeSection(program, context),
     ...emitConstantSection(program, context),
     ...emitFunctionPrototypeSection(program, context),
@@ -35,6 +37,15 @@ function emitTypeAliasSection(program: CheckedProgram, context: EmitContext): St
 
 function emitEnumTypeSection(program: CheckedProgram): Str[] {
   return (program.enums ?? []).flatMap((enumDecl) => [emitEnumTypeDefinition(enumDecl), ""]);
+}
+
+function emitTaggedUnionTypeSection(program: CheckedProgram, context: EmitContext): Str[] {
+  return (program.taggedUnions ?? []).flatMap((unionDecl) => [
+    emitTaggedUnionTypeDefinition(unionDecl, context),
+    "",
+    ...emitTaggedUnionConstants(unionDecl),
+    "",
+  ]);
 }
 
 function emitSliceTypeSection(program: CheckedProgram, context: EmitContext): Str[] {

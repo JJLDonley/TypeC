@@ -8,6 +8,7 @@ import {
   lowerFunctionDecl,
   lowerImportDecl,
   lowerInterfaceDecl,
+  lowerTaggedUnionDecl,
   lowerTypeAliasDecl,
 } from "lower/declarations.ts";
 import { instantiateGenericClasses } from "lower/generic_classes.ts";
@@ -22,6 +23,7 @@ export function lowerCast(program: CastProgram): Program {
       ...(cast.classes ?? []).map(lowerClassTypeAlias),
     ],
     interfaces: (cast.interfaces ?? []).map(lowerInterfaceDecl),
+    taggedUnions: (cast.taggedUnions ?? []).map(lowerTaggedUnionDecl),
     enums: (cast.enums ?? []).map(lowerEnumDecl),
     constants: (cast.constants ?? []).map(lowerConstDecl),
     functions: [

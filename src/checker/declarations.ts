@@ -2,6 +2,7 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { ConstDecl, FunctionDecl, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkValueType } from "checker/value_types.ts";
+import { checkTaggedUnions } from "checker/tagged_unions.ts";
 import { checkTypeAliasOrder } from "checker/type_alias_order.ts";
 import { checkTypeRef } from "checker/type_validation.ts";
 
@@ -20,6 +21,7 @@ export function checkDeclarations(program: ResolvedProgram): CheckedDeclarations
   const constants = collectConstants(program);
   const diagnostics = [
     ...checkTypeAliases(program, typeAliases),
+    ...checkTaggedUnions(program.taggedUnions ?? [], typeAliases),
     ...checkConstants(program, typeAliases),
     ...checkFunctions(program, typeAliases),
   ];
@@ -32,6 +34,10 @@ function collectTypeAliases(program: ResolvedProgram): Map<Str, TypeRef> {
     ...(program.enums ?? []).map((enumDecl): [Str, TypeRef] => [
       enumDecl.name,
       { kind: "NamedTypeRef", name: "i32", span: enumDecl.span },
+    ]),
+    ...(program.taggedUnions ?? []).map((unionDecl): [Str, TypeRef] => [
+      unionDecl.name,
+      { kind: "NamedTypeRef", name: unionDecl.name, span: unionDecl.span },
     ]),
   ]);
 }

@@ -14,6 +14,8 @@ import type {
   CastInterfaceDecl,
   CastInterfaceMethod,
   CastParam,
+  CastTaggedUnionDecl,
+  CastTaggedUnionVariant,
   CastTypeAliasDecl,
   CastTypeRef,
 } from "core/cast.ts";
@@ -63,6 +65,7 @@ export type CastDeclaration =
   | CastTypeAliasDecl
   | CastClassDecl
   | CastInterfaceDecl
+  | CastTaggedUnionDecl
   | CastEnumDecl
   | CastConstDecl
   | CastFunctionDecl;
@@ -73,6 +76,7 @@ export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
   if (parser.checkText("class")) return parseClassDeclaration(parser, modifiers);
   if (parser.checkText("interface")) return parseInterfaceDeclaration(parser, modifiers);
+  if (parser.checkText("union")) return parseTaggedUnionDeclaration(parser, modifiers);
   if (parser.checkText("enum")) return parseEnumDeclaration(parser, modifiers);
   if (parser.checkText("const")) return parseConstDeclaration(parser, modifiers);
   return parseFunctionDeclaration(parser, modifiers);
@@ -251,6 +255,40 @@ function parseInterfaceMethod(parser: DeclarationParser): CastInterfaceMethod {
     returnType,
     span: span(name.span.start, semi.span.end),
   };
+}
+
+function parseTaggedUnionDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastTaggedUnionDecl {
+  parser.diagnostics().push(...enumModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("union");
+  const name = parser.expectKind("identifier", "Expected union name");
+  parser.expectText("{");
+  const variants = parseTaggedUnionVariants(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "TaggedUnionDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    variants,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseTaggedUnionVariants(parser: DeclarationParser): CastTaggedUnionVariant[] {
+  const variants: CastTaggedUnionVariant[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    variants.push(parseTaggedUnionVariant(parser));
+  }
+  return variants;
+}
+
+function parseTaggedUnionVariant(parser: DeclarationParser): CastTaggedUnionVariant {
+  const name = parser.expectKind("identifier", "Expected union variant name");
+  const payload = parser.matchText(":") ? parser.parseTypeRef() : null;
+  const semi = parser.expectText(";");
+  return { name: name.text, payload, span: span(name.span.start, semi.span.end) };
 }
 
 function parseEnumDeclaration(

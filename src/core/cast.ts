@@ -11,6 +11,7 @@ export interface CastProgram {
   typeAliases: CastTypeAliasDecl[];
   classes?: CastClassDecl[];
   interfaces?: CastInterfaceDecl[];
+  taggedUnions?: CastTaggedUnionDecl[];
   enums?: CastEnumDecl[];
   constants?: CastConstDecl[];
   functions: CastFunctionDecl[];
@@ -71,6 +72,22 @@ export interface CastInterfaceMethod {
   name: Str;
   params: CastParam[];
   returnType: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastTaggedUnionDecl {
+  kind: "TaggedUnionDecl";
+  exported: b8;
+  name: Str;
+  cName?: Str | null;
+  variants: CastTaggedUnionVariant[];
+  span: SourceSpan;
+}
+
+export interface CastTaggedUnionVariant {
+  name: Str;
+  cName?: Str | null;
+  payload: CastTypeRef | null;
   span: SourceSpan;
 }
 

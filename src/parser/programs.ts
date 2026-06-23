@@ -8,6 +8,7 @@ import type {
   CastImportDecl,
   CastInterfaceDecl,
   CastProgram,
+  CastTaggedUnionDecl,
   CastTypeAliasDecl,
 } from "core/cast.ts";
 import type { Token } from "core/token.ts";
@@ -31,6 +32,7 @@ interface ProgramDeclarations {
   typeAliases: CastTypeAliasDecl[];
   classes: CastClassDecl[];
   interfaces: CastInterfaceDecl[];
+  taggedUnions: CastTaggedUnionDecl[];
   enums: CastEnumDecl[];
   constants: CastConstDecl[];
   functions: CastFunctionDecl[];
@@ -58,6 +60,7 @@ function emptyProgramDeclarations(): ProgramDeclarations {
     typeAliases: [],
     classes: [],
     interfaces: [],
+    taggedUnions: [],
     enums: [],
     constants: [],
     functions: [],
@@ -69,6 +72,7 @@ function addDeclaration(declarations: ProgramDeclarations, declaration: CastDecl
   if (declaration.kind === "TypeAliasDecl") declarations.typeAliases.push(declaration);
   if (declaration.kind === "ClassDecl") declarations.classes.push(declaration);
   if (declaration.kind === "InterfaceDecl") declarations.interfaces.push(declaration);
+  if (declaration.kind === "TaggedUnionDecl") declarations.taggedUnions.push(declaration);
   if (declaration.kind === "EnumDecl") declarations.enums.push(declaration);
   if (declaration.kind === "ConstDecl") declarations.constants.push(declaration);
   if (declaration.kind === "FunctionDecl") declarations.functions.push(declaration);

@@ -32,6 +32,47 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for tagged unions", () => {
+  const source = `
+    union MaybeI32 { Some: i32; None; }
+    function read(value: MaybeI32): i32 {
+      switch (value.tag) {
+        case 0:
+          return value.Some;
+        default:
+          return 0;
+      }
+    }
+    function main(): i32 {
+      const value: MaybeI32 = MaybeI32.Some(42);
+      return read(value);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "typedef struct MaybeI32");
+  assertIncludes(c, "static const i32 MaybeI32_Some_TAG = 0;");
+  assertIncludes(
+    c,
+    "const MaybeI32 value = (MaybeI32){ .tag = MaybeI32_Some_TAG, .data.Some = 42 };",
+  );
+  assertIncludes(c, "return value.data.Some;");
+});
+
+Deno.test("rejects invalid tagged union constructors", () => {
+  assertCompileError(
+    `union MaybeI32 { Some: i32; None; } function main(): i32 { const value: MaybeI32 = MaybeI32.Some(); return 0; }`,
+    "Union variant 'Some' expects 1 argument(s)",
+  );
+});
+
+Deno.test("compiles tagged union example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/tagged_union.tc", dir);
+
+  assertIncludes(result.cSource, "MaybeI32_Some_TAG");
+});
+
 Deno.test("emits C for arenas", () => {
   const source = `
     function main(): i32 {

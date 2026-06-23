@@ -1,0 +1,18 @@
+union MaybeI32 {
+  Some: i32;
+  None;
+}
+
+function read(value: MaybeI32): i32 {
+  switch (value.tag) {
+    case 0:
+      return value.Some;
+    default:
+      return 0;
+  }
+}
+
+function main(): i32 {
+  const value: MaybeI32 = MaybeI32.Some(42);
+  return read(value);
+}

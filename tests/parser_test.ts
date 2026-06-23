@@ -142,6 +142,13 @@ Deno.test("parses interface declarations", () => {
   if (interfaces[0].methods[1].params.length !== 2) throw new Error("Expected method params");
 });
 
+Deno.test("parses tagged union declarations", () => {
+  const program = parse(lex(`union MaybeI32 { Some: i32; None; }`));
+  const unionDecl = program.taggedUnions?.[0];
+  if (unionDecl?.name !== "MaybeI32") throw new Error("Expected tagged union declaration");
+  if (unionDecl.variants.length !== 2) throw new Error("Expected tagged union variants");
+});
+
 Deno.test("parses enum declarations", () => {
   const program = parse(lex(`enum Key { Space = 32, Escape } function main(): i32 { return 0; }`));
   if ((program.enums ?? []).length !== 1) throw new Error("Expected enum declaration");

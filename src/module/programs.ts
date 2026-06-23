@@ -6,6 +6,7 @@ import type {
   FunctionDecl,
   InterfaceDecl,
   Program,
+  TaggedUnionDecl,
   TypeAliasDecl,
 } from "core/ast.ts";
 import { namespaceCName } from "module/c_names.ts";
@@ -31,6 +32,10 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
       ...imports.flatMap((program) => program.interfaces ?? []),
       ...(local.interfaces ?? []),
     ]),
+    taggedUnions: uniqueRefs([
+      ...imports.flatMap((program) => program.taggedUnions ?? []),
+      ...(local.taggedUnions ?? []),
+    ]),
     enums: uniqueRefs([
       ...imports.flatMap((program) => program.enums ?? []),
       ...(local.enums ?? []),
@@ -47,12 +52,14 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
 export function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
   const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
   const interfaces = names.flatMap((name) => selectInterface(program.interfaces ?? [], name));
+  const taggedUnions = names.flatMap((name) => selectTaggedUnion(program.taggedUnions ?? [], name));
   const enums = names.flatMap((name) => selectEnum(program.enums ?? [], name));
   const constants = names.flatMap((name) => selectConstant(program.constants ?? [], name));
   const functions = names.flatMap((name) => selectFunction(program.functions, name));
   const found = new Set<Str>([
     ...typeAliases.map((decl) => decl.name),
     ...interfaces.map((decl) => decl.name),
+    ...taggedUnions.map((decl) => decl.name),
     ...enums.map((decl) => decl.name),
     ...constants.map((decl) => decl.name),
     ...functions.map((decl) => decl.name),
@@ -68,6 +75,7 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
     [
       ...typeAliases.map((typeAlias) => typeAlias.name),
       ...interfaces.map((interfaceDecl) => interfaceDecl.name),
+      ...taggedUnions.map((unionDecl) => unionDecl.name),
       ...enums.map((enumDecl) => enumDecl.name),
     ],
     constants.map((constant) => constant.name),
@@ -81,6 +89,7 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
     [
       ...exportedTypeNames(program),
       ...exportedInterfaceNames(program),
+      ...exportedTaggedUnionNames(program),
       ...exportedEnumNames(program),
     ],
     exportedConstantNames(program),
@@ -96,6 +105,9 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
   const interfaces = (namespaced.interfaces ?? []).map((interfaceDecl) =>
     namespaceInterface(interfaceDecl, namespace)
   );
+  const taggedUnions = (namespaced.taggedUnions ?? []).map((unionDecl) =>
+    namespaceTaggedUnion(unionDecl, namespace)
+  );
   const enums = (namespaced.enums ?? []).map((enumDecl) => namespaceEnum(enumDecl, namespace));
   const constants = (namespaced.constants ?? []).map((constant) =>
     namespaceConstant(constant, namespace)
@@ -106,6 +118,7 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
     imports: [],
     typeAliases,
     interfaces,
+    taggedUnions,
     enums,
     constants,
     functions,
@@ -123,6 +136,12 @@ function exportedInterfaceNames(program: Program): Str[] {
   return (program.interfaces ?? []).filter((interfaceDecl) => interfaceDecl.exported).map((
     interfaceDecl,
   ) => interfaceDecl.name);
+}
+
+function exportedTaggedUnionNames(program: Program): Str[] {
+  return (program.taggedUnions ?? []).filter((unionDecl) => unionDecl.exported).map((unionDecl) =>
+    unionDecl.name
+  );
 }
 
 function exportedEnumNames(program: Program): Str[] {
@@ -152,6 +171,14 @@ function namespaceTypeAlias(typeAlias: TypeAliasDecl, namespace: Str): TypeAlias
 
 function namespaceInterface(interfaceDecl: InterfaceDecl, namespace: Str): InterfaceDecl {
   return { ...interfaceDecl, exported: false, name: `${namespace}.${interfaceDecl.name}` };
+}
+
+function namespaceTaggedUnion(unionDecl: TaggedUnionDecl, namespace: Str): TaggedUnionDecl {
+  return {
+    ...unionDecl,
+    name: `${namespace}.${unionDecl.name}`,
+    cName: namespaceCName(namespace, unionDecl.name),
+  };
 }
 
 function namespaceEnum(enumDecl: EnumDecl, namespace: Str): EnumDecl {
@@ -201,6 +228,10 @@ function selectInterface(interfaces: InterfaceDecl[], name: Str): InterfaceDecl[
   return interfaces.filter((interfaceDecl) =>
     interfaceDecl.exported && interfaceDecl.name === name
   );
+}
+
+function selectTaggedUnion(unions: TaggedUnionDecl[], name: Str): TaggedUnionDecl[] {
+  return unions.filter((unionDecl) => unionDecl.exported && unionDecl.name === name);
 }
 
 function selectEnum(enums: EnumDecl[], name: Str): EnumDecl[] {

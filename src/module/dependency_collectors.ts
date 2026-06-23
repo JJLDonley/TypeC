@@ -6,6 +6,7 @@ import type {
   FunctionDecl,
   InterfaceDecl,
   Statement,
+  TaggedUnionDecl,
   TypeAliasDecl,
   TypeRef,
 } from "core/ast.ts";
@@ -29,6 +30,16 @@ export function collectInterfaceDeps(
   for (const method of interfaceDecl.methods) {
     for (const param of method.params) collectTypeDeps(param.type, selected);
     collectTypeDeps(method.returnType, selected);
+  }
+}
+
+export function collectTaggedUnionDeps(
+  unionDecl: TaggedUnionDecl | undefined,
+  selected: DependencySet,
+): void {
+  if (!unionDecl) return;
+  for (const variant of unionDecl.variants) {
+    if (variant.payload) collectTypeDeps(variant.payload, selected);
   }
 }
 

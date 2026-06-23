@@ -4,6 +4,7 @@ import {
   collectEnumDeps,
   collectFunctionDeps,
   collectInterfaceDeps,
+  collectTaggedUnionDeps,
   collectTypeAliasDeps,
 } from "module/dependency_collectors.ts";
 import {
@@ -40,6 +41,7 @@ function collectPass(selected: DependencySet, index: ProgramDependencyIndex): b8
   for (const name of [...selected.types]) {
     collectTypeAliasDeps(index.types.get(name), selected);
     collectInterfaceDeps(index.interfaces.get(name), selected);
+    collectTaggedUnionDeps(index.taggedUnions.get(name), selected);
     collectEnumDeps(index.enums.get(name), selected);
     collectTypeMethodDeps(name, index, selected);
   }

@@ -6,6 +6,7 @@ import { emitCallExpression } from "emitter/calls.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
+import { emitTaggedUnionConstructor, emitTaggedUnionFieldAccess } from "emitter/tagged_unions.ts";
 import { spanKey } from "checker/exprs.ts";
 import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
@@ -80,6 +81,8 @@ function emitMethodCallExpression(
   expr: Extract<Expression, { kind: "MethodCallExpr" }>,
   context: EmitContext,
 ): Str {
+  const unionConstructor = emitTaggedUnionConstructor(expr, context, emitExpressionExpected);
+  if (unionConstructor !== null) return unionConstructor;
   const namespaceCall = emitNamespaceCallExpression(expr, context);
   if (namespaceCall !== null) return namespaceCall;
   const receiverType = context.expressionTypes?.get(spanKey(expr.receiver.span))?.type ?? "<error>";
@@ -219,6 +222,9 @@ function emitFieldAccessExpression(
   if (isSliceLengthFieldAccess(expr, context)) {
     return `${emitMemberOperand(expr.operand, context)}.length`;
   }
+  const receiverType = context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? "<error>";
+  const unionAccess = emitTaggedUnionFieldAccess(expr, receiverType, context, emitMemberOperand);
+  if (unionAccess !== null) return unionAccess;
   return `${emitMemberOperand(expr.operand, context)}.${expr.field}`;
 }
 

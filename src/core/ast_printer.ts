@@ -31,6 +31,7 @@ class AstPrinter {
     this.indented(() => {
       for (const typeAlias of program.typeAliases) this.typeAliasDecl(typeAlias);
       for (const interfaceDecl of program.interfaces ?? []) this.interfaceDecl(interfaceDecl);
+      for (const unionDecl of program.taggedUnions ?? []) this.taggedUnionDecl(unionDecl);
       for (const enumDecl of program.enums ?? []) this.enumDecl(enumDecl);
       for (const constant of program.constants ?? []) this.constDecl(constant);
       for (const fn of program.functions) this.functionDecl(fn);
@@ -47,6 +48,16 @@ class AstPrinter {
       for (const method of interfaceDecl.methods) {
         this.line(`InterfaceMethod ${method.name} -> ${this.type(method.returnType)}`);
         this.indented(() => this.params(method.params));
+      }
+    });
+  }
+
+  private taggedUnionDecl(unionDecl: NonNullable<Program["taggedUnions"]>[usize]): void {
+    this.line(`TaggedUnionDecl ${unionDecl.name}`);
+    this.indented(() => {
+      for (const variant of unionDecl.variants) {
+        const payload = variant.payload ? `: ${this.type(variant.payload)}` : "";
+        this.line(`TaggedUnionVariant ${variant.name}${payload}`);
       }
     });
   }
