@@ -296,6 +296,9 @@ export type Expression =
   | PostfixPointerExpr
   | NonNullAssertExpr
   | FieldAccessExpr
+  | OptionalFieldAccessExpr
+  | OptionalMethodCallExpr
+  | OptionalIndexExpr
   | RecordLiteralExpr
   | ArrayLiteralExpr
   | IndexExpr;
@@ -397,6 +400,28 @@ export interface FieldAccessExpr {
   kind: "FieldAccessExpr";
   operand: Expression;
   field: Str;
+  span: SourceSpan;
+}
+
+export interface OptionalFieldAccessExpr {
+  kind: "OptionalFieldAccessExpr";
+  operand: Expression;
+  field: Str;
+  span: SourceSpan;
+}
+
+export interface OptionalMethodCallExpr {
+  kind: "OptionalMethodCallExpr";
+  receiver: Expression;
+  method: Str;
+  args: Expression[];
+  span: SourceSpan;
+}
+
+export interface OptionalIndexExpr {
+  kind: "OptionalIndexExpr";
+  operand: Expression;
+  index: Expression;
   span: SourceSpan;
 }
 

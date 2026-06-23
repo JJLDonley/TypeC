@@ -23,6 +23,7 @@ export function parsePostfixExpressionWith(parser: PostfixExpressionParser): Cas
 
 function parsePostfix(parser: PostfixExpressionParser, operand: CastExpression): CastExpression {
   if (parser.checkText(".")) return parseFieldAccess(parser, operand);
+  if (parser.checkText("?.")) return parseOptionalAccess(parser, operand);
   if (parser.checkText("[")) return parseIndexAccess(parser, operand);
   if (parser.checkText("!")) return parseNonNullAssertion(parser, operand);
   return parsePointerPostfix(parser, operand);
@@ -88,6 +89,53 @@ function parseIndexAccess(
   };
 }
 
+function parseOptionalAccess(
+  parser: PostfixExpressionParser,
+  operand: CastExpression,
+): CastExpression {
+  parser.expectText("?.");
+  if (parser.checkText("[")) return parseOptionalIndexAccess(parser, operand);
+  const field = parser.expectKind("identifier", "Expected optional field name");
+  if (parser.matchText("(")) return parseOptionalMethodCall(parser, operand, field);
+  return {
+    kind: "OptionalFieldAccessExpr",
+    operand,
+    field: field.text,
+    span: span(operand.span.start, field.span.end),
+  };
+}
+
+function parseOptionalIndexAccess(
+  parser: PostfixExpressionParser,
+  operand: CastExpression,
+): CastExpression {
+  parser.expectText("[");
+  const index = parser.parseExpression();
+  const close = parser.expectText("]");
+  return {
+    kind: "OptionalIndexExpr",
+    operand,
+    index,
+    span: span(operand.span.start, close.span.end),
+  };
+}
+
+function parseOptionalMethodCall(
+  parser: PostfixExpressionParser,
+  receiver: CastExpression,
+  method: Token,
+): CastExpression {
+  const args = parseCallArguments(parser);
+  const close = parser.expectText(")");
+  return {
+    kind: "OptionalMethodCallExpr",
+    receiver,
+    method: method.text,
+    args,
+    span: span(receiver.span.start, close.span.end),
+  };
+}
+
 function parsePointerPostfix(
   parser: PostfixExpressionParser,
   operand: CastExpression,
@@ -123,5 +171,5 @@ function parseIndexClose(parser: PostfixExpressionParser): { index: CastExpressi
 
 function isPostfixStart(parser: PostfixExpressionParser): b8 {
   return parser.checkText(".*") || parser.checkText(".&") || parser.checkText(".") ||
-    parser.checkText("[") || parser.checkText("!");
+    parser.checkText("?.") || parser.checkText("[") || parser.checkText("!");
 }

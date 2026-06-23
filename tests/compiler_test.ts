@@ -1188,6 +1188,16 @@ Deno.test("emits C for nullish coalescing", () => {
   assertIncludes(c, "return value.present ? value.value : 7;");
 });
 
+Deno.test("emits C for optional field chaining", () => {
+  const source =
+    `type Point = { x: i32; }; function get(point: Point?): i32? { return point?.x; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(
+    c,
+    "return point.present ? (Optional_i32){ .present = true, .value = point.value.x } : (Optional_i32){ .present = false };",
+  );
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

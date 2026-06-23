@@ -245,6 +245,24 @@ class AstPrinter {
         this.line(`FieldAccessExpr ${expression.field}`);
         this.indented(() => this.expression(expression.operand));
         return;
+      case "OptionalFieldAccessExpr":
+        this.line(`OptionalFieldAccessExpr ${expression.field}`);
+        this.indented(() => this.expression(expression.operand));
+        return;
+      case "OptionalMethodCallExpr":
+        this.line(`OptionalMethodCallExpr ${expression.method}`);
+        this.indented(() => {
+          this.expression(expression.receiver);
+          for (const arg of expression.args) this.expression(arg);
+        });
+        return;
+      case "OptionalIndexExpr":
+        this.line("OptionalIndexExpr");
+        this.indented(() => {
+          this.expression(expression.operand);
+          this.expression(expression.index);
+        });
+        return;
       case "RecordLiteralExpr":
         this.line("RecordLiteralExpr");
         this.indented(() => {

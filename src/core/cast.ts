@@ -322,6 +322,9 @@ export type CastExpression =
   | CastPostfixPointerExpr
   | CastNonNullAssertExpr
   | CastFieldAccessExpr
+  | CastOptionalFieldAccessExpr
+  | CastOptionalMethodCallExpr
+  | CastOptionalIndexExpr
   | CastRecordLiteralExpr
   | CastArrayLiteralExpr
   | CastIndexExpr;
@@ -423,6 +426,28 @@ export interface CastFieldAccessExpr {
   kind: "FieldAccessExpr";
   operand: CastExpression;
   field: Str;
+  span: SourceSpan;
+}
+
+export interface CastOptionalFieldAccessExpr {
+  kind: "OptionalFieldAccessExpr";
+  operand: CastExpression;
+  field: Str;
+  span: SourceSpan;
+}
+
+export interface CastOptionalMethodCallExpr {
+  kind: "OptionalMethodCallExpr";
+  receiver: CastExpression;
+  method: Str;
+  args: CastExpression[];
+  span: SourceSpan;
+}
+
+export interface CastOptionalIndexExpr {
+  kind: "OptionalIndexExpr";
+  operand: CastExpression;
+  index: CastExpression;
   span: SourceSpan;
 }
 

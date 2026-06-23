@@ -1,6 +1,11 @@
 import type { FunctionDecl, Statement, TypeRef } from "core/ast.ts";
 import type { CheckedProgram } from "checker";
+import {
+  optionalCTypeNameFromTypeName,
+  optionalUnwrapFunctionNameFromTypeName,
+} from "c/optional_names.ts";
 import { emitOptionalCType } from "c/optionals.ts";
+import { optionalTypeNameElement } from "checker/type_name_shapes.ts";
 import { optionalTypeElement } from "core/optional_types.ts";
 import { typeName } from "core/type_ref.ts";
 import type { EmitContext } from "emitter/context.ts";
@@ -13,7 +18,31 @@ export function collectOptionalTypeDefinitions(
 ): Str[] {
   const elements = new Map<Str, TypeRef>();
   for (const fn of program.functions) collectFunctionOptionals(fn, elements);
-  return [...elements.values()].map((element) => emitOptionalCType(element, context.typeAliases));
+  const definitions = [...elements.values()].map((element) =>
+    emitOptionalCType(element, context.typeAliases)
+  );
+  for (const type of context.expressionTypes?.values() ?? []) {
+    const element = optionalTypeNameElement(type.type);
+    if (element !== null && !elements.has(element)) {
+      definitions.push(emitOptionalCTypeNameDefinition(element, context));
+    }
+  }
+  return definitions;
+}
+
+function emitOptionalCTypeNameDefinition(element: Str, context: EmitContext): Str {
+  const name = optionalCTypeNameFromTypeName(element);
+  const valueType = optionalElementCTypeName(element, context);
+  const unwrapName = optionalUnwrapFunctionNameFromTypeName(element);
+  return [
+    `typedef struct ${name} { b8 present; ${valueType} value; } ${name};`,
+    `static inline ${valueType} ${unwrapName}(${name} value) { if (!value.present) abort(); return value.value; }`,
+  ].join("\n");
+}
+
+function optionalElementCTypeName(element: Str, context: EmitContext): Str {
+  if (element === "bool") return "b8";
+  return context.typeAliases.get(element)?.cName ?? element;
 }
 
 function collectFunctionOptionals(fn: FunctionDecl, elements: Map<Str, TypeRef>): void {

@@ -13,6 +13,9 @@ import type {
   MethodCallExpr,
   NonNullAssertExpr,
   NullishCoalesceExpr,
+  OptionalFieldAccessExpr,
+  OptionalIndexExpr,
+  OptionalMethodCallExpr,
   PostfixPointerExpr,
   RecordLiteralExpr,
   StringLiteral,
@@ -33,6 +36,9 @@ import type {
   CastMethodCallExpr,
   CastNonNullAssertExpr,
   CastNullishCoalesceExpr,
+  CastOptionalFieldAccessExpr,
+  CastOptionalIndexExpr,
+  CastOptionalMethodCallExpr,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
   CastStringLiteral,
@@ -70,6 +76,12 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerNonNullAssertExpr(expression);
     case "FieldAccessExpr":
       return lowerFieldAccessExpr(expression);
+    case "OptionalFieldAccessExpr":
+      return lowerOptionalFieldAccessExpr(expression);
+    case "OptionalMethodCallExpr":
+      return lowerOptionalMethodCallExpr(expression);
+    case "OptionalIndexExpr":
+      return lowerOptionalIndexExpr(expression);
     case "RecordLiteralExpr":
       return lowerRecordLiteralExpr(expression);
     case "ArrayLiteralExpr":
@@ -195,6 +207,38 @@ function lowerFieldAccessExpr(expression: CastFieldAccessExpr): FieldAccessExpr 
     kind: "FieldAccessExpr",
     operand: lowerExpression(expression.operand),
     field: expression.field,
+    span: expression.span,
+  };
+}
+
+function lowerOptionalFieldAccessExpr(
+  expression: CastOptionalFieldAccessExpr,
+): OptionalFieldAccessExpr {
+  return {
+    kind: "OptionalFieldAccessExpr",
+    operand: lowerExpression(expression.operand),
+    field: expression.field,
+    span: expression.span,
+  };
+}
+
+function lowerOptionalMethodCallExpr(
+  expression: CastOptionalMethodCallExpr,
+): OptionalMethodCallExpr {
+  return {
+    kind: "OptionalMethodCallExpr",
+    receiver: lowerExpression(expression.receiver),
+    method: expression.method,
+    args: expression.args.map(lowerExpression),
+    span: expression.span,
+  };
+}
+
+function lowerOptionalIndexExpr(expression: CastOptionalIndexExpr): OptionalIndexExpr {
+  return {
+    kind: "OptionalIndexExpr",
+    operand: lowerExpression(expression.operand),
+    index: lowerExpression(expression.index),
     span: expression.span,
   };
 }

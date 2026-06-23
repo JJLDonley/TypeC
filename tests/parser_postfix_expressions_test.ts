@@ -65,6 +65,36 @@ Deno.test("parses postfix non-null assertion", () => {
   assertText(expr.operand.kind, "IdentifierExpr");
 });
 
+Deno.test("parses optional chaining expressions", () => {
+  const field = parsePostfixExpressionWith(
+    parserFor([identifier("value"), operator("?."), identifier("x"), eof()]),
+  );
+  const method = parsePostfixExpressionWith(
+    parserFor([
+      identifier("value"),
+      operator("?."),
+      identifier("get"),
+      punct("("),
+      punct(")"),
+      eof(),
+    ]),
+  );
+  const index = parsePostfixExpressionWith(
+    parserFor([
+      identifier("value"),
+      operator("?."),
+      punct("["),
+      identifier("i"),
+      punct("]"),
+      eof(),
+    ]),
+  );
+
+  assertText(field.kind, "OptionalFieldAccessExpr");
+  assertText(method.kind, "OptionalMethodCallExpr");
+  assertText(index.kind, "OptionalIndexExpr");
+});
+
 function parserFor(tokens: Token[]): PostfixExpressionParser {
   let current: i32 = 0;
   return {

@@ -66,13 +66,19 @@ class Lexer {
         continue;
       }
 
+      if (ch === "?" && this.peek(1) === ".") {
+        const text = this.advance() + this.advance();
+        this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
+        continue;
+      }
+
       if (ch === "?" && this.peek(1) === "?") {
         const text = this.advance() + this.advance();
         this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
         continue;
       }
 
-      if ("(){}[]:;,\.?".includes(ch)) {
+      if ("(){}[]:;,.?".includes(ch)) {
         this.advance();
         this.tokens.push({ kind: "punctuation", text: ch, span: { start, end: this.pos() } });
         continue;

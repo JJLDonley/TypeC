@@ -22,6 +22,9 @@ export interface ExpressionTypeHandlers {
   pointer(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): TypeName;
   nonNullAssert(expr: Extract<Expression, { kind: "NonNullAssertExpr" }>): TypeName;
   fieldAccess(expr: Extract<Expression, { kind: "FieldAccessExpr" }>): TypeName;
+  optionalFieldAccess(expr: Extract<Expression, { kind: "OptionalFieldAccessExpr" }>): TypeName;
+  optionalMethodCall(expr: Extract<Expression, { kind: "OptionalMethodCallExpr" }>): TypeName;
+  optionalIndex(expr: Extract<Expression, { kind: "OptionalIndexExpr" }>): TypeName;
   index(expr: Extract<Expression, { kind: "IndexExpr" }>): TypeName;
 }
 
@@ -65,6 +68,12 @@ function computeNonBasicExpressionType(
       return ok(handlers.nonNullAssert(expr));
     case "FieldAccessExpr":
       return ok(handlers.fieldAccess(expr));
+    case "OptionalFieldAccessExpr":
+      return ok(handlers.optionalFieldAccess(expr));
+    case "OptionalMethodCallExpr":
+      return ok(handlers.optionalMethodCall(expr));
+    case "OptionalIndexExpr":
+      return ok(handlers.optionalIndex(expr));
     case "IndexExpr":
       return ok(handlers.index(expr));
     case "RecordLiteralExpr":
@@ -80,8 +89,10 @@ function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
     expr.kind === "NullishCoalesceExpr" || expr.kind === "CallExpr" ||
     expr.kind === "MethodCallExpr" ||
     expr.kind === "PostfixPointerExpr" || expr.kind === "NonNullAssertExpr" ||
-    expr.kind === "FieldAccessExpr" || expr.kind === "IndexExpr" ||
-    expr.kind === "RecordLiteralExpr" || expr.kind === "ArrayLiteralExpr";
+    expr.kind === "FieldAccessExpr" || expr.kind === "OptionalFieldAccessExpr" ||
+    expr.kind === "OptionalMethodCallExpr" || expr.kind === "OptionalIndexExpr" ||
+    expr.kind === "IndexExpr" || expr.kind === "RecordLiteralExpr" ||
+    expr.kind === "ArrayLiteralExpr";
 }
 
 function ok(type: TypeName): ExpressionTypeCheck {

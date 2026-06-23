@@ -33,6 +33,9 @@ export function isAddressable(expr: Expression): b8 {
     case "NonNullAssertExpr":
     case "CallExpr":
     case "MethodCallExpr":
+    case "OptionalFieldAccessExpr":
+    case "OptionalMethodCallExpr":
+    case "OptionalIndexExpr":
     case "RecordLiteralExpr":
     case "ArrayLiteralExpr":
       return false;

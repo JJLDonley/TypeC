@@ -1803,8 +1803,8 @@ deno run -A src/driver/main.ts lsp
 
 # Phase 23: TypeScript-Style Expression Operators
 
-Status: In progress. Logical `!` / `!!`, ternary `? :`, optional type spelling `T?`, postfix
-non-null assertion `expr!`, and nullish coalescing / Elvis subsets implemented.
+Status: Complete. Logical `!` / `!!`, ternary `? :`, optional type spelling `T?`, postfix non-null
+assertion `expr!`, nullish coalescing / Elvis, and optional chaining implemented.
 
 ## Goal
 
@@ -1906,6 +1906,7 @@ Optional chaining:
 - If `expr` is empty, the result is empty.
 - If `expr` contains a value, the access is performed on the contained value.
 - The result type is optional when the access result is a value type.
+- This syntax is implemented.
 
 Nullish coalescing and Elvis:
 

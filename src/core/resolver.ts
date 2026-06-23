@@ -187,6 +187,17 @@ class Resolver {
         if (this.resolveQualifiedSymbol(expression, scope)) return;
         this.resolveExpression(expression.operand, scope);
         return;
+      case "OptionalFieldAccessExpr":
+        this.resolveExpression(expression.operand, scope);
+        return;
+      case "OptionalMethodCallExpr":
+        this.resolveExpression(expression.receiver, scope);
+        for (const arg of expression.args) this.resolveExpression(arg, scope);
+        return;
+      case "OptionalIndexExpr":
+        this.resolveExpression(expression.operand, scope);
+        this.resolveExpression(expression.index, scope);
+        return;
       case "RecordLiteralExpr":
         for (const field of expression.fields) this.resolveExpression(field.expression, scope);
         return;

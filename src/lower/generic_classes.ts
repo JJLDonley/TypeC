@@ -17,6 +17,9 @@ import type {
   CastMethodCallExpr,
   CastNonNullAssertExpr,
   CastNullishCoalesceExpr,
+  CastOptionalFieldAccessExpr,
+  CastOptionalIndexExpr,
+  CastOptionalMethodCallExpr,
   CastParam,
   CastPostfixPointerExpr,
   CastProgram,
@@ -292,6 +295,12 @@ class GenericClassInstantiator {
         return this.rewriteNonNullAssert(expression);
       case "FieldAccessExpr":
         return { ...expression, operand: this.rewriteExpression(expression.operand) };
+      case "OptionalFieldAccessExpr":
+        return this.rewriteOptionalFieldAccess(expression);
+      case "OptionalMethodCallExpr":
+        return this.rewriteOptionalMethodCall(expression);
+      case "OptionalIndexExpr":
+        return this.rewriteOptionalIndex(expression);
       case "RecordLiteralExpr":
         return this.rewriteRecordLiteral(expression);
       case "ArrayLiteralExpr":
@@ -352,6 +361,30 @@ class GenericClassInstantiator {
 
   private rewriteNonNullAssert(expression: CastNonNullAssertExpr): CastNonNullAssertExpr {
     return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  }
+
+  private rewriteOptionalFieldAccess(
+    expression: CastOptionalFieldAccessExpr,
+  ): CastOptionalFieldAccessExpr {
+    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  }
+
+  private rewriteOptionalMethodCall(
+    expression: CastOptionalMethodCallExpr,
+  ): CastOptionalMethodCallExpr {
+    return {
+      ...expression,
+      receiver: this.rewriteExpression(expression.receiver),
+      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+    };
+  }
+
+  private rewriteOptionalIndex(expression: CastOptionalIndexExpr): CastOptionalIndexExpr {
+    return {
+      ...expression,
+      operand: this.rewriteExpression(expression.operand),
+      index: this.rewriteExpression(expression.index),
+    };
   }
 
   private rewriteRecordLiteral(expression: CastRecordLiteralExpr): CastRecordLiteralExpr {

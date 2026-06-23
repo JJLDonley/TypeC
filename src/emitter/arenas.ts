@@ -151,6 +151,12 @@ function expressionUsesArena(expr: Expression): b8 {
         expressionUsesArena(expr.whenFalse);
     case "NullishCoalesceExpr":
       return expressionUsesArena(expr.left) || expressionUsesArena(expr.fallback);
+    case "OptionalFieldAccessExpr":
+      return expressionUsesArena(expr.operand);
+    case "OptionalMethodCallExpr":
+      return expressionUsesArena(expr.receiver) || expr.args.some(expressionUsesArena);
+    case "OptionalIndexExpr":
+      return expressionUsesArena(expr.operand) || expressionUsesArena(expr.index);
     case "RecordLiteralExpr":
       return expr.fields.some((field) => expressionUsesArena(field.expression));
     case "ArrayLiteralExpr":

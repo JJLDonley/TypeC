@@ -110,6 +110,17 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
       collectNamespaceField(expression, namespace, members);
       collectExpression(expression.operand, namespace, members);
       return;
+    case "OptionalFieldAccessExpr":
+      collectExpression(expression.operand, namespace, members);
+      return;
+    case "OptionalMethodCallExpr":
+      collectExpression(expression.receiver, namespace, members);
+      for (const arg of expression.args) collectExpression(arg, namespace, members);
+      return;
+    case "OptionalIndexExpr":
+      collectExpression(expression.operand, namespace, members);
+      collectExpression(expression.index, namespace, members);
+      return;
     case "RecordLiteralExpr":
       for (const field of expression.fields) {
         collectExpression(field.expression, namespace, members);

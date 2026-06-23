@@ -1,5 +1,8 @@
 import type { Expression, RecordTypeRef } from "core/ast.ts";
-import { optionalUnwrapFunctionNameFromTypeName } from "c/optional_names.ts";
+import {
+  optionalCTypeNameFromTypeName,
+  optionalUnwrapFunctionNameFromTypeName,
+} from "c/optional_names.ts";
 import { classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { EmitContext } from "emitter/context.ts";
@@ -9,7 +12,11 @@ import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "em
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
 import { emitTaggedUnionConstructor, emitTaggedUnionFieldAccess } from "emitter/tagged_unions.ts";
 import { spanKey } from "checker/exprs.ts";
-import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
+import {
+  optionalTypeNameElement,
+  parseArrayTypeName,
+  parseSliceTypeName,
+} from "checker/type_name_shapes.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
 
 type Str = string;
@@ -52,6 +59,12 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitNonNullAssertExpression(expr, context);
     case "FieldAccessExpr":
       return emitFieldAccessExpression(expr, context);
+    case "OptionalFieldAccessExpr":
+      return emitOptionalFieldAccessExpression(expr, context);
+    case "OptionalMethodCallExpr":
+      return emitOptionalMethodCallExpression(expr, context);
+    case "OptionalIndexExpr":
+      return emitOptionalIndexExpression(expr, context);
     case "RecordLiteralExpr":
       throw new Error("Record literals require an expected C type");
     case "ArrayLiteralExpr":
@@ -254,6 +267,57 @@ function emitBinaryOperand(
   if (child < parent) return `(${operand})`;
   if (side === "right" && child === parent) return `(${operand})`;
   return operand;
+}
+
+function emitOptionalFieldAccessExpression(
+  expr: Extract<Expression, { kind: "OptionalFieldAccessExpr" }>,
+  context: EmitContext,
+): Str {
+  const operand = emitMemberOperand(expr.operand, context);
+  return emitOptionalChainResult(expr, `${operand}.value.${expr.field}`, context);
+}
+
+function emitOptionalMethodCallExpression(
+  expr: Extract<Expression, { kind: "OptionalMethodCallExpr" }>,
+  context: EmitContext,
+): Str {
+  const receiverType = context.expressionTypes?.get(spanKey(expr.receiver.span))?.type ?? "<error>";
+  const elementType = optionalTypeNameElement(receiverType) ?? "<error>";
+  const methodName = classMethodName(elementType, expr.method);
+  const functionName = context.functions.get(methodName)?.cName ?? methodName;
+  const receiver = `${emitExpression(expr.receiver, context)}.value`;
+  const args = expr.args.map((arg) => emitExpression(arg, context));
+  return emitOptionalChainResult(
+    expr,
+    `${functionName}(${[receiver, ...args].join(", ")})`,
+    context,
+  );
+}
+
+function emitOptionalIndexExpression(
+  expr: Extract<Expression, { kind: "OptionalIndexExpr" }>,
+  context: EmitContext,
+): Str {
+  const operand = emitMemberOperand(expr.operand, context);
+  const index = emitExpression(expr.index, context);
+  return emitOptionalChainResult(expr, `${operand}.value[${index}]`, context);
+}
+
+function emitOptionalChainResult(expr: Expression, presentValue: Str, context: EmitContext): Str {
+  const optionalType = context.expressionTypes?.get(spanKey(expr.span))?.type ?? "<error>";
+  const elementType = optionalTypeNameElement(optionalType) ?? "<error>";
+  const cType = optionalCTypeNameFromTypeName(elementType);
+  const operand = optionalChainOperand(expr);
+  const emittedOperand = operand === null ? "" : emitExpression(operand, context);
+  return `${emittedOperand}.present ? (${cType}){ .present = true, .value = ${presentValue} } : (${cType}){ .present = false }`;
+}
+
+function optionalChainOperand(expr: Expression): Expression | null {
+  if (expr.kind === "OptionalFieldAccessExpr" || expr.kind === "OptionalIndexExpr") {
+    return expr.operand;
+  }
+  if (expr.kind === "OptionalMethodCallExpr") return expr.receiver;
+  return null;
 }
 
 function emitFieldAccessExpression(

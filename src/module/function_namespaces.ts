@@ -118,7 +118,20 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
     case "NonNullAssertExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
     case "FieldAccessExpr":
+    case "OptionalFieldAccessExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
+    case "OptionalMethodCallExpr":
+      return {
+        ...expr,
+        receiver: namespaceExpression(expr.receiver, namespace, functions),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+      };
+    case "OptionalIndexExpr":
+      return {
+        ...expr,
+        operand: namespaceExpression(expr.operand, namespace, functions),
+        index: namespaceExpression(expr.index, namespace, functions),
+      };
     case "RecordLiteralExpr":
       return {
         ...expr,

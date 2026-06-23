@@ -26,6 +26,11 @@ import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
 import { checkNullishCoalesceExpression } from "checker/nullish_coalescing.ts";
+import {
+  checkOptionalFieldAccessExpression,
+  checkOptionalIndexExpression,
+  checkOptionalMethodCallExpression,
+} from "checker/optional_chaining.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
@@ -37,6 +42,7 @@ import {
   checkTaggedUnionFieldAccess,
 } from "checker/tagged_union_expressions.ts";
 import { checkSwitchStatement } from "checker/switch_statements.ts";
+import { optionalTypeNameElement } from "checker/type_name_shapes.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -88,6 +94,7 @@ export * from "checker/locals.ts";
 export * from "checker/main.ts";
 export * from "checker/non_null_assertions.ts";
 export * from "checker/nullish_coalescing.ts";
+export * from "checker/optional_chaining.ts";
 export * from "checker/pointer_compatibility.ts";
 export * from "checker/pointer_expressions.ts";
 export * from "checker/pointer_ops.ts";
@@ -374,6 +381,9 @@ class Checker {
       pointer: (value) => this.postfixPointerType(value, locals),
       nonNullAssert: (value) => this.nonNullAssertType(value, locals),
       fieldAccess: (value) => this.fieldAccessType(value, locals),
+      optionalFieldAccess: (value) => this.optionalFieldAccessType(value, locals),
+      optionalMethodCall: (value) => this.optionalMethodCallType(value, locals),
+      optionalIndex: (value) => this.optionalIndexType(value, locals),
       index: (value) => this.indexType(value, locals),
     });
     this.diagnostics.push(...result.diagnostics);
@@ -530,6 +540,48 @@ class Checker {
   ): ConstDecl | null {
     const name = qualifiedExpressionName(expr);
     return name === null ? null : this.constants.get(name) ?? null;
+  }
+
+  private optionalFieldAccessType(
+    expr: Extract<Expression, { kind: "OptionalFieldAccessExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const operand = this.typeOf(expr.operand, locals);
+    const result = checkOptionalFieldAccessExpression(expr, operand, this.typeAliases);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private optionalMethodCallType(
+    expr: Extract<Expression, { kind: "OptionalMethodCallExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const operand = this.typeOf(expr.receiver, locals);
+    const element = optionalTypeNameElement(operand) ?? "<error>";
+    const fn = this.functions.get(classMethodName(element, expr.method));
+    const result = checkOptionalMethodCallExpression(
+      expr,
+      operand,
+      fn,
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private optionalIndexType(
+    expr: Extract<Expression, { kind: "OptionalIndexExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const operand = this.typeOf(expr.operand, locals);
+    const result = checkOptionalIndexExpression(
+      expr,
+      operand,
+      (index) => this.typeOf(index, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
   }
 
   private indexType(

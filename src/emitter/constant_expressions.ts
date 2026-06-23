@@ -41,6 +41,9 @@ export function emitConstantExpressionExpected(
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
     case "NullishCoalesceExpr":
+    case "OptionalFieldAccessExpr":
+    case "OptionalMethodCallExpr":
+    case "OptionalIndexExpr":
     case "IndexExpr":
       throw new Error("Unsupported compile-time constant expression");
   }

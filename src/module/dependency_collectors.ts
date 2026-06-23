@@ -179,7 +179,16 @@ function collectExpressionDeps(
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
     case "FieldAccessExpr":
+    case "OptionalFieldAccessExpr":
       collectExpressionDeps(expression.operand, selected, ignoredTypes);
+      return;
+    case "OptionalMethodCallExpr":
+      collectExpressionDeps(expression.receiver, selected, ignoredTypes);
+      for (const arg of expression.args) collectExpressionDeps(arg, selected, ignoredTypes);
+      return;
+    case "OptionalIndexExpr":
+      collectExpressionDeps(expression.operand, selected, ignoredTypes);
+      collectExpressionDeps(expression.index, selected, ignoredTypes);
       return;
     case "RecordLiteralExpr":
       for (const field of expression.fields) {

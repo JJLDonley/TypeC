@@ -162,7 +162,18 @@ function expressionGenericCallDiagnostics(
     case "NonNullAssertExpr":
       return expressionGenericCallDiagnostics(expr.operand, templates);
     case "FieldAccessExpr":
+    case "OptionalFieldAccessExpr":
       return expressionGenericCallDiagnostics(expr.operand, templates);
+    case "OptionalMethodCallExpr":
+      return [
+        ...expressionGenericCallDiagnostics(expr.receiver, templates),
+        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
+      ];
+    case "OptionalIndexExpr":
+      return [
+        ...expressionGenericCallDiagnostics(expr.operand, templates),
+        ...expressionGenericCallDiagnostics(expr.index, templates),
+      ];
     case "RecordLiteralExpr":
       return expr.fields.flatMap((field) =>
         expressionGenericCallDiagnostics(field.expression, templates)
@@ -371,7 +382,20 @@ class GenericInstantiator {
       case "NonNullAssertExpr":
         return { ...expr, operand: this.rewriteExpr(expr.operand) };
       case "FieldAccessExpr":
+      case "OptionalFieldAccessExpr":
         return { ...expr, operand: this.rewriteExpr(expr.operand) };
+      case "OptionalMethodCallExpr":
+        return {
+          ...expr,
+          receiver: this.rewriteExpr(expr.receiver),
+          args: expr.args.map((arg) => this.rewriteExpr(arg)),
+        };
+      case "OptionalIndexExpr":
+        return {
+          ...expr,
+          operand: this.rewriteExpr(expr.operand),
+          index: this.rewriteExpr(expr.index),
+        };
       case "RecordLiteralExpr":
         return {
           ...expr,

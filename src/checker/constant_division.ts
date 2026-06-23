@@ -10,8 +10,23 @@ export function checkConstantIntegerDivision(
   constants: Map<Str, ConstDecl>,
 ): Diagnostic[] {
   if (expr.kind === "BinaryExpr") return checkConstantBinaryIntegerDivision(expr, constants);
-  if (expr.kind === "UnaryExpr" || expr.kind === "NonNullAssertExpr") {
+  if (
+    expr.kind === "UnaryExpr" || expr.kind === "NonNullAssertExpr" ||
+    expr.kind === "OptionalFieldAccessExpr"
+  ) {
     return checkConstantIntegerDivision(expr.operand, constants);
+  }
+  if (expr.kind === "OptionalIndexExpr") {
+    return [
+      ...checkConstantIntegerDivision(expr.operand, constants),
+      ...checkConstantIntegerDivision(expr.index, constants),
+    ];
+  }
+  if (expr.kind === "OptionalMethodCallExpr") {
+    return [
+      ...checkConstantIntegerDivision(expr.receiver, constants),
+      ...expr.args.flatMap((arg) => checkConstantIntegerDivision(arg, constants)),
+    ];
   }
   if (expr.kind === "ConditionalExpr") {
     return checkConstantConditionalIntegerDivision(expr, constants);

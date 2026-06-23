@@ -50,6 +50,9 @@ function handlers(): ExpressionTypeHandlers {
     pointer: resolveI64,
     nonNullAssert: resolveI64,
     fieldAccess: resolveI64,
+    optionalFieldAccess: resolveI64,
+    optionalMethodCall: resolveI64,
+    optionalIndex: resolveI64,
     index: resolveI64,
   };
 }
