@@ -39,6 +39,18 @@ Deno.test("parses aggregate record literals", () => {
   assertLen(expr.kind === "RecordLiteralExpr" ? expr.fields.length : 0, 1);
 });
 
+Deno.test("parses shorthand aggregate record literal fields", () => {
+  const expr = parseRecordLiteralWith(
+    parserFor([punct("{"), identifier("x"), punct(","), identifier("y"), punct("}")]),
+  );
+
+  assertText(expr.kind, "RecordLiteralExpr");
+  if (expr.kind !== "RecordLiteralExpr") throw new Error("Expected record literal");
+  assertLen(expr.fields.length, 2);
+  assertText(expr.fields[0]?.name ?? "", "x");
+  assertText(recordFieldExprName(expr.fields[1]?.expression), "y");
+});
+
 function parserFor(tokens: Token[]): AggregateLiteralParser {
   let current: i32 = 0;
   return {
@@ -71,6 +83,11 @@ function parserFor(tokens: Token[]): AggregateLiteralParser {
 
 function identifierExpr(name: Str): CastExpression {
   return { kind: "IdentifierExpr", name, span: sourceSpan };
+}
+
+function recordFieldExprName(expr: CastExpression | undefined): Str {
+  if (!expr || expr.kind !== "IdentifierExpr") return "";
+  return expr.name;
 }
 
 function peek(tokens: Token[], index: i32): Token {

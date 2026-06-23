@@ -2558,6 +2558,48 @@ function main(): i32 {
 
 ---
 
+# Phase 34: Record Literal Field Shorthand
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style record literal field shorthand for local values whose identifier matches the
+record field name.
+
+## Syntax
+
+```ts
+type Point = { x: i32; y: i32 };
+
+function make(x: i32, y: i32): Point {
+  return { x, y };
+}
+```
+
+## Semantics
+
+- `{ x }` is syntax sugar for `{ x: x }`.
+- The shorthand expression is a normal identifier expression and is resolved and type checked like
+  the explicit form.
+- Emitted C is unchanged from explicit record literals.
+- Missing, duplicate, unknown, or mistyped fields keep existing diagnostics.
+
+## Do
+
+- Accept identifier fields without `:` inside record literals.
+- Reuse existing resolver, checker, lowering, and emitter paths by producing an identifier
+  expression for the field value.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add object spreads.
+- Do not add computed property names.
+- Do not add method properties, getters, setters, or JavaScript object behavior.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

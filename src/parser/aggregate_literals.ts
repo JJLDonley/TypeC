@@ -44,7 +44,14 @@ function parseRecordLiteralField(
   parser: AggregateLiteralParser,
 ): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
   const name = parser.expectKind("identifier", "Expected field name");
-  parser.expectText(":");
+  if (!parser.matchText(":")) return parseShorthandRecordLiteralField(name);
   const expression = parser.parseExpression();
   return { name: name.text, expression, span: span(name.span.start, expression.span.end) };
+}
+
+function parseShorthandRecordLiteralField(
+  name: Token,
+): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+  const expression: CastExpression = { kind: "IdentifierExpr", name: name.text, span: name.span };
+  return { name: name.text, expression, span: name.span };
 }
