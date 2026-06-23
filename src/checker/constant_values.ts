@@ -45,10 +45,11 @@ export function evaluateBoolConstant(
       return evaluateReferencedBoolConstant(expr.name, constants);
     case "FieldAccessExpr":
       return evaluateQualifiedBoolConstant(expr, constants);
+    case "UnaryExpr":
+      return evaluateUnaryBoolConstant(expr, constants);
     case "IntegerLiteral":
     case "FloatLiteral":
     case "StringLiteral":
-    case "UnaryExpr":
     case "BinaryExpr":
     case "CallExpr":
     case "MethodCallExpr":
@@ -94,6 +95,15 @@ function evaluateQualifiedBoolConstant(
   return name === null ? null : evaluateReferencedBoolConstant(name, constants);
 }
 
+function evaluateUnaryBoolConstant(
+  expr: Extract<Expression, { kind: "UnaryExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  if (expr.operator !== "!") return null;
+  const value = evaluateBoolConstant(expr.operand, constants);
+  return value === null ? null : !value;
+}
+
 function evaluateUnaryIntegerConstant(
   expr: Extract<Expression, { kind: "UnaryExpr" }>,
   constants: Map<Str, ConstDecl>,
@@ -101,7 +111,8 @@ function evaluateUnaryIntegerConstant(
   const value = evaluateIntegerConstant(expr.operand, constants);
   if (value === null) return null;
   if (expr.operator === "+") return value;
-  return -value;
+  if (expr.operator === "-") return -value;
+  return null;
 }
 
 function evaluateBinaryIntegerConstant(
@@ -167,7 +178,8 @@ function evaluateUnaryFloatConstant(
   const value = evaluateFloatConstant(expr.operand, constants);
   if (value === null) return null;
   if (expr.operator === "+") return value;
-  return -value;
+  if (expr.operator === "-") return -value;
+  return null;
 }
 
 function evaluateBinaryFloatConstant(

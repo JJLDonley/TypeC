@@ -17,6 +17,14 @@ Deno.test("emits nested expression operands", () => {
   );
 });
 
+Deno.test("emits logical not expressions", () => {
+  assertText(emitExpression(unary("!", identifier("closed")), context()), "!closed");
+  assertText(
+    emitExpression(unary("!", binary(identifier("a"), "==", identifier("b"))), context()),
+    "!(a == b)",
+  );
+});
+
 Deno.test("emits expected record and array expressions", () => {
   const ctx = context([recordAlias("Pair")]);
 
@@ -90,6 +98,14 @@ function named(name: Str): TypeRef {
 
 function int(text: Str): Expression {
   return { kind: "IntegerLiteral", value: BigInt(text), text, span };
+}
+
+function identifier(name: Str): Expression {
+  return { kind: "IdentifierExpr", name, span };
+}
+
+function unary(operator: "+" | "-" | "!", operand: Expression): Expression {
+  return { kind: "UnaryExpr", operator, operand, span };
 }
 
 function binary(left: Expression, operator: Str, right: Expression): Expression {

@@ -29,14 +29,14 @@ function parseUnaryExpression(parser: ExpressionParser): CastExpression {
   const operand = parseExpressionWith(parser, 4);
   return {
     kind: "UnaryExpr",
-    operator: operator.text as "+" | "-",
+    operator: operator.text as "+" | "-" | "!",
     operand,
     span: span(operator.span.start, operand.span.end),
   };
 }
 
 function isUnaryOperator(parser: ExpressionParser): b8 {
-  return parser.checkText("+") || parser.checkText("-");
+  return parser.checkText("+") || parser.checkText("-") || parser.checkText("!");
 }
 
 function parseBinaryExpression(parser: ExpressionParser, left: CastExpression): CastExpression {

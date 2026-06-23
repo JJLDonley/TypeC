@@ -18,6 +18,15 @@ Deno.test("parses unary expressions", () => {
   assertText(expr.operator, "-");
 });
 
+Deno.test("parses logical not expressions", () => {
+  const expr = parseExpressionWith(parserFor([operator("!"), operator("!"), identifier("a")]));
+
+  assertText(expr.kind, "UnaryExpr");
+  if (expr.kind !== "UnaryExpr") throw new Error("Expected unary expression");
+  assertText(expr.operator, "!");
+  assertText(expr.operand.kind, "UnaryExpr");
+});
+
 Deno.test("parses binary expressions with precedence", () => {
   const expr = parseExpressionWith(parserFor([
     identifier("a"),

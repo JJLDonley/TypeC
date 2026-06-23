@@ -1803,7 +1803,7 @@ deno run -A src/driver/main.ts lsp
 
 # Phase 23: TypeScript-Style Expression Operators
 
-Status: Planned. Syntax and semantics documented before implementation.
+Status: In progress. Logical `!` / `!!` subset implemented.
 
 ## Goal
 

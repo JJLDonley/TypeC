@@ -16,6 +16,22 @@ export function checkUnaryExpression(
   resolveType: TypeResolver,
 ): UnaryExpressionCheck {
   const type = resolveType(expr.operand);
+  if (expr.operator === "!") return checkLogicalNot(expr, type);
+  return checkNumericUnary(expr, type);
+}
+
+function checkLogicalNot(expr: UnaryExpr, type: TypeName): UnaryExpressionCheck {
+  if (type === "bool") return { diagnostics: [], type: "bool" };
+  return {
+    diagnostics: [{
+      message: "Operator '!' requires a bool operand",
+      span: expr.span,
+    }],
+    type: "<error>",
+  };
+}
+
+function checkNumericUnary(expr: UnaryExpr, type: TypeName): UnaryExpressionCheck {
   if (isNumericType(type)) return { diagnostics: [], type };
   return {
     diagnostics: [{
