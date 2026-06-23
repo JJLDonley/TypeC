@@ -141,6 +141,7 @@ function expressionUsesArena(expr: Expression): b8 {
       return expressionUsesArena(expr.receiver) || expr.args.some(expressionUsesArena);
     case "UnaryExpr":
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
     case "FieldAccessExpr":
       return expressionUsesArena(expr.operand);
     case "BinaryExpr":

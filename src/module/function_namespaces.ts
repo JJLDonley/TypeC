@@ -109,6 +109,7 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         whenFalse: namespaceExpression(expr.whenFalse, namespace, functions),
       };
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
     case "FieldAccessExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };

@@ -230,6 +230,10 @@ class AstPrinter {
         this.line(`PostfixPointerExpr ${expression.operator}`);
         this.indented(() => this.expression(expression.operand));
         return;
+      case "NonNullAssertExpr":
+        this.line("NonNullAssertExpr");
+        this.indented(() => this.expression(expression.operand));
+        return;
       case "FieldAccessExpr":
         this.line(`FieldAccessExpr ${expression.field}`);
         this.indented(() => this.expression(expression.operand));

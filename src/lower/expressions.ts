@@ -11,6 +11,7 @@ import type {
   IndexExpr,
   IntegerLiteral,
   MethodCallExpr,
+  NonNullAssertExpr,
   PostfixPointerExpr,
   RecordLiteralExpr,
   StringLiteral,
@@ -29,6 +30,7 @@ import type {
   CastIndexExpr,
   CastIntegerLiteral,
   CastMethodCallExpr,
+  CastNonNullAssertExpr,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
   CastStringLiteral,
@@ -60,6 +62,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerMethodCallExpr(expression);
     case "PostfixPointerExpr":
       return lowerPostfixPointerExpr(expression);
+    case "NonNullAssertExpr":
+      return lowerNonNullAssertExpr(expression);
     case "FieldAccessExpr":
       return lowerFieldAccessExpr(expression);
     case "RecordLiteralExpr":
@@ -159,6 +163,14 @@ function lowerPostfixPointerExpr(expression: CastPostfixPointerExpr): PostfixPoi
   return {
     kind: "PostfixPointerExpr",
     operator: expression.operator,
+    operand: lowerExpression(expression.operand),
+    span: expression.span,
+  };
+}
+
+function lowerNonNullAssertExpr(expression: CastNonNullAssertExpr): NonNullAssertExpr {
+  return {
+    kind: "NonNullAssertExpr",
     operand: lowerExpression(expression.operand),
     span: expression.span,
   };

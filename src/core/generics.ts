@@ -154,6 +154,7 @@ function expressionGenericCallDiagnostics(
         ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
       ];
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
       return expressionGenericCallDiagnostics(expr.operand, templates);
     case "FieldAccessExpr":
       return expressionGenericCallDiagnostics(expr.operand, templates);
@@ -356,6 +357,7 @@ class GenericInstantiator {
           args: expr.args.map((arg) => this.rewriteExpr(arg)),
         };
       case "PostfixPointerExpr":
+      case "NonNullAssertExpr":
         return { ...expr, operand: this.rewriteExpr(expr.operand) };
       case "FieldAccessExpr":
         return { ...expr, operand: this.rewriteExpr(expr.operand) };

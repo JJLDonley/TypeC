@@ -1172,6 +1172,14 @@ Deno.test("emits C for optional type spelling", () => {
   assertIncludes(c, "Optional_i32 keep(Optional_i32 value)");
 });
 
+Deno.test("emits C for non-null assertions", () => {
+  const source =
+    `function unwrap(value: i32?): i32 { return value!; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "static inline i32 __typec_unwrap_Optional_i32(Optional_i32 value)");
+  assertIncludes(c, "return __typec_unwrap_Optional_i32(value);");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

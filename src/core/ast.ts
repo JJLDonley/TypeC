@@ -293,6 +293,7 @@ export type Expression =
   | CallExpr
   | MethodCallExpr
   | PostfixPointerExpr
+  | NonNullAssertExpr
   | FieldAccessExpr
   | RecordLiteralExpr
   | ArrayLiteralExpr
@@ -373,6 +374,12 @@ export interface MethodCallExpr {
 export interface PostfixPointerExpr {
   kind: "PostfixPointerExpr";
   operator: ".*" | ".&";
+  operand: Expression;
+  span: SourceSpan;
+}
+
+export interface NonNullAssertExpr {
+  kind: "NonNullAssertExpr";
   operand: Expression;
   span: SourceSpan;
 }

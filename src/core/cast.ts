@@ -319,6 +319,7 @@ export type CastExpression =
   | CastCallExpr
   | CastMethodCallExpr
   | CastPostfixPointerExpr
+  | CastNonNullAssertExpr
   | CastFieldAccessExpr
   | CastRecordLiteralExpr
   | CastArrayLiteralExpr
@@ -399,6 +400,12 @@ export interface CastMethodCallExpr {
 export interface CastPostfixPointerExpr {
   kind: "PostfixPointerExpr";
   operator: ".*" | ".&";
+  operand: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastNonNullAssertExpr {
+  kind: "NonNullAssertExpr";
   operand: CastExpression;
   span: SourceSpan;
 }

@@ -55,6 +55,16 @@ Deno.test("parses postfix index expressions", () => {
   assertText(expr.kind, "IndexExpr");
 });
 
+Deno.test("parses postfix non-null assertion", () => {
+  const parser = parserFor([identifier("value"), operator("!"), eof()]);
+
+  const expr = parsePostfixExpressionWith(parser);
+
+  assertText(expr.kind, "NonNullAssertExpr");
+  if (expr.kind !== "NonNullAssertExpr") throw new Error("Expected non-null assertion");
+  assertText(expr.operand.kind, "IdentifierExpr");
+});
+
 function parserFor(tokens: Token[]): PostfixExpressionParser {
   let current: i32 = 0;
   return {
@@ -109,6 +119,10 @@ function identifier(text: Str): Token {
 
 function punct(text: Str): Token {
   return token("punctuation", text);
+}
+
+function operator(text: Str): Token {
+  return token("operator", text);
 }
 
 function eof(): Token {

@@ -47,6 +47,7 @@ function handlers(): ExpressionTypeHandlers {
     call: resolveI64,
     methodCall: resolveI64,
     pointer: resolveI64,
+    nonNullAssert: resolveI64,
     fieldAccess: resolveI64,
     index: resolveI64,
   };

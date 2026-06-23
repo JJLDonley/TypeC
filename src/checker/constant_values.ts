@@ -29,6 +29,7 @@ export function evaluateIntegerConstant(
     case "CallExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
     case "RecordLiteralExpr":
     case "ArrayLiteralExpr":
     case "IndexExpr":
@@ -58,6 +59,7 @@ export function evaluateBoolConstant(
     case "CallExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
     case "RecordLiteralExpr":
     case "ArrayLiteralExpr":
     case "IndexExpr":
@@ -171,6 +173,7 @@ export function evaluateFloatConstant(
     case "CallExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
     case "RecordLiteralExpr":
     case "ArrayLiteralExpr":
     case "IndexExpr":

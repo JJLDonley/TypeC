@@ -24,6 +24,7 @@ import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
+import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
@@ -84,6 +85,7 @@ export * from "checker/local_declarations.ts";
 export * from "checker/local_types.ts";
 export * from "checker/locals.ts";
 export * from "checker/main.ts";
+export * from "checker/non_null_assertions.ts";
 export * from "checker/pointer_compatibility.ts";
 export * from "checker/pointer_expressions.ts";
 export * from "checker/pointer_ops.ts";
@@ -367,6 +369,7 @@ class Checker {
       call: (value) => this.callType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
+      nonNullAssert: (value) => this.nonNullAssertType(value, locals),
       fieldAccess: (value) => this.fieldAccessType(value, locals),
       index: (value) => this.indexType(value, locals),
     });
@@ -529,6 +532,15 @@ class Checker {
   ): TypeName {
     const operand = this.typeOf(expr.operand, locals);
     const result = checkPostfixPointerExpression(expr, operand);
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private nonNullAssertType(
+    expr: Extract<Expression, { kind: "NonNullAssertExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkNonNullAssertExpression(expr, (operand) => this.typeOf(operand, locals));
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }

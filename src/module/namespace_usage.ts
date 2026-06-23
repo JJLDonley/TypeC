@@ -99,6 +99,9 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
       for (const arg of expression.args) collectExpression(arg, namespace, members);
       return;
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
+      collectExpression(expression.operand, namespace, members);
+      return;
     case "FieldAccessExpr":
       collectNamespaceField(expression, namespace, members);
       collectExpression(expression.operand, namespace, members);
@@ -119,11 +122,10 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
 }
 
 function collectNamespaceField(
-  expression: Extract<Expression, { kind: "FieldAccessExpr" | "PostfixPointerExpr" }>,
+  expression: Extract<Expression, { kind: "FieldAccessExpr" }>,
   namespace: Str,
   members: Set<Str>,
 ): void {
-  if (expression.kind !== "FieldAccessExpr") return;
   if (expression.operand.kind !== "IdentifierExpr") return;
   if (expression.operand.name !== namespace) return;
   members.add(expression.field);

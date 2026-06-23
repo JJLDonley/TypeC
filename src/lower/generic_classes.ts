@@ -15,6 +15,7 @@ import type {
   CastIndexExpr,
   CastInterfaceDecl,
   CastMethodCallExpr,
+  CastNonNullAssertExpr,
   CastParam,
   CastPostfixPointerExpr,
   CastProgram,
@@ -284,6 +285,8 @@ class GenericClassInstantiator {
         return this.rewriteMethodCall(expression);
       case "PostfixPointerExpr":
         return this.rewritePostfixPointer(expression);
+      case "NonNullAssertExpr":
+        return this.rewriteNonNullAssert(expression);
       case "FieldAccessExpr":
         return { ...expression, operand: this.rewriteExpression(expression.operand) };
       case "RecordLiteralExpr":
@@ -333,6 +336,10 @@ class GenericClassInstantiator {
   }
 
   private rewritePostfixPointer(expression: CastPostfixPointerExpr): CastPostfixPointerExpr {
+    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  }
+
+  private rewriteNonNullAssert(expression: CastNonNullAssertExpr): CastNonNullAssertExpr {
     return { ...expression, operand: this.rewriteExpression(expression.operand) };
   }
 

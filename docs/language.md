@@ -29,11 +29,11 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phase 23 has started. Logical `!`, `!!`, ternary `? :`, and optional `T?` type spelling are
-implemented. Planned remaining expression syntax includes optional chaining `?.`, nullish coalescing
-`??`, Elvis `?:`, and postfix non-null assertion `expr!`. Additional TypeScript unary/update
-syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly
-rejected as described below.
+Phase 23 has started. Logical `!`, `!!`, ternary `? :`, optional `T?` type spelling, and postfix
+non-null assertion `expr!` are implemented. Planned remaining expression syntax includes optional
+chaining `?.`, nullish coalescing `??`, and Elvis `?:`. Additional TypeScript unary/update syntaxes
+such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly rejected
+as described below.
 
 ## Example
 
@@ -206,8 +206,8 @@ expr!;
 ```
 
 Postfix `expr!` requires an optional expression and returns the contained non-optional type. If the
-value is empty at runtime, default lowering traps/aborts rather than silently producing undefined
-behavior.
+value is empty at runtime, generated C aborts through a checked unwrap helper. `expr!` is
+implemented and does not change the variable's declared type.
 
 ### Precedence
 

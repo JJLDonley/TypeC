@@ -73,6 +73,7 @@ export function isConstantExpression(
     case "CallExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
+    case "NonNullAssertExpr":
     case "IndexExpr":
       return false;
     case "FieldAccessExpr":

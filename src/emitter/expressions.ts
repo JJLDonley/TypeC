@@ -1,4 +1,5 @@
 import type { Expression, RecordTypeRef } from "core/ast.ts";
+import { optionalUnwrapFunctionNameFromTypeName } from "c/optional_names.ts";
 import { classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { EmitContext } from "emitter/context.ts";
@@ -45,6 +46,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitMethodCallExpression(expr, context);
     case "PostfixPointerExpr":
       return emitPostfixPointerExpression(expr, context);
+    case "NonNullAssertExpr":
+      return emitNonNullAssertExpression(expr, context);
     case "FieldAccessExpr":
       return emitFieldAccessExpression(expr, context);
     case "RecordLiteralExpr":
@@ -120,6 +123,16 @@ function emitUnaryOperand(expr: Expression, context: EmitContext): Str {
 
 function emitIdentifierExpression(name: Str, context: EmitContext): Str {
   return context.constants?.get(name)?.cName ?? name;
+}
+
+function emitNonNullAssertExpression(
+  expr: Extract<Expression, { kind: "NonNullAssertExpr" }>,
+  context: EmitContext,
+): Str {
+  const operandType = context.expressionTypes?.get(spanKey(expr.operand.span))?.type ?? "<error>";
+  const elementType = operandType.endsWith("?") ? operandType.slice(0, -1) : "<error>";
+  const unwrapName = optionalUnwrapFunctionNameFromTypeName(elementType);
+  return `${unwrapName}(${emitExpression(expr.operand, context)})`;
 }
 
 function emitSliceExpression(expr: Expression, expectedType: Str, context: EmitContext): Str {

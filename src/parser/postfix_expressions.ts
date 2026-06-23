@@ -24,6 +24,7 @@ export function parsePostfixExpressionWith(parser: PostfixExpressionParser): Cas
 function parsePostfix(parser: PostfixExpressionParser, operand: CastExpression): CastExpression {
   if (parser.checkText(".")) return parseFieldAccess(parser, operand);
   if (parser.checkText("[")) return parseIndexAccess(parser, operand);
+  if (parser.checkText("!")) return parseNonNullAssertion(parser, operand);
   return parsePointerPostfix(parser, operand);
 }
 
@@ -100,6 +101,14 @@ function parsePointerPostfix(
   };
 }
 
+function parseNonNullAssertion(
+  parser: PostfixExpressionParser,
+  operand: CastExpression,
+): CastExpression {
+  const op = parser.expectText("!");
+  return { kind: "NonNullAssertExpr", operand, span: span(operand.span.start, op.span.end) };
+}
+
 function parseFieldAccessName(parser: PostfixExpressionParser): Token {
   parser.expectText(".");
   return parser.expectKind("identifier", "Expected field name");
@@ -114,5 +123,5 @@ function parseIndexClose(parser: PostfixExpressionParser): { index: CastExpressi
 
 function isPostfixStart(parser: PostfixExpressionParser): b8 {
   return parser.checkText(".*") || parser.checkText(".&") || parser.checkText(".") ||
-    parser.checkText("[");
+    parser.checkText("[") || parser.checkText("!");
 }

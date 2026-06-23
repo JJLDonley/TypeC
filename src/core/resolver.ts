@@ -176,6 +176,7 @@ class Resolver {
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "PostfixPointerExpr":
+      case "NonNullAssertExpr":
         this.resolveExpression(expression.operand, scope);
         return;
       case "FieldAccessExpr":

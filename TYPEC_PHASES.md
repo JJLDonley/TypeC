@@ -1803,8 +1803,8 @@ deno run -A src/driver/main.ts lsp
 
 # Phase 23: TypeScript-Style Expression Operators
 
-Status: In progress. Logical `!` / `!!`, ternary `? :`, and optional type spelling `T?` subsets
-implemented.
+Status: In progress. Logical `!` / `!!`, ternary `? :`, optional type spelling `T?`, and postfix
+non-null assertion `expr!` subsets implemented.
 
 ## Goal
 
@@ -1918,8 +1918,9 @@ Nullish coalescing and Elvis:
 Non-null assertion:
 
 - `expr!` requires `expr` to be optional and returns the contained non-optional type.
-- If `expr` is empty at runtime, behavior is a checked trap/abort in debug-safe lowering; unchecked
+- If `expr` is empty at runtime, generated C aborts through a checked unwrap helper. Unchecked
   lowering may be specified later but is not the default.
+- `expr!` is implemented.
 - `expr!` is explicit and local; it does not change the variable's declared type.
 
 ## Precedence
