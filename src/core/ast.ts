@@ -344,6 +344,7 @@ export type Expression =
   | IntegerLiteral
   | FloatLiteral
   | BoolLiteral
+  | ZeroValueExpr
   | StringLiteral
   | IdentifierExpr
   | UnaryExpr
@@ -351,6 +352,7 @@ export type Expression =
   | ConditionalExpr
   | NullishCoalesceExpr
   | CallExpr
+  | NewExpr
   | MethodCallExpr
   | PostfixPointerExpr
   | NonNullAssertExpr
@@ -386,6 +388,11 @@ export interface BoolLiteral {
 export interface StringLiteral {
   kind: "StringLiteral";
   text: Str;
+  span: SourceSpan;
+}
+
+export interface ZeroValueExpr {
+  kind: "ZeroValueExpr";
   span: SourceSpan;
 }
 
@@ -429,6 +436,14 @@ export interface NullishCoalesceExpr {
 export interface CallExpr {
   kind: "CallExpr";
   callee: Str;
+  typeArgs?: TypeRef[];
+  args: Expression[];
+  span: SourceSpan;
+}
+
+export interface NewExpr {
+  kind: "NewExpr";
+  className: Str;
   typeArgs?: TypeRef[];
   args: Expression[];
   span: SourceSpan;

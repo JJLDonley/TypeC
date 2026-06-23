@@ -1,6 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type {
   CastBlockStmt,
+  CastClassConstructor,
   CastClassDecl,
   CastClassField,
   CastClassMethod,
@@ -170,6 +171,7 @@ function parseClassDeclaration(
     genericParams,
     implements: implemented,
     fields: members.fields,
+    constructorDecl: members.constructorDecl,
     methods: members.methods,
     span: span(start.span.start, close.span.end),
   };
@@ -185,15 +187,26 @@ function parseClassImplements(parser: DeclarationParser): CastTypeRef[] {
 function parseClassMembers(
   parser: DeclarationParser,
   exported: b8,
-): { fields: CastClassField[]; methods: CastClassMethod[] } {
+): {
+  fields: CastClassField[];
+  constructorDecl: CastClassConstructor | null;
+  methods: CastClassMethod[];
+} {
   const fields: CastClassField[] = [];
   const methods: CastClassMethod[] = [];
+  let constructorDecl: CastClassConstructor | null = null;
   while (!parser.checkText("}") && !parser.checkText("eof")) {
+    if (parser.checkText("constructor")) {
+      const parsed = parseClassConstructor(parser);
+      if (constructorDecl !== null) parser.error(parser.previous(), "Duplicate constructor");
+      constructorDecl = constructorDecl ?? parsed;
+      continue;
+    }
     const name = parser.expectKind("identifier", "Expected class member name");
     if (parser.checkText("(")) methods.push(parseClassMethod(parser, exported, name));
     else fields.push(parseClassField(parser, name));
   }
-  return { fields, methods };
+  return { fields, constructorDecl, methods };
 }
 
 function parseClassField(parser: DeclarationParser, name: Token): CastClassField {
@@ -201,6 +214,15 @@ function parseClassField(parser: DeclarationParser, name: Token): CastClassField
   const type = parser.parseTypeRef();
   const semi = parser.expectText(";");
   return { name: name.text, type, span: span(name.span.start, semi.span.end) };
+}
+
+function parseClassConstructor(parser: DeclarationParser): CastClassConstructor {
+  const start = parser.expectText("constructor");
+  parser.expectText("(");
+  const params = parseFunctionParams(parser);
+  parser.expectText(")");
+  const body = parser.parseBlock();
+  return { params: params.params, body, span: span(start.span.start, body.span.end) };
 }
 
 function parseClassMethod(

@@ -149,6 +149,7 @@ function expressionGenericCallDiagnostics(
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ZeroValueExpr":
     case "IdentifierExpr":
       return [];
     case "UnaryExpr":
@@ -174,6 +175,8 @@ function expressionGenericCallDiagnostics(
         ...genericCallArityDiagnostics(expr, templates),
         ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
       ];
+    case "NewExpr":
+      return expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates));
     case "MethodCallExpr":
       return [
         ...expressionGenericCallDiagnostics(expr.receiver, templates),
@@ -401,6 +404,7 @@ class GenericInstantiator {
       case "FloatLiteral":
       case "BoolLiteral":
       case "StringLiteral":
+      case "ZeroValueExpr":
       case "IdentifierExpr":
         return expr;
       case "UnaryExpr":
@@ -422,6 +426,8 @@ class GenericInstantiator {
         };
       case "CallExpr":
         return this.instantiateCall(expr);
+      case "NewExpr":
+        return { ...expr, args: expr.args.map((arg) => this.rewriteExpr(arg)) };
       case "MethodCallExpr":
         return {
           ...expr,

@@ -18,7 +18,7 @@ arr[i] = value;
 obj.pos.x += dx;
 ```
 
-The largest remaining ergonomic gaps are constructors and class inheritance/dispatch.
+The largest remaining ergonomic gap is class inheritance/dispatch.
 
 ## Support Matrix
 
@@ -73,11 +73,11 @@ The largest remaining ergonomic gaps are constructors and class inheritance/disp
 | Tagged unions                       | Implemented        | Explicit `union` declarations, not TS `A \| B` type unions.                                           |
 | TS union types `A \| B`             | Not implemented    | Use tagged unions instead.                                                                            |
 | Intersection types `A & B`          | Not implemented    | Not yet specified.                                                                                    |
-| Classes                             | Partial            | Static layout and methods lower to records/functions; no constructors or inheritance.                 |
-| Class fields                        | Partial            | Static layout, initialization, and field assignment; no constructors/inheritance.                     |
-| Class methods                       | Partial            | Calls and mutation through fields work; no constructors/inheritance/dispatch.                         |
+| Classes                             | Partial            | Static layout, constructors, and methods lower to records/functions; no inheritance.                  |
+| Class fields                        | Partial            | Static layout, constructor initialization, and field assignment; no inheritance.                      |
+| Class methods                       | Partial            | Calls and mutation through fields work; no inheritance/dispatch.                                      |
 | `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                               |
-| Constructors                        | Not implemented    | Use record literals for initialization.                                                               |
+| Constructors                        | Implemented subset | Value-returning `new Class(...)`; no heap allocation, overloads, `super`, or parameter properties.    |
 | Class `implements`                  | Implemented        | Explicit static interface contracts; no runtime dispatch.                                             |
 | Class inheritance `extends`         | Not implemented    | No superclass/prototype model.                                                                        |
 | Method overriding                   | Not implemented    | Requires inheritance/dispatch design.                                                                 |
@@ -108,12 +108,11 @@ The largest remaining ergonomic gaps are constructors and class inheritance/disp
 
 ## Most important missing phases
 
-1. **Constructors**: structured initialization without record-literal-only construction.
-2. **Inheritance or composition support**: only after a strict static/C layout spec.
+1. **Inheritance or composition support**: only after a strict static/C layout spec.
 
 ## Latest documented phase
 
-Latest completed phase: **Phase 40 — Class `implements`**.
+Latest completed phase: **Phase 41 — Basic Constructors and `new`**.
 
 Run the compiler with:
 

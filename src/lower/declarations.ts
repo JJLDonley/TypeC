@@ -1,4 +1,4 @@
-import { classMethodFunction, classTypeAlias } from "core/classes.ts";
+import { classConstructorFunction, classMethodFunction, classTypeAlias } from "core/classes.ts";
 import type {
   ConstDecl,
   EnumDecl,
@@ -6,6 +6,7 @@ import type {
   ImportDecl,
   InterfaceDecl,
   Param,
+  Statement,
   TaggedUnionDecl,
   TypeAliasDecl,
 } from "core/ast.ts";
@@ -58,15 +59,49 @@ export function lowerClassTypeAlias(classDecl: CastClassDecl): TypeAliasDecl {
 }
 
 export function lowerClassMethods(classDecl: CastClassDecl): FunctionDecl[] {
-  return classDecl.methods.map((method) =>
-    classMethodFunction(
+  const constructorFn = classDecl.constructorDecl
+    ? [classConstructorFunction(
       classDecl,
-      method,
-      method.params.map(lowerParam),
-      lowerTypeRef(method.returnType),
-      lowerBlockStmt(method.body),
-    )
-  );
+      classDecl.constructorDecl,
+      classDecl.constructorDecl.params.map(lowerParam),
+      lowerConstructorBody(classDecl),
+    )]
+    : [];
+  return [
+    ...constructorFn,
+    ...classDecl.methods.map((method) =>
+      classMethodFunction(
+        classDecl,
+        method,
+        method.params.map(lowerParam),
+        lowerTypeRef(method.returnType),
+        lowerBlockStmt(method.body),
+      )
+    ),
+  ];
+}
+
+function lowerConstructorBody(classDecl: CastClassDecl): NonNullable<FunctionDecl["body"]> {
+  const constructorDecl = classDecl.constructorDecl;
+  if (!constructorDecl) throw new Error("Expected constructor declaration");
+  const thisDecl: Statement = {
+    kind: "VarDeclStmt",
+    mutable: true,
+    name: "this",
+    type: { kind: "NamedTypeRef", name: classDecl.name, span: classDecl.span },
+    initializer: { kind: "ZeroValueExpr", span: constructorDecl.span },
+    span: constructorDecl.span,
+  };
+  const ret: Statement = {
+    kind: "ReturnStmt",
+    expression: { kind: "IdentifierExpr", name: "this", span: constructorDecl.span },
+    span: constructorDecl.span,
+  };
+  return {
+    kind: "BlockStmt",
+    statements: [thisDecl, ...lowerBlockStmt(constructorDecl.body).statements, ret],
+    span: constructorDecl.body.span,
+  };
 }
 
 export function lowerInterfaceDecl(interfaceDecl: CastInterfaceDecl): InterfaceDecl {

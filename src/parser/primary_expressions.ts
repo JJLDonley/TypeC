@@ -31,6 +31,7 @@ export function parsePrimaryWith(parser: PrimaryExpressionParser): CastExpressio
     return parseBoolLiteral(parser.advance());
   }
   if (parser.check("string")) return parseStringLiteral(parser.advance());
+  if (parser.checkText("new")) return parseNewExpression(parser);
   if (parser.check("identifier")) return parseIdentifierExpression(parser);
   if (parser.checkText("{")) return parser.parseRecordLiteral();
   if (parser.checkText("[")) return parser.parseArrayLiteral();
@@ -70,6 +71,22 @@ function parseParenthesizedExpression(parser: PrimaryExpressionParser): CastExpr
   const expr = parser.parseExpression();
   parser.expectText(")");
   return expr;
+}
+
+function parseNewExpression(parser: PrimaryExpressionParser): CastExpression {
+  const start = parser.expectText("new");
+  const name = parser.expectKind("identifier", "Expected class name");
+  const typeArgs = parseGenericCallTypeArgs(parser);
+  parser.expectText("(");
+  const args = parseCallArguments(parser);
+  const close = parser.expectText(")");
+  return {
+    kind: "NewExpr",
+    className: name.text,
+    typeArgs,
+    args,
+    span: span(start.span.start, close.span.end),
+  };
 }
 
 function parseIdentifierExpression(parser: PrimaryExpressionParser): CastExpression {

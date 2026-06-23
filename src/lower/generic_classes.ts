@@ -17,6 +17,7 @@ import type {
   CastIndexExpr,
   CastInterfaceDecl,
   CastMethodCallExpr,
+  CastNewExpr,
   CastNonNullAssertExpr,
   CastNullishCoalesceExpr,
   CastOptionalFieldAccessExpr,
@@ -156,6 +157,13 @@ class GenericClassInstantiator {
         ...field,
         type: this.rewriteTypeRef(field.type),
       })),
+      constructorDecl: classDecl.constructorDecl
+        ? {
+          ...classDecl.constructorDecl,
+          params: classDecl.constructorDecl.params.map((param) => this.rewriteParam(param)),
+          body: this.rewriteBlock(classDecl.constructorDecl.body),
+        }
+        : null,
       methods: classDecl.methods.map((method) => ({
         ...method,
         params: method.params.map((param) => this.rewriteParam(param)),
@@ -332,6 +340,8 @@ class GenericClassInstantiator {
         return this.rewriteNullish(expression);
       case "CallExpr":
         return this.rewriteCall(expression);
+      case "NewExpr":
+        return this.rewriteNew(expression);
       case "MethodCallExpr":
         return this.rewriteMethodCall(expression);
       case "PostfixPointerExpr":
@@ -388,6 +398,21 @@ class GenericClassInstantiator {
     return {
       ...expression,
       typeArgs: expression.typeArgs?.map((typeArg) => this.rewriteTypeRef(typeArg)),
+      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+    };
+  }
+
+  private rewriteNew(expression: CastNewExpr): CastNewExpr {
+    const typeRef = this.rewriteTypeRef({
+      kind: "NamedTypeRef",
+      name: expression.className,
+      typeArgs: expression.typeArgs,
+      span: expression.span,
+    });
+    return {
+      ...expression,
+      className: typeRef.kind === "NamedTypeRef" ? typeRef.name : expression.className,
+      typeArgs: [],
       args: expression.args.map((arg) => this.rewriteExpression(arg)),
     };
   }
@@ -505,6 +530,15 @@ class GenericClassInstantiator {
         ...field,
         type: substituteTypeRef(field.type, substitutions),
       })),
+      constructorDecl: template.constructorDecl
+        ? {
+          ...template.constructorDecl,
+          params: template.constructorDecl.params.map((param) =>
+            substituteParam(param, substitutions)
+          ),
+          body: substituteBlock(template.constructorDecl.body, substitutions),
+        }
+        : null,
       methods: template.methods.map((method) => ({
         ...method,
         params: method.params.map((param) => substituteParam(param, substitutions)),

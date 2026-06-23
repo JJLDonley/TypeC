@@ -18,6 +18,7 @@ export interface ExpressionTypeHandlers {
   conditional(expr: Extract<Expression, { kind: "ConditionalExpr" }>): TypeName;
   nullish(expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>): TypeName;
   call(expr: Extract<Expression, { kind: "CallExpr" }>): TypeName;
+  newExpr(expr: Extract<Expression, { kind: "NewExpr" }>): TypeName;
   methodCall(expr: Extract<Expression, { kind: "MethodCallExpr" }>): TypeName;
   pointer(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): TypeName;
   nonNullAssert(expr: Extract<Expression, { kind: "NonNullAssertExpr" }>): TypeName;
@@ -60,6 +61,8 @@ function computeNonBasicExpressionType(
       return ok(handlers.nullish(expr));
     case "CallExpr":
       return ok(handlers.call(expr));
+    case "NewExpr":
+      return ok(handlers.newExpr(expr));
     case "MethodCallExpr":
       return ok(handlers.methodCall(expr));
     case "PostfixPointerExpr":
@@ -80,6 +83,8 @@ function computeNonBasicExpressionType(
       return error("Record literals require an expected record type", expr.span);
     case "ArrayLiteralExpr":
       return error("Array literals require an expected array type", expr.span);
+    case "ZeroValueExpr":
+      return error("Zero values require an expected type", expr.span);
   }
 }
 
@@ -87,12 +92,12 @@ function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
   return expr.kind === "IdentifierExpr" || expr.kind === "UnaryExpr" ||
     expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr" ||
     expr.kind === "NullishCoalesceExpr" || expr.kind === "CallExpr" ||
-    expr.kind === "MethodCallExpr" ||
+    expr.kind === "NewExpr" || expr.kind === "MethodCallExpr" ||
     expr.kind === "PostfixPointerExpr" || expr.kind === "NonNullAssertExpr" ||
     expr.kind === "FieldAccessExpr" || expr.kind === "OptionalFieldAccessExpr" ||
     expr.kind === "OptionalMethodCallExpr" || expr.kind === "OptionalIndexExpr" ||
     expr.kind === "IndexExpr" || expr.kind === "RecordLiteralExpr" ||
-    expr.kind === "ArrayLiteralExpr";
+    expr.kind === "ArrayLiteralExpr" || expr.kind === "ZeroValueExpr";
 }
 
 function ok(type: TypeName): ExpressionTypeCheck {

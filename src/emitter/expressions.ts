@@ -3,7 +3,7 @@ import {
   optionalCTypeNameFromTypeName,
   optionalUnwrapFunctionNameFromTypeName,
 } from "c/optional_names.ts";
-import { classMethodName } from "core/classes.ts";
+import { classConstructorName, classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCallExpression } from "emitter/calls.ts";
@@ -33,6 +33,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return expr.text;
     case "StringLiteral":
       return emitCStringLiteral(expr.text);
+    case "ZeroValueExpr":
+      throw new Error("Zero values require an expected C type");
     case "IdentifierExpr":
       return emitIdentifierExpression(expr.name, context);
     case "UnaryExpr":
@@ -51,6 +53,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
         emitExpressionExpected,
         emitArrayLiteralExpression,
       );
+    case "NewExpr":
+      return emitNewExpression(expr, context);
     case "MethodCallExpr":
       return emitMethodCallExpression(expr, context);
     case "PostfixPointerExpr":
@@ -79,6 +83,7 @@ export function emitExpressionExpected(
   expectedType: Str,
   context: EmitContext,
 ): Str {
+  if (expr.kind === "ZeroValueExpr") return `(${expectedType}){0}`;
   if (expr.kind === "IntegerLiteral") return emitIntegerLiteralExpression(expr, expectedType);
   if (expr.kind === "RecordLiteralExpr") {
     return emitRecordLiteralExpression(expr, expectedType, context);
@@ -95,6 +100,16 @@ export function emitExpressionExpected(
     return emitSliceExpression(expr, expectedType, context);
   }
   return emitExpression(expr, context);
+}
+
+function emitNewExpression(
+  expr: Extract<Expression, { kind: "NewExpr" }>,
+  context: EmitContext,
+): Str {
+  const constructorName = classConstructorName(expr.className);
+  const fn = context.functions.get(constructorName);
+  const args = expr.args.map((arg) => emitExpression(arg, context));
+  return `${fn?.cName ?? constructorName}(${args.join(", ")})`;
 }
 
 function emitMethodCallExpression(

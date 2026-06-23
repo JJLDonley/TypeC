@@ -116,6 +116,11 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         callee: namespaceCallee(expr.callee, namespace, functions),
         args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
       };
+    case "NewExpr":
+      return {
+        ...expr,
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+      };
     case "MethodCallExpr":
       return {
         ...expr,
@@ -186,6 +191,7 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ZeroValueExpr":
     case "IdentifierExpr":
       return expr;
   }

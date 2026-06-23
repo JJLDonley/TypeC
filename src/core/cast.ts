@@ -48,6 +48,7 @@ export interface CastClassDecl {
   genericParams?: CastGenericParam[];
   implements?: CastTypeRef[];
   fields: CastClassField[];
+  constructorDecl: CastClassConstructor | null;
   methods: CastClassMethod[];
   span: SourceSpan;
 }
@@ -55,6 +56,12 @@ export interface CastClassDecl {
 export interface CastClassField {
   name: Str;
   type: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastClassConstructor {
+  params: CastParam[];
+  body: CastBlockStmt;
   span: SourceSpan;
 }
 
@@ -385,6 +392,7 @@ export type CastExpression =
   | CastConditionalExpr
   | CastNullishCoalesceExpr
   | CastCallExpr
+  | CastNewExpr
   | CastMethodCallExpr
   | CastPostfixPointerExpr
   | CastNonNullAssertExpr
@@ -463,6 +471,14 @@ export interface CastNullishCoalesceExpr {
 export interface CastCallExpr {
   kind: "CallExpr";
   callee: Str;
+  typeArgs?: CastTypeRef[];
+  args: CastExpression[];
+  span: SourceSpan;
+}
+
+export interface CastNewExpr {
+  kind: "NewExpr";
+  className: Str;
   typeArgs?: CastTypeRef[];
   args: CastExpression[];
   span: SourceSpan;

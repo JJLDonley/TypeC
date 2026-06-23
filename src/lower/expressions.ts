@@ -11,6 +11,7 @@ import type {
   IndexExpr,
   IntegerLiteral,
   MethodCallExpr,
+  NewExpr,
   NonNullAssertExpr,
   NullishCoalesceExpr,
   OptionalFieldAccessExpr,
@@ -34,6 +35,7 @@ import type {
   CastIndexExpr,
   CastIntegerLiteral,
   CastMethodCallExpr,
+  CastNewExpr,
   CastNonNullAssertExpr,
   CastNullishCoalesceExpr,
   CastOptionalFieldAccessExpr,
@@ -68,6 +70,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerNullishCoalesceExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
+    case "NewExpr":
+      return lowerNewExpr(expression);
     case "MethodCallExpr":
       return lowerMethodCallExpr(expression);
     case "PostfixPointerExpr":
@@ -169,6 +173,16 @@ function lowerCallExpr(expression: CastCallExpr): CallExpr {
   return {
     kind: "CallExpr",
     callee: expression.callee,
+    typeArgs: expression.typeArgs?.map((typeArg) => lowerTypeRef(typeArg)),
+    args: expression.args.map(lowerExpression),
+    span: expression.span,
+  };
+}
+
+function lowerNewExpr(expression: CastNewExpr): NewExpr {
+  return {
+    kind: "NewExpr",
+    className: expression.className,
     typeArgs: expression.typeArgs?.map((typeArg) => lowerTypeRef(typeArg)),
     args: expression.args.map(lowerExpression),
     span: expression.span,

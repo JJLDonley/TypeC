@@ -196,6 +196,7 @@ class Resolver {
       case "FloatLiteral":
       case "BoolLiteral":
       case "StringLiteral":
+      case "ZeroValueExpr":
         return;
       case "IdentifierExpr":
         this.requireSymbol(scope, expression.name, expression.span);
@@ -220,6 +221,10 @@ class Resolver {
         if (!builtinFunctions.has(expression.callee)) {
           this.requireSymbol(this.globalScope, expression.callee, expression.span);
         }
+        for (const arg of expression.args) this.resolveExpression(arg, scope);
+        return;
+      case "NewExpr":
+        this.requireSymbol(this.globalScope, expression.className, expression.span);
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "MethodCallExpr":

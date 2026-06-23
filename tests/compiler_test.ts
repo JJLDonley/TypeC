@@ -330,6 +330,40 @@ Deno.test("compiles interface example", async () => {
   assertIncludes(result.cSource, "Point_lengthSquared");
 });
 
+Deno.test("emits C for class constructors and new expressions", () => {
+  const source = `
+    class Point {
+      x: i32;
+      y: i32;
+      constructor(x: i32, y: i32) {
+        this.x = x;
+        this.y = y;
+      }
+    }
+    function main(): i32 {
+      const p: Point = new Point(2, 3);
+      return p.x + p.y;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Point Point_new(i32 x, i32 y)");
+  assertIncludes(c, "Point this = (Point){0};");
+  assertIncludes(c, "this.x = x;");
+  assertIncludes(c, "const Point p = Point_new(2, 3);");
+});
+
+Deno.test("rejects invalid class constructor calls", () => {
+  assertCompileError(
+    `class Point { x: i32; constructor(x: i32) { this.x = x; } } function main(): i32 { const p: Point = new Point(); return 0; }`,
+    "Function 'Point.constructor' expects 1 arguments, got 0",
+  );
+  assertCompileError(
+    `class Point { x: i32; } function main(): i32 { const p: Point = new Point(); return 0; }`,
+    "Unknown function 'Point.constructor'",
+  );
+});
+
 Deno.test("emits C for classes and methods", () => {
   const program = parse(lex(`
     class Vec2 {

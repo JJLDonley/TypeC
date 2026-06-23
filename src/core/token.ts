@@ -31,6 +31,8 @@ export const keywords = new Set([
   "false",
   "type",
   "class",
+  "constructor",
+  "new",
   "interface",
   "implements",
   "import",

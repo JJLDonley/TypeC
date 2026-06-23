@@ -24,6 +24,7 @@ export function checkExpectedExpression(
   aliases: Map<Str, TypeRef>,
   resolveExpectedType: ExpectedTypeResolver,
 ): ExpectedExpressionCheck {
+  if (expr.kind === "ZeroValueExpr") return handled(expected, []);
   if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
     return handled(expected, checkIntegerLiteralRange(expr, expected));
   }

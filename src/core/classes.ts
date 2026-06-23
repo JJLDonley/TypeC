@@ -1,5 +1,5 @@
-import type { FunctionDecl, Param, TypeAliasDecl, TypeRef } from "core/ast.ts";
-import type { CastClassDecl, CastClassMethod } from "core/cast.ts";
+import type { BlockStmt, FunctionDecl, Param, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type { CastClassConstructor, CastClassDecl, CastClassMethod } from "core/cast.ts";
 
 export type Str = string;
 
@@ -14,6 +14,14 @@ export function classMethodName(className: Str, methodName: Str): Str {
 
 export function classMethodCName(className: Str, methodName: Str): Str {
   return `${className}_${methodName}`;
+}
+
+export function classConstructorName(className: Str): Str {
+  return `${className}.constructor`;
+}
+
+export function classConstructorCName(className: Str): Str {
+  return `${className}_new`;
 }
 
 export function classTypeRef(className: Str, typeSpan: TypeRef["span"]): TypeRef {
@@ -31,6 +39,25 @@ export function classTypeAlias(
     cName: null,
     type: fields,
     span: classDecl.span,
+  };
+}
+
+export function classConstructorFunction(
+  classDecl: CastClassDecl,
+  constructorDecl: CastClassConstructor,
+  params: Param[],
+  body: BlockStmt,
+): FunctionDecl {
+  return {
+    kind: "FunctionDecl",
+    exported: false,
+    external: false,
+    name: classConstructorName(classDecl.name),
+    cName: classConstructorCName(classDecl.name),
+    params,
+    returnType: classTypeRef(classDecl.name, constructorDecl.span),
+    body,
+    span: constructorDecl.span,
   };
 }
 

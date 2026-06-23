@@ -1,7 +1,7 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { ConstDecl, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
-import { classMethodName } from "core/classes.ts";
+import { classConstructorName, classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
@@ -436,6 +436,7 @@ class Checker {
       conditional: (value) => this.conditionalType(value, locals),
       nullish: (value) => this.nullishType(value, locals),
       call: (value) => this.callType(value, locals),
+      newExpr: (value) => this.newType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
       nonNullAssert: (value) => this.nonNullAssertType(value, locals),
@@ -520,6 +521,21 @@ class Checker {
     const result = checkCallExpression(
       expr,
       this.functions.get(expr.callee),
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private newType(
+    expr: Extract<Expression, { kind: "NewExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const constructorName = classConstructorName(expr.className);
+    const result = checkCallExpression(
+      { kind: "CallExpr", callee: constructorName, args: expr.args, span: expr.span },
+      this.functions.get(constructorName),
       (arg, expected) => this.typeOfExpected(arg, locals, expected),
       (arg) => this.typeOf(arg, locals),
     );

@@ -214,6 +214,9 @@ class AstPrinter {
       case "StringLiteral":
         this.line(`StringLiteral ${expression.text}`);
         return;
+      case "ZeroValueExpr":
+        this.line("ZeroValueExpr");
+        return;
       case "IdentifierExpr":
         this.line(`IdentifierExpr ${expression.name}`);
         return;
@@ -247,6 +250,15 @@ class AstPrinter {
         const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
         const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";
         this.line(`CallExpr ${expression.callee}${typeArgText}`);
+        this.indented(() => {
+          for (const arg of expression.args) this.expression(arg);
+        });
+        return;
+      }
+      case "NewExpr": {
+        const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
+        const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";
+        this.line(`NewExpr ${expression.className}${typeArgText}`);
         this.indented(() => {
           for (const arg of expression.args) this.expression(arg);
         });

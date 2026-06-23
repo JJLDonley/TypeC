@@ -46,6 +46,7 @@ function handlers(): ExpressionTypeHandlers {
     conditional: resolveI64,
     nullish: resolveI64,
     call: resolveI64,
+    newExpr: resolveI64,
     methodCall: resolveI64,
     pointer: resolveI64,
     nonNullAssert: resolveI64,

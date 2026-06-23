@@ -143,6 +143,8 @@ function expressionUsesArena(expr: Expression): b8 {
   switch (expr.kind) {
     case "CallExpr":
       return arenaFunctionNames.has(expr.callee) || expr.args.some(expressionUsesArena);
+    case "NewExpr":
+      return expr.args.some(expressionUsesArena);
     case "MethodCallExpr":
       return expressionUsesArena(expr.receiver) || expr.args.some(expressionUsesArena);
     case "UnaryExpr":
@@ -173,6 +175,7 @@ function expressionUsesArena(expr: Expression): b8 {
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ZeroValueExpr":
     case "IdentifierExpr":
       return false;
   }

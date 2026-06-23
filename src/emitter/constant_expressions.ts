@@ -36,7 +36,9 @@ export function emitConstantExpressionExpected(
       return emitConstantArrayLiteral(expr, expectedType, context);
     case "FieldAccessExpr":
       return emitQualifiedConstantReference(expr, expectedType, context);
+    case "ZeroValueExpr":
     case "CallExpr":
+    case "NewExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":

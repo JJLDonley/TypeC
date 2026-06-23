@@ -129,6 +129,18 @@ Deno.test("parses generic function declarations and calls", () => {
   if ((statement.expression.typeArgs ?? []).length !== 1) throw new Error("Expected type argument");
 });
 
+Deno.test("parses class constructors and new expressions", () => {
+  const program = parseCast(
+    lex(
+      `class Point { x: i32; constructor(x: i32) { this.x = x; } } function main(): i32 { const p: Point = new Point(1); return p.x; }`,
+    ),
+  );
+
+  const classDecl = (program.classes ?? [])[0];
+  if (!classDecl?.constructorDecl) throw new Error("Expected constructor declaration");
+  if (classDecl.constructorDecl.params.length !== 1) throw new Error("Expected constructor param");
+});
+
 Deno.test("parses class implements declarations", () => {
   const program = parseCast(
     lex(

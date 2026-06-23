@@ -2894,6 +2894,61 @@ class Ship implements Drawable, Updatable {
 
 ---
 
+# Phase 41: Basic Constructors and `new`
+
+Status: Complete.
+
+## Goal
+
+Add a small TypeScript-like constructor subset for structured class initialization while preserving
+static value semantics and C emission.
+
+## Syntax
+
+```ts
+class Point {
+  x: i32;
+  y: i32;
+
+  constructor(x: i32, y: i32) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+function main(): i32 {
+  const p: Point = new Point(1, 2);
+  return p.x;
+}
+```
+
+## Semantics
+
+- A class may declare at most one constructor.
+- `new Class(args)` constructs and returns a class value; it does not allocate hidden heap memory.
+- Constructor bodies execute with a mutable local `this` value initialized to zero, then return that
+  value.
+- Constructor arguments are checked against the constructor parameter list.
+- Constructors are emitted as plain C helper functions returning the class record by value.
+
+## Do
+
+- Parse constructor declarations inside classes.
+- Parse `new Class(args)` expressions.
+- Type-check constructor calls, argument types, duplicate constructors, and unknown constructors.
+- Emit value-returning C constructor helpers.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add heap allocation or garbage collection.
+- Do not add `new` for non-class values.
+- Do not add overloads, default parameters, parameter properties, access modifiers, `super`, or
+  inheritance.
+- Do not add JavaScript prototype semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
