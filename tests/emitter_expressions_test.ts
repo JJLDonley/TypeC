@@ -25,6 +25,20 @@ Deno.test("emits logical not expressions", () => {
   );
 });
 
+Deno.test("emits conditional expressions", () => {
+  assertText(
+    emitExpression(conditional(identifier("flag"), int("1"), int("2")), context()),
+    "flag ? 1 : 2",
+  );
+  assertText(
+    emitExpression(
+      binary(int("1"), "+", conditional(identifier("flag"), int("2"), int("3"))),
+      context(),
+    ),
+    "1 + (flag ? 2 : 3)",
+  );
+});
+
 Deno.test("emits expected record and array expressions", () => {
   const ctx = context([recordAlias("Pair")]);
 
@@ -110,6 +124,14 @@ function unary(operator: "+" | "-" | "!", operand: Expression): Expression {
 
 function binary(left: Expression, operator: Str, right: Expression): Expression {
   return { kind: "BinaryExpr", left, operator, right, span };
+}
+
+function conditional(
+  condition: Expression,
+  whenTrue: Expression,
+  whenFalse: Expression,
+): Expression {
+  return { kind: "ConditionalExpr", condition, whenTrue, whenFalse, span };
 }
 
 function recordLiteral(name: Str, expression: Expression): Expression {

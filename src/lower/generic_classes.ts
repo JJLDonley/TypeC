@@ -5,6 +5,7 @@ import type {
   CastBlockStmt,
   CastCallExpr,
   CastClassDecl,
+  CastConditionalExpr,
   CastConstDecl,
   CastExpression,
   CastFunctionDecl,
@@ -275,6 +276,8 @@ class GenericClassInstantiator {
         return this.rewriteUnary(expression);
       case "BinaryExpr":
         return this.rewriteBinary(expression);
+      case "ConditionalExpr":
+        return this.rewriteConditional(expression);
       case "CallExpr":
         return this.rewriteCall(expression);
       case "MethodCallExpr":
@@ -301,6 +304,15 @@ class GenericClassInstantiator {
       ...expression,
       left: this.rewriteExpression(expression.left),
       right: this.rewriteExpression(expression.right),
+    };
+  }
+
+  private rewriteConditional(expression: CastConditionalExpr): CastConditionalExpr {
+    return {
+      ...expression,
+      condition: this.rewriteExpression(expression.condition),
+      whenTrue: this.rewriteExpression(expression.whenTrue),
+      whenFalse: this.rewriteExpression(expression.whenFalse),
     };
   }
 

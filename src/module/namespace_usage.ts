@@ -80,6 +80,11 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
       collectExpression(expression.left, namespace, members);
       collectExpression(expression.right, namespace, members);
       return;
+    case "ConditionalExpr":
+      collectExpression(expression.condition, namespace, members);
+      collectExpression(expression.whenTrue, namespace, members);
+      collectExpression(expression.whenFalse, namespace, members);
+      return;
     case "CallExpr":
       collectQualifiedName(expression.callee, namespace, members);
       for (const typeArg of expression.typeArgs ?? []) collectType(typeArg, namespace, members);

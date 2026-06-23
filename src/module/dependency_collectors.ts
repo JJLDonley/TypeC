@@ -159,6 +159,11 @@ function collectExpressionDeps(
       collectExpressionDeps(expression.left, selected, ignoredTypes);
       collectExpressionDeps(expression.right, selected, ignoredTypes);
       return;
+    case "ConditionalExpr":
+      collectExpressionDeps(expression.condition, selected, ignoredTypes);
+      collectExpressionDeps(expression.whenTrue, selected, ignoredTypes);
+      collectExpressionDeps(expression.whenFalse, selected, ignoredTypes);
+      return;
     case "CallExpr":
       collectCallDeps(expression, selected, ignoredTypes);
       return;

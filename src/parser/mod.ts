@@ -137,6 +137,7 @@ class Parser {
       checkText: (text) => this.checkText(text),
       peek: () => this.peek(),
       advance: () => this.advance(),
+      expectText: (text) => this.expectText(text),
       parsePostfixExpression: () => this.parsePostfixExpression(),
     };
   }

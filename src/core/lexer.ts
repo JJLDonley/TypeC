@@ -66,7 +66,7 @@ class Lexer {
         continue;
       }
 
-      if ("(){}[]:;,\.".includes(ch)) {
+      if ("(){}[]:;,\.?".includes(ch)) {
         this.advance();
         this.tokens.push({ kind: "punctuation", text: ch, span: { start, end: this.pos() } });
         continue;

@@ -101,6 +101,13 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         left: namespaceExpression(expr.left, namespace, functions),
         right: namespaceExpression(expr.right, namespace, functions),
       };
+    case "ConditionalExpr":
+      return {
+        ...expr,
+        condition: namespaceExpression(expr.condition, namespace, functions),
+        whenTrue: namespaceExpression(expr.whenTrue, namespace, functions),
+        whenFalse: namespaceExpression(expr.whenFalse, namespace, functions),
+      };
     case "PostfixPointerExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
     case "FieldAccessExpr":

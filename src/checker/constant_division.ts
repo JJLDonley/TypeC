@@ -11,6 +11,9 @@ export function checkConstantIntegerDivision(
 ): Diagnostic[] {
   if (expr.kind === "BinaryExpr") return checkConstantBinaryIntegerDivision(expr, constants);
   if (expr.kind === "UnaryExpr") return checkConstantIntegerDivision(expr.operand, constants);
+  if (expr.kind === "ConditionalExpr") {
+    return checkConstantConditionalIntegerDivision(expr, constants);
+  }
   if (expr.kind === "RecordLiteralExpr") {
     return expr.fields.flatMap((field) =>
       checkConstantIntegerDivision(field.expression, constants)
@@ -30,6 +33,17 @@ function checkConstantBinaryIntegerDivision(
     ...constantIntegerDivideByZeroDiagnostic(expr, constants),
     ...checkConstantIntegerDivision(expr.left, constants),
     ...checkConstantIntegerDivision(expr.right, constants),
+  ];
+}
+
+function checkConstantConditionalIntegerDivision(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): Diagnostic[] {
+  return [
+    ...checkConstantIntegerDivision(expr.condition, constants),
+    ...checkConstantIntegerDivision(expr.whenTrue, constants),
+    ...checkConstantIntegerDivision(expr.whenFalse, constants),
   ];
 }
 

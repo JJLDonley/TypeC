@@ -11,8 +11,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
   `return;`, function-call expression statements, `while`, TypeScript-like `switch`, `break`, and
   assignment statements
-- Integer literals, float literals, identifiers, calls, unary `+ - !`, `!!`, `+ - * / %`, and
-  comparisons
+- Integer literals, float literals, identifiers, calls, unary `+ - !`, `!!`, ternary `? :`,
+  `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
 - Fixed arrays `T[N]` / `Array<T, N>`, inferred local arrays `T[]` / `Array<T>`, nested fixed
@@ -29,11 +29,11 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phase 23 has started. Logical `!` and `!!` are implemented. Planned remaining expression syntax
-includes TypeScript-style ternary `? :`, optional chaining `?.`, nullish coalescing `??`, Elvis
-`?:`, postfix non-null assertion `expr!`, and optional `T?` type spelling. Additional TypeScript
-unary/update syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved
-or explicitly rejected as described below.
+Phase 23 has started. Logical `!`, `!!`, and ternary `? :` are implemented. Planned remaining
+expression syntax includes optional chaining `?.`, nullish coalescing `??`, Elvis `?:`, postfix
+non-null assertion `expr!`, and optional `T?` type spelling. Additional TypeScript unary/update
+syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly
+rejected as described below.
 
 ## Example
 
@@ -126,9 +126,9 @@ import { abs_i32 } from "basic/math";
 
 ## Planned TypeScript-Style Expression Operators
 
-TypeC supports logical `!` / `!!` and plans the remaining strict, statically typed subset of
-TypeScript expression syntax without JavaScript truthiness, implicit `null`, or implicit
-`undefined`.
+TypeC supports logical `!` / `!!` and ternary `? :`, and plans the remaining strict, statically
+typed subset of TypeScript expression syntax without JavaScript truthiness, implicit `null`, or
+implicit `undefined`.
 
 ### Unary and update syntax
 
@@ -164,7 +164,7 @@ condition ? whenTrue : whenFalse;
 ```
 
 The condition must be `bool`. Branches must have the same type or an existing assignable common
-type. Only the selected branch is evaluated.
+type. Only the selected branch is evaluated. This syntax is implemented.
 
 ### Optional type spelling
 

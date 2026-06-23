@@ -31,6 +31,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitUnaryExpression(expr, context);
     case "BinaryExpr":
       return emitBinaryExpression(expr, context);
+    case "ConditionalExpr":
+      return emitConditionalExpression(expr, context);
     case "CallExpr":
       return emitCallExpression(
         expr,
@@ -193,6 +195,26 @@ function emitBinaryExpression(
   return `${left} ${expr.operator} ${right}`;
 }
 
+function emitConditionalExpression(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  context: EmitContext,
+): Str {
+  const condition = emitConditionalOperand(expr.condition, context);
+  const whenTrue = emitConditionalBranch(expr.whenTrue, context);
+  const whenFalse = emitConditionalBranch(expr.whenFalse, context);
+  return `${condition} ? ${whenTrue} : ${whenFalse}`;
+}
+
+function emitConditionalOperand(expr: Expression, context: EmitContext): Str {
+  if (expr.kind === "ConditionalExpr") return `(${emitExpression(expr, context)})`;
+  return emitExpression(expr, context);
+}
+
+function emitConditionalBranch(expr: Expression, context: EmitContext): Str {
+  if (expr.kind === "ConditionalExpr") return `(${emitExpression(expr, context)})`;
+  return emitExpression(expr, context);
+}
+
 function emitBinaryOperand(
   expr: Expression,
   parentOperator: Str,
@@ -200,6 +222,7 @@ function emitBinaryOperand(
   context: EmitContext,
 ): Str {
   const operand = emitExpression(expr, context);
+  if (expr.kind === "ConditionalExpr") return `(${operand})`;
   if (expr.kind !== "BinaryExpr") return operand;
   const parent = cPrecedence(parentOperator);
   const child = cPrecedence(expr.operator);

@@ -21,6 +21,8 @@ export function evaluateIntegerConstant(
       return evaluateUnaryIntegerConstant(expr, constants);
     case "BinaryExpr":
       return evaluateBinaryIntegerConstant(expr, constants);
+    case "ConditionalExpr":
+      return evaluateConditionalIntegerConstant(expr, constants);
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
@@ -47,6 +49,8 @@ export function evaluateBoolConstant(
       return evaluateQualifiedBoolConstant(expr, constants);
     case "UnaryExpr":
       return evaluateUnaryBoolConstant(expr, constants);
+    case "ConditionalExpr":
+      return evaluateConditionalBoolConstant(expr, constants);
     case "IntegerLiteral":
     case "FloatLiteral":
     case "StringLiteral":
@@ -125,6 +129,24 @@ function evaluateBinaryIntegerConstant(
   return applyIntegerOperator(left, right, expr.operator);
 }
 
+function evaluateConditionalIntegerConstant(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): IntValue | null {
+  const condition = evaluateBoolConstant(expr.condition, constants);
+  if (condition === null) return null;
+  return evaluateIntegerConstant(condition ? expr.whenTrue : expr.whenFalse, constants);
+}
+
+function evaluateConditionalBoolConstant(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  const condition = evaluateBoolConstant(expr.condition, constants);
+  if (condition === null) return null;
+  return evaluateBoolConstant(condition ? expr.whenTrue : expr.whenFalse, constants);
+}
+
 export function evaluateFloatConstant(
   expr: Expression,
   constants: Map<Str, ConstDecl>,
@@ -142,6 +164,8 @@ export function evaluateFloatConstant(
       return evaluateUnaryFloatConstant(expr, constants);
     case "BinaryExpr":
       return evaluateBinaryFloatConstant(expr, constants);
+    case "ConditionalExpr":
+      return evaluateConditionalFloatConstant(expr, constants);
     case "BoolLiteral":
     case "StringLiteral":
     case "CallExpr":
@@ -190,6 +214,15 @@ function evaluateBinaryFloatConstant(
   const right = evaluateFloatConstant(expr.right, constants);
   if (left === null || right === null) return null;
   return applyFloatOperator(left, right, expr.operator);
+}
+
+function evaluateConditionalFloatConstant(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): f64 | null {
+  const condition = evaluateBoolConstant(expr.condition, constants);
+  if (condition === null) return null;
+  return evaluateFloatConstant(condition ? expr.whenTrue : expr.whenFalse, constants);
 }
 
 function applyFloatOperator(left: f64, right: f64, operator: Str): f64 | null {

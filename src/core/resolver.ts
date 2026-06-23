@@ -158,6 +158,11 @@ class Resolver {
         this.resolveExpression(expression.left, scope);
         this.resolveExpression(expression.right, scope);
         return;
+      case "ConditionalExpr":
+        this.resolveExpression(expression.condition, scope);
+        this.resolveExpression(expression.whenTrue, scope);
+        this.resolveExpression(expression.whenFalse, scope);
+        return;
       case "CallExpr":
         if (!builtinFunctions.has(expression.callee)) {
           this.requireSymbol(this.globalScope, expression.callee, expression.span);

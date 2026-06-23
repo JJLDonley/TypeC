@@ -289,6 +289,7 @@ export type Expression =
   | IdentifierExpr
   | UnaryExpr
   | BinaryExpr
+  | ConditionalExpr
   | CallExpr
   | MethodCallExpr
   | PostfixPointerExpr
@@ -342,6 +343,14 @@ export interface BinaryExpr {
   operator: Str;
   left: Expression;
   right: Expression;
+  span: SourceSpan;
+}
+
+export interface ConditionalExpr {
+  kind: "ConditionalExpr";
+  condition: Expression;
+  whenTrue: Expression;
+  whenFalse: Expression;
   span: SourceSpan;
 }
 

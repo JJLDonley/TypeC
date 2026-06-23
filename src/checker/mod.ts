@@ -10,6 +10,7 @@ import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignm
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
+import { checkConditionalExpression } from "checker/conditional_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
@@ -58,6 +59,7 @@ export * from "checker/c_symbols.ts";
 export * from "checker/call_args.ts";
 export * from "checker/callback_expressions.ts";
 export * from "checker/call_expressions.ts";
+export * from "checker/conditional_expressions.ts";
 export * from "checker/calls.ts";
 export * from "checker/conditions.ts";
 export * from "checker/control_flow.ts";
@@ -361,6 +363,7 @@ class Checker {
       identifier: (name, span) => this.identifierType(name, locals, span),
       unary: (value) => this.unaryType(value, locals),
       binary: (value) => this.binaryType(value, locals),
+      conditional: (value) => this.conditionalType(value, locals),
       call: (value) => this.callType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
@@ -395,6 +398,19 @@ class Checker {
       (value) => this.typeOf(value, locals),
       (value, expected) => this.typeOfExpected(value, locals, expected),
       (type) => isEnumTypeName(type, this.program.enums ?? []),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private conditionalType(
+    expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkConditionalExpression(
+      expr,
+      (value) => this.typeOf(value, locals),
+      (value, expected) => this.typeOfExpected(value, locals, expected),
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;

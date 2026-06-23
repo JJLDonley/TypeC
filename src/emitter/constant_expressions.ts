@@ -28,6 +28,8 @@ export function emitConstantExpressionExpected(
       return `${expr.operator}${emitConstantUnaryOperand(expr.operand, expectedType, context)}`;
     case "BinaryExpr":
       return emitConstantBinaryExpression(expr, expectedType, context);
+    case "ConditionalExpr":
+      return emitConstantConditionalExpression(expr, expectedType, context);
     case "RecordLiteralExpr":
       return emitConstantRecordLiteral(expr, expectedType, context);
     case "ArrayLiteralExpr":
@@ -78,7 +80,7 @@ function emitConstantInitializer(
 
 function emitConstantUnaryOperand(expr: Expression, expectedType: Str, context: EmitContext): Str {
   const operand = emitConstantExpressionExpected(expr, expectedType, context);
-  if (expr.kind === "BinaryExpr") return `(${operand})`;
+  if (expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr") return `(${operand})`;
   return operand;
 }
 
@@ -90,6 +92,17 @@ function emitConstantBinaryExpression(
   const left = emitConstantExpressionExpected(expr.left, expectedType, context);
   const right = emitConstantExpressionExpected(expr.right, expectedType, context);
   return `${left} ${expr.operator} ${right}`;
+}
+
+function emitConstantConditionalExpression(
+  expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+  expectedType: Str,
+  context: EmitContext,
+): Str {
+  const condition = emitConstantExpressionExpected(expr.condition, "bool", context);
+  const whenTrue = emitConstantExpressionExpected(expr.whenTrue, expectedType, context);
+  const whenFalse = emitConstantExpressionExpected(expr.whenFalse, expectedType, context);
+  return `${condition} ? ${whenTrue} : ${whenFalse}`;
 }
 
 function emitConstantRecordLiteral(

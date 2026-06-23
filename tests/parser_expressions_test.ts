@@ -27,6 +27,24 @@ Deno.test("parses logical not expressions", () => {
   assertText(expr.operand.kind, "UnaryExpr");
 });
 
+Deno.test("parses conditional expressions", () => {
+  const expr = parseExpressionWith(parserFor([
+    identifier("a"),
+    operator("=="),
+    identifier("b"),
+    punctuation("?"),
+    identifier("c"),
+    punctuation(":"),
+    identifier("d"),
+  ]));
+
+  assertText(expr.kind, "ConditionalExpr");
+  if (expr.kind !== "ConditionalExpr") throw new Error("Expected conditional expression");
+  assertText(expr.condition.kind, "BinaryExpr");
+  assertText(expr.whenTrue.kind, "IdentifierExpr");
+  assertText(expr.whenFalse.kind, "IdentifierExpr");
+});
+
 Deno.test("parses binary expressions with precedence", () => {
   const expr = parseExpressionWith(parserFor([
     identifier("a"),
@@ -67,6 +85,12 @@ function parserFor(tokens: Token[]): ExpressionParser {
       current += 1;
       return peek(tokens, current - 1);
     },
+    expectText: (text) => {
+      const token = peek(tokens, current);
+      if (token.text !== text) throw new Error(`Expected ${text}`);
+      current += 1;
+      return token;
+    },
     parsePostfixExpression: () => {
       const token = peek(tokens, current);
       if (token.kind !== "identifier") throw new Error("Expected identifier");
@@ -90,6 +114,10 @@ function identifier(text: Str): Token {
 
 function operator(text: Str): Token {
   return token("operator", text);
+}
+
+function punctuation(text: Str): Token {
+  return token("punctuation", text);
 }
 
 function eof(): Token {

@@ -11,12 +11,22 @@ export interface ExpressionParser {
   checkText(text: Str): b8;
   peek(): Token;
   advance(): Token;
+  expectText(text: Str): Token;
   parsePostfixExpression(): CastExpression;
 }
 
 export function parseExpressionWith(
   parser: ExpressionParser,
   minPrecedence: i32 = 0,
+): CastExpression {
+  let expr = parseBinaryPrecedenceExpression(parser, minPrecedence);
+  if (minPrecedence <= 0 && parser.checkText("?")) expr = parseConditionalExpression(parser, expr);
+  return expr;
+}
+
+function parseBinaryPrecedenceExpression(
+  parser: ExpressionParser,
+  minPrecedence: i32,
 ): CastExpression {
   let expr = parseUnaryExpression(parser);
   while (hasOperatorAtPrecedence(parser, minPrecedence)) expr = parseBinaryExpression(parser, expr);
@@ -37,6 +47,23 @@ function parseUnaryExpression(parser: ExpressionParser): CastExpression {
 
 function isUnaryOperator(parser: ExpressionParser): b8 {
   return parser.checkText("+") || parser.checkText("-") || parser.checkText("!");
+}
+
+function parseConditionalExpression(
+  parser: ExpressionParser,
+  condition: CastExpression,
+): CastExpression {
+  parser.advance();
+  const whenTrue = parseExpressionWith(parser);
+  parser.expectText(":");
+  const whenFalse = parseExpressionWith(parser);
+  return {
+    kind: "ConditionalExpr",
+    condition,
+    whenTrue,
+    whenFalse,
+    span: span(condition.span.start, whenFalse.span.end),
+  };
 }
 
 function parseBinaryExpression(parser: ExpressionParser, left: CastExpression): CastExpression {

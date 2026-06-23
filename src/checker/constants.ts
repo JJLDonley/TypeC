@@ -60,6 +60,10 @@ export function isConstantExpression(
       return isConstantBinaryOperator(expr.operator) &&
         isConstantExpression(expr.left, availableConstants) &&
         isConstantExpression(expr.right, availableConstants);
+    case "ConditionalExpr":
+      return isConstantExpression(expr.condition, availableConstants) &&
+        isConstantExpression(expr.whenTrue, availableConstants) &&
+        isConstantExpression(expr.whenFalse, availableConstants);
     case "RecordLiteralExpr":
       return expr.fields.every((field) =>
         isConstantExpression(field.expression, availableConstants)

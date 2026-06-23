@@ -202,6 +202,14 @@ class AstPrinter {
           this.expression(expression.right);
         });
         return;
+      case "ConditionalExpr":
+        this.line("ConditionalExpr");
+        this.indented(() => {
+          this.expression(expression.condition);
+          this.expression(expression.whenTrue);
+          this.expression(expression.whenFalse);
+        });
+        return;
       case "CallExpr": {
         const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
         const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";

@@ -3,6 +3,7 @@ import type {
   BinaryExpr,
   BoolLiteral,
   CallExpr,
+  ConditionalExpr,
   Expression,
   FieldAccessExpr,
   FloatLiteral,
@@ -20,6 +21,7 @@ import type {
   CastBinaryExpr,
   CastBoolLiteral,
   CastCallExpr,
+  CastConditionalExpr,
   CastExpression,
   CastFieldAccessExpr,
   CastFloatLiteral,
@@ -50,6 +52,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerUnaryExpr(expression);
     case "BinaryExpr":
       return lowerBinaryExpr(expression);
+    case "ConditionalExpr":
+      return lowerConditionalExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
     case "MethodCallExpr":
@@ -117,6 +121,16 @@ function lowerBinaryExpr(expression: CastBinaryExpr): BinaryExpr {
     operator: expression.operator,
     left: lowerExpression(expression.left),
     right: lowerExpression(expression.right),
+    span: expression.span,
+  };
+}
+
+function lowerConditionalExpr(expression: CastConditionalExpr): ConditionalExpr {
+  return {
+    kind: "ConditionalExpr",
+    condition: lowerExpression(expression.condition),
+    whenTrue: lowerExpression(expression.whenTrue),
+    whenFalse: lowerExpression(expression.whenFalse),
     span: expression.span,
   };
 }

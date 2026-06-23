@@ -315,6 +315,7 @@ export type CastExpression =
   | CastIdentifierExpr
   | CastUnaryExpr
   | CastBinaryExpr
+  | CastConditionalExpr
   | CastCallExpr
   | CastMethodCallExpr
   | CastPostfixPointerExpr
@@ -368,6 +369,14 @@ export interface CastBinaryExpr {
   operator: Str;
   left: CastExpression;
   right: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastConditionalExpr {
+  kind: "ConditionalExpr";
+  condition: CastExpression;
+  whenTrue: CastExpression;
+  whenFalse: CastExpression;
   span: SourceSpan;
 }
 

@@ -137,6 +137,12 @@ function expressionGenericCallDiagnostics(
         ...expressionGenericCallDiagnostics(expr.left, templates),
         ...expressionGenericCallDiagnostics(expr.right, templates),
       ];
+    case "ConditionalExpr":
+      return [
+        ...expressionGenericCallDiagnostics(expr.condition, templates),
+        ...expressionGenericCallDiagnostics(expr.whenTrue, templates),
+        ...expressionGenericCallDiagnostics(expr.whenFalse, templates),
+      ];
     case "CallExpr":
       return [
         ...genericCallArityDiagnostics(expr, templates),
@@ -334,6 +340,13 @@ class GenericInstantiator {
         return { ...expr, operand: this.rewriteExpr(expr.operand) };
       case "BinaryExpr":
         return { ...expr, left: this.rewriteExpr(expr.left), right: this.rewriteExpr(expr.right) };
+      case "ConditionalExpr":
+        return {
+          ...expr,
+          condition: this.rewriteExpr(expr.condition),
+          whenTrue: this.rewriteExpr(expr.whenTrue),
+          whenFalse: this.rewriteExpr(expr.whenFalse),
+        };
       case "CallExpr":
         return this.instantiateCall(expr);
       case "MethodCallExpr":

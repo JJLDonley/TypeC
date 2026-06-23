@@ -145,6 +145,9 @@ function expressionUsesArena(expr: Expression): b8 {
       return expressionUsesArena(expr.operand);
     case "BinaryExpr":
       return expressionUsesArena(expr.left) || expressionUsesArena(expr.right);
+    case "ConditionalExpr":
+      return expressionUsesArena(expr.condition) || expressionUsesArena(expr.whenTrue) ||
+        expressionUsesArena(expr.whenFalse);
     case "RecordLiteralExpr":
       return expr.fields.some((field) => expressionUsesArena(field.expression));
     case "ArrayLiteralExpr":
