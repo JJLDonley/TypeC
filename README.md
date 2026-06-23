@@ -1,118 +1,122 @@
 # TypeC TypeScript Syntax Support
 
-TypeC is a statically typed, C-emitting language with TypeScript-like syntax. It intentionally does
-**not** implement JavaScript runtime semantics such as dynamic objects, prototypes, `any`,
-truthiness, hidden allocation, or garbage collection.
+TypeC is a statically typed, C-emitting language with TypeScript-like syntax. It is **not** a
+TypeScript runtime and does **not** implement JavaScript object, prototype, truthiness, `any`,
+`null`/`undefined`, hidden allocation, or garbage-collected semantics.
+
+For a deeper gap analysis, see [`docs/ts-feature-analysis.md`](docs/ts-feature-analysis.md).
+
+## Important honesty note
+
+Several TS-looking features are only **partially implemented**. The largest current gap is
+assignment targets: TypeC can assign to simple mutable local variables, but not yet to fields or
+indexed elements.
+
+```ts
+x = x + 1; // implemented
+obj.x = 1; // not implemented yet
+arr[i] = value; // not implemented yet
+obj.pos.x += dx; // not implemented yet
+```
+
+This means records, arrays, and classes are useful for static layout, construction, reads, calls,
+and C emission, but they do not yet have normal TypeScript-style mutable object ergonomics.
 
 ## Support Matrix
 
-| TypeScript feature                | TypeC status    | Notes                                                                        |
-| --------------------------------- | --------------- | ---------------------------------------------------------------------------- |
-| `.ts`-style function declarations | Implemented     | Uses `function name(...): Type { ... }`.                                     |
-| Explicit return types             | Implemented     | Required for functions.                                                      |
-| Primitive-looking type names      | Implemented     | Uses TypeC fixed/static names like `i32`, `f32`, `b8`, `usize`, `void`.      |
-| `const` local declarations        | Implemented     | Statically typed; initializer required.                                      |
-| `let` local declarations          | Implemented     | Mutable locals.                                                              |
-| Module constants                  | Implemented     | `const NAME: Type = value;`.                                                 |
-| `return` statements               | Implemented     | Checked against declared return type.                                        |
-| Bare `return;`                    | Implemented     | For `void` functions only.                                                   |
-| `if` / `else`                     | Implemented     | Condition must be `b8`; no truthiness.                                       |
-| `else if`                         | Implemented     | Syntax sugar for nested `if`.                                                |
-| `while`                           | Implemented     | Condition must be `b8`.                                                      |
-| `do while`                        | Implemented     | Condition must be `b8`.                                                      |
-| `switch`                          | Implemented     | Static checked subset.                                                       |
-| `break`                           | Implemented     | For switch/control-flow use.                                                 |
-| Empty statement `;`               | Implemented     | Emits C no-op.                                                               |
-| Expression statements             | Implemented     | Restricted; no arbitrary JS expression semantics.                            |
-| Arithmetic operators              | Implemented     | Static numeric typing.                                                       |
-| Comparison operators              | Implemented     | Static typed results.                                                        |
-| Conditional operator `?:`         | Implemented     | Statically typed branches.                                                   |
-| Nullish coalescing `??`           | Implemented     | Optional-type based; no JS `null`/`undefined` dynamics.                      |
-| Compact nullish `?:`              | Implemented     | TypeC optional fallback operator.                                            |
-| Logical `!`                       | Implemented     | `b8` only.                                                                   |
-| Logical `&&` / `                  |                 | `                                                                            |
-| Bitwise `& \| ^ ~ << >> >>>`      | Implemented     | Integer-only; no JS numeric coercions.                                       |
-| Compound assignment               | Implemented     | Statement-only: `+=`, `-=`, etc.                                             |
-| Increment/decrement               | Implemented     | Statement-only: `x++`, `x--`; no expression value.                           |
-| Assignment expressions            | Not implemented | Assignments are statements only.                                             |
-| Prefix `++x` / `--x` expressions  | Not implemented | Avoids JS value semantics.                                                   |
-| Postfix `x++` / `x--` expressions | Not implemented | Statement-only in TypeC.                                                     |
-| Numeric literals                  | Implemented     | Integers/floats with static range checks.                                    |
-| Decimal numeric separators        | Implemented     | Example: `1_000`. Invalid separator placement rejected.                      |
-| Boolean literals                  | Implemented     | `true`, `false`.                                                             |
-| Double-quoted strings             | Implemented     | C string interop subset.                                                     |
-| Single-quoted strings             | Implemented     | Same semantics as double-quoted strings.                                     |
-| Template literals                 | Not implemented | No interpolation or JS string runtime.                                       |
-| Arrays                            | Implemented     | Static arrays/slices; no JS array object.                                    |
-| Array literals                    | Implemented     | Statically typed; no holes.                                                  |
-| Trailing commas                   | Implemented     | Supported in documented delimited lists.                                     |
-| Array holes                       | Not implemented | No JS sparse arrays.                                                         |
-| Tuples                            | Not implemented | Not yet specified.                                                           |
-| Records / object type literals    | Implemented     | Static record types, e.g. `{ x: i32, y: i32 }`.                              |
-| Record type `;` separators        | Implemented     | Original separator style.                                                    |
-| Record type `,` separators        | Implemented     | TS-style field separators.                                                   |
-| Optional record fields `x?: T`    | Not implemented | Not yet specified.                                                           |
-| `readonly` fields                 | Not implemented | Not yet specified.                                                           |
-| Index signatures                  | Not implemented | No dynamic property model.                                                   |
-| Mapped types                      | Not implemented | Not yet specified.                                                           |
-| Record literals                   | Implemented     | Static field checking.                                                       |
-| Record literal field shorthand    | Implemented     | `{ x }` means `{ x: x }`.                                                    |
-| Object spread                     | Not implemented | No JS object copy semantics.                                                 |
-| Dynamic property access           | Not implemented | No default dynamic object model.                                             |
-| Field access `a.b`                | Implemented     | Static fields / namespace-qualified symbols.                                 |
-| Optional chaining                 | Implemented     | Optional-type based: fields, indexes, method calls.                          |
-| Non-null assertion                | Implemented     | Optional-type based; checked statically.                                     |
-| Named type references             | Implemented     | Includes qualified names.                                                    |
-| Parenthesized type references     | Implemented     | `(T)` is syntax-only grouping.                                               |
-| Pointer/reference type syntax     | Implemented     | TypeC/C-oriented memory model.                                               |
-| Safe pointer type syntax          | Implemented     | For arena/safe pointer modes.                                                |
-| Slice type syntax                 | Implemented     | Static C-emittable slice representation.                                     |
-| Function type syntax              | Implemented     | Example: `(value: i32) => i32`.                                              |
-| Type aliases                      | Implemented     | Record aliases currently supported for emitted C aliases.                    |
-| Scalar type aliases               | Rejected        | Current checker rejects non-record aliases.                                  |
-| `enum`                            | Implemented     | Static enum support.                                                         |
-| Tagged unions                     | Implemented     | Explicit `union` subset.                                                     |
-| Classes                           | Implemented     | Lowered to records + functions; no JS prototype semantics.                   |
-| Class fields                      | Implemented     | Static layout.                                                               |
-| Class methods                     | Implemented     | Lowered to functions with explicit receiver model.                           |
-| Constructors                      | Not implemented | Not yet specified.                                                           |
-| `this` keyword                    | Not implemented | No JS method receiver semantics.                                             |
-| Class inheritance `extends`       | Not implemented | No superclass/prototype model.                                               |
-| Method overriding                 | Not implemented | Requires future inheritance/dispatch design.                                 |
-| Interfaces                        | Implemented     | Static contracts for generic constraints.                                    |
-| Class `implements`                | Not implemented | Reasonable future phase; not yet specified.                                  |
-| Generics                          | Implemented     | Functions/classes with static specialization support.                        |
-| Generic constraints               | Implemented     | `extends` constraints against interfaces.                                    |
-| Type argument lists               | Implemented     | Including trailing commas.                                                   |
-| Conditional types                 | Not implemented | Not yet specified.                                                           |
-| Union types `A \| B`              | Not implemented | Use explicit tagged `union` declarations instead.                            |
-| Intersection types `A & B`        | Not implemented | Not yet specified.                                                           |
-| Type inference                    | Partial         | Local initializer inference exists in supported cases; no TS-wide inference. |
-| `import { name } from "..."`      | Implemented     | Static module imports.                                                       |
-| Named import aliases              | Implemented     | `import { exported as local } from "..."`.                                   |
-| Namespace imports                 | Implemented     | `import * as NS from "..."`; use `NS.name`.                                  |
-| Default imports                   | Not implemented | No JS module default semantics.                                              |
-| Re-exports                        | Not implemented | Not yet specified.                                                           |
-| C header imports                  | Implemented     | Static C interop/header extraction subset.                                   |
-| `extern function`                 | Implemented     | C ABI checked.                                                               |
-| Variadic extern functions         | Implemented     | For C interop.                                                               |
-| `defer`                           | Implemented     | TypeC feature, not TypeScript.                                               |
-| Arenas                            | Implemented     | TypeC feature, not TypeScript.                                               |
-| `any`                             | Not implemented | Intentionally forbidden.                                                     |
-| `unknown`                         | Not implemented | Not yet specified.                                                           |
-| `never`                           | Not implemented | Not yet specified.                                                           |
-| `null` / `undefined` values       | Not implemented | Optional types are explicit; no implicit JS nullish values.                  |
-| Truthiness                        | Not implemented | Conditions must be `b8`.                                                     |
-| `eval`                            | Not implemented | Intentionally forbidden.                                                     |
-| Prototypes                        | Not implemented | Intentionally not JavaScript-compatible.                                     |
-| Garbage-collected objects         | Not implemented | Memory is explicit / C-oriented.                                             |
-| Async/await                       | Not implemented | Not yet specified.                                                           |
-| Promises                          | Not implemented | No JS runtime dependency.                                                    |
-| Exceptions `throw` / `try`        | Not implemented | Not yet specified.                                                           |
-| Decorators                        | Not implemented | Not yet specified.                                                           |
-| JSX                               | Not implemented | Out of scope.                                                                |
+| TypeScript feature                  | TypeC status       | Notes                                                                                                                        |
+| ----------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Function declarations               | Implemented        | `function name(...): Type { ... }`; return types required.                                                                   |
+| Primitive type names                | Implemented        | TypeC source uses `bool`, integer/float aliases like `i32`, `f32`, `usize`, and `void`.                                      |
+| Local `const`                       | Implemented        | Immutable local with initializer.                                                                                            |
+| Local `let`                         | Partial            | Mutable local variable, but only identifier assignment targets are implemented.                                              |
+| Module `const`                      | Implemented        | Compile-time constants in supported expressions.                                                                             |
+| Assignment `x = value`              | Partial            | Local identifiers only. Not an expression.                                                                                   |
+| Field assignment `obj.x = value`    | Not implemented    | Critical missing feature.                                                                                                    |
+| Indexed assignment `arr[i] = value` | Not implemented    | Critical missing feature.                                                                                                    |
+| Compound assignment                 | Partial            | Statement-only and local identifiers only.                                                                                   |
+| Increment/decrement                 | Partial            | Statement-only and local identifiers only.                                                                                   |
+| Assignment expressions              | Not implemented    | No JS expression-valued assignment.                                                                                          |
+| `if` / `else` / `else if`           | Implemented        | Conditions must be `bool`; no truthiness.                                                                                    |
+| `while`                             | Implemented        | Condition must be `bool`.                                                                                                    |
+| `do while`                          | Implemented        | Condition must be `bool`.                                                                                                    |
+| `for`                               | Not implemented    | Use `while` for now.                                                                                                         |
+| `for..of` / `for..in`               | Not implemented    | No iterable/dynamic-key semantics.                                                                                           |
+| `switch` / `case` / `default`       | Implemented        | Static subset.                                                                                                               |
+| `break`                             | Implemented        | Supported in control flow.                                                                                                   |
+| `continue`                          | Not implemented    | Not yet specified.                                                                                                           |
+| Empty statement `;`                 | Implemented        | No-op statement.                                                                                                             |
+| Arithmetic operators                | Implemented        | Static numeric typing.                                                                                                       |
+| Comparison operators                | Implemented        | Static typed result.                                                                                                         |
+| Conditional operator `?:`           | Implemented        | Branches checked statically.                                                                                                 |
+| Logical `!`, `&&`, `\|\|`           | Implemented        | `bool` only; `&&`/`\|\|` return `bool`, not operand values.                                                                  |
+| Bitwise operators                   | Implemented        | Integer-only; no JS numeric coercions.                                                                                       |
+| Nullish coalescing `??`             | Implemented        | Optional-type based, not JS `null`/`undefined`.                                                                              |
+| Optional chaining                   | Implemented        | Optional-type based field/index/method access.                                                                               |
+| Non-null assertion                  | Implemented        | Optional-type based.                                                                                                         |
+| Numeric separators                  | Implemented        | Decimal literals like `1_000`.                                                                                               |
+| String literals                     | Implemented        | Double-quoted and single-quoted.                                                                                             |
+| Template literals                   | Not implemented    | No interpolation/runtime string model.                                                                                       |
+| Arrays                              | Partial            | Static arrays/slices, literals, indexing reads, C interop; no indexed mutation or JS array API.                              |
+| Array holes/sparse arrays           | Not implemented    | Intentionally no JS sparse arrays.                                                                                           |
+| Tuples                              | Not implemented    | Not yet specified.                                                                                                           |
+| Records/object types                | Partial            | Static record aliases, literals, field reads; no field assignment, optional fields, index signatures, or spread.             |
+| Record literal shorthand            | Implemented        | `{ x }` means `{ x: x }`.                                                                                                    |
+| Object spread/rest                  | Not implemented    | Not yet specified.                                                                                                           |
+| Dynamic property access             | Not implemented    | No default dynamic object model.                                                                                             |
+| Field access `obj.x`                | Implemented        | Read access only.                                                                                                            |
+| Index access `arr[i]`               | Implemented        | Read access only.                                                                                                            |
+| Named type references               | Implemented        | Includes qualified names.                                                                                                    |
+| Parenthesized type refs             | Implemented        | `(T)` grouping.                                                                                                              |
+| Function type refs                  | Implemented        | Example: `(value: i32) => i32`.                                                                                              |
+| Pointer/reference/slice type refs   | Implemented        | TypeC/C-oriented memory model.                                                                                               |
+| Type aliases                        | Partial            | Record aliases supported; scalar aliases rejected today.                                                                     |
+| Enums                               | Implemented        | Static scoped enums with fixed representation.                                                                               |
+| Tagged unions                       | Implemented        | Explicit `union` declarations, not TS `A \| B` type unions.                                                                  |
+| TS union types `A \| B`             | Not implemented    | Use tagged unions instead.                                                                                                   |
+| Intersection types `A & B`          | Not implemented    | Not yet specified.                                                                                                           |
+| Classes                             | Partial            | Static layout and methods lower to records/functions; no constructors, inheritance, `implements`, or normal mutable methods. |
+| Class fields                        | Partial            | Static layout and initialization; no field assignment.                                                                       |
+| Class methods                       | Partial            | Calls work; mutation blocked by missing field assignment.                                                                    |
+| `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                                                      |
+| Constructors                        | Not implemented    | Use record literals for initialization.                                                                                      |
+| Class `implements`                  | Not implemented    | Important future static-contract feature.                                                                                    |
+| Class inheritance `extends`         | Not implemented    | No superclass/prototype model.                                                                                               |
+| Method overriding                   | Not implemented    | Requires inheritance/dispatch design.                                                                                        |
+| Interfaces                          | Partial            | Static method signatures for generic constraints; not runtime values.                                                        |
+| Generics                            | Partial            | Compile-time generics/monomorphization; limited inference.                                                                   |
+| Generic constraints                 | Implemented        | `T extends InterfaceName` style constraints.                                                                                 |
+| Conditional/mapped types            | Not implemented    | Not yet specified.                                                                                                           |
+| Type inference                      | Partial            | Some local initializer cases; no full TS inference.                                                                          |
+| Named imports                       | Implemented        | Static module imports.                                                                                                       |
+| Named import aliases                | Implemented        | `import { exported as local } from "..."`.                                                                                   |
+| Namespace imports                   | Implemented        | `import * as NS from "..."`; qualified use required.                                                                         |
+| Default imports                     | Not implemented    | No JS default-module semantics.                                                                                              |
+| Re-exports                          | Not implemented    | Not yet specified.                                                                                                           |
+| Dynamic import                      | Not implemented    | No runtime module loader.                                                                                                    |
+| C extern functions                  | Implemented        | Checked C ABI subset.                                                                                                        |
+| C header imports                    | Partial            | Supported C declarations only; complex macros/C forms excluded.                                                              |
+| `defer`                             | Implemented        | TypeC feature, not TypeScript.                                                                                               |
+| Arenas/safe pointers                | Implemented        | TypeC systems features, not TypeScript.                                                                                      |
+| `any`                               | Not implemented    | Intentionally forbidden.                                                                                                     |
+| `unknown` / `never`                 | Not implemented    | Not yet specified.                                                                                                           |
+| `null` / `undefined` values         | Not implemented    | Optional types are explicit; no implicit JS nullish values.                                                                  |
+| Truthiness                          | Not implemented    | Conditions must be `bool`.                                                                                                   |
+| Exceptions `throw` / `try`          | Not implemented    | Not yet specified.                                                                                                           |
+| Async/await / promises              | Not implemented    | No JS runtime dependency.                                                                                                    |
+| Decorators                          | Not implemented    | Not yet specified.                                                                                                           |
+| JSX                                 | Not implemented    | Out of scope.                                                                                                                |
+| Prototypes / `eval`                 | Not implemented    | Intentionally forbidden.                                                                                                     |
 
-## Latest Documented Phase
+## Most important missing phases
+
+1. **General assignment targets**: `obj.x = v`, `arr[i] = v`, `obj.pos.x += dx`.
+2. **`for` loops**: counted loops without forcing verbose `while` syntax.
+3. **Class `implements`**: explicit static contracts.
+4. **Constructors**: structured initialization without record-literal-only construction.
+5. **Inheritance or composition support**: only after a strict static/C layout spec.
+
+## Latest documented phase
 
 Latest completed phase: **Phase 37 — Named Import Aliases**.
 

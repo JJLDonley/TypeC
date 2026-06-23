@@ -4,20 +4,28 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 
 ## Current prototype subset
 
+> Important: TypeC currently has TS-like static layout features, but not full TS-style mutable
+> object ergonomics. Assignments target simple mutable local identifiers only. Field assignment
+> (`obj.x = value`), indexed assignment (`arr[i] = value`), nested lvalue updates
+> (`obj.pos.x += dx`), `for` loops, constructors, `implements`, and class inheritance are not
+> implemented yet. See `docs/ts-feature-analysis.md` for the detailed support/gap matrix.
+
 - Function declarations
 - Required parameter and return type annotations
 - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`,
   `f64`, `void`
 - Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
-  `return;`, function-call expression statements, `while`, TypeScript-like `switch`, `break`, and
-  assignment statements
-- Integer literals, float literals, identifiers, calls, unary `+ - !`, `!!`, ternary `? :`,
-  `+ - * / %`, and comparisons
+  `return;`, function-call expression statements, `while`, `do while`, TypeScript-like `switch`,
+  `break`, empty statements, and local-identifier assignment statements
+- Integer literals, float literals, string literals, identifiers, calls, unary `+ - ! ~`, `!!`,
+  ternary `? :`, nullish coalescing `??`, Elvis `?:`, logical `&&` / `||`, bitwise integer
+  operators, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
-- Record type aliases, record literals, and field access
+- Record type aliases, record literals, record literal shorthand, and read-only field access from
+  source syntax
 - Fixed arrays `T[N]` / `Array<T, N>`, inferred local arrays `T[]` / `Array<T>`, nested fixed
   arrays, `.data` array pointer access, `.length()` fixed-array length access, pointer-decayed
-  parameter arrays, array literals, and indexing
+  parameter arrays, array literals, and read-only indexing from source syntax
 - Canonical pointer/reference types `Ptr<T>` and `Ref<T>` with equivalent compact `T*` and `T&`
   spellings
 - NUL-terminated C string literals as `u8[]`, decaying to `Ptr<u8>`, `u8*`, `u8[]`, `u8[N]`, or
@@ -25,15 +33,18 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - `void*` C interop parameters accepting pointer and array arguments without pointee type
   information
 - TypeScript-like scoped enums with fixed `i32` backing representation
-- Static imports, standard-library imports, and explicit exports
+- Static imports, named import aliases, namespace imports, standard-library imports, and explicit
+  exports
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phase 23 has started. Logical `!`, `!!`, ternary `? :`, optional `T?` type spelling, postfix
-non-null assertion `expr!`, nullish coalescing `??`, and Elvis `?:` are implemented. Planned
-remaining expression syntax includes optional chaining `?.`. Additional TypeScript unary/update
-syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly
-rejected as described below.
+Phases through 37 are implemented. The current TypeScript-like syntax includes optional chaining,
+non-null assertions, nullish coalescing, bitwise operators, logical binary operators, compound local
+assignments, statement-only local increment/decrement, do-while, else-if, empty statements, trailing
+commas, numeric separators, single-quoted strings, record literal shorthand, comma-separated record
+type fields, parenthesized type refs, and named import aliases. Additional JavaScript runtime
+operators such as `typeof`, `void`, `delete`, and `await` remain unsupported unless a future static
+TypeC meaning is specified.
 
 ## Example
 
@@ -56,7 +67,7 @@ Relative project imports use `./` or `../` paths:
 import { add } from "./math.tc";
 ```
 
-Namespace imports are planned for TypeC modules and C header modules:
+Namespace imports are supported for TypeC modules and C header modules:
 
 ```ts
 import * as RL from "raylib";
@@ -419,10 +430,9 @@ interface Drawable {
 }
 ```
 
-Interfaces have no runtime representation and emit no C. Interface names are not value types in the
-current phase; they are reserved for later generic constraints or another explicitly specified use
-site. Interface method signatures are validated for duplicate names and known parameter/return
-types.
+Interfaces have no runtime representation and emit no C. Interface names are not value types.
+Interface method signatures are validated for duplicate names and known parameter/return types.
+Generic constraints can use interfaces, but classes cannot yet declare `implements InterfaceName`.
 
 ## Classes and Methods
 
@@ -442,9 +452,11 @@ const v: Vec2 = { x: 3.0, y: 4.0 };
 const d: f64 = v.lengthSquared();
 ```
 
-Constructors, inheritance, access modifiers, static members, and `new` are not part of this phase.
-Methods dispatch statically and lower to C functions with an explicit receiver argument. Class
-values use existing record literal initialization.
+Constructors, inheritance, access modifiers, static members, `implements`, and `new` are not
+implemented. Methods dispatch statically and lower to C functions with an explicit receiver
+argument. Class values use existing record literal initialization. Because general field assignment
+is not implemented yet, methods are currently practical for reading computed state, not for ordinary
+mutable object updates like `this.x = this.x + 1`.
 
 ## Enums
 
