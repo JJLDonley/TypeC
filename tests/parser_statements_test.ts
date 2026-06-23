@@ -66,6 +66,23 @@ Deno.test("parses increment and decrement statements", () => {
   assertText(prefix.operator, "--");
 });
 
+Deno.test("parses do while statements", () => {
+  const stmt = parseStatementWith(
+    parserFor([
+      keyword("do"),
+      punct("{"),
+      punct("}"),
+      keyword("while"),
+      punct("("),
+      identifier("done"),
+      punct(")"),
+      punct(";"),
+    ]),
+  );
+
+  assertText(stmt.kind, "DoWhileStmt");
+});
+
 Deno.test("parses break statements", () => {
   const stmt = parseStatementWith(parserFor([keyword("break"), punct(";")]));
 

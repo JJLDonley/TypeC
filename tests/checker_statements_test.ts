@@ -20,6 +20,7 @@ Deno.test("dispatches statement checks", () => {
   assertDispatch(incDec(), "incDec");
   assertDispatch(switchStmt(), "switch");
   assertDispatch(whileStmt(), "while");
+  assertDispatch(doWhileStmt(), "doWhile");
   assertDispatch(ifStmt(), "if");
 });
 
@@ -41,6 +42,7 @@ function handlers(calls: Str[]): StatementCheckHandlers {
     incDec: () => calls.push("incDec"),
     switchStatement: () => calls.push("switch"),
     whileStatement: () => calls.push("while"),
+    doWhileStatement: () => calls.push("doWhile"),
     ifStatement: () => calls.push("if"),
   };
 }
@@ -92,6 +94,10 @@ function switchStmt(): Statement {
 
 function whileStmt(): Statement {
   return { kind: "WhileStmt", condition: boolLiteral(), body: block(), span };
+}
+
+function doWhileStmt(): Statement {
+  return { kind: "DoWhileStmt", body: block(), condition: boolLiteral(), span };
 }
 
 function ifStmt(): Statement {

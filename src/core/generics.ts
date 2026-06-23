@@ -110,6 +110,11 @@ function statementGenericCallDiagnostics(
         ...expressionGenericCallDiagnostics(statement.condition, templates),
         ...statementListGenericCallDiagnostics(statement.body.statements, templates),
       ];
+    case "DoWhileStmt":
+      return [
+        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
+        ...expressionGenericCallDiagnostics(statement.condition, templates),
+      ];
     case "IfStmt":
       return [
         ...expressionGenericCallDiagnostics(statement.condition, templates),
@@ -339,6 +344,12 @@ class GenericInstantiator {
           condition: this.rewriteExpr(statement.condition),
           body: this.rewriteBlock(statement.body),
         };
+      case "DoWhileStmt":
+        return {
+          ...statement,
+          body: this.rewriteBlock(statement.body),
+          condition: this.rewriteExpr(statement.condition),
+        };
       case "IfStmt":
         return {
           ...statement,
@@ -467,6 +478,8 @@ function substituteStatement(statement: Statement, substitutions: TypeSubstituti
           : null,
       };
     case "WhileStmt":
+      return { ...statement, body: substituteBlock(statement.body, substitutions) };
+    case "DoWhileStmt":
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "IfStmt":
       return {

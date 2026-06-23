@@ -127,6 +127,8 @@ function statementUsesArena(stmt: Statement): b8 {
         ) || (stmt.defaultCase?.statements.some(statementUsesArena) ?? false);
     case "WhileStmt":
       return expressionUsesArena(stmt.condition) || stmt.body.statements.some(statementUsesArena);
+    case "DoWhileStmt":
+      return stmt.body.statements.some(statementUsesArena) || expressionUsesArena(stmt.condition);
     case "IfStmt":
       return expressionUsesArena(stmt.condition) ||
         stmt.thenBody.statements.some(statementUsesArena) ||

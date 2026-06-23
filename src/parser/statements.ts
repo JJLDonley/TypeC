@@ -37,6 +37,7 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("switch")) return parseSwitch(parser);
   if (parser.checkText("if")) return parseIf(parser);
   if (parser.checkText("while")) return parseWhile(parser);
+  if (parser.checkText("do")) return parseDoWhile(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
   if (isIncDecStart(parser)) return parseIncDec(parser);
   if (isAssignmentStart(parser)) return parseAssignment(parser);
@@ -149,6 +150,15 @@ function parseWhile(parser: StatementParser): CastStatement {
   const condition = parseCondition(parser);
   const body = parser.parseBlock();
   return { kind: "WhileStmt", condition, body, span: span(start.span.start, body.span.end) };
+}
+
+function parseDoWhile(parser: StatementParser): CastStatement {
+  const start = parser.expectText("do");
+  const body = parser.parseBlock();
+  parser.expectText("while");
+  const condition = parseCondition(parser);
+  const semi = parser.expectText(";");
+  return { kind: "DoWhileStmt", body, condition, span: span(start.span.start, semi.span.end) };
 }
 
 function parseCondition(parser: StatementParser): CastExpression {

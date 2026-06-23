@@ -2271,6 +2271,59 @@ function previous(value: u32): u32 {
 
 ---
 
+# Phase 28: Do-While Statements
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style `do...while` loop syntax for cases where the loop body must execute before the
+condition is checked.
+
+## Syntax
+
+```ts
+do {
+  statements;
+} while (condition);
+```
+
+## Semantics
+
+- `do...while` is a statement.
+- The body executes once before checking the condition.
+- The condition must have type `bool`.
+- The loop body has the same block-local scoping rules as `while`.
+- `break` has the same meaning as in existing loop/switch control flow.
+- TypeC does not add JavaScript truthiness or implicit coercions.
+
+## Examples
+
+```ts
+function runOnce(value: i32): i32 {
+  let current: i32 = value;
+  do {
+    current++;
+  } while (current < 3);
+  return current;
+}
+```
+
+## Do
+
+- Reuse existing boolean condition checks.
+- Emit direct portable C `do { ... } while (condition);`.
+- Preserve existing defer handling around loop exits.
+- Add parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add labelled breaks or continues in this phase.
+- Do not add truthiness.
+- Do not add `while` expression values.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

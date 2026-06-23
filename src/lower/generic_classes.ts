@@ -7,6 +7,7 @@ import type {
   CastClassDecl,
   CastConditionalExpr,
   CastConstDecl,
+  CastDoWhileStmt,
   CastExpression,
   CastFunctionDecl,
   CastFunctionTypeRef,
@@ -212,6 +213,8 @@ class GenericClassInstantiator {
         return this.rewriteSwitch(statement);
       case "WhileStmt":
         return this.rewriteWhile(statement);
+      case "DoWhileStmt":
+        return this.rewriteDoWhile(statement);
       case "IfStmt":
         return this.rewriteIf(statement);
     }
@@ -259,6 +262,14 @@ class GenericClassInstantiator {
       ...statement,
       condition: this.rewriteExpression(statement.condition),
       body: this.rewriteBlock(statement.body),
+    };
+  }
+
+  private rewriteDoWhile(statement: CastDoWhileStmt): CastDoWhileStmt {
+    return {
+      ...statement,
+      body: this.rewriteBlock(statement.body),
+      condition: this.rewriteExpression(statement.condition),
     };
   }
 
@@ -606,6 +617,8 @@ function substituteStatement(
           : null,
       };
     case "WhileStmt":
+      return { ...statement, body: substituteBlock(statement.body, substitutions) };
+    case "DoWhileStmt":
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "IfStmt":
       return {

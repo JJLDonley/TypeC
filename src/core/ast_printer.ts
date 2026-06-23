@@ -166,6 +166,13 @@ class AstPrinter {
           this.block(statement.body);
         });
         return;
+      case "DoWhileStmt":
+        this.line("DoWhileStmt");
+        this.indented(() => {
+          this.block(statement.body);
+          this.expression(statement.condition);
+        });
+        return;
       case "IfStmt":
         this.line("IfStmt");
         this.indented(() => {

@@ -71,6 +71,12 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
         condition: namespaceExpression(stmt.condition, namespace, functions),
         body: namespaceBlock(stmt.body, namespace, functions),
       };
+    case "DoWhileStmt":
+      return {
+        ...stmt,
+        body: namespaceBlock(stmt.body, namespace, functions),
+        condition: namespaceExpression(stmt.condition, namespace, functions),
+      };
     case "IfStmt":
       return {
         ...stmt,

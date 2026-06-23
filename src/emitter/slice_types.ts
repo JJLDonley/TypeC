@@ -20,7 +20,7 @@ function collectFunctionSlices(fn: FunctionDecl, elements: Map<Str, TypeRef>): v
 
 function collectStatementSlices(stmt: Statement, elements: Map<Str, TypeRef>): void {
   if (stmt.kind === "VarDeclStmt") collectTypeSlices(stmt.type, elements);
-  if (stmt.kind === "WhileStmt") {
+  if (stmt.kind === "WhileStmt" || stmt.kind === "DoWhileStmt") {
     for (const child of stmt.body.statements) collectStatementSlices(child, elements);
   }
   if (stmt.kind !== "IfStmt") return;

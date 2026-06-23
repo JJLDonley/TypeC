@@ -2,7 +2,11 @@ import type { Expression, Statement } from "core/ast.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import type { LocalInfo } from "checker/locals.ts";
-import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
+import {
+  checkDoWhileStatement,
+  checkIfStatement,
+  checkWhileStatement,
+} from "checker/control_flow.ts";
 
 type Str = string;
 type usize = number;
@@ -15,12 +19,17 @@ const locals = new Map<Str, LocalInfo>();
 
 Deno.test("checks valid control flow", () => {
   assertLen(checkWhileStatement(whileStmt(bool()), locals, resolveBool, emptyBlock).length, 0);
+  assertLen(checkDoWhileStatement(doWhileStmt(bool()), locals, resolveBool, emptyBlock).length, 0);
   assertLen(checkIfStatement(ifStmt(bool()), locals, resolveBool, emptyBlock).length, 0);
 });
 
 Deno.test("reports invalid control flow conditions", () => {
   assertText(
     checkWhileStatement(whileStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "",
+    "While condition type 'i32' is not assignable to 'bool'",
+  );
+  assertText(
+    checkDoWhileStatement(doWhileStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "",
     "While condition type 'i32' is not assignable to 'bool'",
   );
   assertText(
@@ -43,6 +52,15 @@ function resolveI32(_expr: Expression): TypeName {
 
 function whileStmt(condition: Expression): Extract<Statement, { kind: "WhileStmt" }> {
   return { kind: "WhileStmt", condition, body: { kind: "BlockStmt", statements: [], span }, span };
+}
+
+function doWhileStmt(condition: Expression): Extract<Statement, { kind: "DoWhileStmt" }> {
+  return {
+    kind: "DoWhileStmt",
+    body: { kind: "BlockStmt", statements: [], span },
+    condition,
+    span,
+  };
 }
 
 function ifStmt(condition: Expression): Extract<Statement, { kind: "IfStmt" }> {

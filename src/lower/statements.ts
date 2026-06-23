@@ -2,6 +2,7 @@ import type {
   AssignmentStmt,
   BlockStmt,
   DeferStmt,
+  DoWhileStmt,
   ExpressionStmt,
   IfStmt,
   IncDecStmt,
@@ -14,6 +15,7 @@ import type {
   CastAssignmentStmt,
   CastBlockStmt,
   CastDeferStmt,
+  CastDoWhileStmt,
   CastExpressionStmt,
   CastIfStmt,
   CastIncDecStmt,
@@ -57,6 +59,8 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerSwitchStmt(statement);
     case "WhileStmt":
       return lowerWhileStmt(statement);
+    case "DoWhileStmt":
+      return lowerDoWhileStmt(statement);
     case "IfStmt":
       return lowerIfStmt(statement);
   }
@@ -131,6 +135,15 @@ function lowerWhileStmt(statement: CastWhileStmt): WhileStmt {
     kind: "WhileStmt",
     condition: lowerExpression(statement.condition),
     body: lowerBlockStmt(statement.body),
+    span: statement.span,
+  };
+}
+
+function lowerDoWhileStmt(statement: CastDoWhileStmt): DoWhileStmt {
+  return {
+    kind: "DoWhileStmt",
+    body: lowerBlockStmt(statement.body),
+    condition: lowerExpression(statement.condition),
     span: statement.span,
   };
 }

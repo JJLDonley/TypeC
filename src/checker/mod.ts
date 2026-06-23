@@ -11,7 +11,11 @@ import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkConditionalExpression } from "checker/conditional_expressions.ts";
-import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
+import {
+  checkDoWhileStatement,
+  checkIfStatement,
+  checkWhileStatement,
+} from "checker/control_flow.ts";
 import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
 import { isEnumTypeName } from "checker/enums.ts";
@@ -198,6 +202,7 @@ class Checker {
       incDec: (value) => this.checkIncDec(value, locals),
       switchStatement: (value) => this.checkSwitch(value, locals, returnType),
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
+      doWhileStatement: (value) => this.checkDoWhile(value, locals, returnType),
       ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
     });
   }
@@ -293,6 +298,21 @@ class Checker {
   ): void {
     this.diagnostics.push(
       ...checkWhileStatement(
+        stmt,
+        locals,
+        (expr) => this.typeOf(expr, locals),
+        (children, parent) => this.checkBlock(children, parent, returnType, false),
+      ),
+    );
+  }
+
+  private checkDoWhile(
+    stmt: Extract<Statement, { kind: "DoWhileStmt" }>,
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    this.diagnostics.push(
+      ...checkDoWhileStatement(
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),

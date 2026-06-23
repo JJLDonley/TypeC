@@ -8,6 +8,7 @@ type Str = string;
 
 type IfStmt = Extract<Statement, { kind: "IfStmt" }>;
 type WhileStmt = Extract<Statement, { kind: "WhileStmt" }>;
+type DoWhileStmt = Extract<Statement, { kind: "DoWhileStmt" }>;
 type TypeResolver = (expr: Expression) => TypeName;
 type BlockChecker = (statements: Statement[], locals: Map<Str, LocalInfo>) => Diagnostic[];
 
@@ -17,10 +18,29 @@ export function checkWhileStatement(
   resolveType: TypeResolver,
   checkBlock: BlockChecker,
 ): Diagnostic[] {
-  const condition = resolveType(stmt.condition);
+  return checkLoop(stmt.condition, stmt.body.statements, locals, resolveType, checkBlock);
+}
+
+export function checkDoWhileStatement(
+  stmt: DoWhileStmt,
+  locals: Map<Str, LocalInfo>,
+  resolveType: TypeResolver,
+  checkBlock: BlockChecker,
+): Diagnostic[] {
+  return checkLoop(stmt.condition, stmt.body.statements, locals, resolveType, checkBlock);
+}
+
+function checkLoop(
+  conditionExpr: Expression,
+  statements: Statement[],
+  locals: Map<Str, LocalInfo>,
+  resolveType: TypeResolver,
+  checkBlock: BlockChecker,
+): Diagnostic[] {
+  const condition = resolveType(conditionExpr);
   return [
-    ...checkWhileCondition(condition, stmt.condition.span),
-    ...checkBlock(stmt.body.statements, locals),
+    ...checkWhileCondition(condition, conditionExpr.span),
+    ...checkBlock(statements, locals),
   ];
 }
 

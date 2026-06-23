@@ -92,6 +92,8 @@ function emitStatementWithDefers(
       return [emitSwitchWithDefers(stmt, returnType, context, locals, defers)];
     case "WhileStmt":
       return [emitWhileWithDefers(stmt, returnType, context, locals, defers)];
+    case "DoWhileStmt":
+      return [emitDoWhileWithDefers(stmt, returnType, context, locals, defers)];
     case "IfStmt":
       return [emitIfWithDefers(stmt, returnType, context, locals, defers)];
   }
@@ -184,6 +186,27 @@ function emitWhileWithDefers(
     breakableDeferredContext(outerDefers),
   );
   return emitBracedBlock(`while (${emitExpression(stmt.condition, context)}) {`, body);
+}
+
+function emitDoWhileWithDefers(
+  stmt: Extract<Statement, { kind: "DoWhileStmt" }>,
+  returnType: Str,
+  context: EmitContext,
+  locals: LocalTypes,
+  outerDefers: DeferredContext,
+): Str {
+  const body = emitChildStatements(
+    stmt.body.statements,
+    returnType,
+    context,
+    locals,
+    breakableDeferredContext(outerDefers),
+  );
+  return [
+    ...emitBracedBlock("do {", body).split("\n"),
+    `while (${emitExpression(stmt.condition, context)});`,
+  ]
+    .join("\n");
 }
 
 function emitSwitchWithDefers(

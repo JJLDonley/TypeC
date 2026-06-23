@@ -17,6 +17,7 @@ function statementReturns(statement: Statement): b8 {
   if (statement.kind === "ReturnStmt") return true;
   if (statement.kind === "IfStmt") return ifStatementReturns(statement);
   if (statement.kind === "SwitchStmt") return switchStatementReturns(statement);
+  if (statement.kind === "DoWhileStmt") return blockReturns(statement.body.statements);
   return false;
 }
 

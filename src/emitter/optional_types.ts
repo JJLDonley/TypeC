@@ -54,7 +54,9 @@ function collectFunctionOptionals(fn: FunctionDecl, elements: Map<Str, TypeRef>)
 
 function collectStatementOptionals(stmt: Statement, elements: Map<Str, TypeRef>): void {
   if (stmt.kind === "VarDeclStmt") collectTypeOptionals(stmt.type, elements);
-  if (stmt.kind === "WhileStmt") collectBlockOptionals(stmt.body.statements, elements);
+  if (stmt.kind === "WhileStmt" || stmt.kind === "DoWhileStmt") {
+    collectBlockOptionals(stmt.body.statements, elements);
+  }
   if (stmt.kind !== "IfStmt") return;
   collectBlockOptionals(stmt.thenBody.statements, elements);
   if (stmt.elseBody) collectBlockOptionals(stmt.elseBody.statements, elements);

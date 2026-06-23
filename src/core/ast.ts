@@ -207,6 +207,7 @@ export type Statement =
   | IncDecStmt
   | SwitchStmt
   | WhileStmt
+  | DoWhileStmt
   | IfStmt;
 
 export interface ReturnStmt {
@@ -295,6 +296,13 @@ export interface WhileStmt {
   kind: "WhileStmt";
   condition: Expression;
   body: BlockStmt;
+  span: SourceSpan;
+}
+
+export interface DoWhileStmt {
+  kind: "DoWhileStmt";
+  body: BlockStmt;
+  condition: Expression;
   span: SourceSpan;
 }
 

@@ -117,6 +117,10 @@ function collectStatementDeps(
       collectExpressionDeps(statement.condition, selected, ignoredTypes);
       collectBlockDeps(statement.body, selected, ignoredTypes);
       return;
+    case "DoWhileStmt":
+      collectBlockDeps(statement.body, selected, ignoredTypes);
+      collectExpressionDeps(statement.condition, selected, ignoredTypes);
+      return;
     case "IfStmt":
       collectExpressionDeps(statement.condition, selected, ignoredTypes);
       collectBlockDeps(statement.thenBody, selected, ignoredTypes);

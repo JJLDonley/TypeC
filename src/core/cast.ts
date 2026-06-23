@@ -233,6 +233,7 @@ export type CastStatement =
   | CastIncDecStmt
   | CastSwitchStmt
   | CastWhileStmt
+  | CastDoWhileStmt
   | CastIfStmt;
 
 export interface CastReturnStmt {
@@ -321,6 +322,13 @@ export interface CastWhileStmt {
   kind: "WhileStmt";
   condition: CastExpression;
   body: CastBlockStmt;
+  span: SourceSpan;
+}
+
+export interface CastDoWhileStmt {
+  kind: "DoWhileStmt";
+  body: CastBlockStmt;
+  condition: CastExpression;
   span: SourceSpan;
 }
 

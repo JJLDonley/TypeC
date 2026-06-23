@@ -54,6 +54,10 @@ function collectStatement(statement: Statement, namespace: Str, members: Set<Str
       collectExpression(statement.condition, namespace, members);
       for (const child of statement.body.statements) collectStatement(child, namespace, members);
       return;
+    case "DoWhileStmt":
+      for (const child of statement.body.statements) collectStatement(child, namespace, members);
+      collectExpression(statement.condition, namespace, members);
+      return;
     case "IfStmt":
       collectExpression(statement.condition, namespace, members);
       for (const child of statement.thenBody.statements) {

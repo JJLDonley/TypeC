@@ -131,6 +131,10 @@ class Resolver {
         this.resolveExpression(statement.condition, scope);
         this.resolveBlock(statement.body.statements, scope);
         return;
+      case "DoWhileStmt":
+        this.resolveBlock(statement.body.statements, scope);
+        this.resolveExpression(statement.condition, scope);
+        return;
       case "IfStmt":
         this.resolveExpression(statement.condition, scope);
         this.resolveBlock(statement.thenBody.statements, scope);
