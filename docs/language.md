@@ -28,6 +28,12 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
+Planned next expression syntax includes TypeScript-style `!`, `!!`, ternary `? :`, optional chaining
+`?.`, nullish coalescing `??`, Elvis `?:`, postfix non-null assertion `expr!`, and optional `T?`
+type spelling. Additional TypeScript unary/update syntaxes such as `~`, `++`, `--`, `typeof`,
+`void`, `delete`, and `await` are reserved or explicitly rejected as described below. These are
+specified below but are not part of the completed prototype subset until their phase is implemented.
+
 ## Example
 
 ```ts
@@ -115,6 +121,115 @@ Then source can import through the alias:
 
 ```ts
 import { abs_i32 } from "basic/math";
+```
+
+## Planned TypeScript-Style Expression Operators
+
+TypeC plans to support a strict, statically typed subset of TypeScript expression syntax without
+JavaScript truthiness, implicit `null`, or implicit `undefined`.
+
+### Unary and update syntax
+
+```ts
++expr;
+-expr;
+!expr;
+!!expr;
+~expr;
+++expr;
+--expr;
+expr++;
+expr--;
+typeof expr;
+void expr;
+delete expr;
+await expr;
+```
+
+`+expr` and `-expr` already exist for numeric expressions. `!expr` requires `expr: bool` and returns
+`bool`. `!!expr` is parsed as two unary `!` operators; it also requires `bool` and returns `bool`.
+Integers, pointers, arrays, records, enums, and optional values are not truthy or falsy.
+
+`~expr` is reserved for integer bitwise-not once bitwise integer operators are specified. `++` and
+`--` are reserved for typed numeric update operators. `typeof` may later become compile-time type
+introspection, not JavaScript runtime reflection. `void`, `delete`, and `await` are JavaScript
+runtime operators and are explicitly not valid TypeC expression operators in this phase.
+
+### Ternary conditional
+
+```ts
+condition ? whenTrue : whenFalse;
+```
+
+The condition must be `bool`. Branches must have the same type or an existing assignable common
+type. Only the selected branch is evaluated.
+
+### Optional type spelling
+
+```ts
+T?
+```
+
+`T?` is shorthand for an explicit `Optional<T>` value. Optional values are real static values, not
+implicit JavaScript `undefined`. `T?` is not allowed for `void`.
+
+### Optional chaining
+
+```ts
+expr?.field;
+expr?.method(arg0, arg1);
+expr?.[index];
+```
+
+Optional chaining requires `expr` to be optional. Empty optional values propagate. Present values
+are unwrapped for the field, method, or index access, and value results are wrapped back into an
+optional result.
+
+### Nullish coalescing and Elvis
+
+```ts
+expr ?? fallback
+expr ?: fallback
+```
+
+`??` is the canonical TypeScript-like spelling. `?:` is accepted as Elvis shorthand with the same
+semantics. Both require `expr` to be optional and `fallback` to be assignable to the contained type.
+The fallback is evaluated only when `expr` is empty.
+
+### Non-null assertion
+
+```ts
+expr!;
+```
+
+Postfix `expr!` requires an optional expression and returns the contained non-optional type. If the
+value is empty at runtime, default lowering traps/aborts rather than silently producing undefined
+behavior.
+
+### Precedence
+
+From high to low:
+
+1. postfix access/call/index/non-null: `()`, `[]`, `.`, `?.`, `!`
+2. prefix unary: `!`, `+`, `-`, reserved `~`
+3. multiplicative: `*`, `/`, `%`
+4. additive: `+`, `-`
+5. comparison/equality: `<`, `<=`, `>`, `>=`, `==`, `!=`
+6. nullish/elvis: `??`, `?:`
+7. ternary conditional: `? :`
+
+```ts
+function pick(flag: bool, a: i32, b: i32): i32 {
+  return flag ? a : b;
+}
+
+function fallback(value: i32?): i32 {
+  return value ?? 42;
+}
+
+function fallbackElvis(value: i32?): i32 {
+  return value ?: 42;
+}
 ```
 
 ## Language Server

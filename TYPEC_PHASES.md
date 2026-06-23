@@ -1801,6 +1801,183 @@ deno run -A src/driver/main.ts lsp
 
 ---
 
+# Phase 23: TypeScript-Style Expression Operators
+
+Status: Planned. Syntax and semantics documented before implementation.
+
+## Goal
+
+Add the TypeScript expression syntax users expect for boolean negation, conditional expressions, and
+explicit optional/null-aware access, without adopting JavaScript runtime semantics.
+
+Phase 23 extends expressions only. It does not add `any`, implicit `undefined`, dynamic property
+lookup, prototype behavior, or JavaScript truthiness.
+
+## Syntax
+
+Logical unary operators:
+
+```ts
++expr;
+-expr;
+!expr;
+!!expr;
+~expr;
+```
+
+`+expr` and `-expr` already exist for numeric expressions. Phase 23 adds `!expr` and reserves
+`~expr` for integer bitwise-not once bitwise operators are implemented. `!!expr` is parsed as two
+unary `!` operators, exactly like TypeScript. It is not a separate token or special cast form.
+
+Additional TypeScript unary/update syntaxes are reserved and must be specified before
+implementation:
+
+```ts
+++expr;
+--expr;
+expr++;
+expr--;
+typeof expr;
+void expr;
+delete expr;
+await expr;
+```
+
+`delete`, `void`, and `await` have JavaScript runtime meanings and are not valid TypeC Phase 23
+operators. They remain reserved tokens/syntax forms so diagnostics can be explicit instead of
+misparsing them. `typeof` may later become compile-time type introspection, not JavaScript runtime
+reflection. `++` and `--` may later be added as typed numeric update operators, but are not part of
+Phase 23 expression semantics unless separately specified.
+
+Conditional expression:
+
+```ts
+condition ? whenTrue : whenFalse;
+```
+
+Null-aware optional syntax:
+
+```ts
+expr?.field
+expr?.method(arg0, arg1)
+expr?.[index]
+expr ?? fallback
+expr ?: fallback
+expr!
+T?
+```
+
+`expr ?: fallback` is the Elvis shorthand for `expr ?? fallback`. `??` remains the canonical
+TypeScript-like spelling. `expr!` is a non-null assertion expression. `T?` is shorthand for an
+explicit optional type.
+
+## Semantics
+
+Logical not:
+
+- `!expr` requires `expr: bool` and returns `bool`.
+- `!!expr` therefore requires `expr: bool` and returns `bool`.
+- `~expr` is reserved for integer bitwise-not and is invalid until bitwise integer operators are
+  specified.
+- TypeC does not use JavaScript truthiness; integers, pointers, records, arrays, and enums are not
+  implicitly converted to `bool`.
+
+Conditional expression:
+
+- `condition ? a : b` requires `condition: bool`.
+- Both branches must have the same type or an existing assignable common type.
+- Only the selected branch is evaluated at runtime.
+- Lowering emits a C conditional expression when both branches are expression-safe; otherwise the
+  compiler may lower through a temporary in generated C.
+
+Optional type spelling:
+
+- `T?` is shorthand for `Optional<T>`.
+- Optional values are explicit values, not implicit `null` or `undefined`.
+- Phase 23 may introduce explicit `some(value)` / `none<T>()` constructors or equivalent documented
+  constructors before implementation.
+- `T?` is not allowed for `void`.
+
+Optional chaining:
+
+- `expr?.field`, `expr?.method(...)`, and `expr?.[index]` require `expr` to be optional.
+- If `expr` is empty, the result is empty.
+- If `expr` contains a value, the access is performed on the contained value.
+- The result type is optional when the access result is a value type.
+
+Nullish coalescing and Elvis:
+
+- `expr ?? fallback` requires `expr` to be optional and `fallback` to be assignable to the contained
+  type.
+- `expr ?: fallback` has the same semantics as `expr ?? fallback`.
+- The result type is the contained non-optional type.
+- `fallback` is evaluated only when `expr` is empty.
+
+Non-null assertion:
+
+- `expr!` requires `expr` to be optional and returns the contained non-optional type.
+- If `expr` is empty at runtime, behavior is a checked trap/abort in debug-safe lowering; unchecked
+  lowering may be specified later but is not the default.
+- `expr!` is explicit and local; it does not change the variable's declared type.
+
+## Precedence
+
+From high to low, Phase 23 expression precedence is:
+
+1. postfix access/call/index/non-null: `()`, `[]`, `.`, `?.`, `!`
+2. prefix unary: `!`, `+`, `-`
+3. multiplicative: `*`, `/`, `%`
+4. additive: `+`, `-`
+5. comparison/equality: `<`, `<=`, `>`, `>=`, `==`, `!=`
+6. nullish/elvis: `??`, `?:`
+7. ternary conditional: `? :`
+
+Postfix non-null assertion `expr!` binds tighter than prefix `!expr`.
+
+## Examples
+
+```ts
+function shouldRun(closed: bool): bool {
+  return !closed;
+}
+
+function asBool(value: bool): bool {
+  return !!value;
+}
+
+function pick(flag: bool, a: i32, b: i32): i32 {
+  return flag ? a : b;
+}
+
+function fallback(value: i32?): i32 {
+  return value ?? 42;
+}
+
+function fallbackElvis(value: i32?): i32 {
+  return value ?: 42;
+}
+```
+
+## Do
+
+- Keep all conversions explicit and statically typed.
+- Require boolean conditions for `!` and `? :`.
+- Keep optionality explicit through `T?` / `Optional<T>`.
+- Lower to readable C with predictable evaluation order.
+- Add parser, checker, emitter, and runtime tests before marking complete.
+
+## Do Not
+
+- Do not add JavaScript truthiness.
+- Do not add implicit `null` or `undefined`.
+- Do not allow optional chaining on non-optional values.
+- Do not make `?` mean dynamic property lookup or weak typing.
+- Do not add optional parameters or optional object fields in this phase unless separately
+  specified.
+- Do not implement JavaScript-runtime unary operators `delete`, `void`, or `await`.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
