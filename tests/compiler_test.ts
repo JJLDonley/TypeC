@@ -1297,6 +1297,36 @@ Deno.test("emits C for conditional expressions", () => {
   assertIncludes(c, "return flag ? a : b;");
 });
 
+Deno.test("emits C for optional value constructors", () => {
+  const source = `
+    function main(): i32 {
+      const present: i32? = Some<i32>(42);
+      const empty: i32? = None<i32>();
+      return present! + (empty ?? 1);
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "Optional_i32");
+  assertIncludes(c, "const Optional_i32 present = (Optional_i32){ .present = true, .value = 42 };");
+  assertIncludes(c, "const Optional_i32 empty = (Optional_i32){ .present = false };");
+});
+
+Deno.test("rejects invalid optional value constructors", () => {
+  assertCompileError(
+    `function main(): i32 { const value: i32? = Some<i32>(); return 0; }`,
+    "Some expects 1 arguments, got 0",
+  );
+  assertCompileError(
+    `function main(): i32 { const value: i32? = None<i32>(1); return 0; }`,
+    "None expects 0 arguments, got 1",
+  );
+  assertCompileError(
+    `function main(): i32 { const value: i32? = Some(1); return 0; }`,
+    "Some requires exactly one type argument",
+  );
+});
+
 Deno.test("emits C for optional type spelling", () => {
   const source =
     `function keep(value: i32?): i32? { return value; } function main(): i32 { return 0; }`;

@@ -1,4 +1,5 @@
 import type { Expression, FunctionDecl } from "core/ast.ts";
+import { optionalCTypeNameFromTypeName } from "c/optional_names.ts";
 import { emitCType } from "c/type.ts";
 import { emitArenaCallExpression } from "emitter/arenas.ts";
 import { spanKey } from "checker/exprs.ts";
@@ -6,6 +7,7 @@ import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCStringPointer } from "emitter/strings.ts";
 import { emitCTypeName } from "emitter/type_names.ts";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 type usize = number;
@@ -27,6 +29,8 @@ export function emitCallExpression(
 ): Str {
   const arenaCall = emitArenaCallExpression(expr, context, emitExpression);
   if (arenaCall !== null) return arenaCall;
+  const optionalCall = emitOptionalConstructorCall(expr, context, emitExpressionExpected);
+  if (optionalCall !== null) return optionalCall;
   const fn = context.functions.get(expr.callee);
   const args = expr.args.map((arg, index) =>
     emitCallArg(
@@ -39,6 +43,22 @@ export function emitCallExpression(
     )
   );
   return `${fn?.cName ?? expr.callee}(${args.join(", ")})`;
+}
+
+function emitOptionalConstructorCall(
+  expr: Extract<Expression, { kind: "CallExpr" }>,
+  context: EmitContext,
+  emitExpressionExpected: ExpectedExpressionEmitter,
+): Str | null {
+  if (expr.callee !== "Some" && expr.callee !== "None") return null;
+  const typeArg = expr.typeArgs?.[0];
+  if (!typeArg) return `${expr.callee}()`;
+  const elementType = typeName(typeArg);
+  const optionalType = optionalCTypeNameFromTypeName(elementType);
+  if (expr.callee === "None") return `(${optionalType}){ .present = false }`;
+  const valueType = emitCTypeName(typeArg, context.typeAliases);
+  const value = expr.args[0] ? emitExpressionExpected(expr.args[0], valueType, context) : "0";
+  return `(${optionalType}){ .present = true, .value = ${value} }`;
 }
 
 function emitCallArg(

@@ -3002,6 +3002,48 @@ class Ship extends Entity {
 
 ---
 
+# Phase 43: Optional Value Constructors
+
+Status: Complete.
+
+## Goal
+
+Make optional values constructible without adding JavaScript `null` or `undefined` semantics.
+
+## Syntax
+
+```ts
+const present: i32? = Some<i32>(42);
+const empty: i32? = None<i32>();
+```
+
+## Semantics
+
+- `Some<T>(value)` constructs a present optional value of type `T?`.
+- `None<T>()` constructs an empty optional value of type `T?`.
+- `Some` and `None` are compiler builtins, not ordinary functions and not runtime JS values.
+- `Some<T>` takes exactly one value assignable to `T`.
+- `None<T>` takes no arguments.
+- The type argument is required. This phase does not add TypeScript-like inference for optional
+  constructors.
+- `T` must be a valid non-`void` value type.
+- Emitted C uses the existing optional struct representation.
+
+## Do
+
+- Treat `Some` and `None` as resolver-recognized builtins.
+- Type-check arity, required type arguments, and payload assignability.
+- Emit optional compound literals.
+- Add docs and tests.
+
+## Do Not
+
+- Do not add `null`, `undefined`, truthiness, or implicit optional conversions.
+- Do not add optional constructor inference.
+- Do not add optional parameters or optional object fields.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

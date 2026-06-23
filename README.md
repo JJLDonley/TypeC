@@ -50,6 +50,7 @@ The largest remaining ergonomic gap is runtime dispatch/interface values.
 | Logical `!`, `&&`, `\|\|`           | Implemented        | `bool` only; `&&`/`\|\|` return `bool`, not operand values.                                           |
 | Bitwise operators                   | Implemented        | Integer-only; no JS numeric coercions.                                                                |
 | Nullish coalescing `??`             | Implemented        | Optional-type based, not JS `null`/`undefined`.                                                       |
+| Optional construction               | Implemented        | Explicit `Some<T>(value)` and `None<T>()`; type argument required.                                    |
 | Optional chaining                   | Implemented        | Optional-type based field/index/method access.                                                        |
 | Non-null assertion                  | Implemented        | Optional-type based.                                                                                  |
 | Numeric separators                  | Implemented        | Decimal literals like `1_000`.                                                                        |
@@ -98,7 +99,7 @@ The largest remaining ergonomic gap is runtime dispatch/interface values.
 | Arenas/safe pointers                | Implemented        | TypeC systems features, not TypeScript.                                                               |
 | `any`                               | Not implemented    | Intentionally forbidden.                                                                              |
 | `unknown` / `never`                 | Not implemented    | Not yet specified.                                                                                    |
-| `null` / `undefined` values         | Not implemented    | Optional types are explicit; no implicit JS nullish values.                                           |
+| `null` / `undefined` values         | Not implemented    | Optional types use explicit `Some<T>`/`None<T>`; no implicit JS nullish values.                       |
 | Truthiness                          | Not implemented    | Conditions must be `bool`.                                                                            |
 | Exceptions `throw` / `try`          | Not implemented    | Not yet specified.                                                                                    |
 | Async/await / promises              | Not implemented    | No JS runtime dependency.                                                                             |

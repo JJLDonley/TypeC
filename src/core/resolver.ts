@@ -9,7 +9,13 @@ import { type Scope, ScopeTable } from "core/scope.ts";
 type Str = string;
 type b8 = boolean;
 
-const builtinFunctions = new Set<Str>(["arenaCreate", "arenaDestroy", "arenaAlloc"]);
+const builtinFunctions = new Set<Str>([
+  "arenaCreate",
+  "arenaDestroy",
+  "arenaAlloc",
+  "Some",
+  "None",
+]);
 
 export function resolve(program: Program): ResolvedProgram {
   const resolver = new Resolver(program);

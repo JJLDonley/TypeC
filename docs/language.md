@@ -36,14 +36,14 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phases through 42 are implemented. The current TypeScript-like syntax includes static class
-inheritance, basic constructors and `new`, class `implements`, basic `for` loops, general assignment
-lvalue targets, optional chaining, non-null assertions, nullish coalescing, bitwise operators,
-logical binary operators, compound local assignments, statement-only local increment/decrement,
-do-while, else-if, empty statements, trailing commas, numeric separators, single-quoted strings,
-record literal shorthand, comma-separated record type fields, parenthesized type refs, and named
-import aliases. Additional JavaScript runtime operators such as `typeof`, `void`, `delete`, and
-`await` remain unsupported unless a future static TypeC meaning is specified.
+Phases through 43 are implemented. The current TypeScript-like syntax includes explicit optional
+constructors, static class inheritance, basic constructors and `new`, class `implements`, basic
+`for` loops, general assignment lvalue targets, optional chaining, non-null assertions, nullish
+coalescing, bitwise operators, logical binary operators, compound local assignments, statement-only
+local increment/decrement, do-while, else-if, empty statements, trailing commas, numeric separators,
+single-quoted strings, record literal shorthand, comma-separated record type fields, parenthesized
+type refs, and named import aliases. Additional JavaScript runtime operators such as `typeof`,
+`void`, `delete`, and `await` remain unsupported unless a future static TypeC meaning is specified.
 
 ## Example
 
@@ -176,15 +176,18 @@ condition ? whenTrue : whenFalse;
 The condition must be `bool`. Branches must have the same type or an existing assignable common
 type. Only the selected branch is evaluated. This syntax is implemented.
 
-### Optional type spelling
+### Optional type spelling and construction
 
 ```ts
 T?
+const present: i32? = Some<i32>(42);
+const empty: i32? = None<i32>();
 ```
 
 `T?` is shorthand for an explicit `Optional<T>` value. Optional values are real static values, not
 implicit JavaScript `undefined`. `T?` is implemented for type positions and is not allowed for
-`void`. Optional value constructors are not implemented yet.
+`void`. `Some<T>(value)` and `None<T>()` are compiler builtins. The type argument is required; TypeC
+does not infer optional constructor type arguments yet.
 
 ### Optional chaining
 

@@ -38,6 +38,7 @@ import {
   checkOptionalIndexExpression,
   checkOptionalMethodCallExpression,
 } from "checker/optional_chaining.ts";
+import { checkOptionalConstructorCall } from "checker/optional_values.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
@@ -517,6 +518,15 @@ class Checker {
     if (arena.handled) {
       this.diagnostics.push(...arena.diagnostics);
       return arena.type;
+    }
+    const optional = checkOptionalConstructorCall(
+      expr,
+      this.typeAliases,
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+    );
+    if (optional.handled) {
+      this.diagnostics.push(...optional.diagnostics);
+      return optional.type;
     }
     const result = checkCallExpression(
       expr,

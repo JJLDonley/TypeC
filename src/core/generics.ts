@@ -16,6 +16,8 @@ export type Str = string;
 type b8 = boolean;
 type usize = number;
 
+const genericBuiltinCalls = new Set<Str>(["Some", "None"]);
+
 type TypeSubstitutions = Map<Str, TypeRef>;
 
 export function instantiateGenerics(program: Program): Program {
@@ -219,7 +221,7 @@ function genericCallArityDiagnostics(
   templates: Map<Str, FunctionDecl>,
 ): Diagnostic[] {
   const typeArgs = expr.typeArgs ?? [];
-  if (typeArgs.length === 0) return [];
+  if (typeArgs.length === 0 || genericBuiltinCalls.has(expr.callee)) return [];
   const template = templates.get(expr.callee);
   if (!template) return [{ message: `Unknown generic function '${expr.callee}'`, span: expr.span }];
   const expected = template.genericParams?.length ?? 0;

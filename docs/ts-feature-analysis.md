@@ -9,6 +9,18 @@ ergonomics**.
 
 ## Recently completed critical features
 
+### Phase 43: Optional Value Constructors
+
+TypeC now supports explicit optional construction:
+
+```ts
+const present: i32? = Some<i32>(42);
+const empty: i32? = None<i32>();
+```
+
+These are compiler builtins over TypeC optional structs, not JavaScript `null` or `undefined`. Type
+arguments are required.
+
 ### Phase 42: Static Class Inheritance
 
 TypeC now supports a narrow static `extends` subset:
@@ -102,15 +114,15 @@ destructuring assignment, logical assignment, or nullish assignment.
 
 These are the most important missing or partial features for writing real TypeScript-like programs.
 
-| Priority | Feature                                     | Status          | Why it matters                                | Current impact                                                                   |
-| -------- | ------------------------------------------- | --------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
-| P1       | Function/local type inference               | Partial         | Reduces annotation noise.                     | Some local initializer cases work; no broad TS-style inference.                  |
-| P1       | Runtime dispatch / interface values         | Missing         | Needed for polymorphic OO APIs.               | `extends` and `implements` are static only; no subtype/interface value dispatch. |
-| P1       | Optional value construction                 | Partial         | Needed to create/use optionals ergonomically. | Optional type syntax and operators exist, but value constructors are incomplete. |
-| P2       | Destructuring                               | Missing         | Common TS binding syntax.                     | No object/array destructuring in params or locals.                               |
-| P2       | Object/array spread                         | Missing         | Common TS copy/update syntax.                 | No spread semantics; record copying/updating needs explicit design.              |
-| P2       | Default/rest parameters for TypeC functions | Partial/missing | Common TS call ergonomics.                    | C variadic externs exist; ordinary TS-style defaults/rest are not implemented.   |
-| P2       | Type unions/intersections                   | Missing         | Major TS type-system feature.                 | Use explicit tagged unions instead of `A                                         |
+| Priority | Feature                                     | Status          | Why it matters                     | Current impact                                                                   |
+| -------- | ------------------------------------------- | --------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
+| P1       | Function/local type inference               | Partial         | Reduces annotation noise.          | Some local initializer cases work; no broad TS-style inference.                  |
+| P1       | Runtime dispatch / interface values         | Missing         | Needed for polymorphic OO APIs.    | `extends` and `implements` are static only; no subtype/interface value dispatch. |
+| P1       | Optional constructor inference              | Missing         | Reduces optional annotation noise. | `Some<T>`/`None<T>` work, but type arguments are required.                       |
+| P2       | Destructuring                               | Missing         | Common TS binding syntax.          | No object/array destructuring in params or locals.                               |
+| P2       | Object/array spread                         | Missing         | Common TS copy/update syntax.      | No spread semantics; record copying/updating needs explicit design.              |
+| P2       | Default/rest parameters for TypeC functions | Partial/missing | Common TS call ergonomics.         | C variadic externs exist; ordinary TS-style defaults/rest are not implemented.   |
+| P2       | Type unions/intersections                   | Missing         | Major TS type-system feature.      | Use explicit tagged unions instead of `A                                         |
 
 ## Implemented but narrower than TypeScript
 
@@ -123,7 +135,7 @@ These are the most important missing or partial features for writing real TypeSc
 | Interfaces                             | Static method-shape contracts for generic constraints and class `implements`.                   | Interfaces are not value types; no runtime dispatch.                                                |
 | Generics                               | Compile-time monomorphization for functions/classes.                                            | Requires explicit type arguments in many places; no TS-level inference or conditional/mapped types. |
 | Imports                                | Static named imports, aliases, namespace imports.                                               | No default imports, re-exports, live JS bindings, or dynamic loading.                               |
-| Optional chaining / nullish coalescing | Optional-type based, statically checked.                                                        | No implicit `null` or `undefined`; optional value construction remains limited.                     |
+| Optional chaining / nullish coalescing | Optional-type based, statically checked; explicit `Some<T>`/`None<T>` constructors.             | No implicit `null` or `undefined`; optional constructor type arguments are required.                |
 | Logical operators                      | Bool-only.                                                                                      | No truthiness; `&&` and `                                                                           |
 | Bitwise operators                      | Fixed-width integer-only.                                                                       | No JS `ToInt32`/`ToUint32` coercions.                                                               |
 | Assignment/update operators            | Statement-only updates over static lvalue targets.                                              | No expression-valued assignment or destructuring assignment.                                        |
