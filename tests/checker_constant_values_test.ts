@@ -1,4 +1,8 @@
-import { evaluateFloatConstant, evaluateIntegerConstant } from "checker/constant_values.ts";
+import {
+  evaluateBoolConstant,
+  evaluateFloatConstant,
+  evaluateIntegerConstant,
+} from "checker/constant_values.ts";
 import type { ConstDecl, Expression, TypeRef } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 
@@ -6,6 +10,7 @@ type Str = string;
 type IntValue = bigint;
 type f64 = number;
 type usize = number;
+type b8 = boolean;
 
 Deno.test("evaluates integer constant expressions", () => {
   const constants = constantMap([
@@ -22,6 +27,13 @@ Deno.test("evaluates float constant expressions", () => {
   const expr = binary("*", unary("-", identifier("BASE")), float("2.5"));
 
   assertFloat(evaluateFloatConstant(expr, constants) ?? 0, -10.0);
+});
+
+Deno.test("evaluates bool constant expressions", () => {
+  const constants = constantMap([constant("FLAG", bool(true))]);
+  const expr = binary("&&", identifier("FLAG"), binary("||", bool(false), bool(true)));
+
+  assertBool(evaluateBoolConstant(expr, constants) ?? false, true);
 });
 
 Deno.test("returns null for unsupported constant values", () => {
@@ -70,6 +82,10 @@ function float(text: Str): Expression {
   return { kind: "FloatLiteral", text, value: Number(text), span: sourceSpan() };
 }
 
+function bool(value: b8): Expression {
+  return { kind: "BoolLiteral", value, text: value ? "true" : "false", span: sourceSpan() };
+}
+
 function stringLiteral(text: Str): Expression {
   return { kind: "StringLiteral", text, span: sourceSpan() };
 }
@@ -91,6 +107,10 @@ function assertBigInt(actual: IntValue, expected: IntValue): void {
 }
 
 function assertFloat(actual: f64, expected: f64): void {
+  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+}
+
+function assertBool(actual: b8, expected: b8): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }
 

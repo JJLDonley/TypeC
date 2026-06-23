@@ -5,6 +5,7 @@ import {
   isBitwiseBinaryOperator,
   isComparisonOperator,
   isIntegerZeroLiteral,
+  isLogicalBinaryOperator,
   isShiftOperator,
 } from "checker/exprs.ts";
 import {
@@ -37,6 +38,7 @@ export function checkBinaryOperation(
 ): BinaryOperationCheck {
   const diagnostics: Diagnostic[] = [];
   if (isEnumEquality(expr, operands, isEnumType)) return { type: "bool", diagnostics };
+  if (isLogicalBinaryOperator(expr.operator)) return checkLogicalOperation(expr, operands);
   if (isShiftOperator(expr.operator)) return checkShiftOperation(expr, operands);
   if (operands.left !== operands.right) {
     diagnostics.push({
@@ -57,6 +59,22 @@ function isEnumEquality(
 ): b8 {
   return operands.left === operands.right && isEnumType(operands.left) &&
     (expr.operator === "==" || expr.operator === "!=");
+}
+
+function checkLogicalOperation(
+  expr: BinaryExpr,
+  operands: BinaryOperandTypes,
+): BinaryOperationCheck {
+  if (operands.left === "bool" && operands.right === "bool") {
+    return { type: "bool", diagnostics: [] };
+  }
+  return {
+    type: "<error>",
+    diagnostics: [{
+      message: `Operator '${expr.operator}' requires bool operands`,
+      span: expr.span,
+    }],
+  };
 }
 
 function checkShiftOperation(

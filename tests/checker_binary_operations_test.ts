@@ -55,6 +55,15 @@ Deno.test("checks bitwise binary operations", () => {
   assertText(logicalShift.type, "u32");
 });
 
+Deno.test("checks logical binary operations", () => {
+  const and = checkBinaryOperation(binary("&&", integer("1")), { left: "bool", right: "bool" });
+  const invalid = checkBinaryOperation(binary("||", integer("1")), { left: "bool", right: "i32" });
+
+  assertText(and.type, "bool");
+  assertText(invalid.type, "<error>");
+  assertText(invalid.diagnostics[0]?.message ?? "", "Operator '||' requires bool operands");
+});
+
 Deno.test("reports invalid bitwise operands", () => {
   const floatAnd = checkBinaryOperation(binary("&", integer("1")), { left: "f32", right: "f32" });
   const signedCount = checkBinaryOperation(binary("<<", integer("1")), {

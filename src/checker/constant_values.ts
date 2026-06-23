@@ -54,13 +54,14 @@ export function evaluateBoolConstant(
       return evaluateQualifiedBoolConstant(expr, constants);
     case "UnaryExpr":
       return evaluateUnaryBoolConstant(expr, constants);
+    case "BinaryExpr":
+      return evaluateBinaryBoolConstant(expr, constants);
     case "ConditionalExpr":
       return evaluateConditionalBoolConstant(expr, constants);
     case "NullishCoalesceExpr":
     case "IntegerLiteral":
     case "FloatLiteral":
     case "StringLiteral":
-    case "BinaryExpr":
     case "CallExpr":
     case "MethodCallExpr":
     case "PostfixPointerExpr":
@@ -138,6 +139,18 @@ function evaluateBinaryIntegerConstant(
   const right = evaluateIntegerConstant(expr.right, constants);
   if (left === null || right === null) return null;
   return applyIntegerOperator(left, right, expr.operator);
+}
+
+function evaluateBinaryBoolConstant(
+  expr: Extract<Expression, { kind: "BinaryExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  if (expr.operator !== "&&" && expr.operator !== "||") return null;
+  const left = evaluateBoolConstant(expr.left, constants);
+  if (left === null) return null;
+  if (expr.operator === "&&" && !left) return false;
+  if (expr.operator === "||" && left) return true;
+  return evaluateBoolConstant(expr.right, constants);
 }
 
 function evaluateConditionalIntegerConstant(

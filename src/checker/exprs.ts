@@ -4,6 +4,10 @@ import type { SourceSpan } from "core/diagnostics.ts";
 type Str = string;
 type b8 = boolean;
 
+export function isLogicalBinaryOperator(operator: Str): b8 {
+  return operator === "&&" || operator === "||";
+}
+
 export function isBitwiseBinaryOperator(operator: Str): b8 {
   return operator === "&" || operator === "|" || operator === "^";
 }

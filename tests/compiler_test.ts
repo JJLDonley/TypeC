@@ -1205,6 +1205,14 @@ Deno.test("emits C for bitwise integer operators", () => {
   assertIncludes(c, "return ~value & 255 | value >> shift;");
 });
 
+Deno.test("emits C for logical binary operators", () => {
+  const source =
+    `function both(a: bool, b: bool, c: bool): bool { return a || b && c; } function main(): i32 { return 0; }`;
+  const checked = check(resolve(parse(lex(source))));
+  const c = emitC(checked);
+  assertIncludes(c, "return a || b && c;");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

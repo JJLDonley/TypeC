@@ -2072,6 +2072,77 @@ function invert(value: u8): u8 {
 
 ---
 
+# Phase 25: Logical Binary Operators
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style `&&` and `||` expression syntax with static boolean semantics and C-style
+short-circuit lowering, without JavaScript truthiness or value propagation.
+
+## Syntax
+
+```ts
+a && b;
+a || b;
+```
+
+Assignment forms such as `&&=` and `||=` are not part of this phase.
+
+## Semantics
+
+- `a && b` requires `a: bool` and `b: bool`, evaluates `b` only when `a` is true, and returns
+  `bool`.
+- `a || b` requires `a: bool` and `b: bool`, evaluates `b` only when `a` is false, and returns
+  `bool`.
+- TypeC does not use JavaScript truthiness; integers, pointers, optionals, arrays, records, enums,
+  and strings are not implicitly converted to `bool`.
+- Unlike JavaScript, `&&` and `||` do not return one of their operands. They always return `bool`.
+
+## Precedence
+
+From high to low within existing expression precedence:
+
+1. prefix unary: `~`, `!`, `+`, `-`
+2. multiplicative: `*`, `/`, `%`
+3. additive: `+`, `-`
+4. shifts: `<<`, `>>`, `>>>`
+5. comparison/equality: `<`, `<=`, `>`, `>=`, `==`, `!=`
+6. bitwise AND: `&`
+7. bitwise XOR: `^`
+8. bitwise OR: `|`
+9. logical AND: `&&`
+10. logical OR: `||`
+11. nullish/elvis: `??`, `?:`
+12. ternary conditional: `? :`
+
+## Examples
+
+```ts
+function both(a: bool, b: bool): bool {
+  return a && b;
+}
+
+function either(a: bool, b: bool): bool {
+  return a || b;
+}
+```
+
+## Do
+
+- Require both operands to be `bool`.
+- Preserve short-circuit evaluation in emitted C.
+- Add lexer, parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add JavaScript truthiness.
+- Do not make `&&` or `||` return non-bool operand values.
+- Do not add logical assignment operators in this phase.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

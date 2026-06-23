@@ -40,6 +40,16 @@ Deno.test("emits bitwise expressions", () => {
   );
 });
 
+Deno.test("emits logical binary expressions", () => {
+  assertText(
+    emitExpression(
+      binary(identifier("a"), "||", binary(identifier("b"), "&&", identifier("c"))),
+      context(),
+    ),
+    "a || b && c",
+  );
+});
+
 Deno.test("emits conditional expressions", () => {
   assertText(
     emitExpression(conditional(identifier("flag"), int("1"), int("2")), context()),

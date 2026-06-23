@@ -53,6 +53,10 @@ Deno.test("lexes bitwise operators", () => {
   ]);
 });
 
+Deno.test("lexes logical binary operators", () => {
+  assertEqualText(tokenTexts("a && b || c"), ["a", "&&", "b", "||", "c", ""]);
+});
+
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
   assertEqualText(tokens.map((token) => token.kind), [

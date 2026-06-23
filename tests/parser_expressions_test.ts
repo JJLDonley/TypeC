@@ -45,6 +45,21 @@ Deno.test("parses bitwise expressions", () => {
   assertText(shift.left.kind, "BinaryExpr");
 });
 
+Deno.test("parses logical binary expressions", () => {
+  const expr = parseExpressionWith(parserFor([
+    identifier("a"),
+    operator("||"),
+    identifier("b"),
+    operator("&&"),
+    identifier("c"),
+  ]));
+
+  assertText(expr.kind, "BinaryExpr");
+  if (expr.kind !== "BinaryExpr") throw new Error("Expected binary expression");
+  assertText(expr.operator, "||");
+  assertText(expr.right.kind, "BinaryExpr");
+});
+
 Deno.test("parses conditional expressions", () => {
   const expr = parseExpressionWith(parserFor([
     identifier("a"),
