@@ -140,9 +140,15 @@ function parseIf(parser: StatementParser): CastStatement {
   const start = parser.expectText("if");
   const condition = parseCondition(parser);
   const thenBody = parser.parseBlock();
-  const elseBody = parser.matchText("else") ? parser.parseBlock() : null;
+  const elseBody = parser.matchText("else") ? parseElseBody(parser) : null;
   const end = elseBody?.span.end ?? thenBody.span.end;
   return { kind: "IfStmt", condition, thenBody, elseBody, span: span(start.span.start, end) };
+}
+
+function parseElseBody(parser: StatementParser): CastBlockStmt {
+  if (!parser.checkText("if")) return parser.parseBlock();
+  const statement = parseIf(parser);
+  return { kind: "BlockStmt", statements: [statement], span: statement.span };
 }
 
 function parseWhile(parser: StatementParser): CastStatement {

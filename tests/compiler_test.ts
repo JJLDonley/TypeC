@@ -1253,6 +1253,14 @@ Deno.test("emits C for if else statements", () => {
   assertIncludes(c, "} else {");
 });
 
+Deno.test("emits C for else if chains", () => {
+  const source =
+    `function main(): i32 { if (false) { return -1; } else if (true) { return 0; } else { return 1; } }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "} else {");
+  assertIncludes(c, "if (true) {");
+});
+
 Deno.test("emits C string literals for u8 pointer calls", () => {
   const source =
     `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;

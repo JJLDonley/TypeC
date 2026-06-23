@@ -121,6 +121,28 @@ Deno.test("parses conditional statements", () => {
   assertText(stmt.kind, "IfStmt");
 });
 
+Deno.test("parses else if chains", () => {
+  const stmt = parseStatementWith(parserFor([
+    keyword("if"),
+    punct("("),
+    identifier("first"),
+    punct(")"),
+    punct("{"),
+    punct("}"),
+    keyword("else"),
+    keyword("if"),
+    punct("("),
+    identifier("second"),
+    punct(")"),
+    punct("{"),
+    punct("}"),
+  ]));
+
+  assertText(stmt.kind, "IfStmt");
+  if (stmt.kind !== "IfStmt") throw new Error("Expected if");
+  assertText(stmt.elseBody?.statements[0]?.kind ?? "", "IfStmt");
+});
+
 function parserFor(tokens: Token[]): StatementParser {
   let current: i32 = 0;
   return {

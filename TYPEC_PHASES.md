@@ -2324,6 +2324,62 @@ function runOnce(value: i32): i32 {
 
 ---
 
+# Phase 29: Else-If Chains
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style `else if` syntax as structured conditional sugar without changing TypeC's
+static control-flow semantics.
+
+## Syntax
+
+```ts
+if (condition) {
+  statements;
+} else if (other) {
+  statements;
+} else {
+  statements;
+}
+```
+
+## Semantics
+
+- `else if` is parsed as a nested `if` statement in the `else` branch.
+- Each condition must have type `bool`, as with existing `if` statements.
+- Each branch keeps existing block-local scoping rules.
+- TypeC does not add JavaScript truthiness or implicit coercions.
+
+## Examples
+
+```ts
+function classify(value: i32): i32 {
+  if (value < 0) {
+    return -1;
+  } else if (value == 0) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+```
+
+## Do
+
+- Reuse existing `if` AST, checker, and emitter behavior.
+- Add parser and compile tests.
+- Preserve existing diagnostics for non-bool conditions.
+
+## Do Not
+
+- Do not add pattern matching.
+- Do not add truthiness.
+- Do not add new branch expression values.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
