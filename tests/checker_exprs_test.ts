@@ -1,6 +1,11 @@
 import type { Expression } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
-import { isAddressable, isComparisonOperator, isIntegerZeroLiteral, spanKey } from "checker/exprs.ts";
+import {
+  isAddressable,
+  isComparisonOperator,
+  isIntegerZeroLiteral,
+  spanKey,
+} from "checker/exprs.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -24,10 +29,22 @@ Deno.test("classifies integer zero literals", () => {
 
 Deno.test("classifies addressable expressions", () => {
   assertSame(isAddressable(identifier("x")), true);
-  assertSame(isAddressable({ kind: "IndexExpr", operand: identifier("xs"), index: integer(0n), span }), true);
-  assertSame(isAddressable({ kind: "FieldAccessExpr", operand: identifier("p"), field: "x", span }), true);
-  assertSame(isAddressable({ kind: "PostfixPointerExpr", operator: ".*", operand: identifier("p"), span }), true);
-  assertSame(isAddressable({ kind: "PostfixPointerExpr", operator: ".&", operand: identifier("p"), span }), false);
+  assertSame(
+    isAddressable({ kind: "IndexExpr", operand: identifier("xs"), index: integer(0n), span }),
+    true,
+  );
+  assertSame(
+    isAddressable({ kind: "FieldAccessExpr", operand: identifier("p"), field: "x", span }),
+    true,
+  );
+  assertSame(
+    isAddressable({ kind: "PostfixPointerExpr", operator: ".*", operand: identifier("p"), span }),
+    true,
+  );
+  assertSame(
+    isAddressable({ kind: "PostfixPointerExpr", operator: ".&", operand: identifier("p"), span }),
+    false,
+  );
   assertSame(isAddressable(integer(1n)), false);
 });
 

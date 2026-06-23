@@ -11,7 +11,11 @@ interface ClangOutput {
 
 export async function readClangHeaderAst(headerPath: Str, compilerFlags: Str[]): Promise<unknown> {
   const output = await runClangAstDump(headerPath, compilerFlags);
-  if (!output.ok) throw new TypeCError([{ message: `clang failed while reading '${headerPath}': ${output.stderr}` }]);
+  if (!output.ok) {
+    throw new TypeCError([{
+      message: `clang failed while reading '${headerPath}': ${output.stderr}`,
+    }]);
+  }
   return parseClangJson(output.stdout);
 }
 
@@ -23,7 +27,11 @@ async function runClangAstDump(headerPath: Str, compilerFlags: Str[]): Promise<C
   });
   const output = await command.output();
   const decoder = new TextDecoder();
-  return { ok: output.success, stdout: decoder.decode(output.stdout), stderr: decoder.decode(output.stderr).trim() };
+  return {
+    ok: output.success,
+    stdout: decoder.decode(output.stdout),
+    stderr: decoder.decode(output.stderr).trim(),
+  };
 }
 
 function parseClangJson(text: Str): unknown {

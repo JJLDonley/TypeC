@@ -13,18 +13,39 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks record literal fields", () => {
-  const diagnostics = checkRecordLiteralFields(recordLiteral([["x", integer("1")]]), record([["x", named("i32")]]), "Pair", resolveExpected);
+  const diagnostics = checkRecordLiteralFields(
+    recordLiteral([["x", integer("1")]]),
+    record([["x", named("i32")]]),
+    "Pair",
+    resolveExpected,
+  );
 
   assertLen(diagnostics.length, 0);
 });
 
 Deno.test("reports record literal field errors", () => {
-  const diagnostics = checkRecordLiteralFields(recordLiteral([["x", integer("1")], ["x", integer("2")], ["z", integer("3")]]), record([["x", named("u8")], ["y", named("i32")]]), "Pair", resolveActual);
+  const diagnostics = checkRecordLiteralFields(
+    recordLiteral([["x", integer("1")], ["x", integer("2")], ["z", integer("3")]]),
+    record([["x", named("u8")], ["y", named("i32")]]),
+    "Pair",
+    resolveActual,
+  );
 
   assertSame(diagnostics.some((diagnostic) => diagnostic.message === "Duplicate field 'x'"), true);
-  assertSame(diagnostics.some((diagnostic) => diagnostic.message === "Unknown field 'z' on type 'Pair'"), true);
-  assertSame(diagnostics.some((diagnostic) => diagnostic.message === "Missing field 'y' on type 'Pair'"), true);
-  assertSame(diagnostics.some((diagnostic) => diagnostic.message === "Field 'x' type 'i32' is not assignable to 'u8'"), true);
+  assertSame(
+    diagnostics.some((diagnostic) => diagnostic.message === "Unknown field 'z' on type 'Pair'"),
+    true,
+  );
+  assertSame(
+    diagnostics.some((diagnostic) => diagnostic.message === "Missing field 'y' on type 'Pair'"),
+    true,
+  );
+  assertSame(
+    diagnostics.some((diagnostic) =>
+      diagnostic.message === "Field 'x' type 'i32' is not assignable to 'u8'"
+    ),
+    true,
+  );
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {
@@ -35,12 +56,22 @@ function resolveActual(_expr: Expression, _expected: TypeName): TypeName {
   return "i32";
 }
 
-function recordLiteral(fields: [Str, Expression][]): Extract<Expression, { kind: "RecordLiteralExpr" }> {
-  return { kind: "RecordLiteralExpr", fields: fields.map(([name, expression]) => ({ name, expression, span })), span };
+function recordLiteral(
+  fields: [Str, Expression][],
+): Extract<Expression, { kind: "RecordLiteralExpr" }> {
+  return {
+    kind: "RecordLiteralExpr",
+    fields: fields.map(([name, expression]) => ({ name, expression, span })),
+    span,
+  };
 }
 
 function record(fields: [Str, TypeRef][]): RecordTypeRef {
-  return { kind: "RecordTypeRef", fields: fields.map(([name, type]) => ({ name, type, span })), span };
+  return {
+    kind: "RecordTypeRef",
+    fields: fields.map(([name, type]) => ({ name, type, span })),
+    span,
+  };
 }
 
 function named(name: Str): TypeRef {

@@ -16,7 +16,10 @@ Deno.test("accepts valid main signatures", () => {
 });
 
 Deno.test("reports invalid main signatures", () => {
-  const diagnostics = checkMainFunction(main(true, [{ name: "argc", type: named("i32"), span }], named("void")), "void");
+  const diagnostics = checkMainFunction(
+    main(true, [{ name: "argc", type: named("i32"), span }], named("void")),
+    "void",
+  );
 
   assertText(diagnostics[0]?.message ?? "", "Function 'main' cannot be extern");
   assertText(diagnostics[1]?.message ?? "", "Function 'main' cannot have parameters");

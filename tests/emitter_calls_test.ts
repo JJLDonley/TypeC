@@ -13,19 +13,37 @@ const span: SourceSpan = {
 };
 
 Deno.test("emits array literal call arguments", () => {
-  const output = emitCallExpression(call("sum", [arrayLiteral([integer("1"), integer("2")])]), context([arrayParam("items", "i32", "2")]), emitExpression, emitExpressionExpected, emitArrayLiteral);
+  const output = emitCallExpression(
+    call("sum", [arrayLiteral([integer("1"), integer("2")])]),
+    context([arrayParam("items", "i32", "2")]),
+    emitExpression,
+    emitExpressionExpected,
+    emitArrayLiteral,
+  );
 
   assertText(output, "sum((i32[2]){ 1, 2 })");
 });
 
 Deno.test("emits string literal fixed array call arguments", () => {
-  const output = emitCallExpression(call("consume", [stringLiteral("hello")]), context([arrayParam("data", "u8", "6")]), emitExpression, emitExpressionExpected, emitArrayLiteral);
+  const output = emitCallExpression(
+    call("consume", [stringLiteral("hello")]),
+    context([arrayParam("data", "u8", "6")]),
+    emitExpression,
+    emitExpressionExpected,
+    emitArrayLiteral,
+  );
 
-  assertText(output, "consume((u8*)\"hello\")");
+  assertText(output, 'consume((u8*)"hello")');
 });
 
-function emitArrayLiteral(expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>, ctx: EmitContext, expectedType: Str | null): Str {
-  const elements = expr.elements.map((element) => emitExpressionExpected(element, expectedType ?? "i32", ctx));
+function emitArrayLiteral(
+  expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>,
+  ctx: EmitContext,
+  expectedType: Str | null,
+): Str {
+  const elements = expr.elements.map((element) =>
+    emitExpressionExpected(element, expectedType ?? "i32", ctx)
+  );
   return `{ ${elements.join(", ")} }`;
 }
 
@@ -34,7 +52,25 @@ function context(params: FunctionDecl["params"]): EmitContext {
     kind: "Program",
     imports: [],
     typeAliases: [],
-    functions: [{ kind: "FunctionDecl", exported: false, external: true, name: "sum", params, returnType: named("i32"), body: null, span }, { kind: "FunctionDecl", exported: false, external: true, name: "consume", params, returnType: named("void"), body: null, span }],
+    functions: [{
+      kind: "FunctionDecl",
+      exported: false,
+      external: true,
+      name: "sum",
+      params,
+      returnType: named("i32"),
+      body: null,
+      span,
+    }, {
+      kind: "FunctionDecl",
+      exported: false,
+      external: true,
+      name: "consume",
+      params,
+      returnType: named("void"),
+      body: null,
+      span,
+    }],
     span,
     symbols: [],
     scopes: [],
@@ -43,7 +79,11 @@ function context(params: FunctionDecl["params"]): EmitContext {
 }
 
 function arrayParam(name: Str, element: Str, sizeText: Str): FunctionDecl["params"][usize] {
-  return { name, type: { kind: "FixedArrayTypeRef", element: named(element), sizeText, span }, span };
+  return {
+    name,
+    type: { kind: "FixedArrayTypeRef", element: named(element), sizeText, span },
+    span,
+  };
 }
 
 function call(callee: Str, args: Expression[]): Extract<Expression, { kind: "CallExpr" }> {

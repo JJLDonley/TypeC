@@ -15,7 +15,12 @@ export interface RecordLiteralExpressionCheck {
   type: TypeName;
 }
 
-export function checkRecordLiteralExpression(expr: RecordLiteralExpr, expected: TypeName, aliases: Map<Str, TypeRef>, resolveExpectedType: ExpectedTypeResolver): RecordLiteralExpressionCheck {
+export function checkRecordLiteralExpression(
+  expr: RecordLiteralExpr,
+  expected: TypeName,
+  aliases: Map<Str, TypeRef>,
+  resolveExpectedType: ExpectedTypeResolver,
+): RecordLiteralExpressionCheck {
   const record = lookupRecordAlias(expected, aliases);
   const diagnostics = checkRecordLiteralTarget(record, expected, expr);
   if (!record) return { diagnostics, type: "<error>" };

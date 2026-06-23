@@ -12,21 +12,33 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks binary expressions", () => {
-  const result = checkBinaryExpression(binary(identifier("x"), "+", identifier("y")), resolveI32, resolveExpected);
+  const result = checkBinaryExpression(
+    binary(identifier("x"), "+", identifier("y")),
+    resolveI32,
+    resolveExpected,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32");
 });
 
 Deno.test("hints left literals from right operand", () => {
-  const result = checkBinaryExpression(binary(integer("1"), "+", identifier("wide")), resolveWideRight, resolveExpected);
+  const result = checkBinaryExpression(
+    binary(integer("1"), "+", identifier("wide")),
+    resolveWideRight,
+    resolveExpected,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i64");
 });
 
 Deno.test("reports binary expression errors", () => {
-  const result = checkBinaryExpression(binary(identifier("a"), "+", identifier("b")), resolveMixed, resolveExpected);
+  const result = checkBinaryExpression(
+    binary(identifier("a"), "+", identifier("b")),
+    resolveMixed,
+    resolveExpected,
+  );
 
   assertText(result.diagnostics[0]?.message ?? "", "Cannot apply '+' to 'i32' and 'f64'");
   assertText(result.type, "<error>");
@@ -56,7 +68,11 @@ function isIntegerTypeName(type: TypeName): type is TypeName {
   return type === "i32" || type === "i64";
 }
 
-function binary(left: Expression, operator: Str, right: Expression): Extract<Expression, { kind: "BinaryExpr" }> {
+function binary(
+  left: Expression,
+  operator: Str,
+  right: Expression,
+): Extract<Expression, { kind: "BinaryExpr" }> {
   return { kind: "BinaryExpr", left, operator, right, span };
 }
 

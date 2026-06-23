@@ -14,15 +14,31 @@ const span: SourceSpan = {
 };
 
 Deno.test("accepts mutable assignment", () => {
-  const diagnostics = checkAssignment(assignment("value", integer("1")), local("i32", true), resolveExpected);
+  const diagnostics = checkAssignment(
+    assignment("value", integer("1")),
+    local("i32", true),
+    resolveExpected,
+  );
 
   assertLen(diagnostics.length, 0);
 });
 
 Deno.test("reports invalid assignments", () => {
-  const constDiagnostics = checkAssignment(assignment("value", integer("1")), local("i32", false), resolveExpected);
-  const arrayDiagnostics = checkAssignment(assignment("items", integer("1")), local("i32[1]", true), resolveExpected);
-  const typeDiagnostics = checkAssignment(assignment("value", integer("1")), local("u8", true), resolveActual);
+  const constDiagnostics = checkAssignment(
+    assignment("value", integer("1")),
+    local("i32", false),
+    resolveExpected,
+  );
+  const arrayDiagnostics = checkAssignment(
+    assignment("items", integer("1")),
+    local("i32[1]", true),
+    resolveExpected,
+  );
+  const typeDiagnostics = checkAssignment(
+    assignment("value", integer("1")),
+    local("u8", true),
+    resolveActual,
+  );
 
   assertText(constDiagnostics[0]?.message ?? "", "Cannot assign to const 'value'");
   assertText(arrayDiagnostics[0]?.message ?? "", "Cannot assign to array variable 'items'");
@@ -30,7 +46,10 @@ Deno.test("reports invalid assignments", () => {
 });
 
 Deno.test("ignores unresolved assignment locals", () => {
-  assertLen(checkAssignment(assignment("missing", integer("1")), undefined, resolveActual).length, 0);
+  assertLen(
+    checkAssignment(assignment("missing", integer("1")), undefined, resolveActual).length,
+    0,
+  );
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {
@@ -45,7 +64,10 @@ function local(type: TypeName, mutable: b8): LocalInfo {
   return { type, mutable };
 }
 
-function assignment(name: Str, expression: Expression): Extract<Statement, { kind: "AssignmentStmt" }> {
+function assignment(
+  name: Str,
+  expression: Expression,
+): Extract<Statement, { kind: "AssignmentStmt" }> {
   return { kind: "AssignmentStmt", name, expression, span };
 }
 

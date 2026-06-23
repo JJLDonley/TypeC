@@ -20,7 +20,10 @@ Deno.test("rejects invalid project compiler config", () => {
   assertCompilerError([], "project.json compiler must be an object");
   assertCompilerError({ unknown: [] }, "project.json compiler has unknown key 'unknown'");
   assertCompilerError({ flags: ["-O2", 1] }, "project.json compiler.flags must be a string array");
-  assertCompilerError({ flags: ["-std=c99"] }, "project.json compiler.flags cannot override the C standard");
+  assertCompilerError(
+    { flags: ["-std=c99"] },
+    "project.json compiler.flags cannot override the C standard",
+  );
 });
 
 function assertCompilerError(value: unknown, message: Str): void {

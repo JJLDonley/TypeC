@@ -1,5 +1,11 @@
 import type { SourceSpan } from "core/diagnostics.ts";
-import type { CastBlockStmt, CastFunctionDecl, CastImportDecl, CastTypeAliasDecl, CastTypeRef } from "core/cast.ts";
+import type {
+  CastBlockStmt,
+  CastFunctionDecl,
+  CastImportDecl,
+  CastTypeAliasDecl,
+  CastTypeRef,
+} from "core/cast.ts";
 import { lowerFunctionDecl, lowerImportDecl, lowerTypeAliasDecl } from "lower/declarations.ts";
 
 type Str = string;
@@ -16,7 +22,13 @@ Deno.test("lowers import declarations", () => {
 });
 
 Deno.test("lowers type alias declarations", () => {
-  const decl: CastTypeAliasDecl = { kind: "TypeAliasDecl", exported: true, name: "Value", type: named("i32"), span };
+  const decl: CastTypeAliasDecl = {
+    kind: "TypeAliasDecl",
+    exported: true,
+    name: "Value",
+    type: named("i32"),
+    span,
+  };
   const lowered = lowerTypeAliasDecl(decl);
 
   assertText(lowered.name, "Value");

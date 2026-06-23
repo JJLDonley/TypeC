@@ -18,8 +18,7 @@ export function parseImportNamesWith(parser: ImportNameParser): Str[] {
     parser.error(parser.peek(), "Import must name at least one symbol");
     return names;
   }
-  do parseImportName(parser, names, seen);
-  while (parser.matchText(","));
+  do parseImportName(parser, names, seen); while (parser.matchText(","));
   return names;
 }
 

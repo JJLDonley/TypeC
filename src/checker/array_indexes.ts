@@ -5,7 +5,11 @@ import { isIntegerType } from "checker/types.ts";
 
 type IntLiteralValue = bigint;
 
-export function checkArrayIndex(index: Expression, indexType: TypeName, length: IntLiteralValue | null): Diagnostic[] {
+export function checkArrayIndex(
+  index: Expression,
+  indexType: TypeName,
+  length: IntLiteralValue | null,
+): Diagnostic[] {
   return [
     ...checkArrayIndexType(index, indexType),
     ...checkArrayIndexBounds(index, length),
@@ -21,5 +25,8 @@ function checkArrayIndexBounds(index: Expression, length: IntLiteralValue | null
   if (length === null) return [];
   if (index.kind !== "IntegerLiteral") return [];
   if (index.value < length) return [];
-  return [{ message: `Array index ${index.text} is out of bounds for length ${length}`, span: index.span }];
+  return [{
+    message: `Array index ${index.text} is out of bounds for length ${length}`,
+    span: index.span,
+  }];
 }

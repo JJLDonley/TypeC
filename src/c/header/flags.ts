@@ -2,11 +2,14 @@ type Str = string;
 type b8 = boolean;
 
 export function headerCompilerFlags(flags: Str[], projectDir: Str): Str[] {
-  return flags.filter(isHeaderCompilerFlag).map((flag) => normalizeHeaderCompilerFlag(flag, projectDir));
+  return flags.filter(isHeaderCompilerFlag).map((flag) =>
+    normalizeHeaderCompilerFlag(flag, projectDir)
+  );
 }
 
 function isHeaderCompilerFlag(flag: Str): b8 {
-  return flag.startsWith("-I") || flag.startsWith("-D") || flag.startsWith("-U") || flag.startsWith("-isystem");
+  return flag.startsWith("-I") || flag.startsWith("-D") || flag.startsWith("-U") ||
+    flag.startsWith("-isystem");
 }
 
 function normalizeHeaderCompilerFlag(flag: Str, projectDir: Str): Str {

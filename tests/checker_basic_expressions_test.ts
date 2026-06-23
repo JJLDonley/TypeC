@@ -29,7 +29,10 @@ Deno.test("reports untyped string literal expressions", () => {
 
   assertSame(result.handled, true);
   assertText(result.type, "u8[3]");
-  assertText(result.diagnostics[0]?.message ?? "", "String literals require an expected C string type");
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "String literals require an expected C string type",
+  );
 });
 
 Deno.test("skips non-basic expressions", () => {

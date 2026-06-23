@@ -26,7 +26,11 @@ function functionDecl(): FunctionDecl {
     name: "sum",
     params: [
       { name: "count", type: named("i32"), span },
-      { name: "items", type: { kind: "FixedArrayTypeRef", element: named("u8"), sizeText: "4", span }, span },
+      {
+        name: "items",
+        type: { kind: "FixedArrayTypeRef", element: named("u8"), sizeText: "4", span },
+        span,
+      },
     ],
     returnType: named("i32"),
     body: null,

@@ -1,4 +1,13 @@
-import { basenameNoExt, buildOutputPaths, directoryOf, fileDirectoryUrl, fileUrlPath, isPathWithinDir, normalizePath, stripTrailingSlash } from "paths";
+import {
+  basenameNoExt,
+  buildOutputPaths,
+  directoryOf,
+  fileDirectoryUrl,
+  fileUrlPath,
+  isPathWithinDir,
+  normalizePath,
+  stripTrailingSlash,
+} from "paths";
 
 type Str = string;
 type b8 = boolean;

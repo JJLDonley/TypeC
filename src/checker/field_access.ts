@@ -10,7 +10,12 @@ export interface FieldAccessCheck {
   diagnostics: Diagnostic[];
 }
 
-export function checkFieldAccess(record: RecordTypeRef | null, operand: TypeName, fieldName: Str, span: SourceSpan): FieldAccessCheck {
+export function checkFieldAccess(
+  record: RecordTypeRef | null,
+  operand: TypeName,
+  fieldName: Str,
+  span: SourceSpan,
+): FieldAccessCheck {
   if (!record) return missingRecord(operand, fieldName, span);
   const field = record.fields.find((candidate) => candidate.name === fieldName);
   if (!field) return missingField(operand, fieldName, span);
@@ -20,7 +25,10 @@ export function checkFieldAccess(record: RecordTypeRef | null, operand: TypeName
 function missingRecord(operand: TypeName, fieldName: Str, span: SourceSpan): FieldAccessCheck {
   return {
     type: "<error>",
-    diagnostics: [{ message: `Cannot access field '${fieldName}' on non-record type '${operand}'`, span }],
+    diagnostics: [{
+      message: `Cannot access field '${fieldName}' on non-record type '${operand}'`,
+      span,
+    }],
   };
 }
 

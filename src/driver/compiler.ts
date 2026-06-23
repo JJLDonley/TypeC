@@ -36,15 +36,23 @@ async function compileSourceFile(inputPath: Str, buildDir: Str): Promise<Compile
   return { ...paths, ...compiled };
 }
 
-async function compileSource(inputPath: Str): Promise<{ cSource: Str; hasMain: b8; compilerFlags: Str[] }> {
+async function compileSource(
+  inputPath: Str,
+): Promise<{ cSource: Str; hasMain: b8; compilerFlags: Str[] }> {
   const config = await loadProjectConfig(inputPath);
   const ast = await loadProgram(inputPath, config);
   const resolved = resolve(ast);
   const checked = check(resolved);
-  return { cSource: emitC(checked), hasMain: hasMain(checked), compilerFlags: config.compilerFlags };
+  return {
+    cSource: emitC(checked),
+    hasMain: hasMain(checked),
+    compilerFlags: config.compilerFlags,
+  };
 }
 
 function exitWithDiagnostics(inputPath: Str, source: Str, err: TypeCError): never {
-  console.error(err.diagnostics.map((diagnostic) => formatDiagnostic(inputPath, source, diagnostic)).join("\n"));
+  console.error(
+    err.diagnostics.map((diagnostic) => formatDiagnostic(inputPath, source, diagnostic)).join("\n"),
+  );
   Deno.exit(1);
 }

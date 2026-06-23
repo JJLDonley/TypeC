@@ -1,6 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, Program, Statement } from "core/ast.ts";
+import { enumMemberSymbolName } from "core/enums.ts";
 import type { ResolvedProgram, SymbolKind } from "core/rast.ts";
 import { type Scope, ScopeTable } from "core/scope.ts";
 
@@ -37,15 +38,36 @@ class Resolver {
     for (const typeAlias of this.program.typeAliases) {
       this.declare(this.globalScope, typeAlias.name, "type", typeAlias.span);
     }
+    for (const enumDecl of this.program.enums ?? []) {
+      this.declare(this.globalScope, enumDecl.name, "type", enumDecl.span);
+    }
   }
 
   private declareConstants(): void {
+    for (const enumDecl of this.program.enums ?? []) {
+      const members = new Set<Str>();
+      for (const member of enumDecl.members) {
+        if (members.has(member.name)) continue;
+        members.add(member.name);
+        this.declare(
+          this.globalScope,
+          enumMemberSymbolName(enumDecl.name, member.name),
+          "constant",
+          member.span,
+        );
+      }
+    }
     for (const constant of this.program.constants ?? []) {
       this.declare(this.globalScope, constant.name, "constant", constant.span);
     }
   }
 
   private resolveConstants(): void {
+    for (const enumDecl of this.program.enums ?? []) {
+      for (const member of enumDecl.members) {
+        if (member.initializer) this.resolveExpression(member.initializer, this.globalScope);
+      }
+    }
     for (const constant of this.program.constants ?? []) {
       this.resolveExpression(constant.initializer, this.globalScope);
     }

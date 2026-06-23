@@ -17,9 +17,18 @@ Deno.test("accepts valid returns", () => {
 });
 
 Deno.test("reports invalid returns", () => {
-  assertText(checkReturnStatement(null, "i32", span, resolveExpected)[0]?.message ?? "", "Function must return 'i32'");
-  assertText(checkReturnStatement(integer("1"), "void", span, resolveExpected)[0]?.message ?? "", "Void function cannot return a value");
-  assertText(checkReturnStatement(integer("1"), "u8", span, resolveActual)[0]?.message ?? "", "Return type 'i32' is not assignable to 'u8'");
+  assertText(
+    checkReturnStatement(null, "i32", span, resolveExpected)[0]?.message ?? "",
+    "Function must return 'i32'",
+  );
+  assertText(
+    checkReturnStatement(integer("1"), "void", span, resolveExpected)[0]?.message ?? "",
+    "Void function cannot return a value",
+  );
+  assertText(
+    checkReturnStatement(integer("1"), "u8", span, resolveActual)[0]?.message ?? "",
+    "Return type 'i32' is not assignable to 'u8'",
+  );
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {

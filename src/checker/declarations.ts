@@ -27,7 +27,13 @@ export function checkDeclarations(program: ResolvedProgram): CheckedDeclarations
 }
 
 function collectTypeAliases(program: ResolvedProgram): Map<Str, TypeRef> {
-  return new Map(program.typeAliases.map((typeAlias) => [typeAlias.name, typeAlias.type]));
+  return new Map([
+    ...program.typeAliases.map((typeAlias): [Str, TypeRef] => [typeAlias.name, typeAlias.type]),
+    ...(program.enums ?? []).map((enumDecl): [Str, TypeRef] => [
+      enumDecl.name,
+      { kind: "NamedTypeRef", name: "i32", span: enumDecl.span },
+    ]),
+  ]);
 }
 
 function collectFunctions(program: ResolvedProgram): Map<Str, FunctionDecl> {

@@ -1,4 +1,10 @@
-import { decodedPathSegment, hasBackslash, hasEncodedDotSegment, hasEncodedSeparator, hasMalformedEncoding } from "paths/encoding.ts";
+import {
+  decodedPathSegment,
+  hasBackslash,
+  hasEncodedDotSegment,
+  hasEncodedSeparator,
+  hasMalformedEncoding,
+} from "paths/encoding.ts";
 
 type Str = string;
 type b8 = boolean;

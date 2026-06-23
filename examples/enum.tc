@@ -1,0 +1,18 @@
+enum Key {
+  Space = 32,
+  Escape,
+}
+
+function classify(key: Key): i32 {
+  switch (key) {
+    case Key.Space:
+      return 42;
+    default:
+      return 0;
+  }
+}
+
+function main(): i32 {
+  const key: Key = Key.Space;
+  return classify(key);
+}

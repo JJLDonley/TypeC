@@ -2,6 +2,7 @@ import { TypeCError } from "core/diagnostics.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type {
   CastConstDecl,
+  CastEnumDecl,
   CastFunctionDecl,
   CastImportDecl,
   CastProgram,
@@ -26,6 +27,7 @@ export interface ProgramParser {
 interface ProgramDeclarations {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
+  enums: CastEnumDecl[];
   constants: CastConstDecl[];
   functions: CastFunctionDecl[];
 }
@@ -47,12 +49,13 @@ function parseProgramDeclarations(parser: ProgramParser): ProgramDeclarations {
 }
 
 function emptyProgramDeclarations(): ProgramDeclarations {
-  return { imports: [], typeAliases: [], constants: [], functions: [] };
+  return { imports: [], typeAliases: [], enums: [], constants: [], functions: [] };
 }
 
 function addDeclaration(declarations: ProgramDeclarations, declaration: CastDeclaration): void {
   if (declaration.kind === "ImportDecl") declarations.imports.push(declaration);
   if (declaration.kind === "TypeAliasDecl") declarations.typeAliases.push(declaration);
+  if (declaration.kind === "EnumDecl") declarations.enums.push(declaration);
   if (declaration.kind === "ConstDecl") declarations.constants.push(declaration);
   if (declaration.kind === "FunctionDecl") declarations.functions.push(declaration);
 }

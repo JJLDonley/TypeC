@@ -10,7 +10,10 @@ export function isArrayTypeRef(type: TypeRef): b8 {
 
 export function isVoidValueType(type: TypeRef): b8 {
   if (isVoidNamedType(type)) return true;
-  if (type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef" || type.kind === "SliceTypeRef") return isVoidValueType(type.element);
+  if (
+    type.kind === "FixedArrayTypeRef" || type.kind === "InferredArrayTypeRef" ||
+    type.kind === "SliceTypeRef"
+  ) return isVoidValueType(type.element);
   return false;
 }
 

@@ -10,12 +10,17 @@ Deno.test("parses valid CLI request", () => {
 });
 
 Deno.test("rejects invalid CLI request", () => {
-  if (parseCliArgs(["bad", "examples/main.tc"]) !== null) throw new Error("Expected invalid command");
+  if (parseCliArgs(["bad", "examples/main.tc"]) !== null) {
+    throw new Error("Expected invalid command");
+  }
   if (parseCliArgs(["build"]) !== null) throw new Error("Expected missing input");
 });
 
 Deno.test("prints usage", () => {
-  assertEquals(usageText(), "Usage: deno run -A src/driver/main.ts <build|run|emit-c|emit-ast|watch> <file.tc>");
+  assertEquals(
+    usageText(),
+    "Usage: deno run -A src/driver/main.ts <build|run|emit-c|emit-ast|watch> <file.tc>",
+  );
 });
 
 function assertEquals(actual: Str, expected: Str): void {

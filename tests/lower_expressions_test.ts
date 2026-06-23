@@ -34,7 +34,11 @@ Deno.test("lowers record and pointer expressions", () => {
       kind: "FieldAccessExpr",
       operand: {
         kind: "RecordLiteralExpr",
-        fields: [{ name: "value", expression: { kind: "BoolLiteral", value: true, text: "true", span }, span }],
+        fields: [{
+          name: "value",
+          expression: { kind: "BoolLiteral", value: true, text: "true", span },
+          span,
+        }],
         span,
       },
       field: "value",

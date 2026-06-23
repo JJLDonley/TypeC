@@ -22,13 +22,33 @@ Deno.test("validates accepted import paths", () => {
 
 Deno.test("rejects invalid import paths", () => {
   const config = projectConfig(new Map<Str, Str>());
-  assertImportError("math.tc", config, "Import path 'math.tc' must be relative, std, or a project dependency");
+  assertImportError(
+    "math.tc",
+    config,
+    "Import path 'math.tc' must be relative, std, or a project dependency",
+  );
   assertImportError("./math", config, "Import path './math' must target a .tc or .h file");
   assertImportError("./math\\ops.tc", config, "Import path './math\\ops.tc' must use / separators");
-  assertImportError("./math%2fops.tc", config, "Import path './math%2fops.tc' must use / separators");
-  assertImportError("./math%zz.tc", config, "Import path './math%zz.tc' contains invalid percent encoding");
-  assertImportError("./%2e/math.tc", config, "Import path './%2e/math.tc' must not contain encoded path segments");
-  assertImportError("std/../math.tc", config, "Std import path 'std/../math.tc' must stay within std");
+  assertImportError(
+    "./math%2fops.tc",
+    config,
+    "Import path './math%2fops.tc' must use / separators",
+  );
+  assertImportError(
+    "./math%zz.tc",
+    config,
+    "Import path './math%zz.tc' contains invalid percent encoding",
+  );
+  assertImportError(
+    "./%2e/math.tc",
+    config,
+    "Import path './%2e/math.tc' must not contain encoded path segments",
+  );
+  assertImportError(
+    "std/../math.tc",
+    config,
+    "Std import path 'std/../math.tc' must stay within std",
+  );
 });
 
 function projectConfig(dependencies: Map<Str, Str>): ProjectConfig {
@@ -39,7 +59,10 @@ function assertImportError(path: Str, config: ProjectConfig, message: Str): void
   try {
     validateImportPath(path, undefined, config);
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === message)) return;
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.message === message)
+    ) return;
   }
   throw new Error(`Expected import path error: ${message}`);
 }

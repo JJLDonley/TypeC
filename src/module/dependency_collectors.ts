@@ -1,6 +1,7 @@
 import type {
   BlockStmt,
   ConstDecl,
+  EnumDecl,
   Expression,
   FunctionDecl,
   Statement,
@@ -15,6 +16,13 @@ export function collectTypeAliasDeps(
 ): void {
   if (!typeAlias) return;
   collectTypeDeps(typeAlias.type, selected);
+}
+
+export function collectEnumDeps(enumDecl: EnumDecl | undefined, selected: DependencySet): void {
+  if (!enumDecl) return;
+  for (const member of enumDecl.members) {
+    if (member.initializer) collectExpressionDeps(member.initializer, selected);
+  }
 }
 
 export function collectConstDeps(constant: ConstDecl | undefined, selected: DependencySet): void {

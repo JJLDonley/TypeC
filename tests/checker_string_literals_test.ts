@@ -1,6 +1,10 @@
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
-import { checkStringLiteralTarget, isStringLiteralArrayInitializer, stringLiteralType } from "checker/string_literals.ts";
+import {
+  checkStringLiteralTarget,
+  isStringLiteralArrayInitializer,
+  stringLiteralType,
+} from "checker/string_literals.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -28,7 +32,10 @@ Deno.test("reports invalid C string literal targets", () => {
   const lengthDiagnostics = checkStringLiteralTarget("u8[6]", "u8[5]", literal);
 
   assertText(diagnostics[0]?.message ?? "", "String literal is not assignable to 'i32'");
-  assertText(lengthDiagnostics[0]?.message ?? "", "String literal length 6 is not assignable to 'u8[5]'");
+  assertText(
+    lengthDiagnostics[0]?.message ?? "",
+    "String literal length 6 is not assignable to 'u8[5]'",
+  );
 });
 
 function stringLiteral(text: Str): Extract<Expression, { kind: "StringLiteral" }> {

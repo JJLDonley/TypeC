@@ -12,6 +12,8 @@ export interface LocalInfo {
 
 export function createFunctionLocals(fn: FunctionDecl): Map<Str, LocalInfo> {
   const locals = new Map<Str, LocalInfo>();
-  for (const param of fn.params) locals.set(param.name, { type: typeName(param.type), mutable: false });
+  for (const param of fn.params) {
+    locals.set(param.name, { type: typeName(param.type), mutable: false });
+  }
   return locals;
 }

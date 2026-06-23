@@ -1219,6 +1219,9 @@ switch (key) {
 
 # Phase 14: Enums
 
+Status: In progress. TypeC enum declarations, nominal enum member typing, switch labels, and C
+lowering are implemented. C header enum import remains pending.
+
 ## Goal
 
 Add simple scoped sets of named integer values.

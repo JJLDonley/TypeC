@@ -359,6 +359,53 @@ Deno.test("rejects array return types", () => {
   );
 });
 
+Deno.test("checks enum declarations", () => {
+  check(
+    resolve(
+      parse(
+        lex(
+          `enum Key { Space = 32, Escape } function main(): i32 { const key: Key = Key.Space; return 42; }`,
+        ),
+      ),
+    ),
+  );
+  check(
+    resolve(
+      parse(
+        lex(`enum Key { Space, Escape } function same(): bool { return Key.Space == Key.Escape; }`),
+      ),
+    ),
+  );
+  check(
+    resolve(
+      parse(
+        lex(
+          `enum Key { Space, Escape } function main(): i32 { switch (Key.Space) { case Key.Space: return 42; default: return 0; } }`,
+        ),
+      ),
+    ),
+  );
+});
+
+Deno.test("rejects invalid enum declarations", () => {
+  assertCheckError(
+    `enum Key { Space, Space } function main(): i32 { return 0; }`,
+    "Duplicate enum member 'Space'",
+  );
+  assertCheckError(
+    `enum Key { Space = 2147483648 } function main(): i32 { return 0; }`,
+    "Enum member value '2147483648' is out of range for 'i32'",
+  );
+  assertCheckError(
+    `enum Key { Space } function main(): i32 { const key: Key = 0; return 0; }`,
+    "Initializer type 'i32' is not assignable to 'Key'",
+  );
+  assertCheckError(
+    `enum Key { Space } function main(): i32 { const key: i32 = Key.Space; return key; }`,
+    "Initializer type 'Key' is not assignable to 'i32'",
+  );
+});
+
 Deno.test("checks switch statements", () => {
   check(
     resolve(

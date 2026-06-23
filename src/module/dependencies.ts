@@ -1,6 +1,7 @@
 import type { Program } from "core/ast.ts";
 import {
   collectConstDeps,
+  collectEnumDeps,
   collectFunctionDeps,
   collectTypeAliasDeps,
 } from "module/dependency_collectors.ts";
@@ -35,7 +36,10 @@ function collectClosure(selected: DependencySet, index: ProgramDependencyIndex):
 
 function collectPass(selected: DependencySet, index: ProgramDependencyIndex): b8 {
   const before = dependencyCount(selected);
-  for (const name of [...selected.types]) collectTypeAliasDeps(index.types.get(name), selected);
+  for (const name of [...selected.types]) {
+    collectTypeAliasDeps(index.types.get(name), selected);
+    collectEnumDeps(index.enums.get(name), selected);
+  }
   for (const name of [...selected.constants]) collectConstDeps(index.constants.get(name), selected);
   for (const name of [...selected.functions]) {
     collectFunctionDeps(index.functions.get(name), selected);

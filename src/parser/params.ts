@@ -16,8 +16,7 @@ export interface ParamParser {
 export function parseParamsWith(parser: ParamParser): CastParam[] {
   const params: CastParam[] = [];
   if (parser.checkText(")")) return params;
-  do params.push(parseParam(parser));
-  while (parser.matchText(","));
+  do params.push(parseParam(parser)); while (parser.matchText(","));
   return params;
 }
 

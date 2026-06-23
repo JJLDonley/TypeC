@@ -13,7 +13,11 @@ const span: SourceSpan = {
 };
 
 Deno.test("collects declaration maps", () => {
-  const result = checkDeclarations(program([typeAlias("Pair", record([["x", named("i32")]]))], [fn("use", named("void"), [param("value", named("Pair"))])]));
+  const result = checkDeclarations(
+    program([typeAlias("Pair", record([["x", named("i32")]]))], [
+      fn("use", named("void"), [param("value", named("Pair"))]),
+    ]),
+  );
 
   assertSame(result.typeAliases.has("Pair"), true);
   assertSame(result.functions.has("use"), true);
@@ -21,7 +25,11 @@ Deno.test("collects declaration maps", () => {
 });
 
 Deno.test("reports invalid declarations", () => {
-  const result = checkDeclarations(program([typeAlias("Count", named("i32"))], [fn("bad", named("Missing"), [param("value", named("void"))])]));
+  const result = checkDeclarations(
+    program([typeAlias("Count", named("i32"))], [
+      fn("bad", named("Missing"), [param("value", named("void"))]),
+    ]),
+  );
 
   assertText(result.diagnostics[0]?.message ?? "", "Type alias 'Count' must name a record type");
   assertText(result.diagnostics[1]?.message ?? "", "Unknown type 'Missing'");
@@ -37,7 +45,16 @@ function typeAlias(name: Str, type: TypeRef): Program["typeAliases"][usize] {
 }
 
 function fn(name: Str, returnType: TypeRef, params: FunctionDecl["params"]): FunctionDecl {
-  return { kind: "FunctionDecl", exported: false, external: false, name, params, returnType, body: null, span };
+  return {
+    kind: "FunctionDecl",
+    exported: false,
+    external: false,
+    name,
+    params,
+    returnType,
+    body: null,
+    span,
+  };
 }
 
 function param(name: Str, type: TypeRef): FunctionDecl["params"][usize] {
@@ -49,7 +66,11 @@ function named(name: Str): TypeRef {
 }
 
 function record(fields: [Str, TypeRef][]): TypeRef {
-  return { kind: "RecordTypeRef", fields: fields.map(([name, type]) => ({ name, type, span })), span };
+  return {
+    kind: "RecordTypeRef",
+    fields: fields.map(([name, type]) => ({ name, type, span })),
+    span,
+  };
 }
 
 function assertSame(actual: b8, expected: b8): void {

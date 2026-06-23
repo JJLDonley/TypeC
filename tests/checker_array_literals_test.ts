@@ -23,7 +23,10 @@ Deno.test("checks valid array literals", () => {
   assertLen(target.diagnostics.length, 0);
   assertLen(checkInferredArrayLiteral(literal, target.array!).length, 0);
   assertLen(checkArrayLiteralElementType("i32", "i32", literal.elements[0]!).length, 0);
-  assertLen(checkArrayLiteralLength(1, { element: "i32", length: 1n }, "i32[1]", literal).length, 0);
+  assertLen(
+    checkArrayLiteralLength(1, { element: "i32", length: 1n }, "i32[1]", literal).length,
+    0,
+  );
 });
 
 Deno.test("reports invalid array literals", () => {
@@ -34,7 +37,10 @@ Deno.test("reports invalid array literals", () => {
   const element = checkArrayLiteralElementType("f64", "i32", one.elements[0]!);
   const length = checkArrayLiteralLength(1, { element: "i32", length: 2n }, "i32[2]", one);
 
-  assertText(target.diagnostics[0]?.message ?? "", "Array literal is not assignable to non-array type 'i32'");
+  assertText(
+    target.diagnostics[0]?.message ?? "",
+    "Array literal is not assignable to non-array type 'i32'",
+  );
   assertText(inferred[0]?.message ?? "", "Cannot infer empty array type");
   assertText(element[0]?.message ?? "", "Array element type 'f64' is not assignable to 'i32'");
   assertText(length[0]?.message ?? "", "Array length 1 is not assignable to 'i32[2]'");

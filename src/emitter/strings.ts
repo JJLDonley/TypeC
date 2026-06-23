@@ -23,8 +23,8 @@ function escapeCStringChar(ch: Str): Str {
   switch (ch) {
     case "\\":
       return "\\\\";
-    case "\"":
-      return "\\\"";
+    case '"':
+      return '\\"';
     case "\n":
       return "\\n";
     case "\r":

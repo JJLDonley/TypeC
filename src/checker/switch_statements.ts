@@ -7,12 +7,12 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 
 type Str = string;
-type b8 = boolean;
-
 type SwitchStmt = Extract<Statement, { kind: "SwitchStmt" }>;
 
+type b8 = boolean;
 type ExpressionTyper = (expr: Expression) => TypeName;
 type ExpectedExpressionTyper = (expr: Expression, expected: TypeName) => TypeName;
+type TypePredicate = (type: TypeName) => b8;
 type BlockChecker = (statements: Statement[]) => Diagnostic[];
 
 export function checkSwitchStatement(
@@ -21,25 +21,30 @@ export function checkSwitchStatement(
   typeOf: ExpressionTyper,
   typeOfExpected: ExpectedExpressionTyper,
   checkBlock: BlockChecker,
+  isEnumType: TypePredicate = () => false,
 ): Diagnostic[] {
   const switchType = typeOf(stmt.expression);
   return [
-    ...checkSwitchType(stmt, switchType),
+    ...checkSwitchType(stmt, switchType, isEnumType),
     ...checkSwitchLabels(stmt, switchType, constants, typeOfExpected),
     ...checkSwitchBodies(stmt, checkBlock),
   ];
 }
 
-function checkSwitchType(stmt: SwitchStmt, type: TypeName): Diagnostic[] {
-  if (isSwitchType(type)) return [];
+function checkSwitchType(
+  stmt: SwitchStmt,
+  type: TypeName,
+  isEnumType: TypePredicate,
+): Diagnostic[] {
+  if (isSwitchType(type, isEnumType)) return [];
   return [{
     message: `Switch expression type '${type}' is not switchable`,
     span: stmt.expression.span,
   }];
 }
 
-function isSwitchType(type: TypeName): b8 {
-  return type === "bool" || isIntegerTypeName(type);
+function isSwitchType(type: TypeName, isEnumType: TypePredicate): b8 {
+  return type === "bool" || isIntegerTypeName(type) || isEnumType(type);
 }
 
 function isIntegerTypeName(type: TypeName): b8 {

@@ -14,11 +14,12 @@ export function readProjectCompilerFlags(value: unknown): Str[] {
 
 function readCompilerFlags(value: unknown): Str[] {
   if (value === undefined) return [];
-  if (!isJsonArray(value) || !value.every(isJsonText)) throw jsonConfigError("project.json compiler.flags must be a string array");
+  if (!isJsonArray(value) || !value.every(isJsonText)) {
+    throw jsonConfigError("project.json compiler.flags must be a string array");
+  }
   for (const flag of value) validateCompilerFlag(flag);
   return value;
 }
-
 
 function validateCompilerFlag(flag: Str): void {
   const message = compilerFlagError(flag);

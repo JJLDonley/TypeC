@@ -19,8 +19,14 @@ Deno.test("checks valid control flow", () => {
 });
 
 Deno.test("reports invalid control flow conditions", () => {
-  assertText(checkWhileStatement(whileStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "", "While condition type 'i32' is not assignable to 'bool'");
-  assertText(checkIfStatement(ifStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "", "If condition type 'i32' is not assignable to 'bool'");
+  assertText(
+    checkWhileStatement(whileStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "",
+    "While condition type 'i32' is not assignable to 'bool'",
+  );
+  assertText(
+    checkIfStatement(ifStmt(integer()), locals, resolveI32, emptyBlock)[0]?.message ?? "",
+    "If condition type 'i32' is not assignable to 'bool'",
+  );
 });
 
 function emptyBlock(_statements: Statement[], _locals: Map<Str, LocalInfo>): Diagnostic[] {
@@ -40,7 +46,13 @@ function whileStmt(condition: Expression): Extract<Statement, { kind: "WhileStmt
 }
 
 function ifStmt(condition: Expression): Extract<Statement, { kind: "IfStmt" }> {
-  return { kind: "IfStmt", condition, thenBody: { kind: "BlockStmt", statements: [], span }, elseBody: null, span };
+  return {
+    kind: "IfStmt",
+    condition,
+    thenBody: { kind: "BlockStmt", statements: [], span },
+    elseBody: null,
+    span,
+  };
 }
 
 function bool(): Expression {

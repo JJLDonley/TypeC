@@ -1,6 +1,7 @@
 import type {
   BlockStmt,
   ConstDecl,
+  EnumDecl,
   Expression,
   FunctionDecl,
   Param,
@@ -28,6 +29,7 @@ class AstPrinter {
     this.line("Program");
     this.indented(() => {
       for (const typeAlias of program.typeAliases) this.typeAliasDecl(typeAlias);
+      for (const enumDecl of program.enums ?? []) this.enumDecl(enumDecl);
       for (const constant of program.constants ?? []) this.constDecl(constant);
       for (const fn of program.functions) this.functionDecl(fn);
     });
@@ -35,6 +37,17 @@ class AstPrinter {
 
   private typeAliasDecl(typeAlias: TypeAliasDecl): void {
     this.line(`TypeAliasDecl ${typeAlias.name} = ${this.type(typeAlias.type)}`);
+  }
+
+  private enumDecl(enumDecl: EnumDecl): void {
+    this.line(`EnumDecl ${enumDecl.name}`);
+    this.indented(() => {
+      for (const member of enumDecl.members) {
+        this.line(`EnumMember ${member.name}`);
+        const initializer = member.initializer;
+        if (initializer) this.indented(() => this.expression(initializer));
+      }
+    });
   }
 
   private constDecl(constant: ConstDecl): void {

@@ -8,6 +8,7 @@ import {
   checkCTypeAliasSymbols,
 } from "checker/c_symbols.ts";
 import { checkDeclarations } from "checker/declarations.ts";
+import { checkEnums } from "checker/enums.ts";
 
 type Str = string;
 
@@ -20,12 +21,16 @@ export interface CheckedDeclarations {
 
 export function collectProgramDeclarations(program: ResolvedProgram): CheckedDeclarations {
   const declarations = checkDeclarations(program);
+  const enums = checkEnums(program.enums ?? [], declarations.constants);
+  const constants = new Map<Str, ConstDecl>(declarations.constants);
+  for (const constant of enums.constants) constants.set(constant.name, constant);
   return {
     functions: declarations.functions,
-    constants: declarations.constants,
+    constants,
     typeAliases: declarations.typeAliases,
     diagnostics: [
       ...declarations.diagnostics,
+      ...enums.diagnostics,
       ...checkCFunctionSymbols(program.functions, program.typeAliases),
       ...checkCTypeAliasSymbols(program.typeAliases),
       ...checkCConstantSymbols(program.constants ?? []),

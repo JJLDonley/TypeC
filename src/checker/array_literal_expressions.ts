@@ -16,7 +16,11 @@ export interface ArrayLiteralExpressionCheck {
   type: TypeName;
 }
 
-export function checkArrayLiteralExpression(expr: ArrayLiteralExpr, expected: TypeName, resolveExpectedType: ExpectedTypeResolver): ArrayLiteralExpressionCheck {
+export function checkArrayLiteralExpression(
+  expr: ArrayLiteralExpr,
+  expected: TypeName,
+  resolveExpectedType: ExpectedTypeResolver,
+): ArrayLiteralExpressionCheck {
   const target = checkArrayLiteralTarget(expected, expr);
   if (!target.array) return { diagnostics: target.diagnostics, type: "<error>" };
   const diagnostics = [...target.diagnostics, ...checkInferredArrayLiteral(expr, target.array)];

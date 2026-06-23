@@ -40,7 +40,9 @@ export function parseRecordLiteralWith(parser: AggregateLiteralParser): CastExpr
   return { kind: "RecordLiteralExpr", fields, span: span(open.span.start, close.span.end) };
 }
 
-function parseRecordLiteralField(parser: AggregateLiteralParser): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+function parseRecordLiteralField(
+  parser: AggregateLiteralParser,
+): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
   const name = parser.expectKind("identifier", "Expected field name");
   parser.expectText(":");
   const expression = parser.parseExpression();

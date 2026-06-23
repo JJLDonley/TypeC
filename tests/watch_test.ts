@@ -8,5 +8,7 @@ Deno.test("detects rebuild file events", () => {
 
 Deno.test("requires main before watched native builds", () => {
   if (!shouldBuildWatchedResult(true)) throw new Error("Expected executable program to build");
-  if (shouldBuildWatchedResult(false)) throw new Error("Expected library program to skip native build");
+  if (shouldBuildWatchedResult(false)) {
+    throw new Error("Expected library program to skip native build");
+  }
 });

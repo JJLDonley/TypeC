@@ -11,7 +11,10 @@ const span: SourceSpan = {
 };
 
 Deno.test("emits nested expression operands", () => {
-  assertText(emitExpression(binary(int("1"), "*", binary(int("2"), "+", int("3"))), context()), "1 * (2 + 3)");
+  assertText(
+    emitExpression(binary(int("1"), "*", binary(int("2"), "+", int("3"))), context()),
+    "1 * (2 + 3)",
+  );
 });
 
 Deno.test("emits expected record and array expressions", () => {
@@ -30,7 +33,15 @@ Deno.test("emits expected record and array expressions", () => {
 Deno.test("emits call array compound literals", () => {
   const ctx = context([], [fnWithArrayParam()]);
 
-  assertText(emitExpression({ kind: "CallExpr", callee: "sum", args: [arrayLiteral([int("1"), int("2")])], span }, ctx), "sum((i32[2]){ 1, 2 })");
+  assertText(
+    emitExpression({
+      kind: "CallExpr",
+      callee: "sum",
+      args: [arrayLiteral([int("1"), int("2")])],
+      span,
+    }, ctx),
+    "sum((i32[2]){ 1, 2 })",
+  );
 });
 
 function context(typeAliases: TypeAliasDecl[] = [], functions: FunctionDecl[] = []): EmitContext {
@@ -62,7 +73,11 @@ function fnWithArrayParam(): FunctionDecl {
     exported: false,
     external: false,
     name: "sum",
-    params: [{ name: "items", type: { kind: "FixedArrayTypeRef", element: named("i32"), sizeText: "2", span }, span }],
+    params: [{
+      name: "items",
+      type: { kind: "FixedArrayTypeRef", element: named("i32"), sizeText: "2", span },
+      span,
+    }],
     returnType: named("i32"),
     body: null,
     span,

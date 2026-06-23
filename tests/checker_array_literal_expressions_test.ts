@@ -12,7 +12,11 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks array literal expressions", () => {
-  const result = checkArrayLiteralExpression(array([integer("1"), integer("2")]), "i32[]", resolveExpected);
+  const result = checkArrayLiteralExpression(
+    array([integer("1"), integer("2")]),
+    "i32[]",
+    resolveExpected,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32[2]");
@@ -22,9 +26,15 @@ Deno.test("reports invalid array literal expressions", () => {
   const badTarget = checkArrayLiteralExpression(array([integer("1")]), "i32", resolveExpected);
   const badLength = checkArrayLiteralExpression(array([integer("1")]), "i32[2]", resolveExpected);
 
-  assertText(badTarget.diagnostics[0]?.message ?? "", "Array literal is not assignable to non-array type 'i32'");
+  assertText(
+    badTarget.diagnostics[0]?.message ?? "",
+    "Array literal is not assignable to non-array type 'i32'",
+  );
   assertText(badTarget.type, "<error>");
-  assertText(badLength.diagnostics[0]?.message ?? "", "Array length 1 is not assignable to 'i32[2]'");
+  assertText(
+    badLength.diagnostics[0]?.message ?? "",
+    "Array length 1 is not assignable to 'i32[2]'",
+  );
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {

@@ -1,9 +1,6 @@
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
-import {
-  checkFloatLiteralRange,
-  checkIntegerLiteralRange,
-} from "checker/literal_ranges.ts";
+import { checkFloatLiteralRange, checkIntegerLiteralRange } from "checker/literal_ranges.ts";
 
 type Str = string;
 type f64 = number;
@@ -22,7 +19,10 @@ Deno.test("reports literals outside target ranges", () => {
   const integerDiagnostics = checkIntegerLiteralRange(integer("128"), "i8");
   const floatDiagnostics = checkFloatLiteralRange(float("1e39", 1e39), "f32");
 
-  assertText(integerDiagnostics[0]?.message ?? "", "Integer literal '128' is out of range for 'i8'");
+  assertText(
+    integerDiagnostics[0]?.message ?? "",
+    "Integer literal '128' is out of range for 'i8'",
+  );
   assertText(floatDiagnostics[0]?.message ?? "", "Float literal '1e39' is out of range for 'f32'");
 });
 

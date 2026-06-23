@@ -1,6 +1,10 @@
 import type { CastExpression } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { parseArrayLiteralWith, parseRecordLiteralWith, type AggregateLiteralParser } from "parser/aggregate_literals.ts";
+import {
+  type AggregateLiteralParser,
+  parseArrayLiteralWith,
+  parseRecordLiteralWith,
+} from "parser/aggregate_literals.ts";
 
 type Str = string;
 type i32 = number;
@@ -21,7 +25,13 @@ Deno.test("parses aggregate array literals", () => {
 });
 
 Deno.test("parses aggregate record literals", () => {
-  const parser = parserFor([punct("{"), identifier("x"), punct(":"), identifier("value"), punct("}")]);
+  const parser = parserFor([
+    punct("{"),
+    identifier("x"),
+    punct(":"),
+    identifier("value"),
+    punct("}"),
+  ]);
 
   const expr = parseRecordLiteralWith(parser);
 

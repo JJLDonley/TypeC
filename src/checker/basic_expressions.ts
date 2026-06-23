@@ -6,7 +6,10 @@ import { stringLiteralType } from "checker/string_literals.ts";
 
 type b8 = boolean;
 
-type BasicExpr = Extract<Expression, { kind: "IntegerLiteral" | "FloatLiteral" | "BoolLiteral" | "StringLiteral" }>;
+type BasicExpr = Extract<
+  Expression,
+  { kind: "IntegerLiteral" | "FloatLiteral" | "BoolLiteral" | "StringLiteral" }
+>;
 
 export interface BasicExpressionCheck {
   diagnostics: Diagnostic[];
@@ -28,12 +31,16 @@ function checkKnownBasicExpression(expr: BasicExpr): BasicExpressionCheck {
     case "BoolLiteral":
       return handled("bool", []);
     case "StringLiteral":
-      return handled(stringLiteralType(expr), [{ message: "String literals require an expected C string type", span: expr.span }]);
+      return handled(stringLiteralType(expr), [{
+        message: "String literals require an expected C string type",
+        span: expr.span,
+      }]);
   }
 }
 
 function isBasicExpression(expr: Expression): expr is BasicExpr {
-  return expr.kind === "IntegerLiteral" || expr.kind === "FloatLiteral" || expr.kind === "BoolLiteral" || expr.kind === "StringLiteral";
+  return expr.kind === "IntegerLiteral" || expr.kind === "FloatLiteral" ||
+    expr.kind === "BoolLiteral" || expr.kind === "StringLiteral";
 }
 
 function handled(type: TypeName, diagnostics: Diagnostic[]): BasicExpressionCheck {

@@ -1,5 +1,12 @@
 import { TypeCError } from "core/diagnostics.ts";
-import { isFalseJsonFlag, isJsonArray, isJsonText, isNonEmptyJsonText, isTruthyJsonFlag, readJsonText } from "json/values.ts";
+import {
+  isFalseJsonFlag,
+  isJsonArray,
+  isJsonText,
+  isNonEmptyJsonText,
+  isTruthyJsonFlag,
+  readJsonText,
+} from "json/values.ts";
 
 type Str = string;
 type b8 = boolean;

@@ -1,6 +1,11 @@
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { TypeRef } from "core/ast.ts";
-import { collectTypeAliasRefs, isArrayTypeRef, isVoidNamedType, isVoidValueType } from "checker/type_refs.ts";
+import {
+  collectTypeAliasRefs,
+  isArrayTypeRef,
+  isVoidNamedType,
+  isVoidValueType,
+} from "checker/type_refs.ts";
 
 type Str = string;
 type b8 = boolean;

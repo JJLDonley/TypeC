@@ -3,7 +3,10 @@ import type { FunctionDecl, Program, TypeAliasDecl, TypeRef } from "core/ast.ts"
 type Str = string;
 
 export function namespaceProgramTypes(program: Program, namespace: Str): Program {
-  const aliases = new Set<Str>(program.typeAliases.map((typeAlias) => typeAlias.name));
+  const aliases = new Set<Str>([
+    ...program.typeAliases.map((typeAlias) => typeAlias.name),
+    ...(program.enums ?? []).map((enumDecl) => enumDecl.name),
+  ]);
   return {
     ...program,
     typeAliases: program.typeAliases.map((typeAlias) =>

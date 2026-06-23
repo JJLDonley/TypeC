@@ -43,12 +43,24 @@ Deno.test("rejects unknown identifiers", () => {
 });
 
 Deno.test("allows block-local shadowing", () => {
-  resolve(parse(lex(`function main(): i32 { const x: i32 = 1; if (true) { const x: i32 = 2; } else { const x: i32 = 3; } return x; }`)));
+  resolve(
+    parse(
+      lex(
+        `function main(): i32 { const x: i32 = 1; if (true) { const x: i32 = 2; } else { const x: i32 = 3; } return x; }`,
+      ),
+    ),
+  );
 });
 
 Deno.test("rejects use of block locals outside block", () => {
-  assertResolveError(`function main(): i32 { if (true) { const x: i32 = 1; } return x; }`, "Unknown identifier 'x'");
-  assertResolveError(`function main(): i32 { while (true) { const x: i32 = 1; } return x; }`, "Unknown identifier 'x'");
+  assertResolveError(
+    `function main(): i32 { if (true) { const x: i32 = 1; } return x; }`,
+    "Unknown identifier 'x'",
+  );
+  assertResolveError(
+    `function main(): i32 { while (true) { const x: i32 = 1; } return x; }`,
+    "Unknown identifier 'x'",
+  );
 });
 
 Deno.test("rejects unknown functions", () => {
@@ -59,13 +71,18 @@ function assertResolveError(source: Str, message: Str): void {
   try {
     resolve(parse(lex(source)));
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics.some((diagnostic) => diagnostic.message === message)) return;
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.message === message)
+    ) return;
   }
   throw new Error(`Expected resolver error: ${message}`);
 }
 
 function assertIncludes(values: Str[], expected: Str): void {
-  if (!values.includes(expected)) throw new Error(`Expected ${JSON.stringify(values)} to include ${expected}`);
+  if (!values.includes(expected)) {
+    throw new Error(`Expected ${JSON.stringify(values)} to include ${expected}`);
+  }
 }
 
 function assertEquals(actual: u32, expected: u32): void {

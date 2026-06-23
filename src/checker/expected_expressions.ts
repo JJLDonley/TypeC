@@ -18,11 +18,24 @@ export interface ExpectedExpressionCheck {
   type: TypeName;
 }
 
-export function checkExpectedExpression(expr: Expression, expected: TypeName, aliases: Map<Str, TypeRef>, resolveExpectedType: ExpectedTypeResolver): ExpectedExpressionCheck {
-  if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) return handled(expected, checkIntegerLiteralRange(expr, expected));
-  if (expr.kind === "FloatLiteral" && isFloatType(expected)) return handled(expected, checkFloatLiteralRange(expr, expected));
-  if (expr.kind === "RecordLiteralExpr") return handledCheck(checkRecordLiteralExpression(expr, expected, aliases, resolveExpectedType));
-  if (expr.kind === "ArrayLiteralExpr") return handledCheck(checkArrayLiteralExpression(expr, expected, resolveExpectedType));
+export function checkExpectedExpression(
+  expr: Expression,
+  expected: TypeName,
+  aliases: Map<Str, TypeRef>,
+  resolveExpectedType: ExpectedTypeResolver,
+): ExpectedExpressionCheck {
+  if (expr.kind === "IntegerLiteral" && isIntegerType(expected)) {
+    return handled(expected, checkIntegerLiteralRange(expr, expected));
+  }
+  if (expr.kind === "FloatLiteral" && isFloatType(expected)) {
+    return handled(expected, checkFloatLiteralRange(expr, expected));
+  }
+  if (expr.kind === "RecordLiteralExpr") {
+    return handledCheck(checkRecordLiteralExpression(expr, expected, aliases, resolveExpectedType));
+  }
+  if (expr.kind === "ArrayLiteralExpr") {
+    return handledCheck(checkArrayLiteralExpression(expr, expected, resolveExpectedType));
+  }
   if (expr.kind === "StringLiteral") {
     const type = stringLiteralType(expr);
     return handled(type, checkStringLiteralTarget(type, expected, expr));
@@ -34,6 +47,8 @@ function handled(type: TypeName, diagnostics: Diagnostic[]): ExpectedExpressionC
   return { diagnostics, handled: true, type };
 }
 
-function handledCheck(check: { diagnostics: Diagnostic[]; type: TypeName }): ExpectedExpressionCheck {
+function handledCheck(
+  check: { diagnostics: Diagnostic[]; type: TypeName },
+): ExpectedExpressionCheck {
   return { diagnostics: check.diagnostics, handled: true, type: check.type };
 }

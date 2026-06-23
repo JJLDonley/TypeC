@@ -23,11 +23,17 @@ Deno.test("checks postfix pointer expressions", () => {
 Deno.test("reports invalid postfix pointer expressions", () => {
   const result = checkPostfixPointerExpression(pointerExpr(integer("1"), ".&"), "i32");
 
-  assertText(result.diagnostics[0]?.message ?? "", "Cannot take address of non-addressable expression");
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Cannot take address of non-addressable expression",
+  );
   assertText(result.type, "i32&");
 });
 
-function pointerExpr(operand: Expression, operator: ".&" | ".*"): Extract<Expression, { kind: "PostfixPointerExpr" }> {
+function pointerExpr(
+  operand: Expression,
+  operator: ".&" | ".*",
+): Extract<Expression, { kind: "PostfixPointerExpr" }> {
   return { kind: "PostfixPointerExpr", operand, operator, span };
 }
 

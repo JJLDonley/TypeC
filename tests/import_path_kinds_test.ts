@@ -1,4 +1,11 @@
-import { hasUrlScheme, isAbsolutePosixPath, isImportAliasFilePath, isRelativeImportPath, isStdImportPath, isTypeCImportFile } from "paths/import_kinds.ts";
+import {
+  hasUrlScheme,
+  isAbsolutePosixPath,
+  isImportAliasFilePath,
+  isRelativeImportPath,
+  isStdImportPath,
+  isTypeCImportFile,
+} from "paths/import_kinds.ts";
 
 type b8 = boolean;
 

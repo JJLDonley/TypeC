@@ -16,11 +16,17 @@ export function checkTypeAliasOrder(typeAliases: TypeAliasDecl[]): Diagnostic[] 
 
 function typeAliasIndexes(typeAliases: TypeAliasDecl[]): Map<Str, usize> {
   const indexes = new Map<Str, usize>();
-  for (let index: usize = 0; index < typeAliases.length; index++) indexes.set(typeAliases[index]!.name, index);
+  for (let index: usize = 0; index < typeAliases.length; index++) {
+    indexes.set(typeAliases[index]!.name, index);
+  }
   return indexes;
 }
 
-function checkTypeAliasDeps(typeAlias: TypeAliasDecl, index: usize, indexes: Map<Str, usize>): Diagnostic[] {
+function checkTypeAliasDeps(
+  typeAlias: TypeAliasDecl,
+  index: usize,
+  indexes: Map<Str, usize>,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (const name of collectTypeAliasRefs(typeAlias.type)) {
     const refIndex = indexes.get(name);

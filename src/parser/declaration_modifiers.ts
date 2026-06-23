@@ -25,6 +25,11 @@ export function constModifierDiagnostics(externToken: Token | null): Diagnostic[
   return [{ message: "Constants cannot be extern", span: externToken.span }];
 }
 
+export function enumModifierDiagnostics(externToken: Token | null): Diagnostic[] {
+  if (!externToken) return [];
+  return [{ message: "Enums cannot be extern", span: externToken.span }];
+}
+
 export function functionModifierDiagnostics(
   exportToken: Token | null,
   externToken: Token | null,

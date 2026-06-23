@@ -16,7 +16,10 @@ Deno.test("checks postfix address operations", () => {
 
   assertText(ok.type, "i32&");
   assertLen(ok.diagnostics.length, 0);
-  assertText(bad.diagnostics[0]?.message ?? "", "Cannot take address of non-addressable expression");
+  assertText(
+    bad.diagnostics[0]?.message ?? "",
+    "Cannot take address of non-addressable expression",
+  );
 });
 
 Deno.test("checks postfix dereference operations", () => {
@@ -30,7 +33,10 @@ Deno.test("checks postfix dereference operations", () => {
   assertText(bad.diagnostics[0]?.message ?? "", "Cannot dereference non-pointer-like type 'i32'");
 });
 
-function pointer(operator: ".*" | ".&", operand: Expression): Extract<Expression, { kind: "PostfixPointerExpr" }> {
+function pointer(
+  operator: ".*" | ".&",
+  operand: Expression,
+): Extract<Expression, { kind: "PostfixPointerExpr" }> {
   return { kind: "PostfixPointerExpr", operator, operand, span };
 }
 

@@ -2,6 +2,8 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type {
   CastBlockStmt,
   CastConstDecl,
+  CastEnumDecl,
+  CastEnumMember,
   CastExpression,
   CastFunctionDecl,
   CastImportDecl,
@@ -12,6 +14,7 @@ import type {
 import type { Token, TokenKind } from "core/token.ts";
 import {
   constModifierDiagnostics,
+  enumModifierDiagnostics,
   functionModifierDiagnostics,
   importModifierDiagnostics,
   typeAliasModifierDiagnostics,
@@ -47,12 +50,18 @@ export interface DeclarationModifiers {
   externToken: Token | null;
 }
 
-export type CastDeclaration = CastImportDecl | CastTypeAliasDecl | CastConstDecl | CastFunctionDecl;
+export type CastDeclaration =
+  | CastImportDecl
+  | CastTypeAliasDecl
+  | CastEnumDecl
+  | CastConstDecl
+  | CastFunctionDecl;
 
 export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration {
   const modifiers = parseDeclarationModifiers(parser);
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
+  if (parser.checkText("enum")) return parseEnumDeclaration(parser, modifiers);
   if (parser.checkText("const")) return parseConstDeclaration(parser, modifiers);
   return parseFunctionDeclaration(parser, modifiers);
 }
@@ -122,6 +131,45 @@ function parseTypeAliasDeclaration(
     name: name.text,
     type,
     span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseEnumDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastEnumDecl {
+  parser.diagnostics().push(...enumModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("enum");
+  const name = parser.expectKind("identifier", "Expected enum name");
+  parser.expectText("{");
+  const members = parseEnumMembers(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "EnumDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    cName: null,
+    members,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseEnumMembers(parser: DeclarationParser): CastEnumMember[] {
+  const members: CastEnumMember[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    members.push(parseEnumMember(parser));
+    parser.matchText(",");
+  }
+  return members;
+}
+
+function parseEnumMember(parser: DeclarationParser): CastEnumMember {
+  const name = parser.expectKind("identifier", "Expected enum member name");
+  const initializer = parser.matchText("=") ? parser.parseExpression() : null;
+  return {
+    name: name.text,
+    initializer,
+    span: span(name.span.start, (initializer ?? name).span.end),
   };
 }
 

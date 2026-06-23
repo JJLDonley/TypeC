@@ -48,6 +48,32 @@ Deno.test("emits C for module constants", () => {
   assertIncludes(c, "return ANSWER;");
 });
 
+Deno.test("emits C for enums", () => {
+  const program = parse(lex(`
+    enum Key { Space = 32, Escape }
+    function main(): i32 {
+      const key: Key = Key.Space;
+      return 42;
+    }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertIncludes(c, "typedef i32 Key;");
+  assertIncludes(c, "static const Key Key_Space = 32;");
+  assertIncludes(c, "static const Key Key_Escape = 33;");
+  assertIncludes(c, "const Key key = Key_Space;");
+});
+
+Deno.test("compiles enum example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/enum.tc", dir);
+
+  assertIncludes(result.cSource, "typedef i32 Key;");
+  assertIncludes(result.cSource, "static const Key Key_Space = 32;");
+  assertIncludes(result.cSource, "case 32:");
+});
+
 Deno.test("compiles switch example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/switch.tc", dir);

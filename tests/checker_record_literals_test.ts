@@ -35,7 +35,10 @@ Deno.test("reports invalid record literal fields", () => {
   const fieldDiagnostics = checkRecordLiteralFieldName(literal.fields[0]!, shape, "Vec2", seen);
   const missingDiagnostics = checkRecordLiteralMissingFields(literal, shape, "Vec2", seen);
 
-  assertText(targetDiagnostics[0]?.message ?? "", "Record literal is not assignable to non-record type 'i32'");
+  assertText(
+    targetDiagnostics[0]?.message ?? "",
+    "Record literal is not assignable to non-record type 'i32'",
+  );
   assertText(fieldDiagnostics[0]?.message ?? "", "Duplicate field 'y'");
   assertText(fieldDiagnostics[1]?.message ?? "", "Unknown field 'y' on type 'Vec2'");
   assertText(missingDiagnostics[0]?.message ?? "", "Missing field 'x' on type 'Vec2'");
@@ -53,11 +56,15 @@ function named(name: Str): TypeRef {
   return { kind: "NamedTypeRef", name, span };
 }
 
-function literalWith(fields: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"]): Extract<Expression, { kind: "RecordLiteralExpr" }> {
+function literalWith(
+  fields: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"],
+): Extract<Expression, { kind: "RecordLiteralExpr" }> {
   return { kind: "RecordLiteralExpr", fields, span };
 }
 
-function literalField(name: Str): Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+function literalField(
+  name: Str,
+): Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
   return { name, expression: { kind: "IntegerLiteral", value: 1n, text: "1", span }, span };
 }
 

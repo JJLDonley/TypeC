@@ -10,6 +10,9 @@ export interface PointerExpressionCheck {
   type: TypeName;
 }
 
-export function checkPostfixPointerExpression(expr: PostfixPointerExpr, operandType: TypeName): PointerExpressionCheck {
+export function checkPostfixPointerExpression(
+  expr: PostfixPointerExpr,
+  operandType: TypeName,
+): PointerExpressionCheck {
   return checkPostfixPointerOperation(expr, operandType);
 }

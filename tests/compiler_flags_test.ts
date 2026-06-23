@@ -15,11 +15,20 @@ Deno.test("rejects TypeC-controlled compiler flags", () => {
   assertRejected("-std=c11", "project.json compiler.flags cannot override the C standard");
   assertRejected("--output=bad", "project.json compiler.flags cannot override output paths");
   assertRejected("-fsyntax-only", "project.json compiler.flags cannot change build artifact mode");
-  assertRejected("-Wl,-emain", "project.json compiler.flags cannot override the program entrypoint");
+  assertRejected(
+    "-Wl,-emain",
+    "project.json compiler.flags cannot override the program entrypoint",
+  );
   assertRejected("-nostdlib", "project.json compiler.flags cannot remove the hosted C environment");
-  assertRejected("-march=native", "project.json compiler.flags cannot override the target environment");
+  assertRejected(
+    "-march=native",
+    "project.json compiler.flags cannot override the target environment",
+  );
   assertRejected("-includeconfig.h", "project.json compiler.flags cannot force source includes");
-  assertRejected("-I", "project.json compiler flag '-I' must include its operand in the same argument");
+  assertRejected(
+    "-I",
+    "project.json compiler flag '-I' must include its operand in the same argument",
+  );
   assertRejected("-xc++", "project.json compiler.flags cannot override input language");
 });
 

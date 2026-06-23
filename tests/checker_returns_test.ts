@@ -25,7 +25,10 @@ Deno.test("detects conditional block returns", () => {
 Deno.test("reports missing function returns", () => {
   assertLen(checkMissingFunctionReturn(fn("main", named("i32"), block([])), "i32").length, 1);
   assertLen(checkMissingFunctionReturn(fn("noop", named("void"), block([])), "void").length, 0);
-  assertLen(checkMissingFunctionReturn(fn("main", named("i32"), block([returnStmt()])), "i32").length, 0);
+  assertLen(
+    checkMissingFunctionReturn(fn("main", named("i32"), block([returnStmt()])), "i32").length,
+    0,
+  );
 });
 
 function returnStmt(): Statement {
@@ -56,7 +59,16 @@ function block(statements: Statement[]): BlockStmt {
 }
 
 function fn(name: Str, returnType: TypeRef, body: BlockStmt): FunctionDecl {
-  return { kind: "FunctionDecl", exported: false, external: false, name, params: [], returnType, body, span };
+  return {
+    kind: "FunctionDecl",
+    exported: false,
+    external: false,
+    name,
+    params: [],
+    returnType,
+    body,
+    span,
+  };
 }
 
 function named(name: Str): TypeRef {

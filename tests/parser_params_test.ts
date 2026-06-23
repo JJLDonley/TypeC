@@ -1,6 +1,6 @@
 import type { CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { parseParamsWith, type ParamParser } from "parser/params.ts";
+import { type ParamParser, parseParamsWith } from "parser/params.ts";
 
 type Str = string;
 type i32 = number;
@@ -12,7 +12,16 @@ const sourceSpan = {
 };
 
 Deno.test("parses function params", () => {
-  const parser = parserFor([identifier("a"), punct(":"), identifier("i32"), punct(","), identifier("b"), punct(":"), identifier("f64"), punct(")")]);
+  const parser = parserFor([
+    identifier("a"),
+    punct(":"),
+    identifier("i32"),
+    punct(","),
+    identifier("b"),
+    punct(":"),
+    identifier("f64"),
+    punct(")"),
+  ]);
 
   const params = parseParamsWith(parser);
 

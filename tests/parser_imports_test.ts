@@ -1,6 +1,6 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { parseImportNamesWith, type ImportNameParser } from "parser/imports.ts";
+import { type ImportNameParser, parseImportNamesWith } from "parser/imports.ts";
 
 type Str = string;
 type b8 = boolean;

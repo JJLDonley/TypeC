@@ -13,7 +13,12 @@ const span: SourceSpan = {
 
 Deno.test("checks record literal expressions", () => {
   const aliases = new Map<Str, TypeRef>([["Vec2", record([field("x", named("i32"))])]]);
-  const result = checkRecordLiteralExpression(literalWith([literalField("x")]), "Vec2", aliases, resolveExpected);
+  const result = checkRecordLiteralExpression(
+    literalWith([literalField("x")]),
+    "Vec2",
+    aliases,
+    resolveExpected,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "Vec2");
@@ -21,9 +26,17 @@ Deno.test("checks record literal expressions", () => {
 
 Deno.test("reports invalid record literal expressions", () => {
   const aliases = new Map<Str, TypeRef>();
-  const result = checkRecordLiteralExpression(literalWith([literalField("x")]), "i32", aliases, resolveExpected);
+  const result = checkRecordLiteralExpression(
+    literalWith([literalField("x")]),
+    "i32",
+    aliases,
+    resolveExpected,
+  );
 
-  assertText(result.diagnostics[0]?.message ?? "", "Record literal is not assignable to non-record type 'i32'");
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Record literal is not assignable to non-record type 'i32'",
+  );
   assertText(result.type, "<error>");
 });
 
@@ -43,11 +56,15 @@ function named(name: Str): TypeRef {
   return { kind: "NamedTypeRef", name, span };
 }
 
-function literalWith(fields: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"]): Extract<Expression, { kind: "RecordLiteralExpr" }> {
+function literalWith(
+  fields: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"],
+): Extract<Expression, { kind: "RecordLiteralExpr" }> {
   return { kind: "RecordLiteralExpr", fields, span };
 }
 
-function literalField(name: Str): Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+function literalField(
+  name: Str,
+): Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
   return { name, expression: { kind: "IntegerLiteral", value: 1n, text: "1", span }, span };
 }
 

@@ -11,12 +11,25 @@ type WhileStmt = Extract<Statement, { kind: "WhileStmt" }>;
 type TypeResolver = (expr: Expression) => TypeName;
 type BlockChecker = (statements: Statement[], locals: Map<Str, LocalInfo>) => Diagnostic[];
 
-export function checkWhileStatement(stmt: WhileStmt, locals: Map<Str, LocalInfo>, resolveType: TypeResolver, checkBlock: BlockChecker): Diagnostic[] {
+export function checkWhileStatement(
+  stmt: WhileStmt,
+  locals: Map<Str, LocalInfo>,
+  resolveType: TypeResolver,
+  checkBlock: BlockChecker,
+): Diagnostic[] {
   const condition = resolveType(stmt.condition);
-  return [...checkWhileCondition(condition, stmt.condition.span), ...checkBlock(stmt.body.statements, locals)];
+  return [
+    ...checkWhileCondition(condition, stmt.condition.span),
+    ...checkBlock(stmt.body.statements, locals),
+  ];
 }
 
-export function checkIfStatement(stmt: IfStmt, locals: Map<Str, LocalInfo>, resolveType: TypeResolver, checkBlock: BlockChecker): Diagnostic[] {
+export function checkIfStatement(
+  stmt: IfStmt,
+  locals: Map<Str, LocalInfo>,
+  resolveType: TypeResolver,
+  checkBlock: BlockChecker,
+): Diagnostic[] {
   const condition = resolveType(stmt.condition);
   const diagnostics: Diagnostic[] = checkIfCondition(condition, stmt.condition.span);
   diagnostics.push(...checkBlock(stmt.thenBody.statements, locals));

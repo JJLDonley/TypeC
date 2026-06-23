@@ -23,6 +23,7 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
   `void*` for C calls
 - `void*` C interop parameters accepting pointer and array arguments without pointee type
   information
+- TypeScript-like scoped enums with fixed `i32` backing representation
 - Static imports, standard-library imports, and explicit exports
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
@@ -177,9 +178,9 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
-## Planned Enums
+## Enums
 
-Phase 14 adds TypeScript-like scoped enums:
+TypeC supports TypeScript-like scoped enums with default `i32` backing representation:
 
 ```ts
 export enum Key {
@@ -190,7 +191,15 @@ export enum Key {
 const key: Key = Key.Space;
 ```
 
-Enums are specified in `TYPEC_PHASES.md` but are not implemented in the current prototype yet.
+Enum members are scoped and have the enum type, not raw `i32`. Raw integers are not implicitly
+assignable to enum types, and enum values are not implicitly assignable to integer types. Duplicate
+member names are invalid. Duplicate member values are allowed.
+
+Runnable example:
+
+```bash
+deno run -A src/driver/main.ts run examples/enum.tc
+```
 
 ## Array, Slice, Pointer, and Reference Model
 

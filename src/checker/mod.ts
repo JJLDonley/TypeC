@@ -10,6 +10,7 @@ import { checkCallExpression } from "checker/call_expressions.ts";
 import { checkIfStatement, checkWhileStatement } from "checker/control_flow.ts";
 import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
+import { isEnumTypeName } from "checker/enums.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { computeExpressionType } from "checker/expression_types.ts";
@@ -57,6 +58,7 @@ export * from "checker/constant_division.ts";
 export * from "checker/constant_ranges.ts";
 export * from "checker/constant_values.ts";
 export * from "checker/constants.ts";
+export * from "checker/enums.ts";
 export * from "checker/expected_expressions.ts";
 export * from "checker/expression_statements.ts";
 export * from "checker/expression_types.ts";
@@ -126,7 +128,12 @@ class Checker {
   }
 
   private checkConstants(): void {
-    const available = new Map<Str, ConstDecl>();
+    const moduleConstantNames = new Set<Str>(
+      (this.program.constants ?? []).map((constant) => constant.name),
+    );
+    const available = new Map<Str, ConstDecl>(
+      [...this.constants].filter(([name]) => !moduleConstantNames.has(name)),
+    );
     for (const constant of this.program.constants ?? []) {
       this.checkConstant(constant, available);
       available.set(constant.name, constant);
@@ -235,6 +242,7 @@ class Checker {
         (expr) => this.typeOf(expr, locals),
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
         (children) => this.checkBlock(children, locals, returnType, true),
+        (type) => isEnumTypeName(type, this.program.enums ?? []),
       ),
     );
   }
@@ -357,6 +365,7 @@ class Checker {
       expr,
       (value) => this.typeOf(value, locals),
       (value, expected) => this.typeOfExpected(value, locals, expected),
+      (type) => isEnumTypeName(type, this.program.enums ?? []),
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;

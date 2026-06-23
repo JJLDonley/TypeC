@@ -20,7 +20,11 @@ export async function loadProjectConfig(entryPath: Str): Promise<ProjectConfig> 
 }
 
 export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
-  const value = parseJsonRecord(text, "project.json is not valid JSON", "project.json must contain an object");
+  const value = parseJsonRecord(
+    text,
+    "project.json is not valid JSON",
+    "project.json must contain an object",
+  );
   rejectUnknownJsonKeys("project.json", value, ["dependencies", "compiler"]);
   return {
     projectDir,
@@ -32,5 +36,3 @@ export function parseProjectConfig(text: Str, projectDir: Str): ProjectConfig {
 function emptyProjectConfig(projectDir: Str): ProjectConfig {
   return { projectDir, dependencies: new Map<Str, Str>(), compilerFlags: [] };
 }
-
-

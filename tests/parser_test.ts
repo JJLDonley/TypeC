@@ -58,6 +58,12 @@ Deno.test("rejects duplicate import names", () => {
   );
 });
 
+Deno.test("parses enum declarations", () => {
+  const program = parse(lex(`enum Key { Space = 32, Escape } function main(): i32 { return 0; }`));
+  if ((program.enums ?? []).length !== 1) throw new Error("Expected enum declaration");
+  if (program.enums?.[0]?.members.length !== 2) throw new Error("Expected enum members");
+});
+
 Deno.test("parses exported functions", () => {
   const program = parse(lex(`export function add(a: i32, b: i32): i32 { return a + b; }`));
   if (!program.functions[0].exported) throw new Error("Expected exported function");

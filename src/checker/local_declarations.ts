@@ -18,7 +18,11 @@ export interface LocalDeclarationCheck {
   type: TypeName;
 }
 
-export function checkLocalDeclaration(stmt: VarDeclStmt, typeAliases: Map<Str, TypeRef>, resolveType: TypeResolver): LocalDeclarationCheck {
+export function checkLocalDeclaration(
+  stmt: VarDeclStmt,
+  typeAliases: Map<Str, TypeRef>,
+  resolveType: TypeResolver,
+): LocalDeclarationCheck {
   const expected = typeName(stmt.type);
   const diagnostics: Diagnostic[] = [
     ...checkTypeRef(stmt.type, typeAliases),
@@ -26,6 +30,11 @@ export function checkLocalDeclaration(stmt: VarDeclStmt, typeAliases: Map<Str, T
     ...checkArrayInitializer(stmt.initializer, expected, stmt.span),
   ];
   const actual = resolveType(stmt.initializer, expected);
-  if (!isAssignable(actual, expected)) diagnostics.push({ message: `Initializer type '${actual}' is not assignable to '${expected}'`, span: stmt.span });
+  if (!isAssignable(actual, expected)) {
+    diagnostics.push({
+      message: `Initializer type '${actual}' is not assignable to '${expected}'`,
+      span: stmt.span,
+    });
+  }
   return { diagnostics, type: localDeclaredType(expected, actual) };
 }

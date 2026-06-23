@@ -63,6 +63,25 @@ Deno.test("parses exported type aliases", () => {
   assertBool(declaration.exported, true);
 });
 
+Deno.test("parses enum declarations", () => {
+  const fixture = parserFixture([
+    keyword("export"),
+    keyword("enum"),
+    identifier("Key"),
+    punct("{"),
+    identifier("Space"),
+    punct("="),
+    integer("32"),
+    punct(","),
+    identifier("Escape"),
+    punct("}"),
+  ]);
+
+  const decl = parseDeclarationWith(fixture.parser);
+
+  assertText(decl.kind, "EnumDecl");
+});
+
 Deno.test("parses module constant declarations", () => {
   const fixture = parserFixture([
     keyword("export"),

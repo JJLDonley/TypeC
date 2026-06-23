@@ -18,8 +18,16 @@ Deno.test("checks valid function headers", () => {
 });
 
 Deno.test("reports invalid function headers", () => {
-  const invalidMain = checkFunctionHeader(fn("main", false, false, [param("argc", "i32")], "i32"), "i32", aliases());
-  const invalidReturn = checkFunctionHeader(fn("items", false, false, [], "i32[]"), "i32[]", aliases());
+  const invalidMain = checkFunctionHeader(
+    fn("main", false, false, [param("argc", "i32")], "i32"),
+    "i32",
+    aliases(),
+  );
+  const invalidReturn = checkFunctionHeader(
+    fn("items", false, false, [], "i32[]"),
+    "i32[]",
+    aliases(),
+  );
 
   assertText(invalidMain[0]?.message ?? "", "Function 'main' cannot have parameters");
   assertText(invalidReturn[0]?.message ?? "", "Function 'items' cannot return array type 'i32[]'");
@@ -29,7 +37,13 @@ function aliases(): Map<Str, TypeRef> {
   return new Map<Str, TypeRef>();
 }
 
-function fn(name: Str, exported: b8, external: b8, params: FunctionDecl["params"], returnType: Str): FunctionDecl {
+function fn(
+  name: Str,
+  exported: b8,
+  external: b8,
+  params: FunctionDecl["params"],
+  returnType: Str,
+): FunctionDecl {
   return {
     kind: "FunctionDecl",
     exported,
@@ -47,7 +61,9 @@ function param(name: Str, type: Str): FunctionDecl["params"][usize] {
 }
 
 function named(name: Str): TypeRef {
-  if (name.endsWith("[]")) return { kind: "InferredArrayTypeRef", element: named(name.slice(0, -2)), span };
+  if (name.endsWith("[]")) {
+    return { kind: "InferredArrayTypeRef", element: named(name.slice(0, -2)), span };
+  }
   return { kind: "NamedTypeRef", name, span };
 }
 

@@ -10,7 +10,10 @@ export function checkIntegerLiteralRange(expr: IntegerLiteral, type: TypeName): 
   const range = integerRange(type);
   if (!range) return [];
   if (expr.value >= range.min && expr.value <= range.max) return [];
-  return [{ message: `Integer literal '${expr.text}' is out of range for '${type}'`, span: expr.span }];
+  return [{
+    message: `Integer literal '${expr.text}' is out of range for '${type}'`,
+    span: expr.span,
+  }];
 }
 
 export function checkFloatLiteralRange(expr: FloatLiteral, type: TypeName): Diagnostic[] {
@@ -18,4 +21,3 @@ export function checkFloatLiteralRange(expr: FloatLiteral, type: TypeName): Diag
   if (Math.abs(expr.value) <= maxF32) return [];
   return [{ message: `Float literal '${expr.text}' is out of range for 'f32'`, span: expr.span }];
 }
-

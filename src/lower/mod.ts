@@ -2,6 +2,7 @@ import type { Program } from "core/ast.ts";
 import type { CastProgram } from "core/cast.ts";
 import {
   lowerConstDecl,
+  lowerEnumDecl,
   lowerFunctionDecl,
   lowerImportDecl,
   lowerTypeAliasDecl,
@@ -12,6 +13,7 @@ export function lowerCast(program: CastProgram): Program {
     kind: "Program",
     imports: program.imports.map(lowerImportDecl),
     typeAliases: program.typeAliases.map(lowerTypeAliasDecl),
+    enums: (program.enums ?? []).map(lowerEnumDecl),
     constants: (program.constants ?? []).map(lowerConstDecl),
     functions: program.functions.map(lowerFunctionDecl),
     span: program.span,

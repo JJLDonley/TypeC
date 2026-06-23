@@ -16,7 +16,10 @@ Deno.test("rejects invalid JSON records", () => {
 });
 
 Deno.test("rejects unknown JSON keys", () => {
-  assertConfigError(() => rejectUnknownJsonKeys("project.json", { extra: true }, ["dependencies"]), "project.json has unknown key 'extra'");
+  assertConfigError(
+    () => rejectUnknownJsonKeys("project.json", { extra: true }, ["dependencies"]),
+    "project.json has unknown key 'extra'",
+  );
 });
 
 function assertConfigError(run: () => void, message: Str): void {

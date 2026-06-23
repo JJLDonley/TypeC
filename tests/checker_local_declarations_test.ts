@@ -13,23 +13,45 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks local declarations", () => {
-  const result = checkLocalDeclaration(varDecl("value", named("i32"), integer("1")), new Map(), resolveExpected);
+  const result = checkLocalDeclaration(
+    varDecl("value", named("i32"), integer("1")),
+    new Map(),
+    resolveExpected,
+  );
 
   assertLen(result.diagnostics.length, 0);
   assertText(result.type, "i32");
 });
 
 Deno.test("stores inferred array local type", () => {
-  const result = checkLocalDeclaration(varDecl("items", inferredArray(named("i32")), arrayLiteral([integer("1")])), new Map(), resolveArray);
+  const result = checkLocalDeclaration(
+    varDecl("items", inferredArray(named("i32")), arrayLiteral([integer("1")])),
+    new Map(),
+    resolveArray,
+  );
 
   assertText(result.type, "i32[1]");
 });
 
 Deno.test("reports local declaration errors", () => {
-  const result = checkLocalDeclaration(varDecl("value", named("void"), integer("1")), new Map(), resolveActual);
+  const result = checkLocalDeclaration(
+    varDecl("value", named("void"), integer("1")),
+    new Map(),
+    resolveActual,
+  );
 
-  assertSame(result.diagnostics.some((diagnostic) => diagnostic.message === "Variable 'value' cannot have type 'void'"), true);
-  assertSame(result.diagnostics.some((diagnostic) => diagnostic.message === "Initializer type 'i32' is not assignable to 'void'"), true);
+  assertSame(
+    result.diagnostics.some((diagnostic) =>
+      diagnostic.message === "Variable 'value' cannot have type 'void'"
+    ),
+    true,
+  );
+  assertSame(
+    result.diagnostics.some((diagnostic) =>
+      diagnostic.message === "Initializer type 'i32' is not assignable to 'void'"
+    ),
+    true,
+  );
 });
 
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {
@@ -44,7 +66,11 @@ function resolveActual(_expr: Expression, _expected: TypeName): TypeName {
   return "i32";
 }
 
-function varDecl(name: Str, type: TypeRef, initializer: Expression): Extract<Statement, { kind: "VarDeclStmt" }> {
+function varDecl(
+  name: Str,
+  type: TypeRef,
+  initializer: Expression,
+): Extract<Statement, { kind: "VarDeclStmt" }> {
   return { kind: "VarDeclStmt", mutable: false, name, type, initializer, span };
 }
 

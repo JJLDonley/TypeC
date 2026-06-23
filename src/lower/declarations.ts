@@ -1,6 +1,14 @@
-import type { ConstDecl, FunctionDecl, ImportDecl, Param, TypeAliasDecl } from "core/ast.ts";
+import type {
+  ConstDecl,
+  EnumDecl,
+  FunctionDecl,
+  ImportDecl,
+  Param,
+  TypeAliasDecl,
+} from "core/ast.ts";
 import type {
   CastConstDecl,
+  CastEnumDecl,
   CastFunctionDecl,
   CastImportDecl,
   CastParam,
@@ -28,6 +36,22 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
     cName: typeAlias.cName,
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
+  };
+}
+
+export function lowerEnumDecl(enumDecl: CastEnumDecl): EnumDecl {
+  return {
+    kind: "EnumDecl",
+    exported: enumDecl.exported,
+    name: enumDecl.name,
+    cName: enumDecl.cName,
+    members: enumDecl.members.map((member) => ({
+      name: member.name,
+      cName: member.cName,
+      initializer: member.initializer ? lowerExpression(member.initializer) : null,
+      span: member.span,
+    })),
+    span: enumDecl.span,
   };
 }
 

@@ -9,6 +9,7 @@ export interface CastProgram {
   kind: "Program";
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
+  enums?: CastEnumDecl[];
   constants?: CastConstDecl[];
   functions: CastFunctionDecl[];
   span: SourceSpan;
@@ -28,6 +29,22 @@ export interface CastTypeAliasDecl {
   name: Str;
   cName?: Str | null;
   type: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastEnumDecl {
+  kind: "EnumDecl";
+  exported: b8;
+  name: Str;
+  cName?: Str | null;
+  members: CastEnumMember[];
+  span: SourceSpan;
+}
+
+export interface CastEnumMember {
+  name: Str;
+  cName?: Str | null;
+  initializer: CastExpression | null;
   span: SourceSpan;
 }
 

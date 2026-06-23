@@ -1,6 +1,10 @@
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
-import { createDependencySet, filterProgramDependencies, indexProgramDependencies } from "module/dependency_index.ts";
+import {
+  createDependencySet,
+  filterProgramDependencies,
+  indexProgramDependencies,
+} from "module/dependency_index.ts";
 
 type Str = string;
 type usize = number;

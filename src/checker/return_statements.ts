@@ -5,7 +5,12 @@ import { isAssignable } from "checker/types.ts";
 
 type TypeResolver = (expr: Expression, expected: TypeName) => TypeName;
 
-export function checkReturnStatement(expr: Expression | null, expected: TypeName, span: SourceSpan, resolveType: TypeResolver): Diagnostic[] {
+export function checkReturnStatement(
+  expr: Expression | null,
+  expected: TypeName,
+  span: SourceSpan,
+  resolveType: TypeResolver,
+): Diagnostic[] {
   if (!expr) return checkBareReturn(expected, span);
   if (expected === "void") return [{ message: "Void function cannot return a value", span }];
   const actual = resolveType(expr, expected);

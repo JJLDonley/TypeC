@@ -40,7 +40,10 @@ Deno.test("selects exported imports", () => {
 
 Deno.test("rejects missing exports", () => {
   const program = parse(lex(`function hidden(): i32 { return 1; }`));
-  assertModuleError(() => selectImports(program, ["hidden"], program.span), "Module does not export 'hidden'");
+  assertModuleError(
+    () => selectImports(program, ["hidden"], program.span),
+    "Module does not export 'hidden'",
+  );
 });
 
 function assertModuleError(run: () => void, message: Str): void {

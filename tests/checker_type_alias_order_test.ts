@@ -11,16 +11,29 @@ const span: SourceSpan = {
 };
 
 Deno.test("accepts backward type alias dependencies", () => {
-  assertLen(checkTypeAliasOrder([alias("Point", []), alias("Line", [field("start", named("Point"))])]).length, 0);
+  assertLen(
+    checkTypeAliasOrder([alias("Point", []), alias("Line", [field("start", named("Point"))])])
+      .length,
+    0,
+  );
 });
 
 Deno.test("reports forward type alias dependencies", () => {
-  const diagnostics = checkTypeAliasOrder([alias("Line", [field("start", named("Point"))]), alias("Point", [])]);
+  const diagnostics = checkTypeAliasOrder([
+    alias("Line", [field("start", named("Point"))]),
+    alias("Point", []),
+  ]);
 
-  assertText(diagnostics[0]?.message ?? "", "Type alias 'Line' cannot depend on 'Point' before it is declared");
+  assertText(
+    diagnostics[0]?.message ?? "",
+    "Type alias 'Line' cannot depend on 'Point' before it is declared",
+  );
 });
 
-function alias(name: Str, fields: Extract<TypeRef, { kind: "RecordTypeRef" }>["fields"]): TypeAliasDecl {
+function alias(
+  name: Str,
+  fields: Extract<TypeRef, { kind: "RecordTypeRef" }>["fields"],
+): TypeAliasDecl {
   return {
     kind: "TypeAliasDecl",
     exported: false,

@@ -15,6 +15,7 @@ export * from "emitter/constant_expressions.ts";
 export * from "emitter/constants.ts";
 export * from "emitter/context.ts";
 export * from "emitter/control_flow.ts";
+export * from "emitter/enums.ts";
 export * from "emitter/expression_statements.ts";
 export * from "emitter/expressions.ts";
 export * from "emitter/function_definitions.ts";

@@ -16,11 +16,21 @@ Deno.test("lowers block statements", () => {
     span,
   };
 
-  assertText(lowerBlockStmt(block).statements.map((statement) => statement.kind).join(","), "VarDeclStmt,AssignmentStmt,WhileStmt,IfStmt,ReturnStmt");
+  assertText(
+    lowerBlockStmt(block).statements.map((statement) => statement.kind).join(","),
+    "VarDeclStmt,AssignmentStmt,WhileStmt,IfStmt,ReturnStmt",
+  );
 });
 
 function varDecl(): CastStatement {
-  return { kind: "VarDeclStmt", mutable: false, name: "x", type: named("i32"), initializer: integer("1"), span };
+  return {
+    kind: "VarDeclStmt",
+    mutable: false,
+    name: "x",
+    type: named("i32"),
+    initializer: integer("1"),
+    span,
+  };
 }
 
 function assignment(): CastStatement {
@@ -32,7 +42,13 @@ function whileStmt(): CastStatement {
 }
 
 function ifStmt(): CastStatement {
-  return { kind: "IfStmt", condition: bool(), thenBody: block([returnStmt()]), elseBody: block([returnStmt()]), span };
+  return {
+    kind: "IfStmt",
+    condition: bool(),
+    thenBody: block([returnStmt()]),
+    elseBody: block([returnStmt()]),
+    span,
+  };
 }
 
 function returnStmt(): CastStatement {

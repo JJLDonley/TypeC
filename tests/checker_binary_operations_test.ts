@@ -10,15 +10,30 @@ const span: SourceSpan = {
 };
 
 Deno.test("checks binary result types", () => {
-  assertText(checkBinaryOperation(binary("+", integer("1")), { left: "i32", right: "i32" }).type, "i32");
-  assertText(checkBinaryOperation(binary("==", integer("1")), { left: "i32", right: "i32" }).type, "bool");
+  assertText(
+    checkBinaryOperation(binary("+", integer("1")), { left: "i32", right: "i32" }).type,
+    "i32",
+  );
+  assertText(
+    checkBinaryOperation(binary("==", integer("1")), { left: "i32", right: "i32" }).type,
+    "bool",
+  );
 });
 
 Deno.test("reports invalid binary operands", () => {
   const mismatch = checkBinaryOperation(binary("+", integer("1")), { left: "i32", right: "f64" });
-  const nonNumeric = checkBinaryOperation(binary("+", integer("1")), { left: "bool", right: "bool" });
-  const floatModulo = checkBinaryOperation(binary("%", integer("1")), { left: "f64", right: "f64" });
-  const divideByZero = checkBinaryOperation(binary("/", integer("0")), { left: "i32", right: "i32" });
+  const nonNumeric = checkBinaryOperation(binary("+", integer("1")), {
+    left: "bool",
+    right: "bool",
+  });
+  const floatModulo = checkBinaryOperation(binary("%", integer("1")), {
+    left: "f64",
+    right: "f64",
+  });
+  const divideByZero = checkBinaryOperation(binary("/", integer("0")), {
+    left: "i32",
+    right: "i32",
+  });
 
   assertText(mismatch.type, "<error>");
   assertText(mismatch.diagnostics[0]?.message ?? "", "Cannot apply '+' to 'i32' and 'f64'");
@@ -38,4 +53,3 @@ function integer(text: Str): Extract<Expression, { kind: "IntegerLiteral" }> {
 function assertText(actual: Str, expected: Str): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }
-

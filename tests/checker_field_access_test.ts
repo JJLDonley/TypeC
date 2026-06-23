@@ -22,7 +22,10 @@ Deno.test("reports invalid field access", () => {
   const unknownField = checkFieldAccess(record([field("x", named("i32"))]), "Vec2", "y", span);
 
   assertText(nonRecord.type, "<error>");
-  assertText(nonRecord.diagnostics[0]?.message ?? "", "Cannot access field 'x' on non-record type 'i32'");
+  assertText(
+    nonRecord.diagnostics[0]?.message ?? "",
+    "Cannot access field 'x' on non-record type 'i32'",
+  );
   assertText(unknownField.type, "<error>");
   assertText(unknownField.diagnostics[0]?.message ?? "", "Unknown field 'y' on type 'Vec2'");
 });

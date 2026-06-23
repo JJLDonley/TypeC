@@ -11,14 +11,31 @@ const span: SourceSpan = {
 };
 
 Deno.test("accepts C ABI compatible functions", () => {
-  assertLen(checkCAbiFunction(fn("ok", named("i32"), [{ name: "value", type: named("u8"), span }]), "Extern", new Map()).length, 0);
+  assertLen(
+    checkCAbiFunction(
+      fn("ok", named("i32"), [{ name: "value", type: named("u8"), span }]),
+      "Extern",
+      new Map(),
+    ).length,
+    0,
+  );
 });
 
 Deno.test("reports non-C ABI function types", () => {
-  const diagnostics = checkCAbiFunction(fn("bad", reference(named("i32")), [{ name: "items", type: reference(named("i32")), span }]), "Exported", new Map());
+  const diagnostics = checkCAbiFunction(
+    fn("bad", reference(named("i32")), [{ name: "items", type: reference(named("i32")), span }]),
+    "Exported",
+    new Map(),
+  );
 
-  assertText(diagnostics[0]?.message ?? "", "Exported function 'bad' return type 'i32&' is not C ABI compatible");
-  assertText(diagnostics[1]?.message ?? "", "Exported function 'bad' parameter 'items' type 'i32&' is not C ABI compatible");
+  assertText(
+    diagnostics[0]?.message ?? "",
+    "Exported function 'bad' return type 'i32&' is not C ABI compatible",
+  );
+  assertText(
+    diagnostics[1]?.message ?? "",
+    "Exported function 'bad' parameter 'items' type 'i32&' is not C ABI compatible",
+  );
 });
 
 function fn(name: Str, returnType: TypeRef, params: FunctionDecl["params"]): FunctionDecl {

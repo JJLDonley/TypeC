@@ -1,9 +1,13 @@
 import { TypeCError } from "core/diagnostics.ts";
-import { type JsonRecord, isJsonRecord } from "json/record.ts";
+import { isJsonRecord, type JsonRecord } from "json/record.ts";
 
 type Str = string;
 
-export function parseJsonRecord(text: Str, invalidJsonMessage: Str, nonRecordMessage: Str): JsonRecord {
+export function parseJsonRecord(
+  text: Str,
+  invalidJsonMessage: Str,
+  nonRecordMessage: Str,
+): JsonRecord {
   const value = parseJson(text, invalidJsonMessage);
   if (!isJsonRecord(value)) throw jsonConfigError(nonRecordMessage);
   return value;
