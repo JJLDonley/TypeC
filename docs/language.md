@@ -207,7 +207,20 @@ function main(): i32 {
 }
 ```
 
-Constraints and type inference are not part of the current subset.
+Generic type parameters can use interface constraints:
+
+```ts
+interface Readable {
+  get(): i32;
+}
+
+function read<T extends Readable>(value: T): i32 {
+  return value.get();
+}
+```
+
+Constraint satisfaction is structural over class instance methods. Type inference is not part of the
+current subset.
 
 ## Interfaces
 

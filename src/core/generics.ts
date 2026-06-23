@@ -9,6 +9,7 @@ import type {
 } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
+import { checkGenericConstraints, type ConstraintContext } from "core/generic_constraints.ts";
 import { typeName } from "core/type_ref.ts";
 
 export type Str = string;
@@ -22,7 +23,10 @@ export function instantiateGenerics(program: Program): Program {
   const diagnostics = genericDiagnostics(program.functions, templates);
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   const ordinary = program.functions.filter((fn) => !isGenericFunction(fn));
-  const instantiator = new GenericInstantiator(templates);
+  const instantiator = new GenericInstantiator(templates, {
+    interfaces: program.interfaces ?? [],
+    functions: program.functions,
+  });
   const functions = ordinary.map((fn) => instantiator.rewriteFunction(fn));
   return { ...program, functions: [...functions, ...instantiator.instantiations()] };
 }
@@ -190,7 +194,7 @@ function isGenericFunction(fn: FunctionDecl): b8 {
 class GenericInstantiator {
   private emitted = new Map<Str, FunctionDecl>();
 
-  constructor(private templates: Map<Str, FunctionDecl>) {}
+  constructor(private templates: Map<Str, FunctionDecl>, private constraints: ConstraintContext) {}
 
   rewriteFunction(fn: FunctionDecl): FunctionDecl {
     return { ...fn, body: fn.body ? this.rewriteBlock(fn.body) : null };
@@ -210,6 +214,7 @@ class GenericInstantiator {
     }
     const template = this.templates.get(expr.callee);
     if (!template) return { ...expr, args: expr.args.map((arg) => this.rewriteExpr(arg)) };
+    this.checkConstraints(template, typeArgs, expr.span);
     const name = instantiationName(template.name, typeArgs);
     if (!this.emitted.has(name)) {
       this.emitted.set(name, this.createInstantiation(template, typeArgs, name));
@@ -220,6 +225,20 @@ class GenericInstantiator {
       typeArgs: [],
       args: expr.args.map((arg) => this.rewriteExpr(arg)),
     };
+  }
+
+  private checkConstraints(
+    template: FunctionDecl,
+    typeArgs: TypeRef[],
+    span: Expression["span"],
+  ): void {
+    const diagnostics = checkGenericConstraints(
+      template.genericParams ?? [],
+      typeArgs,
+      this.constraints,
+      span,
+    );
+    if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   }
 
   private createInstantiation(

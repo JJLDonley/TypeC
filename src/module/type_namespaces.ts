@@ -52,6 +52,10 @@ function namespaceInterface(
 function namespaceFunctionTypes(fn: FunctionDecl, namespace: Str, aliases: Set<Str>): FunctionDecl {
   return {
     ...fn,
+    genericParams: (fn.genericParams ?? []).map((param) => ({
+      ...param,
+      constraint: param.constraint ? namespaceTypeRef(param.constraint, namespace, aliases) : null,
+    })),
     params: fn.params.map((param) => ({
       ...param,
       type: namespaceTypeRef(param.type, namespace, aliases),
@@ -62,8 +66,13 @@ function namespaceFunctionTypes(fn: FunctionDecl, namespace: Str, aliases: Set<S
 
 function namespaceTypeRef(type: TypeRef, namespace: Str, aliases: Set<Str>): TypeRef {
   switch (type.kind) {
-    case "NamedTypeRef":
-      return aliases.has(type.name) ? { ...type, name: `${namespace}.${type.name}` } : type;
+    case "NamedTypeRef": {
+      const typeArgs = type.typeArgs?.map((typeArg) =>
+        namespaceTypeRef(typeArg, namespace, aliases)
+      );
+      const name = aliases.has(type.name) ? `${namespace}.${type.name}` : type.name;
+      return { ...type, name, typeArgs };
+    }
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "InferredArrayTypeRef":

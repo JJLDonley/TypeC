@@ -90,6 +90,7 @@ export interface FunctionDecl {
 
 export interface GenericParam {
   name: Str;
+  constraint?: TypeRef | null;
   span: SourceSpan;
 }
 

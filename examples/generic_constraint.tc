@@ -1,0 +1,29 @@
+interface Readable {
+  get(): i32;
+}
+
+class Box {
+  value: i32;
+
+  get(): i32 {
+    return this.value;
+  }
+}
+
+class Holder<T extends Readable> {
+  value: T;
+
+  get(): i32 {
+    return this.value.get();
+  }
+}
+
+function read<T extends Readable>(value: T): i32 {
+  return value.get();
+}
+
+function main(): i32 {
+  const box: Box = { value: 42 };
+  const holder: Holder<Box> = { value: box };
+  return read<Box>(box) + holder.get() - 42;
+}

@@ -44,7 +44,8 @@ export function instantiateGenericClasses(program: CastProgram): CastProgram {
   const diagnostics = genericClassParamDiagnostics(program.classes ?? []);
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   if (templates.size === 0) return program;
-  const instantiator = new GenericClassInstantiator(templates);
+  const concrete = concreteClassTemplates(program.classes ?? []);
+  const instantiator = new GenericClassInstantiator(templates, concrete, program.interfaces ?? []);
   return instantiator.rewriteProgram(program);
 }
 
@@ -54,6 +55,14 @@ function genericClassTemplates(classes: CastClassDecl[]): Map<Str, CastClassDecl
     if (isGenericClass(classDecl)) templates.set(classDecl.name, classDecl);
   }
   return templates;
+}
+
+function concreteClassTemplates(classes: CastClassDecl[]): Map<Str, CastClassDecl> {
+  const concrete = new Map<Str, CastClassDecl>();
+  for (const classDecl of classes) {
+    if (!isGenericClass(classDecl)) concrete.set(classDecl.name, classDecl);
+  }
+  return concrete;
 }
 
 function isGenericClass(classDecl: CastClassDecl): b8 {
@@ -82,7 +91,11 @@ function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagno
 class GenericClassInstantiator {
   private emitted = new Map<Str, CastClassDecl>();
 
-  constructor(private templates: Map<Str, CastClassDecl>) {}
+  constructor(
+    private templates: Map<Str, CastClassDecl>,
+    private concrete: Map<Str, CastClassDecl>,
+    private interfaces: CastInterfaceDecl[],
+  ) {}
 
   rewriteProgram(program: CastProgram): CastProgram {
     const classes = (program.classes ?? []).filter((classDecl) => !isGenericClass(classDecl));
@@ -330,6 +343,7 @@ class GenericClassInstantiator {
     const template = this.templates.get(type.name);
     if (!template || typeArgs.length === 0) return { ...type, typeArgs };
     this.checkClassTypeArgCount(template, typeArgs, type.span);
+    this.checkClassConstraints(template, typeArgs, type.span);
     const name = classInstantiationName(template.name, typeArgs);
     if (!this.emitted.has(name)) {
       this.emitted.set(name, this.createInstantiation(template, typeArgs, name));
@@ -356,7 +370,7 @@ class GenericClassInstantiator {
     name: Str,
   ): CastClassDecl {
     const substitutions = classSubstitutions(template, typeArgs);
-    return this.rewriteClass({
+    const classDecl = this.rewriteClass({
       ...template,
       exported: false,
       name,
@@ -372,6 +386,43 @@ class GenericClassInstantiator {
         body: substituteBlock(method.body, substitutions),
       })),
     });
+    this.concrete.set(name, classDecl);
+    return classDecl;
+  }
+
+  private checkClassConstraints(
+    template: CastClassDecl,
+    typeArgs: CastTypeRef[],
+    span: CastTypeRef["span"],
+  ): void {
+    const diagnostics: Diagnostic[] = [];
+    const params = template.genericParams ?? [];
+    for (let index: usize = 0; index < params.length; index += 1) {
+      const constraint = params[index].constraint;
+      const typeArg = typeArgs[index];
+      if (!constraint || !typeArg) continue;
+      diagnostics.push(...this.checkClassConstraint(typeArg, constraint, span));
+    }
+    if (diagnostics.length > 0) throw new TypeCError(diagnostics);
+  }
+
+  private checkClassConstraint(
+    typeArg: CastTypeRef,
+    constraint: CastTypeRef,
+    span: CastTypeRef["span"],
+  ): Diagnostic[] {
+    if (constraint.kind !== "NamedTypeRef" || typeArg.kind !== "NamedTypeRef") {
+      return [{
+        message: `Type '${typeName(lowerTypeRef(typeArg))}' does not satisfy constraint`,
+        span,
+      }];
+    }
+    const interfaceDecl = this.interfaces.find((candidate) => candidate.name === constraint.name);
+    const classDecl = this.concrete.get(typeArg.name);
+    if (!interfaceDecl || !classDecl) {
+      return [{ message: `Type '${typeArg.name}' does not satisfy '${constraint.name}'`, span }];
+    }
+    return missingCastInterfaceMethods(classDecl, interfaceDecl, span);
   }
 }
 
@@ -488,6 +539,39 @@ function substituteParam(param: CastParam, substitutions: CastTypeSubstitutions)
 function substituteTypeRef(type: CastTypeRef, substitutions: CastTypeSubstitutions): CastTypeRef {
   if (type.kind === "NamedTypeRef") return substitutions.get(type.name) ?? type;
   return rewriteTypeChildren(type, (child) => substituteTypeRef(child, substitutions));
+}
+
+function missingCastInterfaceMethods(
+  classDecl: CastClassDecl,
+  interfaceDecl: CastInterfaceDecl,
+  span: CastTypeRef["span"],
+): Diagnostic[] {
+  return interfaceDecl.methods.flatMap((method) => {
+    const classMethod = classDecl.methods.find((candidate) => candidate.name === method.name);
+    if (classMethod && castMethodSignatureMatches(classMethod, method)) return [];
+    return [{
+      message:
+        `Type '${classDecl.name}' does not satisfy '${interfaceDecl.name}': missing method '${method.name}'`,
+      span,
+    }];
+  });
+}
+
+function castMethodSignatureMatches(
+  classMethod: CastClassDecl["methods"][usize],
+  interfaceMethod: CastInterfaceDecl["methods"][usize],
+): b8 {
+  if (classMethod.params.length !== interfaceMethod.params.length) return false;
+  if (
+    typeName(lowerTypeRef(classMethod.returnType)) !==
+      typeName(lowerTypeRef(interfaceMethod.returnType))
+  ) {
+    return false;
+  }
+  return classMethod.params.every((param, index) =>
+    typeName(lowerTypeRef(param.type)) ===
+      typeName(lowerTypeRef(interfaceMethod.params[index].type))
+  );
 }
 
 function classInstantiationName(name: Str, typeArgs: CastTypeRef[]): Str {

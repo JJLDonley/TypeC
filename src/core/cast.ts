@@ -116,6 +116,7 @@ export interface CastFunctionDecl {
 
 export interface CastGenericParam {
   name: Str;
+  constraint?: CastTypeRef | null;
   span: SourceSpan;
 }
 

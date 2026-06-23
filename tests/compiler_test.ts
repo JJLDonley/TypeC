@@ -97,6 +97,28 @@ Deno.test("rejects interface names as value types", () => {
   );
 });
 
+Deno.test("compiles constrained generic example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/generic_constraint.tc", dir);
+
+  assertIncludes(result.cSource, "read_Box");
+  assertIncludes(result.cSource, "Holder_Box_get");
+});
+
+Deno.test("rejects unsatisfied generic function constraints", () => {
+  assertCompileError(
+    `interface Readable { get(): i32; } class Empty { value: i32; } function read<T extends Readable>(value: T): i32 { return 0; } function main(): i32 { const value: Empty = { value: 1 }; return read<Empty>(value); }`,
+    "Type 'Empty' does not satisfy 'Readable': missing method 'get'",
+  );
+});
+
+Deno.test("rejects unsatisfied generic class constraints", () => {
+  assertCompileError(
+    `interface Readable { get(): i32; } class Empty { value: i32; } class Holder<T extends Readable> { value: T; } function main(): i32 { const empty: Empty = { value: 1 }; const holder: Holder<Empty> = { value: empty }; return 0; }`,
+    "Type 'Empty' does not satisfy 'Readable': missing method 'get'",
+  );
+});
+
 Deno.test("rejects invalid generic class type refs", () => {
   assertCompileError(
     `class Box<T> { value: T; } function main(): i32 { const box: Box<i32, i64> = { value: 42 }; return 0; }`,

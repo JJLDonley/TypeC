@@ -360,7 +360,8 @@ function parseGenericParams(parser: DeclarationParser): CastGenericParam[] {
   if (!parser.matchText("<")) return params;
   do {
     const name = parser.expectKind("identifier", "Expected generic parameter name");
-    params.push({ name: name.text, span: name.span });
+    const constraint = parser.matchText("extends") ? parser.parseTypeRef() : null;
+    params.push({ name: name.text, constraint, span: name.span });
   } while (parser.matchText(","));
   parser.expectText(">");
   return params;

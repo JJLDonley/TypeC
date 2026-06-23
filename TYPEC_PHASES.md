@@ -1428,7 +1428,7 @@ TypeScript structural compatibility rules are not implied unless specified expli
 
 # Phase 17: Generics
 
-Status: In progress. Implementing explicit generic function and class instantiation.
+Status: Complete.
 
 ## Goal
 
@@ -1457,7 +1457,7 @@ function drawAll<T extends Drawable>(items: Slice<T>): void {
 }
 ```
 
-The implemented subset for this phase is explicit generic function instantiation:
+Generic functions instantiate explicitly:
 
 ```ts
 function identity<T>(value: T): T {
@@ -1469,7 +1469,7 @@ function main(): i32 {
 }
 ```
 
-## Implemented Subset Semantics
+## Semantics
 
 - Generic function declarations use TypeScript-like `function name<T>(...)` syntax.
 - Generic class declarations use TypeScript-like `class Name<T> { ... }` syntax.
@@ -1481,8 +1481,10 @@ function main(): i32 {
 - Instantiation C names are deterministic and include sanitized type argument names.
 - Generic type parameters may appear in parameter types, return types, class fields, method
   signatures, local declarations, and nested type references.
+- Generic type parameters may use TypeScript-like interface constraints: `T extends Drawable`.
+- Constraint satisfaction is structural over class instance methods: the concrete type must provide
+  every interface method name with the same parameter count and return type after receiver removal.
 - Generic type parameters may not be shadowed or duplicated in the same declaration.
-- Type-parameter constraints remain out of scope until specified and tested.
 - Generic function type inference is not implemented; omitting call type arguments calls only
   ordinary non-generic functions.
 
