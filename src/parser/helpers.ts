@@ -17,6 +17,10 @@ export function precedence(op: Str): i32 {
     case "+":
     case "-":
       return 10;
+    case "<<":
+    case ">>":
+    case ">>>":
+      return 8;
     case "<":
     case "<=":
     case ">":
@@ -24,6 +28,12 @@ export function precedence(op: Str): i32 {
     case "==":
     case "!=":
       return 5;
+    case "&":
+      return 4;
+    case "^":
+      return 3;
+    case "|":
+      return 2;
     case "??":
       return 1;
     default:

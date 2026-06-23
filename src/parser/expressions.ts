@@ -37,17 +37,18 @@ function parseBinaryPrecedenceExpression(
 function parseUnaryExpression(parser: ExpressionParser): CastExpression {
   if (!isUnaryOperator(parser)) return parser.parsePostfixExpression();
   const operator = parser.advance();
-  const operand = parseExpressionWith(parser, 4);
+  const operand = parseExpressionWith(parser, 21);
   return {
     kind: "UnaryExpr",
-    operator: operator.text as "+" | "-" | "!",
+    operator: operator.text as "+" | "-" | "!" | "~",
     operand,
     span: span(operator.span.start, operand.span.end),
   };
 }
 
 function isUnaryOperator(parser: ExpressionParser): b8 {
-  return parser.checkText("+") || parser.checkText("-") || parser.checkText("!");
+  return parser.checkText("+") || parser.checkText("-") || parser.checkText("!") ||
+    parser.checkText("~");
 }
 
 function parseConditionalExpression(

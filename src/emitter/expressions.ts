@@ -220,7 +220,11 @@ function emitBinaryExpression(
 ): Str {
   const left = emitBinaryOperand(expr.left, expr.operator, "left", context);
   const right = emitBinaryOperand(expr.right, expr.operator, "right", context);
-  return `${left} ${expr.operator} ${right}`;
+  return `${left} ${emitBinaryOperator(expr.operator)} ${right}`;
+}
+
+function emitBinaryOperator(operator: Str): Str {
+  return operator === ">>>" ? ">>" : operator;
 }
 
 function emitConditionalExpression(

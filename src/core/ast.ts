@@ -338,7 +338,7 @@ export interface IdentifierExpr {
 
 export interface UnaryExpr {
   kind: "UnaryExpr";
-  operator: "+" | "-" | "!";
+  operator: "+" | "-" | "!" | "~";
   operand: Expression;
   span: SourceSpan;
 }

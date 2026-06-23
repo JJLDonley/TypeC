@@ -29,10 +29,14 @@ Deno.test("emits wide integer literal macros", () => {
 });
 
 Deno.test("reports emitted C expression precedence", () => {
-  assertSize(cPrecedence("*"), 3);
-  assertSize(cPrecedence("+"), 2);
-  assertSize(cPrecedence("<="), 1);
-  assertSize(cPrecedence("=="), 0);
+  assertSize(cPrecedence("*"), 8);
+  assertSize(cPrecedence("+"), 7);
+  assertSize(cPrecedence("<<"), 6);
+  assertSize(cPrecedence("<="), 5);
+  assertSize(cPrecedence("=="), 4);
+  assertSize(cPrecedence("&"), 3);
+  assertSize(cPrecedence("^"), 2);
+  assertSize(cPrecedence("|"), 1);
 });
 
 function assertText(actual: Str, expected: Str): void {

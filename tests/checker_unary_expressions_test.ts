@@ -31,8 +31,22 @@ Deno.test("keeps numeric unary expressions", () => {
   assertLen(result.diagnostics.length, 0);
 });
 
+Deno.test("checks bitwise not expressions", () => {
+  const result = checkUnaryExpression(unary("~", identifier("value")), () => "u32");
+
+  assertText(result.type, "u32");
+  assertLen(result.diagnostics.length, 0);
+});
+
+Deno.test("rejects bitwise not on non-integer expressions", () => {
+  const result = checkUnaryExpression(unary("~", identifier("value")), () => "f32");
+
+  assertText(result.type, "<error>");
+  assertText(result.diagnostics[0]?.message ?? "", "Operator '~' requires an integer operand");
+});
+
 function unary(
-  operator: "+" | "-" | "!",
+  operator: "+" | "-" | "!" | "~",
   operand: Expression,
 ): Extract<Expression, { kind: "UnaryExpr" }> {
   return { kind: "UnaryExpr", operator, operand, span };

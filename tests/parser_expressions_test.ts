@@ -27,6 +27,24 @@ Deno.test("parses logical not expressions", () => {
   assertText(expr.operand.kind, "UnaryExpr");
 });
 
+Deno.test("parses bitwise expressions", () => {
+  const unary = parseExpressionWith(
+    parserFor([operator("~"), identifier("a"), operator("&"), identifier("b")]),
+  );
+  const shift = parseExpressionWith(
+    parserFor([identifier("a"), operator("<<"), identifier("b"), operator("|"), identifier("c")]),
+  );
+
+  assertText(unary.kind, "BinaryExpr");
+  if (unary.kind !== "BinaryExpr") throw new Error("Expected binary expression");
+  assertText(unary.operator, "&");
+  assertText(unary.left.kind, "UnaryExpr");
+  assertText(shift.kind, "BinaryExpr");
+  if (shift.kind !== "BinaryExpr") throw new Error("Expected binary expression");
+  assertText(shift.operator, "|");
+  assertText(shift.left.kind, "BinaryExpr");
+});
+
 Deno.test("parses conditional expressions", () => {
   const expr = parseExpressionWith(parserFor([
     identifier("a"),

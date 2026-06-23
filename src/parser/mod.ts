@@ -206,8 +206,16 @@ class Parser {
 
   private expectText(text: Str): Token {
     if (this.checkText(text)) return this.advance();
+    if (text === ">" && this.consumeGenericCloseFromShift()) return { ...this.peek(), text: ">" };
     this.error(this.peek(), `Expected '${text}'`);
     throw new TypeCError(this.diagnostics);
+  }
+
+  private consumeGenericCloseFromShift(): b8 {
+    const token = this.peek();
+    if (token.text !== ">>" && token.text !== ">>>") return false;
+    token.text = token.text.slice(1);
+    return true;
   }
 
   private matchText(text: Str): b8 {

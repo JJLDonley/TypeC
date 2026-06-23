@@ -1,7 +1,7 @@
 import type { Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
-import { isNumericType } from "checker/types.ts";
+import { isIntegerType, isNumericType } from "checker/types.ts";
 
 type UnaryExpr = Extract<Expression, { kind: "UnaryExpr" }>;
 type TypeResolver = (expr: Expression) => TypeName;
@@ -17,6 +17,7 @@ export function checkUnaryExpression(
 ): UnaryExpressionCheck {
   const type = resolveType(expr.operand);
   if (expr.operator === "!") return checkLogicalNot(expr, type);
+  if (expr.operator === "~") return checkBitwiseNot(expr, type);
   return checkNumericUnary(expr, type);
 }
 
@@ -25,6 +26,17 @@ function checkLogicalNot(expr: UnaryExpr, type: TypeName): UnaryExpressionCheck 
   return {
     diagnostics: [{
       message: "Operator '!' requires a bool operand",
+      span: expr.span,
+    }],
+    type: "<error>",
+  };
+}
+
+function checkBitwiseNot(expr: UnaryExpr, type: TypeName): UnaryExpressionCheck {
+  if (isIntegerType(type)) return { diagnostics: [], type };
+  return {
+    diagnostics: [{
+      message: "Operator '~' requires an integer operand",
       span: expr.span,
     }],
     type: "<error>",

@@ -364,7 +364,7 @@ export interface CastIdentifierExpr {
 
 export interface CastUnaryExpr {
   kind: "UnaryExpr";
-  operator: "+" | "-" | "!";
+  operator: "+" | "-" | "!" | "~";
   operand: CastExpression;
   span: SourceSpan;
 }

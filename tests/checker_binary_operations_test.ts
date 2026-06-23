@@ -42,6 +42,46 @@ Deno.test("reports invalid binary operands", () => {
   assertText(divideByZero.diagnostics[0]?.message ?? "", "Operator '/' cannot divide by zero");
 });
 
+Deno.test("checks bitwise binary operations", () => {
+  const and = checkBinaryOperation(binary("&", integer("1")), { left: "u32", right: "u32" });
+  const shift = checkBinaryOperation(binary("<<", integer("3")), { left: "i32", right: "u8" });
+  const logicalShift = checkBinaryOperation(binary(">>>", integer("3")), {
+    left: "u32",
+    right: "u8",
+  });
+
+  assertText(and.type, "u32");
+  assertText(shift.type, "i32");
+  assertText(logicalShift.type, "u32");
+});
+
+Deno.test("reports invalid bitwise operands", () => {
+  const floatAnd = checkBinaryOperation(binary("&", integer("1")), { left: "f32", right: "f32" });
+  const signedCount = checkBinaryOperation(binary("<<", integer("1")), {
+    left: "i32",
+    right: "i32",
+  });
+  const signedLogical = checkBinaryOperation(binary(">>>", integer("1")), {
+    left: "i32",
+    right: "u8",
+  });
+  const outOfRange = checkBinaryOperation(binary("<<", integer("32")), {
+    left: "u32",
+    right: "u8",
+  });
+
+  assertText(floatAnd.diagnostics[0]?.message ?? "", "Operator '&' requires integer operands");
+  assertText(
+    signedCount.diagnostics[0]?.message ?? "",
+    "Operator '<<' requires an unsigned integer shift count",
+  );
+  assertText(
+    signedLogical.diagnostics[0]?.message ?? "",
+    "Operator '>>>' requires an unsigned integer left operand",
+  );
+  assertText(outOfRange.diagnostics[0]?.message ?? "", "Shift count must be less than 32");
+});
+
 function binary(operator: Str, right: Expression): Extract<Expression, { kind: "BinaryExpr" }> {
   return { kind: "BinaryExpr", operator, left: integer("1"), right, span };
 }

@@ -126,6 +126,7 @@ function evaluateUnaryIntegerConstant(
   if (value === null) return null;
   if (expr.operator === "+") return value;
   if (expr.operator === "-") return -value;
+  if (expr.operator === "~") return ~value;
   return null;
 }
 
@@ -271,6 +272,17 @@ function applyIntegerOperator(left: IntValue, right: IntValue, operator: Str): I
     case "%":
       if (right === 0n) return null;
       return left % right;
+    case "&":
+      return left & right;
+    case "|":
+      return left | right;
+    case "^":
+      return left ^ right;
+    case "<<":
+      return left << right;
+    case ">>":
+    case ">>>":
+      return left >> right;
     default:
       return null;
   }

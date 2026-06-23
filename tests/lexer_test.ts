@@ -33,6 +33,26 @@ Deno.test("lexes rest parameter operator", () => {
   assertEqualText(tokenTexts("...args"), ["...", "args", ""]);
 });
 
+Deno.test("lexes bitwise operators", () => {
+  assertEqualText(tokenTexts("~a & b | c ^ d << e >> f >>> g"), [
+    "~",
+    "a",
+    "&",
+    "b",
+    "|",
+    "c",
+    "^",
+    "d",
+    "<<",
+    "e",
+    ">>",
+    "f",
+    ">>>",
+    "g",
+    "",
+  ]);
+});
+
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
   assertEqualText(tokens.map((token) => token.kind), [

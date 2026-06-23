@@ -1198,6 +1198,13 @@ Deno.test("emits C for optional field chaining", () => {
   );
 });
 
+Deno.test("emits C for bitwise integer operators", () => {
+  const source =
+    `function mask(value: u32, shift: u8): u32 { return (~value & 255) | (value >>> shift); } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return ~value & 255 | value >> shift;");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

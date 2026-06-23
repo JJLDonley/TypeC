@@ -9,6 +9,7 @@ import {
 type Str = string;
 type f64 = number;
 type b8 = boolean;
+type usize = number;
 type IntLiteralValue = bigint;
 
 export interface IntegerRange {
@@ -75,11 +76,44 @@ export function isNumericType(type: TypeName): b8 {
 }
 
 export function isIntegerType(type: TypeName): b8 {
-  return type === "i8" || type === "i16" || type === "i32" || type === "i64" || type === "u8" ||
-    type === "u16" || type === "u32" || type === "u64" || type === "usize" ||
-    type === "c_char" || type === "c_schar" || type === "c_uchar" || type === "c_short" ||
-    type === "c_ushort" || type === "c_int" || type === "c_uint" || type === "c_long" ||
-    type === "c_ulong" || type === "c_longlong" || type === "c_ulonglong";
+  return integerRanges.has(type) || type === "usize";
+}
+
+export function isUnsignedIntegerType(type: TypeName): b8 {
+  return type === "u8" || type === "u16" || type === "u32" || type === "u64" ||
+    type === "usize" || type === "c_uchar" || type === "c_ushort" || type === "c_uint" ||
+    type === "c_ulong" || type === "c_ulonglong";
+}
+
+export function integerBitWidth(type: TypeName): usize | null {
+  switch (type) {
+    case "i8":
+    case "u8":
+    case "c_char":
+    case "c_schar":
+    case "c_uchar":
+      return 8;
+    case "i16":
+    case "u16":
+    case "c_short":
+    case "c_ushort":
+      return 16;
+    case "i32":
+    case "u32":
+    case "c_int":
+    case "c_uint":
+      return 32;
+    case "i64":
+    case "u64":
+    case "usize":
+    case "c_long":
+    case "c_ulong":
+    case "c_longlong":
+    case "c_ulonglong":
+      return 64;
+    default:
+      return null;
+  }
 }
 
 export function isFloatType(type: TypeName): b8 {

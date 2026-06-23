@@ -1983,6 +1983,95 @@ function fallbackElvis(value: i32?): i32 {
 
 ---
 
+# Phase 24: Bitwise Integer Operators
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style bitwise expression syntax for fixed-width integer types without JavaScript's
+32-bit coercions, signedness surprises, or dynamic conversion rules.
+
+## Syntax
+
+Unary bitwise not:
+
+```ts
+~expr;
+```
+
+Binary bitwise operators:
+
+```ts
+a & b;
+a | b;
+a ^ b;
+a << n;
+a >> n;
+a >>> n;
+```
+
+Assignment/update forms such as `&=`, `|=`, `^=`, `<<=`, `>>=`, `>>>=`, `++`, and `--` are not part
+of this phase.
+
+## Semantics
+
+- All bitwise operands must be fixed-width integer types.
+- Binary `&`, `|`, and `^` require both operands to have the same integer type and return that type.
+- Shift left `<<`, arithmetic shift right `>>`, and logical shift right `>>>` require an integer
+  left operand and an unsigned integer shift count.
+- Shift expressions return the left operand type.
+- Shift counts must be less than the bit width of the left operand when known at compile time.
+- `>>>` is valid only for unsigned integer left operands.
+- `~expr` requires an integer operand and returns the same type.
+- TypeC does not use JavaScript `ToInt32`, `ToUint32`, truthiness, or numeric coercion.
+- Floating-point, bool, pointer, array, record, enum, optional, and string operands are rejected.
+
+## Precedence
+
+From high to low within existing expression precedence:
+
+1. prefix unary: `~`, `!`, `+`, `-`
+2. multiplicative: `*`, `/`, `%`
+3. additive: `+`, `-`
+4. shifts: `<<`, `>>`, `>>>`
+5. comparison/equality: `<`, `<=`, `>`, `>=`, `==`, `!=`
+6. bitwise AND: `&`
+7. bitwise XOR: `^`
+8. bitwise OR: `|`
+9. nullish/elvis: `??`, `?:`
+10. ternary conditional: `? :`
+
+## Examples
+
+```ts
+function mask(value: u32): u32 {
+  return value & 255;
+}
+
+function high(value: u32): u32 {
+  return value >>> 24;
+}
+
+function invert(value: u8): u8 {
+  return ~value;
+}
+```
+
+## Do
+
+- Preserve the static TypeC integer type through every bitwise operation.
+- Emit plain C bitwise operators only after checking signedness and shift bounds.
+- Add lexer, parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add JavaScript numeric coercions.
+- Do not allow bitwise operators on floats, bools, pointers, records, arrays, or optionals.
+- Do not add assignment or update operators in this phase.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

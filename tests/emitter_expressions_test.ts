@@ -25,6 +25,21 @@ Deno.test("emits logical not expressions", () => {
   );
 });
 
+Deno.test("emits bitwise expressions", () => {
+  assertText(emitExpression(unary("~", identifier("bits")), context()), "~bits");
+  assertText(
+    emitExpression(binary(identifier("bits"), ">>>", int("8")), context()),
+    "bits >> 8",
+  );
+  assertText(
+    emitExpression(
+      binary(identifier("a"), "|", binary(identifier("b"), "&", identifier("c"))),
+      context(),
+    ),
+    "a | b & c",
+  );
+});
+
 Deno.test("emits conditional expressions", () => {
   assertText(
     emitExpression(conditional(identifier("flag"), int("1"), int("2")), context()),
@@ -118,7 +133,7 @@ function identifier(name: Str): Expression {
   return { kind: "IdentifierExpr", name, span };
 }
 
-function unary(operator: "+" | "-" | "!", operand: Expression): Expression {
+function unary(operator: "+" | "-" | "!" | "~", operand: Expression): Expression {
   return { kind: "UnaryExpr", operator, operand, span };
 }
 

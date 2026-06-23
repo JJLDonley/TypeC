@@ -84,15 +84,8 @@ class Lexer {
         continue;
       }
 
-      if ("+-*/=%<>!&".includes(ch)) {
-        let text = this.advance();
-        if (text === "=" && this.peek() === ">") {
-          text += this.advance();
-        } else if (
-          (text === "=" || text === "!" || text === "<" || text === ">") && this.peek() === "="
-        ) {
-          text += this.advance();
-        }
+      if ("+-*/=%<>!&|^~".includes(ch)) {
+        const text = this.readOperator();
         this.tokens.push({ kind: "operator", text, span: { start, end: this.pos() } });
         continue;
       }
@@ -149,6 +142,25 @@ class Lexer {
       text += this.readWhile(isDigit);
     }
     return text;
+  }
+
+  private readOperator(): Str {
+    let text = this.advance();
+    if (text === "=" && this.peek() === ">") return text + this.advance();
+    if (this.isShiftPrefix(text)) {
+      while (this.peek() === text[0] && text.length < 3) text += this.advance();
+      return text;
+    }
+    if (this.isEqualityPrefix(text) && this.peek() === "=") return text + this.advance();
+    return text;
+  }
+
+  private isShiftPrefix(text: Str): b8 {
+    return (text === "<" && this.peek() === "<") || (text === ">" && this.peek() === ">");
+  }
+
+  private isEqualityPrefix(text: Str): b8 {
+    return text === "=" || text === "!" || text === "<" || text === ">";
   }
 
   private readString(start: SourcePos): Str {

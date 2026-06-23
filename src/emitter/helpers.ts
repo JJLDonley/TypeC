@@ -20,8 +20,13 @@ export function emitIntegerLiteralExpression(expr: IntegerLiteralText, expectedT
 }
 
 export function cPrecedence(operator: Str): usize {
-  if (operator === "*" || operator === "/" || operator === "%") return 3;
-  if (operator === "+" || operator === "-") return 2;
-  if (operator === "<" || operator === "<=" || operator === ">" || operator === ">=") return 1;
+  if (operator === "*" || operator === "/" || operator === "%") return 8;
+  if (operator === "+" || operator === "-") return 7;
+  if (operator === "<<" || operator === ">>" || operator === ">>>") return 6;
+  if (operator === "<" || operator === "<=" || operator === ">" || operator === ">=") return 5;
+  if (operator === "==" || operator === "!=") return 4;
+  if (operator === "&") return 3;
+  if (operator === "^") return 2;
+  if (operator === "|") return 1;
   return 0;
 }
