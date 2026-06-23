@@ -11,6 +11,12 @@ const sourceSpan = {
   end: { offset: 0, line: 1, column: 1 },
 };
 
+Deno.test("parses empty statements", () => {
+  const stmt = parseStatementWith(parserFor([punct(";")]));
+
+  assertText(stmt.kind, "EmptyStmt");
+});
+
 Deno.test("parses return statements", () => {
   const stmt = parseStatementWith(parserFor([keyword("return"), identifier("value"), punct(";")]));
 

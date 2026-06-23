@@ -22,6 +22,8 @@ function collectFunction(fn: FunctionDecl, namespace: Str, members: Set<Str>): v
 
 function collectStatement(statement: Statement, namespace: Str, members: Set<Str>): void {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return;
     case "ReturnStmt":
       if (statement.expression) collectExpression(statement.expression, namespace, members);
       return;

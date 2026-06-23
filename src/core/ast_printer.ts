@@ -108,6 +108,9 @@ class AstPrinter {
 
   private statement(statement: Statement): void {
     switch (statement.kind) {
+      case "EmptyStmt":
+        this.line("EmptyStmt");
+        return;
       case "ReturnStmt":
         this.line("ReturnStmt");
         if (statement.expression) {

@@ -193,6 +193,7 @@ class Checker {
     inSwitch: b8,
   ): void {
     checkStatementDispatch(stmt, {
+      emptyStatement: () => {},
       returnStatement: (expr, span) => this.checkReturn(expr, locals, returnType, span),
       deferStatement: (expr, span) => this.checkDefer(expr, locals, span),
       expressionStatement: (expr) => this.checkExpressionStatement(expr, locals),

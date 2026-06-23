@@ -37,6 +37,8 @@ export function lowerBlockStmt(block: CastBlockStmt): BlockStmt {
 
 function lowerStatement(statement: CastStatement): Statement {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return { kind: "EmptyStmt", span: statement.span };
     case "ReturnStmt":
       return {
         kind: "ReturnStmt",

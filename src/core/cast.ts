@@ -224,6 +224,7 @@ export interface CastBlockStmt {
 }
 
 export type CastStatement =
+  | CastEmptyStmt
   | CastReturnStmt
   | CastDeferStmt
   | CastExpressionStmt
@@ -235,6 +236,11 @@ export type CastStatement =
   | CastWhileStmt
   | CastDoWhileStmt
   | CastIfStmt;
+
+export interface CastEmptyStmt {
+  kind: "EmptyStmt";
+  span: SourceSpan;
+}
 
 export interface CastReturnStmt {
   kind: "ReturnStmt";

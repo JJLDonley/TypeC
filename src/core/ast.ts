@@ -198,6 +198,7 @@ export interface BlockStmt {
 }
 
 export type Statement =
+  | EmptyStmt
   | ReturnStmt
   | DeferStmt
   | ExpressionStmt
@@ -209,6 +210,11 @@ export type Statement =
   | WhileStmt
   | DoWhileStmt
   | IfStmt;
+
+export interface EmptyStmt {
+  kind: "EmptyStmt";
+  span: SourceSpan;
+}
 
 export interface ReturnStmt {
   kind: "ReturnStmt";

@@ -31,6 +31,7 @@ export interface StatementParser {
 }
 
 export function parseStatementWith(parser: StatementParser): CastStatement {
+  if (parser.checkText(";")) return parseEmpty(parser);
   if (parser.checkText("return")) return parseReturn(parser);
   if (parser.checkText("defer")) return parseDefer(parser);
   if (parser.checkText("break")) return parseBreak(parser);
@@ -42,6 +43,11 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (isIncDecStart(parser)) return parseIncDec(parser);
   if (isAssignmentStart(parser)) return parseAssignment(parser);
   return parseExpressionStatement(parser);
+}
+
+function parseEmpty(parser: StatementParser): CastStatement {
+  const semi = parser.expectText(";");
+  return { kind: "EmptyStmt", span: semi.span };
 }
 
 function parseExpressionStatement(parser: StatementParser): CastStatement {

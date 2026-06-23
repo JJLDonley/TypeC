@@ -2380,6 +2380,49 @@ function classify(value: i32): i32 {
 
 ---
 
+# Phase 30: Empty Statements
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style empty statement syntax for intentional no-op statement positions.
+
+## Syntax
+
+```ts
+```
+
+## Semantics
+
+- An empty statement is a statement that performs no operation.
+- It has no type and no runtime value.
+- It does not create a scope.
+- It is valid anywhere an ordinary statement is valid.
+- TypeC does not add JavaScript automatic semicolon insertion semantics.
+
+## Examples
+
+```ts
+function main(): i32 {
+  return 0;
+}
+```
+
+## Do
+
+- Parse a standalone semicolon as an empty statement.
+- Emit a portable C empty statement `;`.
+- Add parser, lowering, checker dispatch, emitter, and compile tests.
+
+## Do Not
+
+- Do not add automatic semicolon insertion.
+- Do not change expression statement rules.
+- Do not add labelled statements.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

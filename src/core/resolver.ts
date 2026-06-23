@@ -97,6 +97,8 @@ class Resolver {
 
   private resolveStatement(statement: Statement, scope: Scope): void {
     switch (statement.kind) {
+      case "EmptyStmt":
+        return;
       case "ReturnStmt":
         if (statement.expression) this.resolveExpression(statement.expression, scope);
         return;

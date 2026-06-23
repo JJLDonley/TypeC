@@ -10,6 +10,7 @@ type DoWhileStmt = Extract<Statement, { kind: "DoWhileStmt" }>;
 type IfStmt = Extract<Statement, { kind: "IfStmt" }>;
 
 export interface StatementCheckHandlers {
+  emptyStatement(span: SourceSpan): void;
   returnStatement(expr: Expression | null, span: SourceSpan): void;
   deferStatement(expr: Expression, span: SourceSpan): void;
   expressionStatement(expr: Expression): void;
@@ -25,6 +26,9 @@ export interface StatementCheckHandlers {
 
 export function checkStatementDispatch(stmt: Statement, handlers: StatementCheckHandlers): void {
   switch (stmt.kind) {
+    case "EmptyStmt":
+      handlers.emptyStatement(stmt.span);
+      return;
     case "ReturnStmt":
       handlers.returnStatement(stmt.expression, stmt.span);
       return;

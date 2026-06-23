@@ -73,6 +73,8 @@ function emitStatementWithDefers(
   defers: DeferredContext,
 ): Str[] {
   switch (stmt.kind) {
+    case "EmptyStmt":
+      return [";"];
     case "ReturnStmt":
       return emitReturnWithDefers(stmt, returnType, context, defers.returnDefers);
     case "DeferStmt":

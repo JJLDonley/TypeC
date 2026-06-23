@@ -76,6 +76,8 @@ function statementGenericCallDiagnostics(
   templates: Map<Str, FunctionDecl>,
 ): Diagnostic[] {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return [];
     case "ReturnStmt":
       return statement.expression
         ? expressionGenericCallDiagnostics(statement.expression, templates)
@@ -303,6 +305,8 @@ class GenericInstantiator {
 
   private rewriteStatement(statement: Statement): Statement {
     switch (statement.kind) {
+      case "EmptyStmt":
+        return statement;
       case "ReturnStmt":
         return {
           ...statement,
@@ -450,6 +454,8 @@ function substituteBlock(block: BlockStmt, substitutions: TypeSubstitutions): Bl
 
 function substituteStatement(statement: Statement, substitutions: TypeSubstitutions): Statement {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return statement;
     case "ReturnStmt":
     case "DeferStmt":
     case "ExpressionStmt":

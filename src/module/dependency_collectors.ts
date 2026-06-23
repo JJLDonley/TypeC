@@ -90,6 +90,8 @@ function collectStatementDeps(
   ignoredTypes: Set<Str>,
 ): void {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return;
     case "ReturnStmt":
       if (statement.expression) collectExpressionDeps(statement.expression, selected, ignoredTypes);
       return;

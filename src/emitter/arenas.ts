@@ -109,6 +109,8 @@ function functionUsesArena(fn: FunctionDecl): b8 {
 
 function statementUsesArena(stmt: Statement): b8 {
   switch (stmt.kind) {
+    case "EmptyStmt":
+      return false;
     case "ReturnStmt":
       return stmt.expression !== null && expressionUsesArena(stmt.expression);
     case "DeferStmt":

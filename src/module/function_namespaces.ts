@@ -27,6 +27,8 @@ function namespaceBlock(block: BlockStmt, namespace: Str, functions: Set<Str>): 
 
 function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>): Statement {
   switch (stmt.kind) {
+    case "EmptyStmt":
+      return stmt;
     case "ReturnStmt":
       return stmt.expression
         ? { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) }

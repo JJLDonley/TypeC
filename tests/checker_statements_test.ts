@@ -11,6 +11,7 @@ const span: SourceSpan = {
 };
 
 Deno.test("dispatches statement checks", () => {
+  assertDispatch(emptyStmt(), "empty");
   assertDispatch(returnStmt(), "return");
   assertDispatch(deferStmt(), "defer");
   assertDispatch(expressionStmt(), "expression");
@@ -33,6 +34,7 @@ function assertDispatch(stmt: Statement, expected: Str): void {
 
 function handlers(calls: Str[]): StatementCheckHandlers {
   return {
+    emptyStatement: () => calls.push("empty"),
     returnStatement: () => calls.push("return"),
     deferStatement: () => calls.push("defer"),
     expressionStatement: () => calls.push("expression"),
@@ -45,6 +47,10 @@ function handlers(calls: Str[]): StatementCheckHandlers {
     doWhileStatement: () => calls.push("doWhile"),
     ifStatement: () => calls.push("if"),
   };
+}
+
+function emptyStmt(): Statement {
+  return { kind: "EmptyStmt", span };
 }
 
 function returnStmt(): Statement {

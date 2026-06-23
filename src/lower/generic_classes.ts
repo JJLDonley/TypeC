@@ -195,6 +195,8 @@ class GenericClassInstantiator {
 
   private rewriteStatement(statement: CastStatement): CastStatement {
     switch (statement.kind) {
+      case "EmptyStmt":
+        return statement;
       case "ReturnStmt":
         return this.rewriteReturn(statement);
       case "DeferStmt":
@@ -589,6 +591,8 @@ function substituteStatement(
   substitutions: CastTypeSubstitutions,
 ): CastStatement {
   switch (statement.kind) {
+    case "EmptyStmt":
+      return statement;
     case "ReturnStmt":
     case "DeferStmt":
     case "ExpressionStmt":
