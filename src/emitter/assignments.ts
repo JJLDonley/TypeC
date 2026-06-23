@@ -7,6 +7,10 @@ type Str = string;
 
 type AssignmentStatement = Extract<Statement, { kind: "AssignmentStmt" }>;
 
+function emitAssignmentOperator(operator: AssignmentStatement["operator"]): Str {
+  return operator === ">>>=" ? ">>=" : operator;
+}
+
 export function emitAssignment(
   stmt: AssignmentStatement,
   context: EmitContext,
@@ -16,5 +20,5 @@ export function emitAssignment(
   const expression = targetType
     ? emitExpressionExpected(stmt.expression, targetType, context)
     : emitExpression(stmt.expression, context);
-  return `${stmt.name} = ${expression};`;
+  return `${stmt.name} ${emitAssignmentOperator(stmt.operator)} ${expression};`;
 }

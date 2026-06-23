@@ -52,6 +52,22 @@ Deno.test("ignores unresolved assignment locals", () => {
   );
 });
 
+Deno.test("checks compound assignments through binary rules", () => {
+  const valid = checkAssignment(
+    assignment("value", integer("1"), "+="),
+    local("i32", true),
+    resolveExpected,
+  );
+  const invalid = checkAssignment(
+    assignment("value", integer("1"), "&="),
+    local("f32", true),
+    resolveExpected,
+  );
+
+  assertLen(valid.length, 0);
+  assertText(invalid[0]?.message ?? "", "Operator '&' requires integer operands");
+});
+
 function resolveExpected(_expr: Expression, expected: TypeName): TypeName {
   return expected;
 }
@@ -67,8 +83,9 @@ function local(type: TypeName, mutable: b8): LocalInfo {
 function assignment(
   name: Str,
   expression: Expression,
+  operator: Extract<Statement, { kind: "AssignmentStmt" }>["operator"] = "=",
 ): Extract<Statement, { kind: "AssignmentStmt" }> {
-  return { kind: "AssignmentStmt", name, expression, span };
+  return { kind: "AssignmentStmt", name, operator, expression, span };
 }
 
 function integer(text: Str): Expression {

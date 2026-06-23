@@ -2143,6 +2143,74 @@ function either(a: bool, b: bool): bool {
 
 ---
 
+# Phase 26: Compound Assignment Statements
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style compound assignment statement syntax for already-supported numeric and bitwise
+operators, while preserving TypeC's static typing and statement-only assignment model.
+
+## Syntax
+
+```ts
+x += value;
+x -= value;
+x *= value;
+x /= value;
+x %= value;
+x <<= count;
+x >>= count;
+x >>>= count;
+x &= value;
+x ^= value;
+x |= value;
+```
+
+Logical and nullish assignment forms `&&=`, `||=`, and `??=` are not part of this phase. Increment
+and decrement `++` / `--` are not part of this phase.
+
+## Semantics
+
+- Compound assignment is a statement, not an expression.
+- The left side is an existing mutable local variable, as with `=` assignment.
+- `x op= y` is checked like `x = x op y`, using the existing operator rules for `op`.
+- The resulting operation type must be assignable to the local variable type.
+- Array variables remain non-assignable.
+- The right operand is evaluated once.
+- TypeC does not add JavaScript numeric coercions or truthiness.
+
+## Examples
+
+```ts
+function add(value: i32): i32 {
+  let total: i32 = 0;
+  total += value;
+  return total;
+}
+
+function mask(value: u32): u32 {
+  let bits: u32 = value;
+  bits &= 255;
+  return bits;
+}
+```
+
+## Do
+
+- Reuse existing binary operator type rules.
+- Emit direct C compound assignment operators after checking.
+- Add parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not make assignments expressions.
+- Do not add logical/nullish assignment in this phase.
+- Do not add implicit conversions.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

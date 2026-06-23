@@ -1,4 +1,5 @@
 import type {
+  CastAssignmentOperator,
   CastBlockStmt,
   CastExpression,
   CastStatement,
@@ -157,15 +158,29 @@ function parseCondition(parser: StatementParser): CastExpression {
 
 function parseAssignment(parser: StatementParser): CastStatement {
   const name = parser.expectKind("identifier", "Expected assignment target");
-  parser.expectText("=");
+  const operator = parseAssignmentOperator(parser);
   const expression = parser.parseExpression();
   const semi = parser.expectText(";");
   return {
     kind: "AssignmentStmt",
     name: name.text,
+    operator,
     expression,
     span: span(name.span.start, semi.span.end),
   };
+}
+
+function parseAssignmentOperator(parser: StatementParser): CastAssignmentOperator {
+  const token = parser.advance();
+  if (isAssignmentOperator(token.text)) return token.text;
+  parser.error(token, "Expected assignment operator");
+  return "=";
+}
+
+function isAssignmentOperator(text: Str): text is CastAssignmentOperator {
+  return text === "=" || text === "+=" || text === "-=" || text === "*=" || text === "/=" ||
+    text === "%=" || text === "<<=" || text === ">>=" || text === ">>>=" || text === "&=" ||
+    text === "^=" || text === "|=";
 }
 
 function parseVarDecl(parser: StatementParser): CastStatement {
@@ -191,5 +206,5 @@ function isVariableDeclarationStart(parser: StatementParser): b8 {
 }
 
 function isAssignmentStart(parser: StatementParser): b8 {
-  return parser.check("identifier") && parser.peek(1).text === "=";
+  return parser.check("identifier") && isAssignmentOperator(parser.peek(1).text);
 }

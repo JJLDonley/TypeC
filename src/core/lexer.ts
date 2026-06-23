@@ -149,11 +149,22 @@ class Lexer {
     if (text === "=" && this.peek() === ">") return text + this.advance();
     if (this.isShiftPrefix(text)) {
       while (this.peek() === text[0] && text.length < 3) text += this.advance();
-      return text;
+      return this.withAssignmentSuffix(text);
     }
     if (this.isLogicalPrefix(text) && this.peek() === text) return text + this.advance();
     if (this.isEqualityPrefix(text) && this.peek() === "=") return text + this.advance();
+    return this.withAssignmentSuffix(text);
+  }
+
+  private withAssignmentSuffix(text: Str): Str {
+    if (this.isAssignmentOperatorPrefix(text) && this.peek() === "=") return text + this.advance();
     return text;
+  }
+
+  private isAssignmentOperatorPrefix(text: Str): b8 {
+    return text === "+" || text === "-" || text === "*" || text === "/" || text === "%" ||
+      text === "&" || text === "|" || text === "^" || text === "<<" || text === ">>" ||
+      text === ">>>";
   }
 
   private isShiftPrefix(text: Str): b8 {

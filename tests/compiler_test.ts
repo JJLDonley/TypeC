@@ -1213,6 +1213,15 @@ Deno.test("emits C for logical binary operators", () => {
   assertIncludes(c, "return a || b && c;");
 });
 
+Deno.test("emits C for compound assignments", () => {
+  const source =
+    `function update(value: u32): u32 { let bits: u32 = value; bits += 1; bits &= 255; bits >>>= 1; return bits; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "bits += 1;");
+  assertIncludes(c, "bits &= 255;");
+  assertIncludes(c, "bits >>= 1;");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

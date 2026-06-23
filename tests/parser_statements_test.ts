@@ -43,6 +43,16 @@ Deno.test("parses assignments before expression statements", () => {
   assertText(stmt.kind, "AssignmentStmt");
 });
 
+Deno.test("parses compound assignment statements", () => {
+  const stmt = parseStatementWith(
+    parserFor([identifier("x"), operator("+="), identifier("value"), punct(";")]),
+  );
+
+  assertText(stmt.kind, "AssignmentStmt");
+  if (stmt.kind !== "AssignmentStmt") throw new Error("Expected assignment");
+  assertText(stmt.operator, "+=");
+});
+
 Deno.test("parses break statements", () => {
   const stmt = parseStatementWith(parserFor([keyword("break"), punct(";")]));
 
@@ -162,6 +172,10 @@ function identifier(text: Str): Token {
 
 function punct(text: Str): Token {
   return token("punctuation", text);
+}
+
+function operator(text: Str): Token {
+  return token("operator", text);
 }
 
 function eof(): Token {

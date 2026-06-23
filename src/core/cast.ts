@@ -266,9 +266,24 @@ export interface CastVarDeclStmt {
   span: SourceSpan;
 }
 
+export type CastAssignmentOperator =
+  | "="
+  | "+="
+  | "-="
+  | "*="
+  | "/="
+  | "%="
+  | "<<="
+  | ">>="
+  | ">>>="
+  | "&="
+  | "^="
+  | "|=";
+
 export interface CastAssignmentStmt {
   kind: "AssignmentStmt";
   name: Str;
+  operator: CastAssignmentOperator;
   expression: CastExpression;
   span: SourceSpan;
 }

@@ -88,6 +88,7 @@ function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
   return {
     kind: "AssignmentStmt",
     name: statement.name,
+    operator: statement.operator,
     expression: lowerExpression(statement.expression),
     span: statement.span,
   };

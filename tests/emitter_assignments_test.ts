@@ -21,8 +21,23 @@ Deno.test("emits assignments without known local types", () => {
   assertText(emitAssignment(assignment("x", int("7")), context(), locals()), "x = 7;");
 });
 
-function assignment(name: Str, expression: Expression) {
-  return { kind: "AssignmentStmt" as const, name, expression, span };
+Deno.test("emits compound assignments", () => {
+  assertText(
+    emitAssignment(assignment("x", int("7"), "+="), context(), locals([["x", "i32"]])),
+    "x += 7;",
+  );
+  assertText(
+    emitAssignment(assignment("bits", int("1"), ">>>="), context(), locals([["bits", "u32"]])),
+    "bits >>= 1;",
+  );
+});
+
+function assignment(
+  name: Str,
+  expression: Expression,
+  operator: "=" | "+=" | ">>>=" = "=",
+) {
+  return { kind: "AssignmentStmt" as const, name, operator, expression, span };
 }
 
 function int(text: Str): Expression {

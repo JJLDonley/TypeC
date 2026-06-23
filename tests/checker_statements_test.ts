@@ -71,7 +71,7 @@ function varDecl(): Statement {
 }
 
 function assignment(): Statement {
-  return { kind: "AssignmentStmt", name: "x", expression: integer("1"), span };
+  return { kind: "AssignmentStmt", operator: "=", name: "x", expression: integer("1"), span };
 }
 
 function switchStmt(): Statement {

@@ -240,9 +240,24 @@ export interface VarDeclStmt {
   span: SourceSpan;
 }
 
+export type AssignmentOperator =
+  | "="
+  | "+="
+  | "-="
+  | "*="
+  | "/="
+  | "%="
+  | "<<="
+  | ">>="
+  | ">>>="
+  | "&="
+  | "^="
+  | "|=";
+
 export interface AssignmentStmt {
   kind: "AssignmentStmt";
   name: Str;
+  operator: AssignmentOperator;
   expression: Expression;
   span: SourceSpan;
 }

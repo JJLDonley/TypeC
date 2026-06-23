@@ -39,6 +39,7 @@ function assignmentStmt(): Statement {
   return {
     kind: "AssignmentStmt",
     name: "x",
+    operator: "=",
     expression: { kind: "IntegerLiteral", value: 1n, text: "1", span },
     span,
   };

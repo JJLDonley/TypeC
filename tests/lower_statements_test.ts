@@ -34,7 +34,7 @@ function varDecl(): CastStatement {
 }
 
 function assignment(): CastStatement {
-  return { kind: "AssignmentStmt", name: "x", expression: integer("2"), span };
+  return { kind: "AssignmentStmt", operator: "=", name: "x", expression: integer("2"), span };
 }
 
 function whileStmt(): CastStatement {

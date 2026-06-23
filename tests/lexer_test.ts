@@ -57,6 +57,21 @@ Deno.test("lexes logical binary operators", () => {
   assertEqualText(tokenTexts("a && b || c"), ["a", "&&", "b", "||", "c", ""]);
 });
 
+Deno.test("lexes compound assignment operators", () => {
+  assertEqualText(tokenTexts("a += b <<= c >>>= d |= e"), [
+    "a",
+    "+=",
+    "b",
+    "<<=",
+    "c",
+    ">>>=",
+    "d",
+    "|=",
+    "e",
+    "",
+  ]);
+});
+
 Deno.test("lexes float literals", () => {
   const tokens = lex("1 2.5 3.");
   assertEqualText(tokens.map((token) => token.kind), [
