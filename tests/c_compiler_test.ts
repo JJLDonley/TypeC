@@ -16,10 +16,10 @@ Deno.test("adds project compiler flags", () => {
     nativeCompileArgs({ cPath: "build/main.c", exePath: "build/main", compilerFlags: ["-O2"] }),
     [
       "-std=c99",
-      "-O2",
       "build/main.c",
       "-o",
       "build/main",
+      "-O2",
     ],
   );
 });

@@ -6,6 +6,7 @@ export * from "module/function_namespaces.ts";
 export * from "module/header_modules.ts";
 export * from "module/import_requests.ts";
 export * from "module/loader.ts";
+export * from "module/namespace_usage.ts";
 export * from "module/paths.ts";
 export * from "module/programs.ts";
 export * from "module/type_namespaces.ts";

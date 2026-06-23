@@ -4,26 +4,33 @@ import { isJsonRecord, type JsonRecord } from "json/record.ts";
 import { isJsonArray, isJsonText, readJsonText } from "json/values.ts";
 
 type Str = string;
+type b8 = boolean;
 
-export function readHeaderRecord(value: JsonRecord): CHeaderRecord | null {
+export function readHeaderRecord(
+  value: JsonRecord,
+  mainSourceFile: Str | null = null,
+): CHeaderRecord | null {
   try {
-    return readRecord(value);
+    return readRecord(value, mainSourceFile);
   } catch (error) {
     if (error instanceof TypeCError) return null;
     throw error;
   }
 }
 
-export function readHeaderRecordDecl(value: JsonRecord): CHeaderRecord | null {
+export function readHeaderRecordDecl(
+  value: JsonRecord,
+  mainSourceFile: Str | null = null,
+): CHeaderRecord | null {
   try {
-    return readRecordDecl(value);
+    return readRecordDecl(value, mainSourceFile);
   } catch (error) {
     if (error instanceof TypeCError) return null;
     throw error;
   }
 }
 
-function readRecord(value: JsonRecord): CHeaderRecord {
+function readRecord(value: JsonRecord, mainSourceFile: Str | null): CHeaderRecord {
   const record = findRecordDecl(value.inner);
   if (!record) {
     throw new TypeCError([{ message: `Typedef '${value.name}' has no record declaration` }]);
@@ -35,11 +42,11 @@ function readRecord(value: JsonRecord): CHeaderRecord {
   return {
     name: readJsonText(value.name, "Typedef has no name"),
     fields,
-    sourceFile: readSourceFile(value) ?? readSourceFile(record),
+    sourceFile: readSourceFile(value, mainSourceFile) ?? readSourceFile(record, mainSourceFile),
   };
 }
 
-function readRecordDecl(value: JsonRecord): CHeaderRecord {
+function readRecordDecl(value: JsonRecord, mainSourceFile: Str | null): CHeaderRecord {
   const fields = readRecordFields(value.inner);
   if (fields.length === 0) {
     throw new TypeCError([{ message: `Record '${value.name}' has no fields` }]);
@@ -47,7 +54,7 @@ function readRecordDecl(value: JsonRecord): CHeaderRecord {
   return {
     name: readJsonText(value.name, "Record has no name"),
     fields,
-    sourceFile: readSourceFile(value),
+    sourceFile: readSourceFile(value, mainSourceFile),
   };
 }
 
@@ -79,14 +86,19 @@ function isFieldDecl(value: unknown): value is JsonRecord {
   return isJsonRecord(value) && value.kind === "FieldDecl";
 }
 
-function readSourceFile(value: JsonRecord): Str | null {
+function readSourceFile(value: JsonRecord, mainSourceFile: Str | null): Str | null {
   const loc = value.loc;
   if (!isJsonRecord(loc)) return null;
   if (isJsonText(loc.file)) return loc.file;
+  if (mainSourceFile !== null && isMainFileLocation(loc)) return mainSourceFile;
   const includedFrom = loc.includedFrom;
   if (!isJsonRecord(includedFrom)) return null;
   if (isJsonText(includedFrom.file)) return includedFrom.file;
   return null;
+}
+
+function isMainFileLocation(loc: JsonRecord): b8 {
+  return typeof loc.line === "number" || typeof loc.offset === "number";
 }
 
 function requireRecord(value: unknown, message: Str): JsonRecord {

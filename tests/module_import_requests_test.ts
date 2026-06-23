@@ -22,10 +22,14 @@ Deno.test("collects merged import requests", () => {
 });
 
 Deno.test("collects namespace import requests", () => {
-  const program = parse(lex(`import * as Math from "basic/math";`));
+  const program = parse(lex(`
+    import * as Math from "basic/math";
+    function main(): i32 { return Math.abs_i32(-1); }
+  `));
   const requests = collectImportRequests("/project/main.tc", program, projectConfig());
 
-  assertText([...(requests[0]?.namespaces ?? [])].join(","), "Math");
+  assertText([...(requests[0]?.namespaces.keys() ?? [])].join(","), "Math");
+  assertText([...(requests[0]?.namespaces.get("Math") ?? [])].join(","), "abs_i32");
 });
 
 function projectConfig(): ProjectConfig {

@@ -17,24 +17,29 @@ import { directoryOf } from "paths";
 
 type Str = string;
 
-export function generateExternsFromClangAst(ast: unknown, includeDir: Str | null = null): Str {
-  return generateExternsFromHeaderParts(ast, [], includeDir);
+export function generateExternsFromClangAst(
+  ast: unknown,
+  includeDir: Str | null = null,
+  mainSourceFile: Str | null = null,
+): Str {
+  return generateExternsFromHeaderParts(ast, [], includeDir, mainSourceFile);
 }
 
 function generateExternsFromHeaderParts(
   ast: unknown,
   macroConstants: ReturnType<typeof collectHeaderMacroConstants>,
   includeDir: Str | null,
+  mainSourceFile: Str | null,
 ): Str {
   const records = supportedHeaderRecords(
-    selectHeaderRecords(collectHeaderRecords(ast), includeDir),
+    selectHeaderRecords(collectHeaderRecords(ast, mainSourceFile), includeDir),
   );
   const recordNames = new Set<Str>(records.map((record) => record.name));
-  const constants = [...collectHeaderConstants(ast), ...macroConstants];
+  const constants = [...collectHeaderConstants(ast, mainSourceFile), ...macroConstants];
   return `${formatHeaderRecordAliases(records)}${
-    formatHeaderEnums(collectHeaderEnums(ast), includeDir)
+    formatHeaderEnums(collectHeaderEnums(ast, mainSourceFile), includeDir)
   }${formatHeaderConstants(constants, includeDir, recordNames)}${
-    formatHeaderExterns(collectHeaderFunctions(ast), includeDir, recordNames)
+    formatHeaderExterns(collectHeaderFunctions(ast, mainSourceFile), includeDir, recordNames)
   }`;
 }
 
@@ -49,5 +54,5 @@ export async function generateExternsFromHeader(
     await Deno.readTextFile(headerPath),
     headerPath,
   );
-  return generateExternsFromHeaderParts(ast, macroConstants, directoryOf(headerPath));
+  return generateExternsFromHeaderParts(ast, macroConstants, directoryOf(headerPath), headerPath);
 }

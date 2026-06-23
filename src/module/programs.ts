@@ -83,17 +83,23 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
   );
 }
 
-export function selectNamespaceImports(program: Program, namespace: Str): Program {
+export function selectNamespaceImports(
+  program: Program,
+  namespace: Str,
+  members: Str[] = [
+    ...exportedTypeNames(program),
+    ...exportedInterfaceNames(program),
+    ...exportedTaggedUnionNames(program),
+    ...exportedEnumNames(program),
+    ...exportedConstantNames(program),
+    ...exportedFunctionNames(program),
+  ],
+): Program {
   const selected = selectDependencyClosure(
     program,
-    [
-      ...exportedTypeNames(program),
-      ...exportedInterfaceNames(program),
-      ...exportedTaggedUnionNames(program),
-      ...exportedEnumNames(program),
-    ],
-    exportedConstantNames(program),
-    exportedFunctionNames(program),
+    exportedNamespaceTypeNames(program, members),
+    exportedNamespaceConstantNames(program, members),
+    exportedNamespaceFunctionNames(program, members),
   );
   const namespaced = namespaceProgramFunctions(
     namespaceProgramTypes(selected, namespace),
@@ -124,6 +130,25 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
     functions,
     span: program.span,
   };
+}
+
+function exportedNamespaceTypeNames(program: Program, members: Str[]): Str[] {
+  const memberSet = new Set(members);
+  return [
+    ...exportedTypeNames(program),
+    ...exportedInterfaceNames(program),
+    ...exportedTaggedUnionNames(program),
+    ...exportedEnumNames(program),
+  ].filter((name) => memberSet.has(name));
+}
+
+function exportedNamespaceConstantNames(program: Program, _members: Str[]): Str[] {
+  return exportedConstantNames(program);
+}
+
+function exportedNamespaceFunctionNames(program: Program, members: Str[]): Str[] {
+  const memberSet = new Set(members);
+  return exportedFunctionNames(program).filter((name) => memberSet.has(name));
 }
 
 function exportedTypeNames(program: Program): Str[] {

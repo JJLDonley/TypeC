@@ -57,70 +57,98 @@ export interface CHeaderEnum {
   sourceFile: Str | null;
 }
 
-export function collectHeaderFunctions(value: unknown): CHeaderFunction[] {
+export function collectHeaderFunctions(
+  value: unknown,
+  mainSourceFile: Str | null = null,
+): CHeaderFunction[] {
   const functions: CHeaderFunction[] = [];
-  collectHeaderFunctionsInto(value, functions);
+  collectHeaderFunctionsInto(value, functions, mainSourceFile);
   return functions;
 }
 
-function collectHeaderFunctionsInto(value: unknown, functions: CHeaderFunction[]): void {
+function collectHeaderFunctionsInto(
+  value: unknown,
+  functions: CHeaderFunction[],
+  mainSourceFile: Str | null,
+): void {
   if (!isJsonRecord(value)) return;
   if (
     value.kind === "FunctionDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)
   ) {
-    const fn = readHeaderFunction(value);
+    const fn = readHeaderFunction(value, mainSourceFile);
     if (fn) functions.push(fn);
   }
-  collectInner(value, (child) => collectHeaderFunctionsInto(child, functions));
+  collectInner(value, (child) => collectHeaderFunctionsInto(child, functions, mainSourceFile));
 }
 
-export function collectHeaderRecords(value: unknown): CHeaderRecord[] {
+export function collectHeaderRecords(
+  value: unknown,
+  mainSourceFile: Str | null = null,
+): CHeaderRecord[] {
   const records: CHeaderRecord[] = [];
-  collectHeaderRecordsInto(value, records);
+  collectHeaderRecordsInto(value, records, mainSourceFile);
   return records;
 }
 
-export function collectHeaderConstants(value: unknown): CHeaderConstant[] {
+export function collectHeaderConstants(
+  value: unknown,
+  mainSourceFile: Str | null = null,
+): CHeaderConstant[] {
   const constants: CHeaderConstant[] = [];
-  collectHeaderConstantsInto(value, constants);
+  collectHeaderConstantsInto(value, constants, mainSourceFile);
   return constants;
 }
 
-export function collectHeaderEnums(value: unknown): CHeaderEnum[] {
+export function collectHeaderEnums(
+  value: unknown,
+  mainSourceFile: Str | null = null,
+): CHeaderEnum[] {
   const enums: CHeaderEnum[] = [];
-  collectHeaderEnumsInto(value, enums);
+  collectHeaderEnumsInto(value, enums, mainSourceFile);
   return enums;
 }
 
-function collectHeaderRecordsInto(value: unknown, records: CHeaderRecord[]): void {
+function collectHeaderRecordsInto(
+  value: unknown,
+  records: CHeaderRecord[],
+  mainSourceFile: Str | null,
+): void {
   if (!isJsonRecord(value)) return;
   if (value.kind === "TypedefDecl" && hasName(value) && isHeaderDeclaration(value)) {
-    const record = readHeaderRecord(value);
+    const record = readHeaderRecord(value, mainSourceFile);
     if (record) records.push(record);
   }
   if (value.kind === "RecordDecl" && hasName(value) && isHeaderDeclaration(value)) {
-    const record = readHeaderRecordDecl(value);
+    const record = readHeaderRecordDecl(value, mainSourceFile);
     if (record) records.push(record);
   }
-  collectInner(value, (child) => collectHeaderRecordsInto(child, records));
+  collectInner(value, (child) => collectHeaderRecordsInto(child, records, mainSourceFile));
 }
 
-function collectHeaderConstantsInto(value: unknown, constants: CHeaderConstant[]): void {
+function collectHeaderConstantsInto(
+  value: unknown,
+  constants: CHeaderConstant[],
+  mainSourceFile: Str | null,
+): void {
   if (!isJsonRecord(value)) return;
   if (value.kind === "VarDecl" && hasName(value) && hasType(value) && isHeaderDeclaration(value)) {
-    const constant = readHeaderConstant(value);
+    const constant = readHeaderConstant(value, mainSourceFile);
     if (constant) constants.push(constant);
   }
-  collectInner(value, (child) => collectHeaderConstantsInto(child, constants));
+  collectInner(value, (child) => collectHeaderConstantsInto(child, constants, mainSourceFile));
 }
 
-function collectHeaderEnumsInto(value: unknown, enums: CHeaderEnum[]): void {
+function collectHeaderEnumsInto(
+  value: unknown,
+  enums: CHeaderEnum[],
+  mainSourceFile: Str | null,
+): void {
   if (!isJsonRecord(value)) return;
   if (value.kind === "EnumDecl" && hasName(value) && isHeaderDeclaration(value)) {
-    const enumDecl = readHeaderEnum(value);
+    const enumDecl = readHeaderEnum(value, mainSourceFile);
     if (enumDecl) enums.push(enumDecl);
   }
-  collectInner(value, (child) => collectHeaderEnumsInto(child, enums));
+  collectInner(value, (child) => collectHeaderEnumsInto(child, enums, mainSourceFile));
 }
 
 function collectInner(value: JsonRecord, visit: (child: unknown) => void): void {
@@ -137,7 +165,10 @@ function hasName(value: JsonRecord): b8 {
   return isNonEmptyJsonText(value.name);
 }
 
-function readHeaderConstant(value: JsonRecord): CHeaderConstant | null {
+function readHeaderConstant(
+  value: JsonRecord,
+  mainSourceFile: Str | null,
+): CHeaderConstant | null {
   if (!isJsonRecord(value.type) || !isJsonText(value.type.qualType) || !isJsonText(value.name)) {
     return null;
   }
@@ -147,7 +178,7 @@ function readHeaderConstant(value: JsonRecord): CHeaderConstant | null {
     name: value.name,
     type: value.type.qualType,
     value: literal,
-    sourceFile: readSourceFile(value),
+    sourceFile: readSourceFile(value, mainSourceFile),
   };
 }
 
@@ -199,11 +230,11 @@ function isSimpleStringLiteralText(value: Str): b8 {
   return /^"[^"\\\r\n]*"$/.test(value);
 }
 
-function readHeaderEnum(value: JsonRecord): CHeaderEnum | null {
+function readHeaderEnum(value: JsonRecord, mainSourceFile: Str | null): CHeaderEnum | null {
   if (!isJsonText(value.name)) return null;
   const members = readHeaderEnumMembers(value.inner);
   if (members === null) return null;
-  return { name: value.name, members, sourceFile: readSourceFile(value) };
+  return { name: value.name, members, sourceFile: readSourceFile(value, mainSourceFile) };
 }
 
 function readHeaderEnumMembers(inner: unknown): CHeaderEnumMember[] | null {
@@ -236,14 +267,19 @@ function readHeaderEnumConstantValue(inner: unknown): Str | null {
   return value.value;
 }
 
-function readSourceFile(value: JsonRecord): Str | null {
+function readSourceFile(value: JsonRecord, mainSourceFile: Str | null): Str | null {
   const loc = value.loc;
   if (!isJsonRecord(loc)) return null;
   if (isJsonText(loc.file)) return loc.file;
+  if (mainSourceFile !== null && isMainFileLocation(loc)) return mainSourceFile;
   const includedFrom = loc.includedFrom;
   if (!isJsonRecord(includedFrom)) return null;
   if (isJsonText(includedFrom.file)) return includedFrom.file;
   return null;
+}
+
+function isMainFileLocation(loc: JsonRecord): b8 {
+  return typeof loc.line === "number" || typeof loc.offset === "number";
 }
 
 function hasType(value: JsonRecord): b8 {

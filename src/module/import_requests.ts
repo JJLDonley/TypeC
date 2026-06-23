@@ -1,6 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Program } from "core/ast.ts";
 import { validateImportPath } from "paths/imports.ts";
+import { collectNamespaceMembers } from "module/namespace_usage.ts";
 import { resolveModuleImportPath } from "module/paths.ts";
 import type { ProjectConfig } from "project/config.ts";
 
@@ -9,7 +10,7 @@ type Str = string;
 export interface ImportRequest {
   path: Str;
   names: Set<Str>;
-  namespaces: Set<Str>;
+  namespaces: Map<Str, Set<Str>>;
   span: Diagnostic["span"];
 }
 
@@ -25,12 +26,17 @@ export function collectImportRequests(
     const request = requests.get(importedPath) ??
       createImportRequest(importedPath, importDecl.span);
     for (const name of importDecl.names) request.names.add(name);
-    if (importDecl.namespace) request.namespaces.add(importDecl.namespace);
+    if (importDecl.namespace) {
+      request.namespaces.set(
+        importDecl.namespace,
+        collectNamespaceMembers(program, importDecl.namespace),
+      );
+    }
     requests.set(importedPath, request);
   }
   return [...requests.values()];
 }
 
 function createImportRequest(path: Str, span: Diagnostic["span"]): ImportRequest {
-  return { path, names: new Set<Str>(), namespaces: new Set<Str>(), span };
+  return { path, names: new Set<Str>(), namespaces: new Map<Str, Set<Str>>(), span };
 }

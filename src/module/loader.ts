@@ -69,8 +69,8 @@ async function collectImports(path: Str, program: Program, state: LoadState): Pr
   for (const request of collectImportRequests(path, program, state.config)) {
     const imported = await loadModule(request.path, state);
     programs.push(selectImports(imported, [...request.names], request.span));
-    for (const namespace of request.namespaces) {
-      programs.push(selectNamespaceImports(imported, namespace));
+    for (const [namespace, members] of request.namespaces) {
+      programs.push(selectNamespaceImports(imported, namespace, [...members]));
     }
   }
   return programs;
