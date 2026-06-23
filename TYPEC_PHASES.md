@@ -2518,6 +2518,46 @@ const scale: f64 = 1_000.25_5;
 
 ---
 
+# Phase 33: Single-Quoted String Literals
+
+Status: Complete.
+
+## Goal
+
+Accept TypeScript-style single-quoted string literals as an alternate spelling for TypeC string
+literals.
+
+## Syntax
+
+```ts
+extern function puts(s: u8*): i32;
+
+function main(): i32 {
+  return puts('hello');
+}
+```
+
+## Semantics
+
+- Single-quoted and double-quoted string literals produce the same TypeC string literal node.
+- The quote style is syntax only and does not affect type checking or emitted C.
+- Emitted C keeps using normal C double-quoted string literals.
+
+## Do
+
+- Accept `'text'` wherever string literals are accepted today.
+- Reuse existing string literal checker and emitter behavior.
+- Add lexer and compile tests.
+
+## Do Not
+
+- Do not add template literals.
+- Do not add string interpolation.
+- Do not add escape-sequence semantics beyond what TypeC already supports.
+- Do not add JavaScript `String` object or runtime behavior.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

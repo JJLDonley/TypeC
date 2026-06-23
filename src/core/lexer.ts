@@ -53,8 +53,8 @@ class Lexer {
         continue;
       }
 
-      if (ch === '"') {
-        const text = this.readString(start);
+      if (ch === '"' || ch === "'") {
+        const text = this.readString(start, ch);
         this.tokens.push({ kind: "string", text, span: { start, end: this.pos() } });
         continue;
       }
@@ -214,28 +214,29 @@ class Lexer {
     return text === "=" || text === "!" || text === "<" || text === ">";
   }
 
-  private readString(start: SourcePos): Str {
+  private readString(start: SourcePos, quote: Str): Str {
     this.advance();
-    let text = "";
-    while (!this.isAtEnd() && this.peek() !== '"') {
+    let text: Str = "";
+    while (!this.isAtEnd() && this.peek() !== quote) {
       if (this.peek() === "\n") {
-        this.diagnostics.push({
-          message: "Unterminated string literal",
-          span: { start, end: this.pos() },
-        });
+        this.reportUnterminatedString(start);
         return text;
       }
       text += this.advance();
     }
     if (this.isAtEnd()) {
-      this.diagnostics.push({
-        message: "Unterminated string literal",
-        span: { start, end: this.pos() },
-      });
+      this.reportUnterminatedString(start);
       return text;
     }
     this.advance();
     return text;
+  }
+
+  private reportUnterminatedString(start: SourcePos): void {
+    this.diagnostics.push({
+      message: "Unterminated string literal",
+      span: { start, end: this.pos() },
+    });
   }
 
   private readWhile(pred: (ch: Str) => b8): Str {

@@ -1287,6 +1287,13 @@ Deno.test("emits C string literals for u8 pointer calls", () => {
   assertIncludes(c, 'return puts((u8*)"hello");');
 });
 
+Deno.test("emits C string literals for single-quoted strings", () => {
+  const source =
+    `extern function puts(s: u8*): i32; function main(): i32 { return puts('hello'); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, 'return puts((u8*)"hello");');
+});
+
 Deno.test("emits C string literals for canonical u8 pointer calls", () => {
   const source =
     `extern function puts(s: Ptr<u8>): i32; function main(): i32 { return puts("hello"); }`;

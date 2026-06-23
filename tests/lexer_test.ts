@@ -95,6 +95,12 @@ Deno.test("lexes string literals", () => {
   assertEqualText(tokens.map((token) => token.text), ["./math.tc", ""]);
 });
 
+Deno.test("lexes single-quoted string literals", () => {
+  const tokens = lex(`'hello'`);
+  assertEqualText(tokens.map((token) => token.kind), ["string", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ["hello", ""]);
+});
+
 Deno.test("lexes numeric separators", () => {
   const tokens = lex("1_000 12_345.67_89");
   assertEqualText(tokens.map((token) => token.kind), ["integer", "float", "eof"]);
