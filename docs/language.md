@@ -301,12 +301,13 @@ deno run -A src/driver/main.ts run examples/enum.tc
 ## Array, Slice, Pointer, and Reference Model
 
 The current prototype supports `T*`, `T&`, local `T[]`, `T[N]`, and canonical spellings `Ptr<T>`,
-`Ref<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>`. `Slice<T>` is supported for TypeC-owned APIs
-and lowers to a generated C struct with `data` and `length` fields.
+`Ref<T>`, `SafePtr<T>`, `Array<T>`, `Array<T, N>`, and `Slice<T>`. `Slice<T>` is supported for
+TypeC-owned APIs and lowers to a generated C struct with `data` and `length` fields.
 
 ```txt
 Ptr<T>        // raw pointer, no length
 Ref<T>        // reference
+SafePtr<T>    // non-null, mutable, non-owning checked pointer; emits as T*
 Array<T>      // inferred-size array value
 Array<T, N>   // fixed-size array value
 Slice<T>      // pointer plus runtime length
@@ -320,6 +321,10 @@ T&    // Ref<T>
 T[]   // Array<T> for local inferred arrays; C ABI pointer-decayed array in parameters
 T[N]  // Array<T, N>
 ```
+
+`SafePtr<T>` is non-null by construction. It accepts explicit references such as `value.&`, rejects
+implicit raw-pointer-to-safe-pointer assignment, and remains raw-pointer ABI-compatible when passed
+to `Ptr<T>`/`T*` or `void*` parameters. It is non-owning and does not allocate or free memory.
 
 `T[]` is not slice syntax. Slices are spelled `Slice<T>`. Arrays may decay to `Ptr<T>` only when a
 raw pointer or C ABI parameter is expected. Array `.data` exposes the raw pointer for C interop.

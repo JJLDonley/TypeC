@@ -1587,21 +1587,35 @@ return 0
 
 # Phase 19: Safe Pointer Modes
 
-Implementation status: optional systems feature, not started.
+Status: Complete.
 
 ## Goal
 
 Add stricter pointer categories or annotations that improve safety while preserving explicit memory
 behavior.
 
-## Syntax Direction
+## Syntax
 
-Use Zig-inspired systems syntax for pointer annotations or type constructors that do not collide
-with TypeScript class, interface, or generic syntax. Exact syntax remains unspecified until a
-dedicated design update defines semantics, examples, lowering, and tests.
+Phase 19 introduces one explicit safe pointer type constructor:
 
-Candidate syntax must make aliasing, nullability, mutability, and ownership visible at the type
-site. Do not repurpose TypeScript-only syntax for pointer modes.
+```ts
+SafePtr<T>;
+```
+
+`SafePtr<T>` is a checked, non-null, mutable, non-owning pointer to `T`.
+
+- Aliasing: aliasing is allowed; Phase 19 does not implement exclusive pointers.
+- Nullability: non-null by construction. TypeC currently has no `null` literal; implicit raw
+  `Ptr<T>`/`T*` to `SafePtr<T>` conversion is rejected.
+- Mutability: pointee mutability is unchanged from raw `Ptr<T>`; no readonly mode is added in this
+  phase.
+- Ownership: non-owning; no allocation, free, drop, or lifetime inference is added.
+
+`SafePtr<T>` may be initialized or passed from `Ref<T>`/`T&` produced by explicit address-of
+`expr.&`. `SafePtr<T>` may be passed where raw `Ptr<T>`/`T*` or `void*` is expected for C interop.
+It lowers to the same C representation as `Ptr<T>`: `T*`.
+
+No other pointer modes are specified in Phase 19.
 
 ## Do
 

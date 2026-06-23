@@ -13,6 +13,7 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
     case "NamedTypeRef":
       return isCAbiNamedType(type.name, typeAliases, seen);
     case "PointerTypeRef":
+    case "SafePointerTypeRef":
       return isCAbiTypeSeen(type.element, typeAliases, seen);
     case "RecordTypeRef":
       return type.fields.every((field) => isCAbiRecordFieldType(field.type, typeAliases, seen));

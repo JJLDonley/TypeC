@@ -32,6 +32,36 @@ Deno.test("tracks project compiler flags", async () => {
   assertEqualText(result.compilerFlags, ["-O2", "-Wall"]);
 });
 
+Deno.test("emits C for safe pointers", () => {
+  const source = `
+    function read(value: SafePtr<i32>): i32 { return value.*; }
+    function raw_read(value: Ptr<i32>): i32 { return value.*; }
+    function main(): i32 {
+      const value: i32 = 42;
+      const safe: SafePtr<i32> = value.&;
+      return read(safe) + raw_read(safe) - 42;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32* value");
+  assertIncludes(c, "const i32* safe = &value;");
+});
+
+Deno.test("rejects implicit raw pointer to safe pointer conversion", () => {
+  assertCompileError(
+    `function main(): i32 { const value: i32 = 42; const raw: Ptr<i32> = value.&; const safe: SafePtr<i32> = raw; return safe.*; }`,
+    "Initializer type 'i32*' is not assignable to 'SafePtr<i32>'",
+  );
+});
+
+Deno.test("compiles safe pointer example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/safe_ptr.tc", dir);
+
+  assertIncludes(result.cSource, "const i32* safe = &value;");
+});
+
 Deno.test("emits C for defer before return", () => {
   const source =
     `function cleanup(): void { return; } function main(): i32 { defer cleanup(); return 42; }`;

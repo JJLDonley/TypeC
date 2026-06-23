@@ -130,6 +130,7 @@ export type CastTypeRef =
   | CastNamedTypeRef
   | CastPointerTypeRef
   | CastReferenceTypeRef
+  | CastSafePointerTypeRef
   | CastSliceTypeRef
   | CastInferredArrayTypeRef
   | CastFixedArrayTypeRef
@@ -151,6 +152,12 @@ export interface CastPointerTypeRef {
 
 export interface CastReferenceTypeRef {
   kind: "ReferenceTypeRef";
+  element: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastSafePointerTypeRef {
+  kind: "SafePointerTypeRef";
   element: CastTypeRef;
   span: SourceSpan;
 }

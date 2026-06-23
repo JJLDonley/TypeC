@@ -38,6 +38,7 @@ function collectTypeSlices(type: TypeRef, elements: Map<Str, TypeRef>): void {
       return;
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
       collectTypeSlices(type.element, elements);

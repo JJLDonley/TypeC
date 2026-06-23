@@ -432,6 +432,7 @@ function substituteTypeRef(type: TypeRef, substitutions: TypeSubstitutions): Typ
       return substitutions.get(type.name) ?? type;
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
     case "SliceTypeRef":
     case "InferredArrayTypeRef":
       return { ...type, element: substituteTypeRef(type.element, substitutions) };

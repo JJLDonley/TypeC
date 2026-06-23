@@ -15,6 +15,7 @@ export function emitCType(
       return emitNamedCType(type.name, aliases);
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
       return `${emitCType(type.element, aliases)}*`;
     case "SliceTypeRef":
       return sliceCTypeName(type.element);

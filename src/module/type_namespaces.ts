@@ -75,6 +75,7 @@ function namespaceTypeRef(type: TypeRef, namespace: Str, aliases: Set<Str>): Typ
     }
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
     case "InferredArrayTypeRef":
       return { ...type, element: namespaceTypeRef(type.element, namespace, aliases) };
     case "FixedArrayTypeRef":

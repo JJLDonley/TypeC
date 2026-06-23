@@ -13,6 +13,8 @@ export function typeName(type: TypeRef): Str {
       return `${typeName(type.element)}*`;
     case "ReferenceTypeRef":
       return `${typeName(type.element)}&`;
+    case "SafePointerTypeRef":
+      return `SafePtr<${typeName(type.element)}>`;
     case "SliceTypeRef":
       return `Slice<${typeName(type.element)}>`;
     case "InferredArrayTypeRef":

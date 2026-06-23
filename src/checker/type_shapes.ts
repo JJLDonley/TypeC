@@ -5,7 +5,7 @@ import { isArrayTypeRef, isVoidNamedType } from "checker/type_refs.ts";
 type Str = string;
 
 export function checkPointerElementType(
-  type: Extract<TypeRef, { kind: "PointerTypeRef" }>,
+  type: Extract<TypeRef, { kind: "PointerTypeRef" | "SafePointerTypeRef" }>,
 ): Diagnostic[] {
   if (!isArrayTypeRef(type.element)) return [];
   return [{ message: "Pointer type cannot target array type", span: type.span }];

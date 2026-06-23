@@ -18,6 +18,8 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
       return checkNamedType(type, typeAliases);
     case "PointerTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkPointerElementType(type)];
+    case "SafePointerTypeRef":
+      return [...checkTypeRef(type.element, typeAliases), ...checkPointerElementType(type)];
     case "ReferenceTypeRef":
       return [...checkTypeRef(type.element, typeAliases), ...checkReferenceElementType(type)];
     case "SliceTypeRef":

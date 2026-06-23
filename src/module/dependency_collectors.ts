@@ -198,6 +198,7 @@ function collectTypeDeps(
       return;
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
     case "InferredArrayTypeRef":
     case "FixedArrayTypeRef":
     case "SliceTypeRef":

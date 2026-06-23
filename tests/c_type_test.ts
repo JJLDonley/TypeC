@@ -25,6 +25,10 @@ Deno.test("maps pointer and reference types to C pointers", () => {
     emitCType({ kind: "ReferenceTypeRef", element: namedType("i32"), span: fakeSpan() }),
     "i32*",
   );
+  assertEquals(
+    emitCType({ kind: "SafePointerTypeRef", element: namedType("i32"), span: fakeSpan() }),
+    "i32*",
+  );
 });
 
 Deno.test("emits slice types", () => {

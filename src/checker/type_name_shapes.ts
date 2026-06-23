@@ -14,6 +14,10 @@ export interface SliceTypeNameShape {
   element: TypeName;
 }
 
+export interface SafePointerTypeNameShape {
+  element: TypeName;
+}
+
 export interface FunctionParamTypeNameShape {
   name: Str;
   type: TypeName;
@@ -32,6 +36,12 @@ export function parseArrayTypeName(type: TypeName): ArrayTypeNameShape | null {
 
 export function parseSliceTypeName(type: TypeName): SliceTypeNameShape | null {
   const match = type.match(/^Slice<(.+)>$/);
+  if (!match) return null;
+  return { element: match[1] };
+}
+
+export function parseSafePointerTypeName(type: TypeName): SafePointerTypeNameShape | null {
+  const match = type.match(/^SafePtr<(.+)>$/);
   if (!match) return null;
   return { element: match[1] };
 }
@@ -98,9 +108,11 @@ function nextTypeNestingDepth(character: Str, depth: i32): i32 {
 }
 
 export function isPointerLikeTypeName(type: TypeName): b8 {
-  return type.endsWith("*") || type.endsWith("&");
+  return type.endsWith("*") || type.endsWith("&") || parseSafePointerTypeName(type) !== null;
 }
 
 export function pointeeTypeName(type: TypeName): TypeName {
+  const safePointer = parseSafePointerTypeName(type);
+  if (safePointer !== null) return safePointer.element;
   return type.slice(0, -1);
 }

@@ -91,6 +91,14 @@ Deno.test("parses function type refs", () => {
   assertText(typeName(fn), "(value: i32) => i32");
 });
 
+Deno.test("parses safe pointer type refs", () => {
+  const type = parseTypeRefWith(
+    parserFor([identifier("SafePtr"), punct("<"), identifier("i32"), punct(">"), eof()]),
+  );
+
+  assertText(typeName(type), "SafePtr<i32>");
+});
+
 Deno.test("parses canonical slice type refs", () => {
   const slice = parseTypeRefWith(
     parserFor([identifier("Slice"), punct("<"), identifier("i32"), punct(">"), eof()]),
@@ -137,6 +145,8 @@ function typeName(type: CastTypeRef): Str {
       return `${typeName(type.element)}*`;
     case "ReferenceTypeRef":
       return `${typeName(type.element)}&`;
+    case "SafePointerTypeRef":
+      return `SafePtr<${typeName(type.element)}>`;
     case "SliceTypeRef":
       return `Slice<${typeName(type.element)}>`;
     case "InferredArrayTypeRef":

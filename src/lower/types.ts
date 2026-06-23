@@ -6,6 +6,7 @@ import type {
   RecordField,
   RecordTypeRef,
   ReferenceTypeRef,
+  SafePointerTypeRef,
   SliceTypeRef,
   TypeRef,
 } from "core/ast.ts";
@@ -17,6 +18,7 @@ import type {
   CastRecordField,
   CastRecordTypeRef,
   CastReferenceTypeRef,
+  CastSafePointerTypeRef,
   CastSliceTypeRef,
   CastTypeRef,
 } from "core/cast.ts";
@@ -34,6 +36,8 @@ export function lowerTypeRef(type: CastTypeRef): TypeRef {
       return lowerPointerTypeRef(type);
     case "ReferenceTypeRef":
       return lowerReferenceTypeRef(type);
+    case "SafePointerTypeRef":
+      return lowerSafePointerTypeRef(type);
     case "SliceTypeRef":
       return lowerSliceTypeRef(type);
     case "InferredArrayTypeRef":
@@ -53,6 +57,10 @@ function lowerPointerTypeRef(type: CastPointerTypeRef): PointerTypeRef {
 
 function lowerReferenceTypeRef(type: CastReferenceTypeRef): ReferenceTypeRef {
   return { kind: "ReferenceTypeRef", element: lowerTypeRef(type.element), span: type.span };
+}
+
+function lowerSafePointerTypeRef(type: CastSafePointerTypeRef): SafePointerTypeRef {
+  return { kind: "SafePointerTypeRef", element: lowerTypeRef(type.element), span: type.span };
 }
 
 function lowerSliceTypeRef(type: CastSliceTypeRef): SliceTypeRef {

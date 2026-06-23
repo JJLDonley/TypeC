@@ -104,6 +104,7 @@ export type TypeRef =
   | NamedTypeRef
   | PointerTypeRef
   | ReferenceTypeRef
+  | SafePointerTypeRef
   | SliceTypeRef
   | InferredArrayTypeRef
   | FixedArrayTypeRef
@@ -125,6 +126,12 @@ export interface PointerTypeRef {
 
 export interface ReferenceTypeRef {
   kind: "ReferenceTypeRef";
+  element: TypeRef;
+  span: SourceSpan;
+}
+
+export interface SafePointerTypeRef {
+  kind: "SafePointerTypeRef";
   element: TypeRef;
   span: SourceSpan;
 }

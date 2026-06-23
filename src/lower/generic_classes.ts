@@ -437,6 +437,7 @@ function rewriteTypeChildren(
       return type;
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
     case "SliceTypeRef":
     case "InferredArrayTypeRef":
       return { ...type, element: rewrite(type.element) };

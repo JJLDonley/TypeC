@@ -25,6 +25,7 @@ export function cTypeShape(type: TypeRef, aliases: TypeAliasIndex): Str {
       return aliases.get(type.name)?.cName ?? typeName(type);
     case "PointerTypeRef":
     case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
       return `${cTypeShape(type.element, aliases)}*`;
     case "SliceTypeRef":
       return `Slice<${cTypeShape(type.element, aliases)}>`;
