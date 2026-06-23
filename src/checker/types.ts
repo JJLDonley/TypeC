@@ -88,6 +88,7 @@ export function isFloatType(type: TypeName): b8 {
 
 export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (actual === expected) return true;
+  if (canonicalNumericType(actual) === canonicalNumericType(expected)) return true;
   const expectedArray = parseArrayTypeName(expected);
   const actualArray = parseArrayTypeName(actual);
   if (expectedArray && actualArray) {
@@ -103,13 +104,43 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   return isPointerAssignable(actual, expected);
 }
 
+function canonicalNumericType(type: TypeName): TypeName {
+  switch (type) {
+    case "c_char":
+    case "c_schar":
+      return "i8";
+    case "c_uchar":
+      return "u8";
+    case "c_short":
+      return "i16";
+    case "c_ushort":
+      return "u16";
+    case "c_int":
+      return "i32";
+    case "c_uint":
+      return "u32";
+    case "c_long":
+    case "c_longlong":
+      return "i64";
+    case "c_ulong":
+    case "c_ulonglong":
+      return "u64";
+    case "c_float":
+      return "f32";
+    case "c_double":
+      return "f64";
+    default:
+      return type;
+  }
+}
+
 function areFunctionTypesAssignable(actual: TypeName, expected: TypeName): b8 {
   const actualFunction = parseFunctionTypeName(actual);
   const expectedFunction = parseFunctionTypeName(expected);
   if (!actualFunction || !expectedFunction) return false;
-  if (actualFunction.returnType !== expectedFunction.returnType) return false;
+  if (!isAssignable(actualFunction.returnType, expectedFunction.returnType)) return false;
   if (actualFunction.params.length !== expectedFunction.params.length) return false;
   return actualFunction.params.every((param, index) =>
-    param.type === expectedFunction.params[index]!.type
+    isAssignable(param.type, expectedFunction.params[index]!.type)
   );
 }

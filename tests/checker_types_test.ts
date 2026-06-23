@@ -74,6 +74,10 @@ Deno.test("classifies C variadic argument types", () => {
 
 Deno.test("checks assignability", () => {
   assertSame(isAssignable("i32", "i32"), true);
+  assertSame(isAssignable("i32", "c_int"), true);
+  assertSame(isAssignable("c_int", "i32"), true);
+  assertSame(isAssignable("f64", "c_double"), true);
+  assertSame(isAssignable("i64", "c_int"), false);
   assertSame(isAssignable("i32[3]", "i32[]"), true);
   assertSame(isAssignable("i32[3]", "i32[2]"), false);
   assertSame(isAssignable("Vec&", "Vec*"), true);
