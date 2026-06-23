@@ -1,4 +1,4 @@
-import type { Statement } from "core/ast.ts";
+import type { Expression, FunctionDecl, Statement, TypeAliasDecl } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import { emitIncDec } from "emitter/inc_dec.ts";
 
@@ -10,15 +10,23 @@ const span: SourceSpan = {
 };
 
 Deno.test("emits increment and decrement statements", () => {
-  assertText(emitIncDec(incDec("x", "++")), "x++;");
-  assertText(emitIncDec(incDec("y", "--")), "y--;");
+  assertText(emitIncDec(incDec("x", "++"), context()), "x++;");
+  assertText(emitIncDec(incDec("y", "--"), context()), "y--;");
 });
 
 function incDec(
   name: Str,
   operator: Extract<Statement, { kind: "IncDecStmt" }>["operator"],
 ): Extract<Statement, { kind: "IncDecStmt" }> {
-  return { kind: "IncDecStmt", name, operator, span };
+  return { kind: "IncDecStmt", target: identifier(name), operator, span };
+}
+
+function identifier(name: Str): Extract<Expression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
+}
+
+function context(): { typeAliases: Map<Str, TypeAliasDecl>; functions: Map<Str, FunctionDecl> } {
+  return { typeAliases: new Map<Str, TypeAliasDecl>(), functions: new Map<Str, FunctionDecl>() };
 }
 
 function assertText(actual: Str, expected: Str): void {

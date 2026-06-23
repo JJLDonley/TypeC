@@ -1,7 +1,7 @@
 import type { Expression, Statement } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
-import type { LocalInfo } from "checker/locals.ts";
+import type { AssignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkAssignment } from "checker/assignments.ts";
 
 type Str = string;
@@ -31,7 +31,7 @@ Deno.test("reports invalid assignments", () => {
   );
   const arrayDiagnostics = checkAssignment(
     assignment("items", integer("1")),
-    local("i32[1]", true),
+    local("i32[1]", true, "items"),
     resolveExpected,
   );
   const typeDiagnostics = checkAssignment(
@@ -46,10 +46,7 @@ Deno.test("reports invalid assignments", () => {
 });
 
 Deno.test("ignores unresolved assignment locals", () => {
-  assertLen(
-    checkAssignment(assignment("missing", integer("1")), undefined, resolveActual).length,
-    0,
-  );
+  assertLen(checkAssignment(assignment("missing", integer("1")), null, resolveActual).length, 0);
 });
 
 Deno.test("checks compound assignments through binary rules", () => {
@@ -76,8 +73,8 @@ function resolveActual(_expr: Expression, _expected: TypeName): TypeName {
   return "i32";
 }
 
-function local(type: TypeName, mutable: b8): LocalInfo {
-  return { type, mutable };
+function local(type: TypeName, mutable: b8, rootName: Str = "value"): AssignmentTargetInfo {
+  return { type, mutable, rootName, wholeLocal: true };
 }
 
 function assignment(
@@ -85,7 +82,11 @@ function assignment(
   expression: Expression,
   operator: Extract<Statement, { kind: "AssignmentStmt" }>["operator"] = "=",
 ): Extract<Statement, { kind: "AssignmentStmt" }> {
-  return { kind: "AssignmentStmt", name, operator, expression, span };
+  return { kind: "AssignmentStmt", target: identifier(name), operator, expression, span };
+}
+
+function identifier(name: Str): Extract<Expression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
 }
 
 function integer(text: Str): Expression {

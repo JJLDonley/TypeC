@@ -238,7 +238,11 @@ class GenericClassInstantiator {
   }
 
   private rewriteAssignment(statement: CastAssignmentStmt): CastAssignmentStmt {
-    return { ...statement, expression: this.rewriteExpression(statement.expression) };
+    return {
+      ...statement,
+      target: this.rewriteExpression(statement.target) as CastAssignmentStmt["target"],
+      expression: this.rewriteExpression(statement.expression),
+    };
   }
 
   private rewriteSwitch(statement: CastSwitchStmt): CastSwitchStmt {

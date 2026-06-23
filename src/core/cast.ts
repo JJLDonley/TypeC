@@ -296,17 +296,22 @@ export type CastAssignmentOperator =
 
 export interface CastAssignmentStmt {
   kind: "AssignmentStmt";
-  name: Str;
+  target: CastAssignmentTarget;
   operator: CastAssignmentOperator;
   expression: CastExpression;
   span: SourceSpan;
 }
 
+export type CastAssignmentTarget =
+  | Extract<CastExpression, { kind: "IdentifierExpr" }>
+  | Extract<CastExpression, { kind: "FieldAccessExpr" }>
+  | Extract<CastExpression, { kind: "IndexExpr" }>;
+
 export type CastIncDecOperator = "++" | "--";
 
 export interface CastIncDecStmt {
   kind: "IncDecStmt";
-  name: Str;
+  target: CastAssignmentTarget;
   operator: CastIncDecOperator;
   span: SourceSpan;
 }

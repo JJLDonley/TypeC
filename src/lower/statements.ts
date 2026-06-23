@@ -97,7 +97,7 @@ function lowerIfStmt(statement: CastIfStmt): IfStmt {
 function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
   return {
     kind: "AssignmentStmt",
-    name: statement.name,
+    target: lowerExpression(statement.target) as AssignmentStmt["target"],
     operator: statement.operator,
     expression: lowerExpression(statement.expression),
     span: statement.span,
@@ -107,7 +107,7 @@ function lowerAssignmentStmt(statement: CastAssignmentStmt): AssignmentStmt {
 function lowerIncDecStmt(statement: CastIncDecStmt): IncDecStmt {
   return {
     kind: "IncDecStmt",
-    name: statement.name,
+    target: lowerExpression(statement.target) as IncDecStmt["target"],
     operator: statement.operator,
     span: statement.span,
   };

@@ -270,17 +270,19 @@ export type AssignmentOperator =
 
 export interface AssignmentStmt {
   kind: "AssignmentStmt";
-  name: Str;
+  target: AssignmentTarget;
   operator: AssignmentOperator;
   expression: Expression;
   span: SourceSpan;
 }
 
+export type AssignmentTarget = IdentifierExpr | FieldAccessExpr | IndexExpr;
+
 export type IncDecOperator = "++" | "--";
 
 export interface IncDecStmt {
   kind: "IncDecStmt";
-  name: Str;
+  target: AssignmentTarget;
   operator: IncDecOperator;
   span: SourceSpan;
 }

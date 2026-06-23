@@ -47,6 +47,38 @@ Deno.test("parses assignments before expression statements", () => {
   );
 
   assertText(stmt.kind, "AssignmentStmt");
+  if (stmt.kind !== "AssignmentStmt") throw new Error("Expected assignment");
+  assertText(stmt.target.kind, "IdentifierExpr");
+});
+
+Deno.test("parses field and index assignment targets", () => {
+  const field = parseStatementWith(
+    parserFor([
+      identifier("ship"),
+      punct("."),
+      identifier("x"),
+      punct("="),
+      integer("1"),
+      punct(";"),
+    ]),
+  );
+  const index = parseStatementWith(
+    parserFor([
+      identifier("items"),
+      punct("["),
+      integer("0"),
+      punct("]"),
+      punct("="),
+      integer("1"),
+      punct(";"),
+    ]),
+  );
+
+  if (field.kind !== "AssignmentStmt" || index.kind !== "AssignmentStmt") {
+    throw new Error("Expected assignments");
+  }
+  assertText(field.target.kind, "FieldAccessExpr");
+  assertText(index.target.kind, "IndexExpr");
 });
 
 Deno.test("parses compound assignment statements", () => {
@@ -70,6 +102,8 @@ Deno.test("parses increment and decrement statements", () => {
   }
   assertText(postfix.operator, "++");
   assertText(prefix.operator, "--");
+  assertText(postfix.target.kind, "IdentifierExpr");
+  assertText(prefix.target.kind, "IdentifierExpr");
 });
 
 Deno.test("parses do while statements", () => {
@@ -181,10 +215,40 @@ function parserFor(tokens: Token[]): StatementParser {
       throw new Error(`${message} at ${token.text}`);
     },
     parseExpression: () => {
-      const token = peek(tokens, current);
-      if (token.kind !== "identifier") throw new Error("Expected expression");
-      current += 1;
-      return identifierExpr(token.text);
+      let expression = parsePrimaryTestExpression(tokens, current);
+      current = expression.next;
+      while (peek(tokens, current).text === "." || peek(tokens, current).text === "[") {
+        if (peek(tokens, current).text === ".") {
+          current += 1;
+          const field = peek(tokens, current);
+          current += 1;
+          expression = {
+            next: current,
+            value: {
+              kind: "FieldAccessExpr",
+              operand: expression.value,
+              field: field.text,
+              span: sourceSpan,
+            },
+          };
+        } else {
+          current += 1;
+          const index = parsePrimaryTestExpression(tokens, current);
+          current = index.next;
+          if (peek(tokens, current).text !== "]") throw new Error("Expected index close");
+          current += 1;
+          expression = {
+            next: current,
+            value: {
+              kind: "IndexExpr",
+              operand: expression.value,
+              index: index.value,
+              span: sourceSpan,
+            },
+          };
+        }
+      }
+      return expression.value;
     },
     parseTypeRef: () => {
       const token = peek(tokens, current);
@@ -202,6 +266,26 @@ function parserFor(tokens: Token[]): StatementParser {
       return block();
     },
   };
+}
+
+function parsePrimaryTestExpression(
+  tokens: Token[],
+  current: i32,
+): { value: CastExpression; next: i32 } {
+  const token = peek(tokens, current);
+  if (token.kind === "identifier") return { value: identifierExpr(token.text), next: current + 1 };
+  if (token.kind === "integer") {
+    return {
+      value: {
+        kind: "IntegerLiteral",
+        value: BigInt(token.text),
+        text: token.text,
+        span: sourceSpan,
+      },
+      next: current + 1,
+    };
+  }
+  throw new Error("Expected expression");
 }
 
 function identifierExpr(name: Str): CastExpression {
@@ -234,6 +318,10 @@ function punct(text: Str): Token {
 
 function operator(text: Str): Token {
   return token("operator", text);
+}
+
+function integer(text: Str): Token {
+  return token("integer", text);
 }
 
 function eof(): Token {

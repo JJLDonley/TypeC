@@ -1,7 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { AssignmentOperator, Expression, Statement } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
-import type { LocalInfo } from "checker/locals.ts";
+import type { AssignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkBinaryOperation } from "checker/binary_operations.ts";
 import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import { isAssignable } from "checker/types.ts";
@@ -14,25 +14,25 @@ type TypeResolver = (expr: Expression, expected: TypeName) => TypeName;
 
 export function checkAssignment(
   stmt: AssignmentStmt,
-  local: LocalInfo | undefined,
+  target: AssignmentTargetInfo | null,
   resolveType: TypeResolver,
 ): Diagnostic[] {
-  if (!local) return [];
+  if (!target) return [];
   const diagnostics: Diagnostic[] = [];
-  if (!local.mutable) {
-    diagnostics.push({ message: `Cannot assign to const '${stmt.name}'`, span: stmt.span });
+  if (!target.mutable) {
+    diagnostics.push({ message: `Cannot assign to const '${target.rootName}'`, span: stmt.span });
   }
-  if (parseArrayTypeName(local.type)) {
+  if (target.wholeLocal && parseArrayTypeName(target.type)) {
     diagnostics.push({
-      message: `Cannot assign to array variable '${stmt.name}'`,
+      message: `Cannot assign to array variable '${target.rootName}'`,
       span: stmt.span,
     });
   }
-  const operation = checkAssignmentOperation(stmt, local.type, resolveType);
+  const operation = checkAssignmentOperation(stmt, target.type, resolveType);
   diagnostics.push(...operation.diagnostics);
-  if (operation.type !== "<error>" && !isAssignable(operation.type, local.type)) {
+  if (operation.type !== "<error>" && !isAssignable(operation.type, target.type)) {
     diagnostics.push({
-      message: `Assignment type '${operation.type}' is not assignable to '${local.type}'`,
+      message: `Assignment type '${operation.type}' is not assignable to '${target.type}'`,
       span: stmt.span,
     });
   }
@@ -57,7 +57,7 @@ function binaryExpression(stmt: AssignmentStmt): Extract<Expression, { kind: "Bi
   return {
     kind: "BinaryExpr",
     operator: binaryOperator(stmt.operator),
-    left: { kind: "IdentifierExpr", name: stmt.name, span: stmt.span },
+    left: stmt.target,
     right: stmt.expression,
     span: stmt.span,
   };

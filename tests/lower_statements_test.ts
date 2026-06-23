@@ -34,7 +34,13 @@ function varDecl(): CastStatement {
 }
 
 function assignment(): CastStatement {
-  return { kind: "AssignmentStmt", operator: "=", name: "x", expression: integer("2"), span };
+  return {
+    kind: "AssignmentStmt",
+    operator: "=",
+    target: identifier("x"),
+    expression: integer("2"),
+    span,
+  };
 }
 
 function whileStmt(): CastStatement {
@@ -61,6 +67,10 @@ function block(statements: CastStatement[]): CastBlockStmt {
 
 function integer(text: Str): CastExpression {
   return { kind: "IntegerLiteral", value: BigInt(text), text, span };
+}
+
+function identifier(name: Str): Extract<CastExpression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
 }
 
 function bool(): CastExpression {

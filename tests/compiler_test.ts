@@ -1262,6 +1262,15 @@ Deno.test("emits C for compound assignments", () => {
   assertIncludes(c, "bits >>= 1;");
 });
 
+Deno.test("emits C for field and index assignment targets", () => {
+  const source =
+    `type Vec2 = { x: i32, y: i32 }; type Ship = { pos: Vec2, values: i32[2] }; function main(): i32 { let ship: Ship = { pos: { x: 1, y: 2 }, values: [3, 4] }; ship.pos.x += 5; ship.values[1] = ship.pos.x; ship.values[1]++; return ship.values[1]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "ship.pos.x += 5;");
+  assertIncludes(c, "ship.values[1] = ship.pos.x;");
+  assertIncludes(c, "ship.values[1]++;");
+});
+
 Deno.test("emits C for increment and decrement statements", () => {
   const source =
     `function update(value: i32): i32 { let current: i32 = value; current++; --current; return current; } function main(): i32 { return 0; }`;

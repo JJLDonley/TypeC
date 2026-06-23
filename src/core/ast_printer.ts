@@ -136,11 +136,15 @@ class AstPrinter {
         this.indented(() => this.expression(statement.initializer));
         return;
       case "AssignmentStmt":
-        this.line(`AssignmentStmt ${statement.name} ${statement.operator}`);
-        this.indented(() => this.expression(statement.expression));
+        this.line(`AssignmentStmt ${statement.operator}`);
+        this.indented(() => {
+          this.expression(statement.target);
+          this.expression(statement.expression);
+        });
         return;
       case "IncDecStmt":
-        this.line(`IncDecStmt ${statement.name} ${statement.operator}`);
+        this.line(`IncDecStmt ${statement.operator}`);
+        this.indented(() => this.expression(statement.target));
         return;
       case "SwitchStmt":
         this.line("SwitchStmt");

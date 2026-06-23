@@ -1,7 +1,7 @@
-import type { Statement } from "core/ast.ts";
+import type { Expression, Statement } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
-import type { LocalInfo } from "checker/locals.ts";
+import type { AssignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkIncDec } from "checker/inc_dec.ts";
 
 type Str = string;
@@ -20,7 +20,7 @@ Deno.test("accepts mutable integer increment and decrement", () => {
 
 Deno.test("reports invalid increment and decrement targets", () => {
   const constDiagnostics = checkIncDec(incDec("value", "++"), local("i32", false));
-  const arrayDiagnostics = checkIncDec(incDec("items", "++"), local("i32[1]", true));
+  const arrayDiagnostics = checkIncDec(incDec("items", "++"), local("i32[1]", true, "items"));
   const typeDiagnostics = checkIncDec(incDec("value", "--"), local("f32", true));
 
   assertText(constDiagnostics[0]?.message ?? "", "Cannot assign to const 'value'");
@@ -29,18 +29,22 @@ Deno.test("reports invalid increment and decrement targets", () => {
 });
 
 Deno.test("ignores unresolved increment and decrement locals", () => {
-  assertLen(checkIncDec(incDec("missing", "++"), undefined).length, 0);
+  assertLen(checkIncDec(incDec("missing", "++"), null).length, 0);
 });
 
 function incDec(
   name: Str,
   operator: Extract<Statement, { kind: "IncDecStmt" }>["operator"],
 ): Extract<Statement, { kind: "IncDecStmt" }> {
-  return { kind: "IncDecStmt", name, operator, span };
+  return { kind: "IncDecStmt", target: identifier(name), operator, span };
 }
 
-function local(type: TypeName, mutable: b8): LocalInfo {
-  return { type, mutable };
+function local(type: TypeName, mutable: b8, rootName: Str = "value"): AssignmentTargetInfo {
+  return { type, mutable, rootName, wholeLocal: true };
+}
+
+function identifier(name: Str): Extract<Expression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
 }
 
 function assertText(actual: Str, expected: Str): void {

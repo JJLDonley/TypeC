@@ -2728,6 +2728,58 @@ function main(): i32 {
 
 ---
 
+# Phase 38: General Assignment Targets
+
+Status: Complete.
+
+## Goal
+
+Allow assignments and statement-only updates to target static lvalues beyond simple local
+identifiers.
+
+## Syntax
+
+```ts
+x = value;
+ship.x = ship.x + ship.vx;
+items[i] = value;
+items[i].alive = false;
+ship.pos.x += dx;
+items[i].count++;
+```
+
+## Semantics
+
+- Assignment targets are static lvalues only.
+- Valid targets are:
+  - identifiers
+  - field accesses whose operand is a valid assignable storage expression
+  - index accesses whose operand is a valid assignable storage expression
+  - nested combinations of field and index access
+- `x op= y` is checked as `x = x op y` using existing operator rules.
+- `++` and `--` remain statements only and require integer targets.
+- Assignments remain statements only; no assignment expression values are added.
+- `const` locals are not assignable, including through their fields or indexes.
+- Whole fixed/inferred array variables are still not assignable, but their elements may be assigned.
+
+## Do
+
+- Parse assignment/update statements from expression lvalue targets.
+- Type-check target mutability, lvalue shape, and assignability.
+- Emit direct C lvalue assignments and updates.
+- Add parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add assignment expressions.
+- Do not add destructuring assignment.
+- Do not add logical/nullish assignment.
+- Do not add pointer dereference assignment in this phase unless already represented as a valid
+  emitted C lvalue by existing expression syntax.
+- Do not add `for` loops, constructors, `implements`, or inheritance in this phase.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

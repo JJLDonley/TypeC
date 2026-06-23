@@ -81,11 +81,17 @@ function varDecl(): Statement {
 }
 
 function assignment(): Statement {
-  return { kind: "AssignmentStmt", operator: "=", name: "x", expression: integer("1"), span };
+  return {
+    kind: "AssignmentStmt",
+    operator: "=",
+    target: identifier("x"),
+    expression: integer("1"),
+    span,
+  };
 }
 
 function incDec(): Statement {
-  return { kind: "IncDecStmt", operator: "++", name: "x", span };
+  return { kind: "IncDecStmt", operator: "++", target: identifier("x"), span };
 }
 
 function switchStmt(): Statement {
@@ -116,6 +122,10 @@ function block(): Extract<Statement, { kind: "WhileStmt" }>["body"] {
 
 function call(): Expression {
   return { kind: "CallExpr", callee: "tick", args: [], span };
+}
+
+function identifier(name: Str): Extract<Expression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
 }
 
 function integer(text: Str): Expression {

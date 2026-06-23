@@ -119,9 +119,9 @@ function statementUsesArena(stmt: Statement): b8 {
     case "VarDeclStmt":
       return typeUsesArena(stmt.type) || expressionUsesArena(stmt.initializer);
     case "AssignmentStmt":
-      return expressionUsesArena(stmt.expression);
+      return expressionUsesArena(stmt.target) || expressionUsesArena(stmt.expression);
     case "IncDecStmt":
-      return false;
+      return expressionUsesArena(stmt.target);
     case "SwitchStmt":
       return expressionUsesArena(stmt.expression) ||
         stmt.cases.some((caseStmt) =>

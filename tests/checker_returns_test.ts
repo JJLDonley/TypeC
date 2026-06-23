@@ -38,7 +38,7 @@ function returnStmt(): Statement {
 function assignmentStmt(): Statement {
   return {
     kind: "AssignmentStmt",
-    name: "x",
+    target: { kind: "IdentifierExpr", name: "x", span },
     operator: "=",
     expression: { kind: "IntegerLiteral", value: 1n, text: "1", span },
     span,

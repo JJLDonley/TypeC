@@ -4,11 +4,10 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 
 ## Current prototype subset
 
-> Important: TypeC currently has TS-like static layout features, but not full TS-style mutable
-> object ergonomics. Assignments target simple mutable local identifiers only. Field assignment
-> (`obj.x = value`), indexed assignment (`arr[i] = value`), nested lvalue updates
-> (`obj.pos.x += dx`), `for` loops, constructors, `implements`, and class inheritance are not
-> implemented yet. See `docs/ts-feature-analysis.md` for the detailed support/gap matrix.
+> Important: TypeC now supports general assignment targets such as `obj.x = value`,
+> `arr[i] = value`, and `obj.pos.x += dx`. Remaining major TypeScript-style ergonomic gaps include
+> `for` loops, constructors, `implements`, and class inheritance. See `docs/ts-feature-analysis.md`
+> for the detailed support/gap matrix.
 
 - Function declarations
 - Required parameter and return type annotations
@@ -16,16 +15,15 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
   `f64`, `void`
 - Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
   `return;`, function-call expression statements, `while`, `do while`, TypeScript-like `switch`,
-  `break`, empty statements, and local-identifier assignment statements
+  `break`, empty statements, and static lvalue assignment statements
 - Integer literals, float literals, string literals, identifiers, calls, unary `+ - ! ~`, `!!`,
   ternary `? :`, nullish coalescing `??`, Elvis `?:`, logical `&&` / `||`, bitwise integer
   operators, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
-- Record type aliases, record literals, record literal shorthand, and read-only field access from
-  source syntax
+- Record type aliases, record literals, record literal shorthand, field access, and field assignment
 - Fixed arrays `T[N]` / `Array<T, N>`, inferred local arrays `T[]` / `Array<T>`, nested fixed
   arrays, `.data` array pointer access, `.length()` fixed-array length access, pointer-decayed
-  parameter arrays, array literals, and read-only indexing from source syntax
+  parameter arrays, array literals, indexing, and indexed assignment from source syntax
 - Canonical pointer/reference types `Ptr<T>` and `Ref<T>` with equivalent compact `T*` and `T&`
   spellings
 - NUL-terminated C string literals as `u8[]`, decaying to `Ptr<u8>`, `u8*`, `u8[]`, `u8[N]`, or
@@ -38,13 +36,13 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phases through 37 are implemented. The current TypeScript-like syntax includes optional chaining,
-non-null assertions, nullish coalescing, bitwise operators, logical binary operators, compound local
-assignments, statement-only local increment/decrement, do-while, else-if, empty statements, trailing
-commas, numeric separators, single-quoted strings, record literal shorthand, comma-separated record
-type fields, parenthesized type refs, and named import aliases. Additional JavaScript runtime
-operators such as `typeof`, `void`, `delete`, and `await` remain unsupported unless a future static
-TypeC meaning is specified.
+Phases through 38 are implemented. The current TypeScript-like syntax includes general assignment
+lvalue targets, optional chaining, non-null assertions, nullish coalescing, bitwise operators,
+logical binary operators, compound local assignments, statement-only local increment/decrement,
+do-while, else-if, empty statements, trailing commas, numeric separators, single-quoted strings,
+record literal shorthand, comma-separated record type fields, parenthesized type refs, and named
+import aliases. Additional JavaScript runtime operators such as `typeof`, `void`, `delete`, and
+`await` remain unsupported unless a future static TypeC meaning is specified.
 
 ## Example
 
@@ -454,9 +452,9 @@ const d: f64 = v.lengthSquared();
 
 Constructors, inheritance, access modifiers, static members, `implements`, and `new` are not
 implemented. Methods dispatch statically and lower to C functions with an explicit receiver
-argument. Class values use existing record literal initialization. Because general field assignment
-is not implemented yet, methods are currently practical for reading computed state, not for ordinary
-mutable object updates like `this.x = this.x + 1`.
+argument. Class values use existing record literal initialization. General field assignment is
+implemented, so methods can mutate fields, but constructor, inheritance, and dispatch semantics are
+not implemented.
 
 ## Enums
 

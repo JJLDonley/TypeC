@@ -89,7 +89,7 @@ function emitStatementWithDefers(
     case "AssignmentStmt":
       return [emitAssignment(stmt, context, locals)];
     case "IncDecStmt":
-      return [emitIncDec(stmt)];
+      return [emitIncDec(stmt, context)];
     case "SwitchStmt":
       return [emitSwitchWithDefers(stmt, returnType, context, locals, defers)];
     case "WhileStmt":

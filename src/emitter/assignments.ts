@@ -1,5 +1,6 @@
-import type { Statement } from "core/ast.ts";
+import type { AssignmentTarget, Statement } from "core/ast.ts";
 import type { EmitContext } from "emitter/context.ts";
+import { spanKey } from "checker/exprs.ts";
 import { emitExpression, emitExpressionExpected } from "emitter/expressions.ts";
 import type { LocalTypes } from "emitter/local_types.ts";
 
@@ -16,9 +17,20 @@ export function emitAssignment(
   context: EmitContext,
   locals: LocalTypes,
 ): Str {
-  const targetType = locals.get(stmt.name);
+  const targetType = assignmentTargetType(stmt.target, context, locals);
   const expression = targetType
     ? emitExpressionExpected(stmt.expression, targetType, context)
     : emitExpression(stmt.expression, context);
-  return `${stmt.name} ${emitAssignmentOperator(stmt.operator)} ${expression};`;
+  return `${emitExpression(stmt.target, context)} ${
+    emitAssignmentOperator(stmt.operator)
+  } ${expression};`;
+}
+
+function assignmentTargetType(
+  target: AssignmentTarget,
+  context: EmitContext,
+  locals: LocalTypes,
+): Str | null {
+  if (target.kind === "IdentifierExpr") return locals.get(target.name) ?? null;
+  return context.expressionTypes?.get(spanKey(target.span))?.type ?? null;
 }

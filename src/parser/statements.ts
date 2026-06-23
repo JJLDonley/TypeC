@@ -40,9 +40,8 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("while")) return parseWhile(parser);
   if (parser.checkText("do")) return parseDoWhile(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
-  if (isIncDecStart(parser)) return parseIncDec(parser);
-  if (isAssignmentStart(parser)) return parseAssignment(parser);
-  return parseExpressionStatement(parser);
+  if (isPrefixIncDecStart(parser)) return parsePrefixIncDec(parser);
+  return parseExpressionOrAssignmentStatement(parser);
 }
 
 function parseEmpty(parser: StatementParser): CastStatement {
@@ -50,8 +49,10 @@ function parseEmpty(parser: StatementParser): CastStatement {
   return { kind: "EmptyStmt", span: semi.span };
 }
 
-function parseExpressionStatement(parser: StatementParser): CastStatement {
+function parseExpressionOrAssignmentStatement(parser: StatementParser): CastStatement {
   const expression = parser.parseExpression();
+  if (isAssignmentOperator(parser.peek().text)) return parseAssignment(parser, expression);
+  if (isIncDecOperator(parser.peek().text)) return parsePostfixIncDec(parser, expression);
   const semi = parser.expectText(";");
   return { kind: "ExpressionStmt", expression, span: span(expression.span.start, semi.span.end) };
 }
@@ -180,17 +181,17 @@ function parseCondition(parser: StatementParser): CastExpression {
   return condition;
 }
 
-function parseAssignment(parser: StatementParser): CastStatement {
-  const name = parser.expectKind("identifier", "Expected assignment target");
+function parseAssignment(parser: StatementParser, targetExpression: CastExpression): CastStatement {
+  const target = assignmentTarget(parser, targetExpression);
   const operator = parseAssignmentOperator(parser);
   const expression = parser.parseExpression();
   const semi = parser.expectText(";");
   return {
     kind: "AssignmentStmt",
-    name: name.text,
+    target,
     operator,
     expression,
-    span: span(name.span.start, semi.span.end),
+    span: span(targetExpression.span.start, semi.span.end),
   };
 }
 
@@ -201,35 +202,45 @@ function parseAssignmentOperator(parser: StatementParser): CastAssignmentOperato
   return "=";
 }
 
-function parseIncDec(parser: StatementParser): CastStatement {
-  return isIncDecOperator(parser.peek().text)
-    ? parsePrefixIncDec(parser)
-    : parsePostfixIncDec(parser);
-}
-
 function parsePrefixIncDec(parser: StatementParser): CastStatement {
   const operatorToken = parser.advance();
   const operator = parseIncDecOperator(operatorToken);
-  const name = parser.expectKind("identifier", "Expected increment target");
+  const targetExpression = parser.parseExpression();
+  const target = assignmentTarget(parser, targetExpression);
   const semi = parser.expectText(";");
   return {
     kind: "IncDecStmt",
-    name: name.text,
+    target,
     operator,
     span: span(operatorToken.span.start, semi.span.end),
   };
 }
 
-function parsePostfixIncDec(parser: StatementParser): CastStatement {
-  const name = parser.expectKind("identifier", "Expected increment target");
+function parsePostfixIncDec(
+  parser: StatementParser,
+  targetExpression: CastExpression,
+): CastStatement {
+  const target = assignmentTarget(parser, targetExpression);
   const operator = parseIncDecOperator(parser.advance());
   const semi = parser.expectText(";");
   return {
     kind: "IncDecStmt",
-    name: name.text,
+    target,
     operator,
-    span: span(name.span.start, semi.span.end),
+    span: span(targetExpression.span.start, semi.span.end),
   };
+}
+
+function assignmentTarget(
+  parser: StatementParser,
+  expression: CastExpression,
+): Extract<CastExpression, { kind: "IdentifierExpr" | "FieldAccessExpr" | "IndexExpr" }> {
+  if (
+    expression.kind === "IdentifierExpr" || expression.kind === "FieldAccessExpr" ||
+    expression.kind === "IndexExpr"
+  ) return expression;
+  parser.error({ kind: "eof", text: "", span: expression.span }, "Invalid assignment target");
+  return { kind: "IdentifierExpr", name: "<error>", span: expression.span };
 }
 
 function parseIncDecOperator(token: Token): CastIncDecOperator {
@@ -269,18 +280,6 @@ function isVariableDeclarationStart(parser: StatementParser): b8 {
   return parser.checkText("let") || parser.checkText("const");
 }
 
-function isAssignmentStart(parser: StatementParser): b8 {
-  return parser.check("identifier") && isAssignmentOperator(parser.peek(1).text);
-}
-
-function isIncDecStart(parser: StatementParser): b8 {
-  return isPrefixIncDecStart(parser) || isPostfixIncDecStart(parser);
-}
-
 function isPrefixIncDecStart(parser: StatementParser): b8 {
-  return isIncDecOperator(parser.peek().text) && parser.peek(1).kind === "identifier";
-}
-
-function isPostfixIncDecStart(parser: StatementParser): b8 {
-  return parser.check("identifier") && isIncDecOperator(parser.peek(1).text);
+  return isIncDecOperator(parser.peek().text);
 }

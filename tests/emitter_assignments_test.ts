@@ -37,7 +37,11 @@ function assignment(
   expression: Expression,
   operator: "=" | "+=" | ">>>=" = "=",
 ) {
-  return { kind: "AssignmentStmt" as const, name, operator, expression, span };
+  return { kind: "AssignmentStmt" as const, target: identifier(name), operator, expression, span };
+}
+
+function identifier(name: Str): Extract<Expression, { kind: "IdentifierExpr" }> {
+  return { kind: "IdentifierExpr", name, span };
 }
 
 function int(text: Str): Expression {

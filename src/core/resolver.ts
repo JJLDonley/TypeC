@@ -115,11 +115,11 @@ class Resolver {
         this.declare(scope, statement.name, "local", statement.span);
         return;
       case "AssignmentStmt":
-        this.requireSymbol(scope, statement.name, statement.span);
+        this.resolveAssignmentTarget(statement.target, scope);
         this.resolveExpression(statement.expression, scope);
         return;
       case "IncDecStmt":
-        this.requireSymbol(scope, statement.name, statement.span);
+        this.resolveAssignmentTarget(statement.target, scope);
         return;
       case "SwitchStmt":
         this.resolveExpression(statement.expression, scope);
@@ -148,6 +148,35 @@ class Resolver {
   private resolveBlock(statements: Statement[], parent: Scope): void {
     const scope = this.scopeTable.createScope("block", parent);
     for (const statement of statements) this.resolveStatement(statement, scope);
+  }
+
+  private resolveAssignmentTarget(
+    target: Extract<Statement, { kind: "AssignmentStmt" | "IncDecStmt" }>["target"],
+    scope: Scope,
+  ): void {
+    switch (target.kind) {
+      case "IdentifierExpr":
+        this.requireSymbol(scope, target.name, target.span);
+        return;
+      case "FieldAccessExpr":
+        this.resolveAssignmentTargetOperand(target.operand, scope);
+        return;
+      case "IndexExpr":
+        this.resolveAssignmentTargetOperand(target.operand, scope);
+        this.resolveExpression(target.index, scope);
+        return;
+    }
+  }
+
+  private resolveAssignmentTargetOperand(expression: Expression, scope: Scope): void {
+    if (
+      expression.kind === "IdentifierExpr" || expression.kind === "FieldAccessExpr" ||
+      expression.kind === "IndexExpr"
+    ) {
+      this.resolveAssignmentTarget(expression, scope);
+      return;
+    }
+    this.resolveExpression(expression, scope);
   }
 
   private resolveExpression(expression: Expression, scope: Scope): void {

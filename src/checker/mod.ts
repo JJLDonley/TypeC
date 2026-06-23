@@ -6,6 +6,7 @@ import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkArenaCall, checkExpectedArenaCall } from "checker/arenas.ts";
+import { assignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
@@ -262,7 +263,11 @@ class Checker {
     this.diagnostics.push(
       ...collectAssignmentDiagnostics(
         stmt,
-        locals.get(stmt.name),
+        assignmentTargetInfo(
+          stmt.target,
+          (name) => locals.get(name),
+          (expr) => this.typeOf(expr, locals),
+        ),
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
       ),
     );
@@ -272,7 +277,16 @@ class Checker {
     stmt: Extract<Statement, { kind: "IncDecStmt" }>,
     locals: Map<Str, LocalInfo>,
   ): void {
-    this.diagnostics.push(...collectIncDecDiagnostics(stmt, locals.get(stmt.name)));
+    this.diagnostics.push(
+      ...collectIncDecDiagnostics(
+        stmt,
+        assignmentTargetInfo(
+          stmt.target,
+          (name) => locals.get(name),
+          (expr) => this.typeOf(expr, locals),
+        ),
+      ),
+    );
   }
 
   private checkSwitch(

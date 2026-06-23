@@ -8,19 +8,18 @@ For a deeper gap analysis, see [`docs/ts-feature-analysis.md`](docs/ts-feature-a
 
 ## Important honesty note
 
-Several TS-looking features are only **partially implemented**. The largest current gap is
-assignment targets: TypeC can assign to simple mutable local variables, but not yet to fields or
-indexed elements.
+Several TS-looking features are still **partially implemented**. General assignment targets are now
+implemented, so mutable record fields and array elements can be updated:
 
 ```ts
-x = x + 1; // implemented
-obj.x = 1; // not implemented yet
-arr[i] = value; // not implemented yet
-obj.pos.x += dx; // not implemented yet
+x = x + 1;
+obj.x = 1;
+arr[i] = value;
+obj.pos.x += dx;
 ```
 
-This means records, arrays, and classes are useful for static layout, construction, reads, calls,
-and C emission, but they do not yet have normal TypeScript-style mutable object ergonomics.
+The largest remaining ergonomic gaps are `for` loops, constructors, explicit `implements`, and class
+inheritance/dispatch.
 
 ## Support Matrix
 
@@ -29,13 +28,13 @@ and C emission, but they do not yet have normal TypeScript-style mutable object 
 | Function declarations               | Implemented        | `function name(...): Type { ... }`; return types required.                                                                   |
 | Primitive type names                | Implemented        | TypeC source uses `bool`, integer/float aliases like `i32`, `f32`, `usize`, and `void`.                                      |
 | Local `const`                       | Implemented        | Immutable local with initializer.                                                                                            |
-| Local `let`                         | Partial            | Mutable local variable, but only identifier assignment targets are implemented.                                              |
+| Local `let`                         | Implemented        | Mutable local variable.                                                                                                      |
 | Module `const`                      | Implemented        | Compile-time constants in supported expressions.                                                                             |
-| Assignment `x = value`              | Partial            | Local identifiers only. Not an expression.                                                                                   |
-| Field assignment `obj.x = value`    | Not implemented    | Critical missing feature.                                                                                                    |
-| Indexed assignment `arr[i] = value` | Not implemented    | Critical missing feature.                                                                                                    |
-| Compound assignment                 | Partial            | Statement-only and local identifiers only.                                                                                   |
-| Increment/decrement                 | Partial            | Statement-only and local identifiers only.                                                                                   |
+| Assignment `x = value`              | Implemented        | Statement-only; no assignment expression value.                                                                              |
+| Field assignment `obj.x = value`    | Implemented        | Static lvalue targets only.                                                                                                  |
+| Indexed assignment `arr[i] = value` | Implemented        | Static lvalue targets only.                                                                                                  |
+| Compound assignment                 | Implemented        | Statement-only; supports static lvalue targets.                                                                              |
+| Increment/decrement                 | Implemented        | Statement-only; supports integer static lvalue targets.                                                                      |
 | Assignment expressions              | Not implemented    | No JS expression-valued assignment.                                                                                          |
 | `if` / `else` / `else if`           | Implemented        | Conditions must be `bool`; no truthiness.                                                                                    |
 | `while`                             | Implemented        | Condition must be `bool`.                                                                                                    |
@@ -57,10 +56,10 @@ and C emission, but they do not yet have normal TypeScript-style mutable object 
 | Numeric separators                  | Implemented        | Decimal literals like `1_000`.                                                                                               |
 | String literals                     | Implemented        | Double-quoted and single-quoted.                                                                                             |
 | Template literals                   | Not implemented    | No interpolation/runtime string model.                                                                                       |
-| Arrays                              | Partial            | Static arrays/slices, literals, indexing reads, C interop; no indexed mutation or JS array API.                              |
+| Arrays                              | Partial            | Static arrays/slices, literals, indexing, indexed mutation, C interop; no JS array API.                                      |
 | Array holes/sparse arrays           | Not implemented    | Intentionally no JS sparse arrays.                                                                                           |
 | Tuples                              | Not implemented    | Not yet specified.                                                                                                           |
-| Records/object types                | Partial            | Static record aliases, literals, field reads; no field assignment, optional fields, index signatures, or spread.             |
+| Records/object types                | Partial            | Static record aliases, literals, field reads/writes; no optional fields, index signatures, or spread.                        |
 | Record literal shorthand            | Implemented        | `{ x }` means `{ x: x }`.                                                                                                    |
 | Object spread/rest                  | Not implemented    | Not yet specified.                                                                                                           |
 | Dynamic property access             | Not implemented    | No default dynamic object model.                                                                                             |
@@ -76,8 +75,8 @@ and C emission, but they do not yet have normal TypeScript-style mutable object 
 | TS union types `A \| B`             | Not implemented    | Use tagged unions instead.                                                                                                   |
 | Intersection types `A & B`          | Not implemented    | Not yet specified.                                                                                                           |
 | Classes                             | Partial            | Static layout and methods lower to records/functions; no constructors, inheritance, `implements`, or normal mutable methods. |
-| Class fields                        | Partial            | Static layout and initialization; no field assignment.                                                                       |
-| Class methods                       | Partial            | Calls work; mutation blocked by missing field assignment.                                                                    |
+| Class fields                        | Partial            | Static layout, initialization, and field assignment; no constructors/inheritance.                                            |
+| Class methods                       | Partial            | Calls and mutation through fields work; no constructors/inheritance/dispatch.                                                |
 | `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                                                      |
 | Constructors                        | Not implemented    | Use record literals for initialization.                                                                                      |
 | Class `implements`                  | Not implemented    | Important future static-contract feature.                                                                                    |
@@ -110,15 +109,14 @@ and C emission, but they do not yet have normal TypeScript-style mutable object 
 
 ## Most important missing phases
 
-1. **General assignment targets**: `obj.x = v`, `arr[i] = v`, `obj.pos.x += dx`.
-2. **`for` loops**: counted loops without forcing verbose `while` syntax.
-3. **Class `implements`**: explicit static contracts.
-4. **Constructors**: structured initialization without record-literal-only construction.
-5. **Inheritance or composition support**: only after a strict static/C layout spec.
+1. **`for` loops**: counted loops without forcing verbose `while` syntax.
+2. **Class `implements`**: explicit static contracts.
+3. **Constructors**: structured initialization without record-literal-only construction.
+4. **Inheritance or composition support**: only after a strict static/C layout spec.
 
 ## Latest documented phase
 
-Latest completed phase: **Phase 37 — Named Import Aliases**.
+Latest completed phase: **Phase 38 — General Assignment Targets**.
 
 Run the compiler with:
 
