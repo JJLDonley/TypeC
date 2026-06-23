@@ -29,11 +29,11 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phase 23 has started. Logical `!`, `!!`, ternary `? :`, optional `T?` type spelling, and postfix
-non-null assertion `expr!` are implemented. Planned remaining expression syntax includes optional
-chaining `?.`, nullish coalescing `??`, and Elvis `?:`. Additional TypeScript unary/update syntaxes
-such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly rejected
-as described below.
+Phase 23 has started. Logical `!`, `!!`, ternary `? :`, optional `T?` type spelling, postfix
+non-null assertion `expr!`, nullish coalescing `??`, and Elvis `?:` are implemented. Planned
+remaining expression syntax includes optional chaining `?.`. Additional TypeScript unary/update
+syntaxes such as `~`, `++`, `--`, `typeof`, `void`, `delete`, and `await` are reserved or explicitly
+rejected as described below.
 
 ## Example
 
@@ -197,7 +197,7 @@ expr ?: fallback
 
 `??` is the canonical TypeScript-like spelling. `?:` is accepted as Elvis shorthand with the same
 semantics. Both require `expr` to be optional and `fallback` to be assignable to the contained type.
-The fallback is evaluated only when `expr` is empty.
+The fallback is evaluated only when `expr` is empty. This syntax is implemented.
 
 ### Non-null assertion
 

@@ -9,7 +9,7 @@ type b8 = boolean;
 export interface ExpressionParser {
   check(kind: TokenKind): b8;
   checkText(text: Str): b8;
-  peek(): Token;
+  peek(offset?: i32): Token;
   advance(): Token;
   expectText(text: Str): Token;
   parsePostfixExpression(): CastExpression;
@@ -20,6 +20,7 @@ export function parseExpressionWith(
   minPrecedence: i32 = 0,
 ): CastExpression {
   let expr = parseBinaryPrecedenceExpression(parser, minPrecedence);
+  if (minPrecedence <= 0 && isElvisExpression(parser)) expr = parseElvisExpression(parser, expr);
   if (minPrecedence <= 0 && parser.checkText("?")) expr = parseConditionalExpression(parser, expr);
   return expr;
 }
@@ -66,9 +67,35 @@ function parseConditionalExpression(
   };
 }
 
+function parseElvisExpression(parser: ExpressionParser, left: CastExpression): CastExpression {
+  parser.expectText("?");
+  parser.expectText(":");
+  const fallback = parseExpressionWith(parser, 1);
+  return {
+    kind: "NullishCoalesceExpr",
+    operator: "?:",
+    left,
+    fallback,
+    span: span(left.span.start, fallback.span.end),
+  };
+}
+
+function isElvisExpression(parser: ExpressionParser): b8 {
+  return parser.peek().text === "?" && parser.peek(1).text === ":";
+}
+
 function parseBinaryExpression(parser: ExpressionParser, left: CastExpression): CastExpression {
   const op = parser.advance();
   const rhs = parseExpressionWith(parser, precedence(op.text) + 1);
+  if (op.text === "??") {
+    return {
+      kind: "NullishCoalesceExpr",
+      operator: "??",
+      left,
+      fallback: rhs,
+      span: span(left.span.start, rhs.span.end),
+    };
+  }
   return {
     kind: "BinaryExpr",
     operator: op.text,

@@ -290,6 +290,7 @@ export type Expression =
   | UnaryExpr
   | BinaryExpr
   | ConditionalExpr
+  | NullishCoalesceExpr
   | CallExpr
   | MethodCallExpr
   | PostfixPointerExpr
@@ -352,6 +353,14 @@ export interface ConditionalExpr {
   condition: Expression;
   whenTrue: Expression;
   whenFalse: Expression;
+  span: SourceSpan;
+}
+
+export interface NullishCoalesceExpr {
+  kind: "NullishCoalesceExpr";
+  operator: "??" | "?:";
+  left: Expression;
+  fallback: Expression;
   span: SourceSpan;
 }
 

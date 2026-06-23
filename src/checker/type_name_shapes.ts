@@ -28,6 +28,12 @@ export interface FunctionTypeNameShape {
   returnType: TypeName;
 }
 
+export function optionalTypeNameElement(type: TypeName): TypeName | null {
+  if (!type.endsWith("?")) return null;
+  const element = type.slice(0, -1);
+  return element.length > 0 ? element : null;
+}
+
 export function parseArrayTypeName(type: TypeName): ArrayTypeNameShape | null {
   const match = type.match(/^(.+)\[(\d*)\]$/);
   if (!match) return null;

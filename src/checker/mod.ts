@@ -25,6 +25,7 @@ import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
+import { checkNullishCoalesceExpression } from "checker/nullish_coalescing.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
@@ -86,6 +87,7 @@ export * from "checker/local_types.ts";
 export * from "checker/locals.ts";
 export * from "checker/main.ts";
 export * from "checker/non_null_assertions.ts";
+export * from "checker/nullish_coalescing.ts";
 export * from "checker/pointer_compatibility.ts";
 export * from "checker/pointer_expressions.ts";
 export * from "checker/pointer_ops.ts";
@@ -366,6 +368,7 @@ class Checker {
       unary: (value) => this.unaryType(value, locals),
       binary: (value) => this.binaryType(value, locals),
       conditional: (value) => this.conditionalType(value, locals),
+      nullish: (value) => this.nullishType(value, locals),
       call: (value) => this.callType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
       pointer: (value) => this.postfixPointerType(value, locals),
@@ -414,6 +417,19 @@ class Checker {
       expr,
       (value) => this.typeOf(value, locals),
       (value, expected) => this.typeOfExpected(value, locals, expected),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private nullishType(
+    expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const result = checkNullishCoalesceExpression(
+      expr,
+      (operand) => this.typeOf(operand, locals),
+      (fallback, expected) => this.typeOfExpected(fallback, locals, expected),
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;

@@ -143,6 +143,11 @@ function expressionGenericCallDiagnostics(
         ...expressionGenericCallDiagnostics(expr.whenTrue, templates),
         ...expressionGenericCallDiagnostics(expr.whenFalse, templates),
       ];
+    case "NullishCoalesceExpr":
+      return [
+        ...expressionGenericCallDiagnostics(expr.left, templates),
+        ...expressionGenericCallDiagnostics(expr.fallback, templates),
+      ];
     case "CallExpr":
       return [
         ...genericCallArityDiagnostics(expr, templates),
@@ -347,6 +352,12 @@ class GenericInstantiator {
           condition: this.rewriteExpr(expr.condition),
           whenTrue: this.rewriteExpr(expr.whenTrue),
           whenFalse: this.rewriteExpr(expr.whenFalse),
+        };
+      case "NullishCoalesceExpr":
+        return {
+          ...expr,
+          left: this.rewriteExpr(expr.left),
+          fallback: this.rewriteExpr(expr.fallback),
         };
       case "CallExpr":
         return this.instantiateCall(expr);

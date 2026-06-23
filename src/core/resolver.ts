@@ -163,6 +163,10 @@ class Resolver {
         this.resolveExpression(expression.whenTrue, scope);
         this.resolveExpression(expression.whenFalse, scope);
         return;
+      case "NullishCoalesceExpr":
+        this.resolveExpression(expression.left, scope);
+        this.resolveExpression(expression.fallback, scope);
+        return;
       case "CallExpr":
         if (!builtinFunctions.has(expression.callee)) {
           this.requireSymbol(this.globalScope, expression.callee, expression.span);

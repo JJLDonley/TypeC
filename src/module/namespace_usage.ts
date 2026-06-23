@@ -85,6 +85,10 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
       collectExpression(expression.whenTrue, namespace, members);
       collectExpression(expression.whenFalse, namespace, members);
       return;
+    case "NullishCoalesceExpr":
+      collectExpression(expression.left, namespace, members);
+      collectExpression(expression.fallback, namespace, members);
+      return;
     case "CallExpr":
       collectQualifiedName(expression.callee, namespace, members);
       for (const typeArg of expression.typeArgs ?? []) collectType(typeArg, namespace, members);

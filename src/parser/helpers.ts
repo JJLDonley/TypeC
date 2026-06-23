@@ -24,6 +24,8 @@ export function precedence(op: Str): i32 {
     case "==":
     case "!=":
       return 5;
+    case "??":
+      return 1;
     default:
       return -1;
   }

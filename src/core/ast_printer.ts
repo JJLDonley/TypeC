@@ -210,6 +210,13 @@ class AstPrinter {
           this.expression(expression.whenFalse);
         });
         return;
+      case "NullishCoalesceExpr":
+        this.line(`NullishCoalesceExpr ${expression.operator}`);
+        this.indented(() => {
+          this.expression(expression.left);
+          this.expression(expression.fallback);
+        });
+        return;
       case "CallExpr": {
         const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
         const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";

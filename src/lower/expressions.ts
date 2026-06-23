@@ -12,6 +12,7 @@ import type {
   IntegerLiteral,
   MethodCallExpr,
   NonNullAssertExpr,
+  NullishCoalesceExpr,
   PostfixPointerExpr,
   RecordLiteralExpr,
   StringLiteral,
@@ -31,6 +32,7 @@ import type {
   CastIntegerLiteral,
   CastMethodCallExpr,
   CastNonNullAssertExpr,
+  CastNullishCoalesceExpr,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
   CastStringLiteral,
@@ -56,6 +58,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerBinaryExpr(expression);
     case "ConditionalExpr":
       return lowerConditionalExpr(expression);
+    case "NullishCoalesceExpr":
+      return lowerNullishCoalesceExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
     case "MethodCallExpr":
@@ -135,6 +139,16 @@ function lowerConditionalExpr(expression: CastConditionalExpr): ConditionalExpr 
     condition: lowerExpression(expression.condition),
     whenTrue: lowerExpression(expression.whenTrue),
     whenFalse: lowerExpression(expression.whenFalse),
+    span: expression.span,
+  };
+}
+
+function lowerNullishCoalesceExpr(expression: CastNullishCoalesceExpr): NullishCoalesceExpr {
+  return {
+    kind: "NullishCoalesceExpr",
+    operator: expression.operator,
+    left: lowerExpression(expression.left),
+    fallback: lowerExpression(expression.fallback),
     span: expression.span,
   };
 }

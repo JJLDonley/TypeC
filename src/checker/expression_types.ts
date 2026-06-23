@@ -16,6 +16,7 @@ export interface ExpressionTypeHandlers {
   unary(expr: Extract<Expression, { kind: "UnaryExpr" }>): TypeName;
   binary(expr: Extract<Expression, { kind: "BinaryExpr" }>): TypeName;
   conditional(expr: Extract<Expression, { kind: "ConditionalExpr" }>): TypeName;
+  nullish(expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>): TypeName;
   call(expr: Extract<Expression, { kind: "CallExpr" }>): TypeName;
   methodCall(expr: Extract<Expression, { kind: "MethodCallExpr" }>): TypeName;
   pointer(expr: Extract<Expression, { kind: "PostfixPointerExpr" }>): TypeName;
@@ -52,6 +53,8 @@ function computeNonBasicExpressionType(
       return ok(handlers.binary(expr));
     case "ConditionalExpr":
       return ok(handlers.conditional(expr));
+    case "NullishCoalesceExpr":
+      return ok(handlers.nullish(expr));
     case "CallExpr":
       return ok(handlers.call(expr));
     case "MethodCallExpr":
@@ -74,7 +77,8 @@ function computeNonBasicExpressionType(
 function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
   return expr.kind === "IdentifierExpr" || expr.kind === "UnaryExpr" ||
     expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr" ||
-    expr.kind === "CallExpr" || expr.kind === "MethodCallExpr" ||
+    expr.kind === "NullishCoalesceExpr" || expr.kind === "CallExpr" ||
+    expr.kind === "MethodCallExpr" ||
     expr.kind === "PostfixPointerExpr" || expr.kind === "NonNullAssertExpr" ||
     expr.kind === "FieldAccessExpr" || expr.kind === "IndexExpr" ||
     expr.kind === "RecordLiteralExpr" || expr.kind === "ArrayLiteralExpr";

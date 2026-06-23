@@ -34,6 +34,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitBinaryExpression(expr, context);
     case "ConditionalExpr":
       return emitConditionalExpression(expr, context);
+    case "NullishCoalesceExpr":
+      return emitNullishCoalesceExpression(expr, context);
     case "CallExpr":
       return emitCallExpression(
         expr,
@@ -228,6 +230,16 @@ function emitConditionalBranch(expr: Expression, context: EmitContext): Str {
   return emitExpression(expr, context);
 }
 
+function emitNullishCoalesceExpression(
+  expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>,
+  context: EmitContext,
+): Str {
+  const left = emitExpression(expr.left, context);
+  const fallbackType = context.expressionTypes?.get(spanKey(expr.fallback.span))?.type ?? "";
+  const fallback = emitExpressionExpected(expr.fallback, fallbackType, context);
+  return `${left}.present ? ${left}.value : ${fallback}`;
+}
+
 function emitBinaryOperand(
   expr: Expression,
   parentOperator: Str,
@@ -235,7 +247,7 @@ function emitBinaryOperand(
   context: EmitContext,
 ): Str {
   const operand = emitExpression(expr, context);
-  if (expr.kind === "ConditionalExpr") return `(${operand})`;
+  if (expr.kind === "ConditionalExpr" || expr.kind === "NullishCoalesceExpr") return `(${operand})`;
   if (expr.kind !== "BinaryExpr") return operand;
   const parent = cPrecedence(parentOperator);
   const child = cPrecedence(expr.operator);

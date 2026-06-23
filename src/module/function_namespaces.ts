@@ -108,6 +108,12 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         whenTrue: namespaceExpression(expr.whenTrue, namespace, functions),
         whenFalse: namespaceExpression(expr.whenFalse, namespace, functions),
       };
+    case "NullishCoalesceExpr":
+      return {
+        ...expr,
+        left: namespaceExpression(expr.left, namespace, functions),
+        fallback: namespaceExpression(expr.fallback, namespace, functions),
+      };
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };

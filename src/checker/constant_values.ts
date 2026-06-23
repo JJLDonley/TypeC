@@ -23,6 +23,7 @@ export function evaluateIntegerConstant(
       return evaluateBinaryIntegerConstant(expr, constants);
     case "ConditionalExpr":
       return evaluateConditionalIntegerConstant(expr, constants);
+    case "NullishCoalesceExpr":
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
@@ -52,6 +53,7 @@ export function evaluateBoolConstant(
       return evaluateUnaryBoolConstant(expr, constants);
     case "ConditionalExpr":
       return evaluateConditionalBoolConstant(expr, constants);
+    case "NullishCoalesceExpr":
     case "IntegerLiteral":
     case "FloatLiteral":
     case "StringLiteral":
@@ -168,6 +170,7 @@ export function evaluateFloatConstant(
       return evaluateBinaryFloatConstant(expr, constants);
     case "ConditionalExpr":
       return evaluateConditionalFloatConstant(expr, constants);
+    case "NullishCoalesceExpr":
     case "BoolLiteral":
     case "StringLiteral":
     case "CallExpr":

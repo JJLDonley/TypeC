@@ -16,6 +16,12 @@ export function checkConstantIntegerDivision(
   if (expr.kind === "ConditionalExpr") {
     return checkConstantConditionalIntegerDivision(expr, constants);
   }
+  if (expr.kind === "NullishCoalesceExpr") {
+    return [
+      ...checkConstantIntegerDivision(expr.left, constants),
+      ...checkConstantIntegerDivision(expr.fallback, constants),
+    ];
+  }
   if (expr.kind === "RecordLiteralExpr") {
     return expr.fields.flatMap((field) =>
       checkConstantIntegerDivision(field.expression, constants)

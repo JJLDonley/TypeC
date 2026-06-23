@@ -316,6 +316,7 @@ export type CastExpression =
   | CastUnaryExpr
   | CastBinaryExpr
   | CastConditionalExpr
+  | CastNullishCoalesceExpr
   | CastCallExpr
   | CastMethodCallExpr
   | CastPostfixPointerExpr
@@ -378,6 +379,14 @@ export interface CastConditionalExpr {
   condition: CastExpression;
   whenTrue: CastExpression;
   whenFalse: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastNullishCoalesceExpr {
+  kind: "NullishCoalesceExpr";
+  operator: "??" | "?:";
+  left: CastExpression;
+  fallback: CastExpression;
   span: SourceSpan;
 }
 

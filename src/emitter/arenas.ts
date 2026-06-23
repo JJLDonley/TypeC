@@ -149,6 +149,8 @@ function expressionUsesArena(expr: Expression): b8 {
     case "ConditionalExpr":
       return expressionUsesArena(expr.condition) || expressionUsesArena(expr.whenTrue) ||
         expressionUsesArena(expr.whenFalse);
+    case "NullishCoalesceExpr":
+      return expressionUsesArena(expr.left) || expressionUsesArena(expr.fallback);
     case "RecordLiteralExpr":
       return expr.fields.some((field) => expressionUsesArena(field.expression));
     case "ArrayLiteralExpr":

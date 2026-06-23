@@ -135,7 +135,7 @@ class Parser {
     return {
       check: (kind) => this.check(kind),
       checkText: (text) => this.checkText(text),
-      peek: () => this.peek(),
+      peek: (offset = 0) => this.peek(offset),
       advance: () => this.advance(),
       expectText: (text) => this.expectText(text),
       parsePostfixExpression: () => this.parsePostfixExpression(),

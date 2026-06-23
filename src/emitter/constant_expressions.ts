@@ -40,6 +40,7 @@ export function emitConstantExpressionExpected(
     case "MethodCallExpr":
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
+    case "NullishCoalesceExpr":
     case "IndexExpr":
       throw new Error("Unsupported compile-time constant expression");
   }
@@ -81,7 +82,10 @@ function emitConstantInitializer(
 
 function emitConstantUnaryOperand(expr: Expression, expectedType: Str, context: EmitContext): Str {
   const operand = emitConstantExpressionExpected(expr, expectedType, context);
-  if (expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr") return `(${operand})`;
+  if (
+    expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr" ||
+    expr.kind === "NullishCoalesceExpr"
+  ) return `(${operand})`;
   return operand;
 }
 

@@ -45,6 +45,25 @@ Deno.test("parses conditional expressions", () => {
   assertText(expr.whenFalse.kind, "IdentifierExpr");
 });
 
+Deno.test("parses nullish coalescing expressions", () => {
+  const nullish = parseExpressionWith(
+    parserFor([identifier("a"), operator("??"), identifier("b")]),
+  );
+  const elvis = parseExpressionWith(parserFor([
+    identifier("a"),
+    punctuation("?"),
+    punctuation(":"),
+    identifier("b"),
+  ]));
+
+  assertText(nullish.kind, "NullishCoalesceExpr");
+  if (nullish.kind !== "NullishCoalesceExpr") throw new Error("Expected nullish expression");
+  assertText(nullish.operator, "??");
+  assertText(elvis.kind, "NullishCoalesceExpr");
+  if (elvis.kind !== "NullishCoalesceExpr") throw new Error("Expected Elvis expression");
+  assertText(elvis.operator, "?:");
+});
+
 Deno.test("parses binary expressions with precedence", () => {
   const expr = parseExpressionWith(parserFor([
     identifier("a"),
@@ -80,7 +99,7 @@ function parserFor(tokens: Token[]): ExpressionParser {
   return {
     check: (kind) => peek(tokens, current).kind === kind,
     checkText: (text) => peek(tokens, current).text === text,
-    peek: () => peek(tokens, current),
+    peek: (offset = 0) => peek(tokens, current + offset),
     advance: () => {
       current += 1;
       return peek(tokens, current - 1);

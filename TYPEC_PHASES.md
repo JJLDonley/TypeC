@@ -1803,8 +1803,8 @@ deno run -A src/driver/main.ts lsp
 
 # Phase 23: TypeScript-Style Expression Operators
 
-Status: In progress. Logical `!` / `!!`, ternary `? :`, optional type spelling `T?`, and postfix
-non-null assertion `expr!` subsets implemented.
+Status: In progress. Logical `!` / `!!`, ternary `? :`, optional type spelling `T?`, postfix
+non-null assertion `expr!`, and nullish coalescing / Elvis subsets implemented.
 
 ## Goal
 
@@ -1914,6 +1914,7 @@ Nullish coalescing and Elvis:
 - `expr ?: fallback` has the same semantics as `expr ?? fallback`.
 - The result type is the contained non-optional type.
 - `fallback` is evaluated only when `expr` is empty.
+- This syntax is implemented.
 
 Non-null assertion:
 

@@ -1180,6 +1180,14 @@ Deno.test("emits C for non-null assertions", () => {
   assertIncludes(c, "return __typec_unwrap_Optional_i32(value);");
 });
 
+Deno.test("emits C for nullish coalescing", () => {
+  const source =
+    `function fallback(value: i32?): i32 { return value ?? 42; } function fallbackElvis(value: i32?): i32 { return value ?: 7; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return value.present ? value.value : 42;");
+  assertIncludes(c, "return value.present ? value.value : 7;");
+});
+
 Deno.test("emits C macros for wide integer literals", () => {
   const source =
     `function big(): u64 { return 18446744073709551615; } function main(): i32 { return 0; }`;

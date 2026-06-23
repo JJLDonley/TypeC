@@ -1,8 +1,7 @@
 import type { Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
-
-type Str = string;
+import { optionalTypeNameElement } from "checker/type_name_shapes.ts";
 
 export interface NonNullAssertCheck {
   diagnostics: Diagnostic[];
@@ -27,10 +26,4 @@ export function checkNonNullAssertExpression(
     }],
     type: "<error>",
   };
-}
-
-function optionalTypeNameElement(type: TypeName): Str | null {
-  if (!type.endsWith("?")) return null;
-  const element = type.slice(0, -1);
-  return element.length > 0 ? element : null;
 }

@@ -165,6 +165,10 @@ function collectExpressionDeps(
       collectExpressionDeps(expression.whenTrue, selected, ignoredTypes);
       collectExpressionDeps(expression.whenFalse, selected, ignoredTypes);
       return;
+    case "NullishCoalesceExpr":
+      collectExpressionDeps(expression.left, selected, ignoredTypes);
+      collectExpressionDeps(expression.fallback, selected, ignoredTypes);
+      return;
     case "CallExpr":
       collectCallDeps(expression, selected, ignoredTypes);
       return;

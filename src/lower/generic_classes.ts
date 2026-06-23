@@ -16,6 +16,7 @@ import type {
   CastInterfaceDecl,
   CastMethodCallExpr,
   CastNonNullAssertExpr,
+  CastNullishCoalesceExpr,
   CastParam,
   CastPostfixPointerExpr,
   CastProgram,
@@ -279,6 +280,8 @@ class GenericClassInstantiator {
         return this.rewriteBinary(expression);
       case "ConditionalExpr":
         return this.rewriteConditional(expression);
+      case "NullishCoalesceExpr":
+        return this.rewriteNullish(expression);
       case "CallExpr":
         return this.rewriteCall(expression);
       case "MethodCallExpr":
@@ -316,6 +319,14 @@ class GenericClassInstantiator {
       condition: this.rewriteExpression(expression.condition),
       whenTrue: this.rewriteExpression(expression.whenTrue),
       whenFalse: this.rewriteExpression(expression.whenFalse),
+    };
+  }
+
+  private rewriteNullish(expression: CastNullishCoalesceExpr): CastNullishCoalesceExpr {
+    return {
+      ...expression,
+      left: this.rewriteExpression(expression.left),
+      fallback: this.rewriteExpression(expression.fallback),
     };
   }
 
