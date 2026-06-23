@@ -25,9 +25,11 @@ import { checkReturnStatement as collectReturnStatementDiagnostics } from "check
 import { checkUnaryExpression } from "checker/unary_expressions.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
 import { checkStatementDispatch } from "checker/statements.ts";
+import { checkSwitchStatement } from "checker/switch_statements.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
+type b8 = boolean;
 
 export type CheckedProgram = TypedProgram;
 
@@ -82,6 +84,7 @@ export * from "checker/return_statements.ts";
 export * from "checker/returns.ts";
 export * from "checker/statements.ts";
 export * from "checker/string_literals.ts";
+export * from "checker/switch_statements.ts";
 export * from "checker/type_alias_order.ts";
 export * from "checker/type_name_shapes.ts";
 export * from "checker/type_refs.ts";
@@ -146,18 +149,25 @@ class Checker {
     const returnType = typeName(fn.returnType);
     this.diagnostics.push(...collectFunctionHeaderDiagnostics(fn, returnType, this.typeAliases));
     if (!fn.body) return;
-    for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType);
+    for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType, false);
     this.diagnostics.push(...collectMissingFunctionReturnDiagnostics(fn, returnType));
   }
 
-  private checkStatement(stmt: Statement, locals: Map<Str, LocalInfo>, returnType: TypeName): void {
+  private checkStatement(
+    stmt: Statement,
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+    inSwitch: b8,
+  ): void {
     checkStatementDispatch(stmt, {
       returnStatement: (expr, span) => this.checkReturn(expr, locals, returnType, span),
       expressionStatement: (expr) => this.checkExpressionStatement(expr, locals),
+      breakStatement: (span) => this.checkBreak(span, inSwitch),
       variableDeclaration: (value) => this.checkVarDecl(value, locals),
       assignment: (value) => this.checkAssignment(value, locals),
+      switchStatement: (value) => this.checkSwitch(value, locals, returnType),
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
-      ifStatement: (value) => this.checkIf(value, locals, returnType),
+      ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
     });
   }
 
@@ -180,6 +190,11 @@ class Checker {
         (value, target) => this.typeOfExpected(value, locals, target),
       ),
     );
+  }
+
+  private checkBreak(span: SourceSpan, inSwitch: b8): void {
+    if (inSwitch) return;
+    this.diagnostics.push({ message: "Break statement is only valid inside a switch", span });
   }
 
   private checkVarDecl(
@@ -208,6 +223,22 @@ class Checker {
     );
   }
 
+  private checkSwitch(
+    stmt: Extract<Statement, { kind: "SwitchStmt" }>,
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    this.diagnostics.push(
+      ...checkSwitchStatement(
+        stmt,
+        this.constants,
+        (expr) => this.typeOf(expr, locals),
+        (expr, expected) => this.typeOfExpected(expr, locals, expected),
+        (children) => this.checkBlock(children, locals, returnType, true),
+      ),
+    );
+  }
+
   private checkWhile(
     stmt: Extract<Statement, { kind: "WhileStmt" }>,
     locals: Map<Str, LocalInfo>,
@@ -218,7 +249,7 @@ class Checker {
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType),
+        (children, parent) => this.checkBlock(children, parent, returnType, false),
       ),
     );
   }
@@ -227,13 +258,14 @@ class Checker {
     stmt: Extract<Statement, { kind: "IfStmt" }>,
     locals: Map<Str, LocalInfo>,
     returnType: TypeName,
+    inSwitch: b8,
   ): void {
     this.diagnostics.push(
       ...checkIfStatement(
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType),
+        (children, parent) => this.checkBlock(children, parent, returnType, inSwitch),
       ),
     );
   }
@@ -242,10 +274,11 @@ class Checker {
     statements: Statement[],
     parentLocals: Map<Str, LocalInfo>,
     returnType: TypeName,
+    inSwitch: b8,
   ): Diagnostic[] {
     const before = this.diagnostics.length;
     const locals = new Map<Str, LocalInfo>(parentLocals);
-    for (const child of statements) this.checkStatement(child, locals, returnType);
+    for (const child of statements) this.checkStatement(child, locals, returnType, inSwitch);
     return this.diagnostics.splice(before);
   }
 

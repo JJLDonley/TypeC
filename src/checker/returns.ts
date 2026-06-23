@@ -15,7 +15,18 @@ export function blockReturns(statements: Statement[]): b8 {
 
 function statementReturns(statement: Statement): b8 {
   if (statement.kind === "ReturnStmt") return true;
-  if (statement.kind !== "IfStmt") return false;
+  if (statement.kind === "IfStmt") return ifStatementReturns(statement);
+  if (statement.kind === "SwitchStmt") return switchStatementReturns(statement);
+  return false;
+}
+
+function ifStatementReturns(statement: Extract<Statement, { kind: "IfStmt" }>): b8 {
   if (!statement.elseBody) return false;
   return blockReturns(statement.thenBody.statements) && blockReturns(statement.elseBody.statements);
+}
+
+function switchStatementReturns(statement: Extract<Statement, { kind: "SwitchStmt" }>): b8 {
+  if (!statement.defaultCase) return false;
+  return statement.cases.every((switchCase) => blockReturns(switchCase.statements)) &&
+    blockReturns(statement.defaultCase.statements);
 }

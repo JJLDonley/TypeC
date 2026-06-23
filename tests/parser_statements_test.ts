@@ -18,7 +18,17 @@ Deno.test("parses return statements", () => {
 });
 
 Deno.test("parses variable declarations", () => {
-  const stmt = parseStatementWith(parserFor([keyword("const"), identifier("x"), punct(":"), identifier("i32"), punct("="), identifier("value"), punct(";")]));
+  const stmt = parseStatementWith(
+    parserFor([
+      keyword("const"),
+      identifier("x"),
+      punct(":"),
+      identifier("i32"),
+      punct("="),
+      identifier("value"),
+      punct(";"),
+    ]),
+  );
 
   assertText(stmt.kind, "VarDeclStmt");
   if (stmt.kind !== "VarDeclStmt") throw new Error("Expected variable declaration");
@@ -26,13 +36,47 @@ Deno.test("parses variable declarations", () => {
 });
 
 Deno.test("parses assignments before expression statements", () => {
-  const stmt = parseStatementWith(parserFor([identifier("x"), punct("="), identifier("value"), punct(";")]));
+  const stmt = parseStatementWith(
+    parserFor([identifier("x"), punct("="), identifier("value"), punct(";")]),
+  );
 
   assertText(stmt.kind, "AssignmentStmt");
 });
 
+Deno.test("parses break statements", () => {
+  const stmt = parseStatementWith(parserFor([keyword("break"), punct(";")]));
+
+  assertText(stmt.kind, "BreakStmt");
+});
+
+Deno.test("parses switch statements", () => {
+  const stmt = parseStatementWith(parserFor([
+    keyword("switch"),
+    punct("("),
+    identifier("value"),
+    punct(")"),
+    punct("{"),
+    keyword("case"),
+    identifier("first"),
+    punct(":"),
+    keyword("break"),
+    punct(";"),
+    keyword("default"),
+    punct(":"),
+    keyword("break"),
+    punct(";"),
+    punct("}"),
+  ]));
+
+  assertText(stmt.kind, "SwitchStmt");
+  if (stmt.kind !== "SwitchStmt") throw new Error("Expected switch");
+  assertText(`${stmt.cases.length}:${stmt.defaultCase?.statements.length ?? 0}`, "1:1");
+});
+
 Deno.test("parses conditional statements", () => {
-  const stmt = parseStatementWith(parserFor([keyword("if"), punct("("), identifier("ok"), punct(")"), punct("{"), punct("}")]));
+  const stmt = parseStatementWith(
+    parserFor([keyword("if"), punct("("), identifier("ok"), punct(")"), punct("{"), punct("}")]),
+  );
 
   assertText(stmt.kind, "IfStmt");
 });
@@ -63,7 +107,11 @@ function parserFor(tokens: Token[]): StatementParser {
       current += 1;
       return token;
     },
+    previous: () => peek(tokens, current - 1),
     peek: (offset = 0) => peek(tokens, current + offset),
+    error: (token, message) => {
+      throw new Error(`${message} at ${token.text}`);
+    },
     parseExpression: () => {
       const token = peek(tokens, current);
       if (token.kind !== "identifier") throw new Error("Expected expression");

@@ -42,12 +42,24 @@ function collectStatementDeps(statement: Statement, selected: DependencySet): vo
     case "ExpressionStmt":
       collectExpressionDeps(statement.expression, selected);
       return;
+    case "BreakStmt":
+      return;
     case "VarDeclStmt":
       collectTypeDeps(statement.type, selected);
       collectExpressionDeps(statement.initializer, selected);
       return;
     case "AssignmentStmt":
       collectExpressionDeps(statement.expression, selected);
+      return;
+    case "SwitchStmt":
+      collectExpressionDeps(statement.expression, selected);
+      for (const switchCase of statement.cases) {
+        for (const label of switchCase.labels) collectExpressionDeps(label, selected);
+        for (const child of switchCase.statements) collectStatementDeps(child, selected);
+      }
+      if (statement.defaultCase) {
+        for (const child of statement.defaultCase.statements) collectStatementDeps(child, selected);
+      }
       return;
     case "WhileStmt":
       collectExpressionDeps(statement.condition, selected);

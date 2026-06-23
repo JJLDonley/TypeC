@@ -359,6 +359,45 @@ Deno.test("rejects array return types", () => {
   );
 });
 
+Deno.test("checks switch statements", () => {
+  check(
+    resolve(
+      parse(
+        lex(
+          `const ONE: i32 = 1; function main(): i32 { const x: i32 = 1; switch (x) { case ONE: break; default: break; } return 42; }`,
+        ),
+      ),
+    ),
+  );
+});
+
+Deno.test("rejects invalid switch statements", () => {
+  assertCheckError(
+    `function main(): i32 { switch (1.0) { case 1.0: break; } return 0; }`,
+    "Switch expression type 'f64' is not switchable",
+  );
+  assertCheckError(
+    `function main(): i32 { const x: i32 = 1; switch (1) { case x: break; } return 0; }`,
+    "Expression is not valid in a compile-time constant",
+  );
+  assertCheckError(
+    `const TRUE: bool = true; function main(): i32 { switch (true) { case true: break; case TRUE: break; } return 0; }`,
+    "Duplicate switch case 'true'",
+  );
+  assertCheckError(
+    `function main(): i32 { switch (1) { case 1: break; case 1: break; } return 0; }`,
+    "Duplicate switch case '1'",
+  );
+  assertCheckError(
+    `function main(): i32 { break; return 0; }`,
+    "Break statement is only valid inside a switch",
+  );
+  assertCheckError(
+    `function main(): i32 { switch (1) { case 1: while (true) { break; } } return 0; }`,
+    "Break statement is only valid inside a switch",
+  );
+});
+
 Deno.test("checks while and assignment", () => {
   check(
     resolve(

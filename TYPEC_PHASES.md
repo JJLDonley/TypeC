@@ -1147,6 +1147,8 @@ representation are skipped safely.
 
 # Phase 13: Switch Statements
 
+Status: Complete.
+
 ## Goal
 
 Add TypeScript-like `switch` statements for explicit multi-way branching over integer-like values

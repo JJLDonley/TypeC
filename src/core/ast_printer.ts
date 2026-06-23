@@ -81,6 +81,9 @@ class AstPrinter {
         this.line("ExpressionStmt");
         this.indented(() => this.expression(statement.expression));
         return;
+      case "BreakStmt":
+        this.line("BreakStmt");
+        return;
       case "VarDeclStmt":
         this.line(
           `${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`,
@@ -90,6 +93,26 @@ class AstPrinter {
       case "AssignmentStmt":
         this.line(`AssignmentStmt ${statement.name}`);
         this.indented(() => this.expression(statement.expression));
+        return;
+      case "SwitchStmt":
+        this.line("SwitchStmt");
+        this.indented(() => {
+          this.expression(statement.expression);
+          for (const switchCase of statement.cases) {
+            this.line("Case");
+            this.indented(() => {
+              for (const label of switchCase.labels) this.expression(label);
+              for (const child of switchCase.statements) this.statement(child);
+            });
+          }
+          if (statement.defaultCase) {
+            const defaultCase = statement.defaultCase;
+            this.line("Default");
+            this.indented(() => {
+              for (const child of defaultCase.statements) this.statement(child);
+            });
+          }
+        });
         return;
       case "WhileStmt":
         this.line("WhileStmt");

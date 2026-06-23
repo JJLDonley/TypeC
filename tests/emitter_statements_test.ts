@@ -13,24 +13,75 @@ const span: SourceSpan = {
 };
 
 Deno.test("emits return and variable statements", () => {
-  assertText(emitStatement({ kind: "ReturnStmt", expression: int("7"), span }, "i32", context()), "return 7;");
-  assertText(emitStatement(varDecl(false, "x", named("i32"), int("3")), "i32", context()), "const i32 x = 3;");
+  assertText(
+    emitStatement({ kind: "ReturnStmt", expression: int("7"), span }, "i32", context()),
+    "return 7;",
+  );
+  assertText(
+    emitStatement(varDecl(false, "x", named("i32"), int("3")), "i32", context()),
+    "const i32 x = 3;",
+  );
 });
 
 Deno.test("emits array variable statements", () => {
   assertText(
-    emitStatement(varDecl(true, "xs", { kind: "InferredArrayTypeRef", element: named("i32"), span }, arrayLiteral([int("1"), int("2")])), "i32", context()),
+    emitStatement(
+      varDecl(
+        true,
+        "xs",
+        { kind: "InferredArrayTypeRef", element: named("i32"), span },
+        arrayLiteral([int("1"), int("2")]),
+      ),
+      "i32",
+      context(),
+    ),
     "i32 xs[2] = { 1, 2 };",
+  );
+});
+
+Deno.test("emits switch statements", () => {
+  assertText(
+    emitStatement(
+      {
+        kind: "SwitchStmt",
+        expression: int("1"),
+        cases: [{ labels: [int("1")], statements: [{ kind: "BreakStmt", span }], span }],
+        defaultCase: { statements: [{ kind: "ReturnStmt", expression: int("0"), span }], span },
+        span,
+      },
+      "i32",
+      context(),
+    ),
+    "switch (1) {\ncase 1:\n  break;\ndefault:\n  return 0;\n}",
   );
 });
 
 Deno.test("emits control flow statements", () => {
   assertText(
-    emitStatement({ kind: "WhileStmt", condition: bool("true"), body: block([{ kind: "ReturnStmt", expression: int("1"), span }]), span }, "i32", context()),
+    emitStatement(
+      {
+        kind: "WhileStmt",
+        condition: bool("true"),
+        body: block([{ kind: "ReturnStmt", expression: int("1"), span }]),
+        span,
+      },
+      "i32",
+      context(),
+    ),
     "while (true) {\n    return 1;\n  }",
   );
   assertText(
-    emitStatement({ kind: "IfStmt", condition: bool("false"), thenBody: block([{ kind: "ReturnStmt", expression: int("1"), span }]), elseBody: block([{ kind: "ReturnStmt", expression: int("2"), span }]), span }, "i32", context()),
+    emitStatement(
+      {
+        kind: "IfStmt",
+        condition: bool("false"),
+        thenBody: block([{ kind: "ReturnStmt", expression: int("1"), span }]),
+        elseBody: block([{ kind: "ReturnStmt", expression: int("2"), span }]),
+        span,
+      },
+      "i32",
+      context(),
+    ),
     "if (false) {\n    return 1;\n  } else {\n    return 2;\n  }",
   );
 });

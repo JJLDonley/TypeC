@@ -13,8 +13,10 @@ const span: SourceSpan = {
 Deno.test("dispatches statement checks", () => {
   assertDispatch(returnStmt(), "return");
   assertDispatch(expressionStmt(), "expression");
+  assertDispatch(breakStmt(), "break");
   assertDispatch(varDecl(), "var");
   assertDispatch(assignment(), "assign");
+  assertDispatch(switchStmt(), "switch");
   assertDispatch(whileStmt(), "while");
   assertDispatch(ifStmt(), "if");
 });
@@ -30,8 +32,10 @@ function handlers(calls: Str[]): StatementCheckHandlers {
   return {
     returnStatement: () => calls.push("return"),
     expressionStatement: () => calls.push("expression"),
+    breakStatement: () => calls.push("break"),
     variableDeclaration: () => calls.push("var"),
     assignment: () => calls.push("assign"),
+    switchStatement: () => calls.push("switch"),
     whileStatement: () => calls.push("while"),
     ifStatement: () => calls.push("if"),
   };
@@ -45,12 +49,33 @@ function expressionStmt(): Statement {
   return { kind: "ExpressionStmt", expression: call(), span };
 }
 
+function breakStmt(): Statement {
+  return { kind: "BreakStmt", span };
+}
+
 function varDecl(): Statement {
-  return { kind: "VarDeclStmt", mutable: false, name: "x", type: named("i32"), initializer: integer("1"), span };
+  return {
+    kind: "VarDeclStmt",
+    mutable: false,
+    name: "x",
+    type: named("i32"),
+    initializer: integer("1"),
+    span,
+  };
 }
 
 function assignment(): Statement {
   return { kind: "AssignmentStmt", name: "x", expression: integer("1"), span };
+}
+
+function switchStmt(): Statement {
+  return {
+    kind: "SwitchStmt",
+    expression: integer("1"),
+    cases: [{ labels: [integer("1")], statements: [], span }],
+    defaultCase: null,
+    span,
+  };
 }
 
 function whileStmt(): Statement {

@@ -161,6 +161,21 @@ Deno.test("parses bare returns", () => {
   if (statement.expression) throw new Error("Expected bare return");
 });
 
+Deno.test("parses switch statements", () => {
+  const program = parse(
+    lex(`function main(): i32 { switch (1) { case 0: return 0; default: return 1; } }`),
+  );
+  const statement = requireBody(program.functions[0].body).statements[0];
+  if (statement.kind !== "SwitchStmt") throw new Error("Expected switch statement");
+});
+
+Deno.test("rejects duplicate default cases", () => {
+  assertParseError(
+    `function main(): i32 { switch (1) { default: return 0; default: return 1; } }`,
+    "Duplicate default case",
+  );
+});
+
 Deno.test("parses if else statements", () => {
   const program = parse(lex(`function main(): i32 { if (true) { return 1; } else { return 0; } }`));
   const statement = requireBody(program.functions[0].body).statements[0];

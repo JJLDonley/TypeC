@@ -135,8 +135,10 @@ export interface CastBlockStmt {
 export type CastStatement =
   | CastReturnStmt
   | CastExpressionStmt
+  | CastBreakStmt
   | CastVarDeclStmt
   | CastAssignmentStmt
+  | CastSwitchStmt
   | CastWhileStmt
   | CastIfStmt;
 
@@ -149,6 +151,11 @@ export interface CastReturnStmt {
 export interface CastExpressionStmt {
   kind: "ExpressionStmt";
   expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastBreakStmt {
+  kind: "BreakStmt";
   span: SourceSpan;
 }
 
@@ -165,6 +172,25 @@ export interface CastAssignmentStmt {
   kind: "AssignmentStmt";
   name: Str;
   expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastSwitchStmt {
+  kind: "SwitchStmt";
+  expression: CastExpression;
+  cases: CastSwitchCase[];
+  defaultCase: CastSwitchDefaultCase | null;
+  span: SourceSpan;
+}
+
+export interface CastSwitchCase {
+  labels: CastExpression[];
+  statements: CastStatement[];
+  span: SourceSpan;
+}
+
+export interface CastSwitchDefaultCase {
+  statements: CastStatement[];
   span: SourceSpan;
 }
 

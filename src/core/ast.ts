@@ -135,8 +135,10 @@ export interface BlockStmt {
 export type Statement =
   | ReturnStmt
   | ExpressionStmt
+  | BreakStmt
   | VarDeclStmt
   | AssignmentStmt
+  | SwitchStmt
   | WhileStmt
   | IfStmt;
 
@@ -149,6 +151,11 @@ export interface ReturnStmt {
 export interface ExpressionStmt {
   kind: "ExpressionStmt";
   expression: Expression;
+  span: SourceSpan;
+}
+
+export interface BreakStmt {
+  kind: "BreakStmt";
   span: SourceSpan;
 }
 
@@ -165,6 +172,25 @@ export interface AssignmentStmt {
   kind: "AssignmentStmt";
   name: Str;
   expression: Expression;
+  span: SourceSpan;
+}
+
+export interface SwitchStmt {
+  kind: "SwitchStmt";
+  expression: Expression;
+  cases: SwitchCase[];
+  defaultCase: SwitchDefaultCase | null;
+  span: SourceSpan;
+}
+
+export interface SwitchCase {
+  labels: Expression[];
+  statements: Statement[];
+  span: SourceSpan;
+}
+
+export interface SwitchDefaultCase {
+  statements: Statement[];
   span: SourceSpan;
 }
 

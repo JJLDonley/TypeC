@@ -72,6 +72,8 @@ class Resolver {
       case "ExpressionStmt":
         this.resolveExpression(statement.expression, scope);
         return;
+      case "BreakStmt":
+        return;
       case "VarDeclStmt":
         this.resolveExpression(statement.initializer, scope);
         this.declare(scope, statement.name, "local", statement.span);
@@ -79,6 +81,14 @@ class Resolver {
       case "AssignmentStmt":
         this.requireSymbol(scope, statement.name, statement.span);
         this.resolveExpression(statement.expression, scope);
+        return;
+      case "SwitchStmt":
+        this.resolveExpression(statement.expression, scope);
+        for (const switchCase of statement.cases) {
+          for (const label of switchCase.labels) this.resolveExpression(label, scope);
+          this.resolveBlock(switchCase.statements, scope);
+        }
+        if (statement.defaultCase) this.resolveBlock(statement.defaultCase.statements, scope);
         return;
       case "WhileStmt":
         this.resolveExpression(statement.condition, scope);

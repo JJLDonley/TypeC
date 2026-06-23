@@ -33,7 +33,7 @@ function checkConstantAssignable(
   return [];
 }
 
-function checkConstantExpression(
+export function checkConstantExpression(
   expr: Expression,
   availableConstants: Map<Str, ConstDecl>,
 ): Diagnostic[] {
@@ -41,7 +41,10 @@ function checkConstantExpression(
   return [{ message: `Expression is not valid in a compile-time constant`, span: expr.span }];
 }
 
-function isConstantExpression(expr: Expression, availableConstants: Map<Str, ConstDecl>): b8 {
+export function isConstantExpression(
+  expr: Expression,
+  availableConstants: Map<Str, ConstDecl>,
+): b8 {
   switch (expr.kind) {
     case "IntegerLiteral":
     case "FloatLiteral":

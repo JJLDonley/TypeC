@@ -3,6 +3,7 @@ import type { ConstDecl, Expression } from "core/ast.ts";
 type Str = string;
 type IntValue = bigint;
 type f64 = number;
+type b8 = boolean;
 
 export function evaluateIntegerConstant(
   expr: Expression,
@@ -31,6 +32,31 @@ export function evaluateIntegerConstant(
   }
 }
 
+export function evaluateBoolConstant(
+  expr: Expression,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  switch (expr.kind) {
+    case "BoolLiteral":
+      return expr.value;
+    case "IdentifierExpr":
+      return evaluateReferencedBoolConstant(expr.name, constants);
+    case "FieldAccessExpr":
+      return evaluateQualifiedBoolConstant(expr, constants);
+    case "IntegerLiteral":
+    case "FloatLiteral":
+    case "StringLiteral":
+    case "UnaryExpr":
+    case "BinaryExpr":
+    case "CallExpr":
+    case "PostfixPointerExpr":
+    case "RecordLiteralExpr":
+    case "ArrayLiteralExpr":
+    case "IndexExpr":
+      return null;
+  }
+}
+
 function evaluateReferencedIntegerConstant(
   name: Str,
   constants: Map<Str, ConstDecl>,
@@ -40,12 +66,29 @@ function evaluateReferencedIntegerConstant(
   return evaluateIntegerConstant(constant.initializer, constants);
 }
 
+function evaluateReferencedBoolConstant(
+  name: Str,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  const constant = constants.get(name) ?? null;
+  if (constant === null) return null;
+  return evaluateBoolConstant(constant.initializer, constants);
+}
+
 function evaluateQualifiedIntegerConstant(
   expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
   constants: Map<Str, ConstDecl>,
 ): IntValue | null {
   if (expr.operand.kind !== "IdentifierExpr") return null;
   return evaluateReferencedIntegerConstant(`${expr.operand.name}.${expr.field}`, constants);
+}
+
+function evaluateQualifiedBoolConstant(
+  expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  constants: Map<Str, ConstDecl>,
+): b8 | null {
+  if (expr.operand.kind !== "IdentifierExpr") return null;
+  return evaluateReferencedBoolConstant(`${expr.operand.name}.${expr.field}`, constants);
 }
 
 function evaluateUnaryIntegerConstant(

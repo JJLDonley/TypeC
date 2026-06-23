@@ -9,7 +9,8 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`,
   `f64`, `void`
 - Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
-  `return;`, function-call expression statements, `while`, and assignment statements
+  `return;`, function-call expression statements, `while`, TypeScript-like `switch`, `break`, and
+  assignment statements
 - Integer literals, float literals, identifiers, calls, `+ - * / %`, and comparisons
 - Postfix pointer operators `expr.&` and `expr.*`
 - Record type aliases, record literals, and field access
@@ -121,8 +122,8 @@ The standard library is written in TypeC and is expected to use the full complet
 only the initial core subset.
 
 Current stdlib modules are simple because many advanced features are not implemented yet. Completed
-features such as compile-time constants may be used in stdlib modules where they improve clarity,
-safety, or reuse. Essential later features such as switch statements, enums, classes, methods,
+features such as compile-time constants and switch statements may be used in stdlib modules where
+they improve clarity, safety, or reuse. Essential later features such as enums, classes, methods,
 interfaces, and generics should be adopted after their phases are implemented. Optional systems
 features such as defer, safe pointers, arenas, and tagged unions should be adopted only when
 explicitly prioritized.
@@ -151,7 +152,34 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/constants.tc
 ```
 
-Phase 13 adds TypeScript-like `switch` statements. Phase 14 adds TypeScript-like scoped enums:
+## Switch Statements
+
+Switch statements use TypeScript-like `switch`, `case`, `default`, and `break` syntax. Fallthrough
+follows TypeScript/C semantics unless a case exits with `break;`, `return`, or another explicit
+exit. Case labels must be compile-time constants assignable to the switch expression type. Duplicate
+case values are invalid. `default` is optional and may appear at most once.
+
+```ts
+function classify(value: i32): i32 {
+  switch (value) {
+    case 0:
+    case 1:
+      return 42;
+    default:
+      return 0;
+  }
+}
+```
+
+Runnable example:
+
+```bash
+deno run -A src/driver/main.ts run examples/switch.tc
+```
+
+## Planned Enums
+
+Phase 14 adds TypeScript-like scoped enums:
 
 ```ts
 export enum Key {

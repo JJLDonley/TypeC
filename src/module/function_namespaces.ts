@@ -33,10 +33,34 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
         : stmt;
     case "ExpressionStmt":
       return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
+    case "BreakStmt":
+      return stmt;
     case "VarDeclStmt":
       return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, functions) };
     case "AssignmentStmt":
       return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
+    case "SwitchStmt":
+      return {
+        ...stmt,
+        expression: namespaceExpression(stmt.expression, namespace, functions),
+        cases: stmt.cases.map((switchCase) => ({
+          ...switchCase,
+          labels: switchCase.labels.map((label) =>
+            namespaceExpression(label, namespace, functions)
+          ),
+          statements: switchCase.statements.map((child) =>
+            namespaceStatement(child, namespace, functions)
+          ),
+        })),
+        defaultCase: stmt.defaultCase
+          ? {
+            ...stmt.defaultCase,
+            statements: stmt.defaultCase.statements.map((child) =>
+              namespaceStatement(child, namespace, functions)
+            ),
+          }
+          : null,
+      };
     case "WhileStmt":
       return {
         ...stmt,

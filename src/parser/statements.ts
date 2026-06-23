@@ -1,4 +1,11 @@
-import type { CastBlockStmt, CastExpression, CastStatement, CastTypeRef } from "core/cast.ts";
+import type {
+  CastBlockStmt,
+  CastExpression,
+  CastStatement,
+  CastSwitchCase,
+  CastSwitchDefaultCase,
+  CastTypeRef,
+} from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { span } from "parser/helpers.ts";
 
@@ -13,7 +20,9 @@ export interface StatementParser {
   advance(): Token;
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
+  previous(): Token;
   peek(offset?: i32): Token;
+  error(token: Token, message: Str): void;
   parseExpression(): CastExpression;
   parseTypeRef(): CastTypeRef;
   parseBlock(): CastBlockStmt;
@@ -21,6 +30,8 @@ export interface StatementParser {
 
 export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("return")) return parseReturn(parser);
+  if (parser.checkText("break")) return parseBreak(parser);
+  if (parser.checkText("switch")) return parseSwitch(parser);
   if (parser.checkText("if")) return parseIf(parser);
   if (parser.checkText("while")) return parseWhile(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
@@ -39,6 +50,75 @@ function parseReturn(parser: StatementParser): CastStatement {
   const expression = parser.checkText(";") ? null : parser.parseExpression();
   const semi = parser.expectText(";");
   return { kind: "ReturnStmt", expression, span: span(start.span.start, semi.span.end) };
+}
+
+function parseBreak(parser: StatementParser): CastStatement {
+  const start = parser.expectText("break");
+  const semi = parser.expectText(";");
+  return { kind: "BreakStmt", span: span(start.span.start, semi.span.end) };
+}
+
+function parseSwitch(parser: StatementParser): CastStatement {
+  const start = parser.expectText("switch");
+  const expression = parseCondition(parser);
+  parser.expectText("{");
+  const cases: CastSwitchCase[] = [];
+  let defaultCase: CastSwitchDefaultCase | null = null;
+  while (!parser.checkText("}") && !parser.check("eof")) {
+    if (parser.checkText("default")) {
+      const parsedDefault = parseSwitchDefault(parser);
+      if (defaultCase !== null) parser.error(parser.previous(), "Duplicate default case");
+      defaultCase = defaultCase ?? parsedDefault;
+    } else {
+      cases.push(parseSwitchCase(parser));
+    }
+  }
+  const close = parser.expectText("}");
+  return {
+    kind: "SwitchStmt",
+    expression,
+    cases,
+    defaultCase,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseSwitchCase(parser: StatementParser): CastSwitchCase {
+  const labels: CastExpression[] = [];
+  const start = parser.expectText("case");
+  labels.push(parseSwitchLabel(parser));
+  while (parser.checkText("case")) {
+    parser.expectText("case");
+    labels.push(parseSwitchLabel(parser));
+  }
+  const statements = parseSwitchStatements(parser);
+  const end = statements.at(-1)?.span.end ?? labels.at(-1)?.span.end ?? start.span.end;
+  return { labels, statements, span: span(start.span.start, end) };
+}
+
+function parseSwitchLabel(parser: StatementParser): CastExpression {
+  const label = parser.parseExpression();
+  parser.expectText(":");
+  return label;
+}
+
+function parseSwitchDefault(parser: StatementParser): CastSwitchDefaultCase {
+  const start = parser.expectText("default");
+  parser.expectText(":");
+  const statements = parseSwitchStatements(parser);
+  const end = statements.at(-1)?.span.end ?? start.span.end;
+  return { statements, span: span(start.span.start, end) };
+}
+
+function parseSwitchStatements(parser: StatementParser): CastStatement[] {
+  const statements: CastStatement[] = [];
+  while (
+    !parser.checkText("case") && !parser.checkText("default") && !parser.checkText("}") &&
+    !parser.check("eof")
+  ) {
+    statements.push(parseStatementWith(parser));
+  }
+  return statements;
 }
 
 function parseIf(parser: StatementParser): CastStatement {
@@ -69,7 +149,12 @@ function parseAssignment(parser: StatementParser): CastStatement {
   parser.expectText("=");
   const expression = parser.parseExpression();
   const semi = parser.expectText(";");
-  return { kind: "AssignmentStmt", name: name.text, expression, span: span(name.span.start, semi.span.end) };
+  return {
+    kind: "AssignmentStmt",
+    name: name.text,
+    expression,
+    span: span(name.span.start, semi.span.end),
+  };
 }
 
 function parseVarDecl(parser: StatementParser): CastStatement {

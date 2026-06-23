@@ -26,6 +26,7 @@ export * from "emitter/record_types.ts";
 export * from "emitter/return_statements.ts";
 export * from "emitter/statements.ts";
 export * from "emitter/strings.ts";
+export * from "emitter/switch_statements.ts";
 export * from "emitter/translation_units.ts";
 export * from "emitter/type_alias_collection.ts";
 export * from "emitter/type_aliases.ts";

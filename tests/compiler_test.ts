@@ -48,6 +48,16 @@ Deno.test("emits C for module constants", () => {
   assertIncludes(c, "return ANSWER;");
 });
 
+Deno.test("compiles switch example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/switch.tc", dir);
+
+  assertIncludes(result.cSource, "switch (value)");
+  assertIncludes(result.cSource, "case 0:");
+  assertIncludes(result.cSource, "case 1:");
+  assertIncludes(result.cSource, "return 42;");
+});
+
 Deno.test("compiles constants example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/constants.tc", dir);
