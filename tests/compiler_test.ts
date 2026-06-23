@@ -1,6 +1,7 @@
 import { check } from "checker";
 import { compileFile } from "driver/compiler.ts";
 import { emitC } from "emitter";
+import { TypeCError } from "core/diagnostics.ts";
 import { loadProgram } from "module/loader.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
@@ -63,6 +64,44 @@ Deno.test("emits C for enums", () => {
   assertIncludes(c, "static const Key Key_Space = 32;");
   assertIncludes(c, "static const Key Key_Escape = 33;");
   assertIncludes(c, "const Key key = Key_Space;");
+});
+
+Deno.test("checks interfaces without C emission", () => {
+  const program = parse(lex(`
+    interface Drawable { draw(): void; }
+    function main(): i32 { return 42; }
+  `));
+
+  const c = emitC(check(resolve(program)));
+
+  assertNotIncludes(c, "Drawable");
+  assertIncludes(c, "i32 main(void)");
+});
+
+Deno.test("rejects invalid interface declarations", () => {
+  assertCompileError(
+    `interface Drawable { draw(): void; draw(): void; } function main(): i32 { return 0; }`,
+    "Duplicate interface method 'draw'",
+  );
+  assertCompileError(
+    `interface Drawable { draw(value: Missing): void; } function main(): i32 { return 0; }`,
+    "Unknown type 'Missing'",
+  );
+});
+
+Deno.test("rejects interface names as value types", () => {
+  assertCompileError(
+    `interface Drawable { draw(): void; } function use(value: Drawable): void { return; } function main(): i32 { return 0; }`,
+    "Unknown type 'Drawable'",
+  );
+});
+
+Deno.test("compiles interface example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/interface.tc", dir);
+
+  assertNotIncludes(result.cSource, "Drawable");
+  assertIncludes(result.cSource, "Point_lengthSquared");
 });
 
 Deno.test("emits C for classes and methods", () => {
@@ -983,6 +1022,18 @@ Deno.test("emits inferred array parameters as C pointers", () => {
   assertIncludes(c, "static i32 first(i32* values)");
   assertIncludes(c, "return first(values);");
 });
+
+function assertCompileError(source: Str, message: Str): void {
+  try {
+    emitC(check(resolve(parse(lex(source)))));
+  } catch (error) {
+    if (!(error instanceof TypeCError)) throw error;
+    const text = error.diagnostics.map((diagnostic) => diagnostic.message).join("\n");
+    if (!text.includes(message)) throw new Error(`Expected diagnostic ${message}, got ${text}`);
+    return;
+  }
+  throw new Error(`Expected diagnostic ${message}`);
+}
 
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);

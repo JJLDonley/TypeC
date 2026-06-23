@@ -7,6 +7,7 @@ import {
   lowerEnumDecl,
   lowerFunctionDecl,
   lowerImportDecl,
+  lowerInterfaceDecl,
   lowerTypeAliasDecl,
 } from "lower/declarations.ts";
 
@@ -18,6 +19,7 @@ export function lowerCast(program: CastProgram): Program {
       ...program.typeAliases.map(lowerTypeAliasDecl),
       ...(program.classes ?? []).map(lowerClassTypeAlias),
     ],
+    interfaces: (program.interfaces ?? []).map(lowerInterfaceDecl),
     enums: (program.enums ?? []).map(lowerEnumDecl),
     constants: (program.constants ?? []).map(lowerConstDecl),
     functions: [

@@ -4,6 +4,7 @@ import type {
   EnumDecl,
   Expression,
   FunctionDecl,
+  InterfaceDecl,
   Param,
   Program,
   Statement,
@@ -29,6 +30,7 @@ class AstPrinter {
     this.line("Program");
     this.indented(() => {
       for (const typeAlias of program.typeAliases) this.typeAliasDecl(typeAlias);
+      for (const interfaceDecl of program.interfaces ?? []) this.interfaceDecl(interfaceDecl);
       for (const enumDecl of program.enums ?? []) this.enumDecl(enumDecl);
       for (const constant of program.constants ?? []) this.constDecl(constant);
       for (const fn of program.functions) this.functionDecl(fn);
@@ -37,6 +39,16 @@ class AstPrinter {
 
   private typeAliasDecl(typeAlias: TypeAliasDecl): void {
     this.line(`TypeAliasDecl ${typeAlias.name} = ${this.type(typeAlias.type)}`);
+  }
+
+  private interfaceDecl(interfaceDecl: InterfaceDecl): void {
+    this.line(`InterfaceDecl ${interfaceDecl.name}`);
+    this.indented(() => {
+      for (const method of interfaceDecl.methods) {
+        this.line(`InterfaceMethod ${method.name} -> ${this.type(method.returnType)}`);
+        this.indented(() => this.params(method.params));
+      }
+    });
   }
 
   private enumDecl(enumDecl: EnumDecl): void {

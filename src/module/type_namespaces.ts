@@ -1,16 +1,20 @@
-import type { FunctionDecl, Program, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import type { FunctionDecl, InterfaceDecl, Program, TypeAliasDecl, TypeRef } from "core/ast.ts";
 
 type Str = string;
 
 export function namespaceProgramTypes(program: Program, namespace: Str): Program {
   const aliases = new Set<Str>([
     ...program.typeAliases.map((typeAlias) => typeAlias.name),
+    ...(program.interfaces ?? []).map((interfaceDecl) => interfaceDecl.name),
     ...(program.enums ?? []).map((enumDecl) => enumDecl.name),
   ]);
   return {
     ...program,
     typeAliases: program.typeAliases.map((typeAlias) =>
       namespaceTypeAlias(typeAlias, namespace, aliases)
+    ),
+    interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
+      namespaceInterface(interfaceDecl, namespace, aliases)
     ),
     functions: program.functions.map((fn) => namespaceFunctionTypes(fn, namespace, aliases)),
   };
@@ -24,6 +28,24 @@ function namespaceTypeAlias(
   return {
     ...typeAlias,
     type: namespaceTypeRef(typeAlias.type, namespace, aliases),
+  };
+}
+
+function namespaceInterface(
+  interfaceDecl: InterfaceDecl,
+  namespace: Str,
+  aliases: Set<Str>,
+): InterfaceDecl {
+  return {
+    ...interfaceDecl,
+    methods: interfaceDecl.methods.map((method) => ({
+      ...method,
+      params: method.params.map((param) => ({
+        ...param,
+        type: namespaceTypeRef(param.type, namespace, aliases),
+      })),
+      returnType: namespaceTypeRef(method.returnType, namespace, aliases),
+    })),
   };
 }
 

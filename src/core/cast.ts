@@ -10,6 +10,7 @@ export interface CastProgram {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
   classes?: CastClassDecl[];
+  interfaces?: CastInterfaceDecl[];
   enums?: CastEnumDecl[];
   constants?: CastConstDecl[];
   functions: CastFunctionDecl[];
@@ -54,6 +55,21 @@ export interface CastClassMethod {
   params: CastParam[];
   returnType: CastTypeRef;
   body: CastBlockStmt;
+  span: SourceSpan;
+}
+
+export interface CastInterfaceDecl {
+  kind: "InterfaceDecl";
+  exported: b8;
+  name: Str;
+  methods: CastInterfaceMethod[];
+  span: SourceSpan;
+}
+
+export interface CastInterfaceMethod {
+  name: Str;
+  params: CastParam[];
+  returnType: CastTypeRef;
   span: SourceSpan;
 }
 

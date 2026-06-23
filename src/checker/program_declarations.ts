@@ -9,6 +9,7 @@ import {
 } from "checker/c_symbols.ts";
 import { checkDeclarations } from "checker/declarations.ts";
 import { checkEnums } from "checker/enums.ts";
+import { checkInterfaces } from "checker/interfaces.ts";
 
 type Str = string;
 
@@ -30,6 +31,7 @@ export function collectProgramDeclarations(program: ResolvedProgram): CheckedDec
     typeAliases: declarations.typeAliases,
     diagnostics: [
       ...declarations.diagnostics,
+      ...checkInterfaces(program.interfaces ?? [], declarations.typeAliases),
       ...enums.diagnostics,
       ...checkCFunctionSymbols(program.functions, program.typeAliases),
       ...checkCTypeAliasSymbols(program.typeAliases),

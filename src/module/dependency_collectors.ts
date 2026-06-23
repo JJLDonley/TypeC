@@ -4,6 +4,7 @@ import type {
   EnumDecl,
   Expression,
   FunctionDecl,
+  InterfaceDecl,
   Statement,
   TypeAliasDecl,
   TypeRef,
@@ -16,6 +17,17 @@ export function collectTypeAliasDeps(
 ): void {
   if (!typeAlias) return;
   collectTypeDeps(typeAlias.type, selected);
+}
+
+export function collectInterfaceDeps(
+  interfaceDecl: InterfaceDecl | undefined,
+  selected: DependencySet,
+): void {
+  if (!interfaceDecl) return;
+  for (const method of interfaceDecl.methods) {
+    for (const param of method.params) collectTypeDeps(param.type, selected);
+    collectTypeDeps(method.returnType, selected);
+  }
 }
 
 export function collectEnumDeps(enumDecl: EnumDecl | undefined, selected: DependencySet): void {

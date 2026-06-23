@@ -35,6 +35,11 @@ export function classModifierDiagnostics(externToken: Token | null): Diagnostic[
   return [{ message: "Classes cannot be extern", span: externToken.span }];
 }
 
+export function interfaceModifierDiagnostics(externToken: Token | null): Diagnostic[] {
+  if (!externToken) return [];
+  return [{ message: "Interfaces cannot be extern", span: externToken.span }];
+}
+
 export function functionModifierDiagnostics(
   exportToken: Token | null,
   externToken: Token | null,

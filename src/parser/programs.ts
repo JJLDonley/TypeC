@@ -6,6 +6,7 @@ import type {
   CastEnumDecl,
   CastFunctionDecl,
   CastImportDecl,
+  CastInterfaceDecl,
   CastProgram,
   CastTypeAliasDecl,
 } from "core/cast.ts";
@@ -29,6 +30,7 @@ interface ProgramDeclarations {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
   classes: CastClassDecl[];
+  interfaces: CastInterfaceDecl[];
   enums: CastEnumDecl[];
   constants: CastConstDecl[];
   functions: CastFunctionDecl[];
@@ -51,13 +53,22 @@ function parseProgramDeclarations(parser: ProgramParser): ProgramDeclarations {
 }
 
 function emptyProgramDeclarations(): ProgramDeclarations {
-  return { imports: [], typeAliases: [], classes: [], enums: [], constants: [], functions: [] };
+  return {
+    imports: [],
+    typeAliases: [],
+    classes: [],
+    interfaces: [],
+    enums: [],
+    constants: [],
+    functions: [],
+  };
 }
 
 function addDeclaration(declarations: ProgramDeclarations, declaration: CastDeclaration): void {
   if (declaration.kind === "ImportDecl") declarations.imports.push(declaration);
   if (declaration.kind === "TypeAliasDecl") declarations.typeAliases.push(declaration);
   if (declaration.kind === "ClassDecl") declarations.classes.push(declaration);
+  if (declaration.kind === "InterfaceDecl") declarations.interfaces.push(declaration);
   if (declaration.kind === "EnumDecl") declarations.enums.push(declaration);
   if (declaration.kind === "ConstDecl") declarations.constants.push(declaration);
   if (declaration.kind === "FunctionDecl") declarations.functions.push(declaration);

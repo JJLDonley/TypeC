@@ -10,6 +10,8 @@ import type {
   CastExpression,
   CastFunctionDecl,
   CastImportDecl,
+  CastInterfaceDecl,
+  CastInterfaceMethod,
   CastParam,
   CastTypeAliasDecl,
   CastTypeRef,
@@ -21,6 +23,7 @@ import {
   enumModifierDiagnostics,
   functionModifierDiagnostics,
   importModifierDiagnostics,
+  interfaceModifierDiagnostics,
   typeAliasModifierDiagnostics,
 } from "parser/declaration_modifiers.ts";
 import { span } from "parser/helpers.ts";
@@ -58,6 +61,7 @@ export type CastDeclaration =
   | CastImportDecl
   | CastTypeAliasDecl
   | CastClassDecl
+  | CastInterfaceDecl
   | CastEnumDecl
   | CastConstDecl
   | CastFunctionDecl;
@@ -67,6 +71,7 @@ export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
   if (parser.checkText("class")) return parseClassDeclaration(parser, modifiers);
+  if (parser.checkText("interface")) return parseInterfaceDeclaration(parser, modifiers);
   if (parser.checkText("enum")) return parseEnumDeclaration(parser, modifiers);
   if (parser.checkText("const")) return parseConstDeclaration(parser, modifiers);
   return parseFunctionDeclaration(parser, modifiers);
@@ -199,6 +204,49 @@ function parseClassMethod(
     returnType,
     body,
     span: span(name.span.start, body.span.end),
+  };
+}
+
+function parseInterfaceDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastInterfaceDecl {
+  parser.diagnostics().push(...interfaceModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("interface");
+  const name = parser.expectKind("identifier", "Expected interface name");
+  parser.expectText("{");
+  const methods = parseInterfaceMethods(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "InterfaceDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    methods,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseInterfaceMethods(parser: DeclarationParser): CastInterfaceMethod[] {
+  const methods: CastInterfaceMethod[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    methods.push(parseInterfaceMethod(parser));
+  }
+  return methods;
+}
+
+function parseInterfaceMethod(parser: DeclarationParser): CastInterfaceMethod {
+  const name = parser.expectKind("identifier", "Expected interface method name");
+  parser.expectText("(");
+  const params = parseFunctionParams(parser);
+  parser.expectText(")");
+  parser.expectText(":");
+  const returnType = parser.parseTypeRef();
+  const semi = parser.expectText(";");
+  return {
+    name: name.text,
+    params: params.params,
+    returnType,
+    span: span(name.span.start, semi.span.end),
   };
 }
 

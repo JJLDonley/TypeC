@@ -39,6 +39,9 @@ class Resolver {
     for (const typeAlias of this.program.typeAliases) {
       this.declare(this.globalScope, typeAlias.name, "type", typeAlias.span);
     }
+    for (const interfaceDecl of this.program.interfaces ?? []) {
+      this.declare(this.globalScope, interfaceDecl.name, "type", interfaceDecl.span);
+    }
     for (const enumDecl of this.program.enums ?? []) {
       this.declare(this.globalScope, enumDecl.name, "type", enumDecl.span);
     }

@@ -3,6 +3,7 @@ import {
   collectConstDeps,
   collectEnumDeps,
   collectFunctionDeps,
+  collectInterfaceDeps,
   collectTypeAliasDeps,
 } from "module/dependency_collectors.ts";
 import {
@@ -38,6 +39,7 @@ function collectPass(selected: DependencySet, index: ProgramDependencyIndex): b8
   const before = dependencyCount(selected);
   for (const name of [...selected.types]) {
     collectTypeAliasDeps(index.types.get(name), selected);
+    collectInterfaceDeps(index.interfaces.get(name), selected);
     collectEnumDeps(index.enums.get(name), selected);
     collectTypeMethodDeps(name, index, selected);
   }

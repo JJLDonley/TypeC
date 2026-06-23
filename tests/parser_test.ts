@@ -87,6 +87,19 @@ function main(): i32 { const v: Vec2 = { x: 1.0 }; const d: f64 = v.lengthSquare
   if (local.initializer.method !== "lengthSquared") throw new Error("Expected method name");
 });
 
+Deno.test("parses interface declarations", () => {
+  const program = parse(
+    lex(
+      `interface Drawable { draw(): void; move(dx: f64, dy: f64): void; } function main(): i32 { return 0; }`,
+    ),
+  );
+  const interfaces = program.interfaces ?? [];
+  if (interfaces.length !== 1) throw new Error("Expected interface declaration");
+  if (interfaces[0].name !== "Drawable") throw new Error("Expected interface name");
+  if (interfaces[0].methods.length !== 2) throw new Error("Expected interface methods");
+  if (interfaces[0].methods[1].params.length !== 2) throw new Error("Expected method params");
+});
+
 Deno.test("parses enum declarations", () => {
   const program = parse(lex(`enum Key { Space = 32, Escape } function main(): i32 { return 0; }`));
   if ((program.enums ?? []).length !== 1) throw new Error("Expected enum declaration");

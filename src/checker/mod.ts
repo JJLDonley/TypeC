@@ -71,6 +71,7 @@ export * from "checker/function_checks.ts";
 export * from "checker/function_signatures.ts";
 export * from "checker/identifiers.ts";
 export * from "checker/index_expressions.ts";
+export * from "checker/interfaces.ts";
 export * from "checker/literal_ranges.ts";
 export * from "checker/local_declarations.ts";
 export * from "checker/local_types.ts";

@@ -1,4 +1,11 @@
-import type { ConstDecl, EnumDecl, FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
+import type {
+  ConstDecl,
+  EnumDecl,
+  FunctionDecl,
+  InterfaceDecl,
+  Program,
+  TypeAliasDecl,
+} from "core/ast.ts";
 
 type Str = string;
 
@@ -10,6 +17,7 @@ export interface DependencySet {
 
 export interface ProgramDependencyIndex {
   types: Map<Str, TypeAliasDecl>;
+  interfaces: Map<Str, InterfaceDecl>;
   enums: Map<Str, EnumDecl>;
   constants: Map<Str, ConstDecl>;
   functions: Map<Str, FunctionDecl>;
@@ -18,6 +26,9 @@ export interface ProgramDependencyIndex {
 export function indexProgramDependencies(program: Program): ProgramDependencyIndex {
   return {
     types: new Map(program.typeAliases.map((typeAlias) => [typeAlias.name, typeAlias])),
+    interfaces: new Map(
+      (program.interfaces ?? []).map((interfaceDecl) => [interfaceDecl.name, interfaceDecl]),
+    ),
     enums: new Map((program.enums ?? []).map((enumDecl) => [enumDecl.name, enumDecl])),
     constants: new Map((program.constants ?? []).map((constant) => [constant.name, constant])),
     functions: new Map(program.functions.map((fn) => [fn.name, fn])),
@@ -43,6 +54,9 @@ export function filterProgramDependencies(program: Program, selected: Dependency
     kind: "Program",
     imports: [],
     typeAliases: program.typeAliases.filter((typeAlias) => selected.types.has(typeAlias.name)),
+    interfaces: (program.interfaces ?? []).filter((interfaceDecl) =>
+      selected.types.has(interfaceDecl.name)
+    ),
     enums: (program.enums ?? []).filter((enumDecl) => selected.types.has(enumDecl.name)),
     constants: (program.constants ?? []).filter((constant) =>
       selected.constants.has(constant.name)

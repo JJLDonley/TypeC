@@ -1380,6 +1380,8 @@ unless specified by a later design update.
 
 # Phase 16: Interfaces
 
+Status: Complete.
+
 ## Goal
 
 Add compile-time constraints for generic or static-dispatch code.
@@ -1396,6 +1398,17 @@ interface Drawable {
 
 Interfaces are compile-time constraints in this phase. Runtime dispatch, dynamic objects, and
 TypeScript structural compatibility rules are not implied unless specified explicitly.
+
+## Semantics
+
+- Interface declarations introduce compile-time-only type names.
+- Interface members are method signatures only in this phase.
+- Duplicate member names are invalid.
+- Interface method parameter and return types are checked with the same type-reference rules as
+  function signatures.
+- Interface names are not value types. A function parameter, local, field, or return type cannot use
+  an interface name until a later phase defines generic constraints or another valid use site.
+- Interfaces emit no C.
 
 ## Do
 

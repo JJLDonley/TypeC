@@ -29,6 +29,8 @@ export const keywords = new Set([
   "true",
   "false",
   "type",
+  "class",
+  "interface",
   "import",
   "export",
 ]);

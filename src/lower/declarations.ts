@@ -4,6 +4,7 @@ import type {
   EnumDecl,
   FunctionDecl,
   ImportDecl,
+  InterfaceDecl,
   Param,
   TypeAliasDecl,
 } from "core/ast.ts";
@@ -13,6 +14,7 @@ import type {
   CastEnumDecl,
   CastFunctionDecl,
   CastImportDecl,
+  CastInterfaceDecl,
   CastParam,
   CastTypeAliasDecl,
 } from "core/cast.ts";
@@ -63,6 +65,21 @@ export function lowerClassMethods(classDecl: CastClassDecl): FunctionDecl[] {
       lowerBlockStmt(method.body),
     )
   );
+}
+
+export function lowerInterfaceDecl(interfaceDecl: CastInterfaceDecl): InterfaceDecl {
+  return {
+    kind: "InterfaceDecl",
+    exported: interfaceDecl.exported,
+    name: interfaceDecl.name,
+    methods: interfaceDecl.methods.map((method) => ({
+      name: method.name,
+      params: method.params.map(lowerParam),
+      returnType: lowerTypeRef(method.returnType),
+      span: method.span,
+    })),
+    span: interfaceDecl.span,
+  };
 }
 
 export function lowerEnumDecl(enumDecl: CastEnumDecl): EnumDecl {

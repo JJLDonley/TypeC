@@ -9,6 +9,7 @@ export interface Program {
   kind: "Program";
   imports: ImportDecl[];
   typeAliases: TypeAliasDecl[];
+  interfaces?: InterfaceDecl[];
   enums?: EnumDecl[];
   constants?: ConstDecl[];
   functions: FunctionDecl[];
@@ -29,6 +30,21 @@ export interface TypeAliasDecl {
   name: Str;
   cName?: Str | null;
   type: TypeRef;
+  span: SourceSpan;
+}
+
+export interface InterfaceDecl {
+  kind: "InterfaceDecl";
+  exported: b8;
+  name: Str;
+  methods: InterfaceMethod[];
+  span: SourceSpan;
+}
+
+export interface InterfaceMethod {
+  name: Str;
+  params: Param[];
+  returnType: TypeRef;
   span: SourceSpan;
 }
 

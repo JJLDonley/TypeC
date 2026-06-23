@@ -178,6 +178,21 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Interfaces
+
+TypeC supports TypeScript-like interface declarations as compile-time-only method-signature sets:
+
+```ts
+interface Drawable {
+  draw(): void;
+}
+```
+
+Interfaces have no runtime representation and emit no C. Interface names are not value types in the
+current phase; they are reserved for later generic constraints or another explicitly specified use
+site. Interface method signatures are validated for duplicate names and known parameter/return
+types.
+
 ## Classes and Methods
 
 TypeC supports TypeScript-like classes as static-layout record types with instance methods:

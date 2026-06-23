@@ -1,6 +1,13 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import type { ConstDecl, EnumDecl, FunctionDecl, Program, TypeAliasDecl } from "core/ast.ts";
+import type {
+  ConstDecl,
+  EnumDecl,
+  FunctionDecl,
+  InterfaceDecl,
+  Program,
+  TypeAliasDecl,
+} from "core/ast.ts";
 import { namespaceCName } from "module/c_names.ts";
 import { selectDependencyClosure } from "module/dependencies.ts";
 import { namespaceProgramFunctions } from "module/function_namespaces.ts";
@@ -20,6 +27,10 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
       ...imports.flatMap((program) => program.typeAliases),
       ...local.typeAliases,
     ]),
+    interfaces: uniqueRefs([
+      ...imports.flatMap((program) => program.interfaces ?? []),
+      ...(local.interfaces ?? []),
+    ]),
     enums: uniqueRefs([
       ...imports.flatMap((program) => program.enums ?? []),
       ...(local.enums ?? []),
@@ -35,11 +46,13 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
 
 export function selectImports(program: Program, names: Str[], span: Diagnostic["span"]): Program {
   const typeAliases = names.flatMap((name) => selectTypeAlias(program.typeAliases, name));
+  const interfaces = names.flatMap((name) => selectInterface(program.interfaces ?? [], name));
   const enums = names.flatMap((name) => selectEnum(program.enums ?? [], name));
   const constants = names.flatMap((name) => selectConstant(program.constants ?? [], name));
   const functions = names.flatMap((name) => selectFunction(program.functions, name));
   const found = new Set<Str>([
     ...typeAliases.map((decl) => decl.name),
+    ...interfaces.map((decl) => decl.name),
     ...enums.map((decl) => decl.name),
     ...constants.map((decl) => decl.name),
     ...functions.map((decl) => decl.name),
@@ -52,7 +65,11 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
   }
   return selectDependencyClosure(
     program,
-    [...typeAliases.map((typeAlias) => typeAlias.name), ...enums.map((enumDecl) => enumDecl.name)],
+    [
+      ...typeAliases.map((typeAlias) => typeAlias.name),
+      ...interfaces.map((interfaceDecl) => interfaceDecl.name),
+      ...enums.map((enumDecl) => enumDecl.name),
+    ],
     constants.map((constant) => constant.name),
     functions.map((fn) => fn.name),
   );
@@ -61,7 +78,11 @@ export function selectImports(program: Program, names: Str[], span: Diagnostic["
 export function selectNamespaceImports(program: Program, namespace: Str): Program {
   const selected = selectDependencyClosure(
     program,
-    [...exportedTypeNames(program), ...exportedEnumNames(program)],
+    [
+      ...exportedTypeNames(program),
+      ...exportedInterfaceNames(program),
+      ...exportedEnumNames(program),
+    ],
     exportedConstantNames(program),
     exportedFunctionNames(program),
   );
@@ -72,6 +93,9 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
   const typeAliases = namespaced.typeAliases.map((typeAlias) =>
     namespaceTypeAlias(typeAlias, namespace)
   );
+  const interfaces = (namespaced.interfaces ?? []).map((interfaceDecl) =>
+    namespaceInterface(interfaceDecl, namespace)
+  );
   const enums = (namespaced.enums ?? []).map((enumDecl) => namespaceEnum(enumDecl, namespace));
   const constants = (namespaced.constants ?? []).map((constant) =>
     namespaceConstant(constant, namespace)
@@ -81,6 +105,7 @@ export function selectNamespaceImports(program: Program, namespace: Str): Progra
     kind: "Program",
     imports: [],
     typeAliases,
+    interfaces,
     enums,
     constants,
     functions,
@@ -92,6 +117,12 @@ function exportedTypeNames(program: Program): Str[] {
   return program.typeAliases.filter((typeAlias) => typeAlias.exported).map((typeAlias) =>
     typeAlias.name
   );
+}
+
+function exportedInterfaceNames(program: Program): Str[] {
+  return (program.interfaces ?? []).filter((interfaceDecl) => interfaceDecl.exported).map((
+    interfaceDecl,
+  ) => interfaceDecl.name);
 }
 
 function exportedEnumNames(program: Program): Str[] {
@@ -117,6 +148,10 @@ function namespaceTypeAlias(typeAlias: TypeAliasDecl, namespace: Str): TypeAlias
     name: `${namespace}.${typeAlias.name}`,
     cName: typeAlias.cName ?? namespaceCName(namespace, typeAlias.name),
   };
+}
+
+function namespaceInterface(interfaceDecl: InterfaceDecl, namespace: Str): InterfaceDecl {
+  return { ...interfaceDecl, exported: false, name: `${namespace}.${interfaceDecl.name}` };
 }
 
 function namespaceEnum(enumDecl: EnumDecl, namespace: Str): EnumDecl {
@@ -160,6 +195,12 @@ function uniqueRefs<T>(items: T[]): T[] {
 
 function selectTypeAlias(typeAliases: TypeAliasDecl[], name: Str): TypeAliasDecl[] {
   return typeAliases.filter((typeAlias) => typeAlias.exported && typeAlias.name === name);
+}
+
+function selectInterface(interfaces: InterfaceDecl[], name: Str): InterfaceDecl[] {
+  return interfaces.filter((interfaceDecl) =>
+    interfaceDecl.exported && interfaceDecl.name === name
+  );
 }
 
 function selectEnum(enums: EnumDecl[], name: Str): EnumDecl[] {
