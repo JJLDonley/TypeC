@@ -1274,6 +1274,12 @@ Deno.test("compiles trailing commas in supported lists", () => {
   assertIncludes(c, "return id(values[0]);");
 });
 
+Deno.test("compiles numeric separators", () => {
+  const source = `function main(): i32 { const value: i32 = 1_024; return value; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const i32 value = 1024;");
+});
+
 Deno.test("emits C string literals for u8 pointer calls", () => {
   const source =
     `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;

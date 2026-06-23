@@ -6,6 +6,11 @@ type i32 = number;
 type Str = string;
 type b8 = boolean;
 
+interface NumericLiteralLexeme {
+  text: Str;
+  isFloat: b8;
+}
+
 export function lex(source: Str): Token[] {
   const lexer = new Lexer(source);
   return lexer.lex();
@@ -39,10 +44,10 @@ class Lexer {
       }
 
       if (isDigit(ch)) {
-        const text = this.readNumber();
+        const literal = this.readNumber(start);
         this.tokens.push({
-          kind: text.includes(".") ? "float" : "integer",
-          text,
+          kind: literal.isFloat ? "float" : "integer",
+          text: literal.text,
           span: { start, end: this.pos() },
         });
         continue;
@@ -135,13 +140,38 @@ class Lexer {
     }
   }
 
-  private readNumber(): Str {
-    let text = this.readWhile(isDigit);
+  private readNumber(start: SourcePos): NumericLiteralLexeme {
+    let text: Str = this.readNumberDigits(start);
+    let isFloat: b8 = false;
     if (this.peek() === "." && isDigit(this.peek(1))) {
+      isFloat = true;
       text += this.advance();
-      text += this.readWhile(isDigit);
+      text += this.readNumberDigits(start);
+    }
+    return { text, isFloat };
+  }
+
+  private readNumberDigits(start: SourcePos): Str {
+    let text: Str = "";
+    while (isDigit(this.peek()) || this.peek() === "_") {
+      if (this.peek() === "_") {
+        this.readNumericSeparator(start);
+        continue;
+      }
+      text += this.advance();
     }
     return text;
+  }
+
+  private readNumericSeparator(start: SourcePos): void {
+    const next: Str = this.peek(1);
+    if (!isDigit(next)) {
+      this.diagnostics.push({
+        message: "Numeric separators must appear between digits",
+        span: { start, end: this.pos() },
+      });
+    }
+    this.advance();
   }
 
   private readOperator(): Str {

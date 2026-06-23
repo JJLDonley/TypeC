@@ -2483,6 +2483,41 @@ const values: [i32] = [
 
 ---
 
+# Phase 32: Numeric Separators in Decimal Literals
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style `_` separators inside decimal integer and float literals for readability.
+
+## Syntax
+
+```ts
+const thousand: i32 = 1_000;
+const scale: f64 = 1_000.25_5;
+```
+
+## Semantics
+
+- Numeric separators are syntax only.
+- The checker sees the same literal value as if separators were omitted.
+- Emitted C uses normalized literals without separators.
+- Only decimal literals supported by TypeC today are covered.
+
+## Do
+
+- Accept `_` only between two decimal digits inside integer and fractional parts.
+- Reject leading, trailing, and consecutive numeric separators.
+- Add lexer and compile tests.
+
+## Do Not
+
+- Do not add binary, octal, hexadecimal, bigint, exponent, or signed literal syntax.
+- Do not add JavaScript numeric coercions or runtime semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

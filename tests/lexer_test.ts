@@ -1,3 +1,4 @@
+import { TypeCError } from "core/diagnostics.ts";
 import { lex } from "core/lexer.ts";
 
 type Str = string;
@@ -94,8 +95,30 @@ Deno.test("lexes string literals", () => {
   assertEqualText(tokens.map((token) => token.text), ["./math.tc", ""]);
 });
 
+Deno.test("lexes numeric separators", () => {
+  const tokens = lex("1_000 12_345.67_89");
+  assertEqualText(tokens.map((token) => token.kind), ["integer", "float", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ["1000", "12345.6789", ""]);
+});
+
+Deno.test("rejects invalid numeric separators", () => {
+  assertLexError("1__000");
+  assertLexError("1_");
+  assertLexError("1_.5");
+});
+
 function tokenTexts(source: Str): Str[] {
   return lex(source).map((token) => token.text);
+}
+
+function assertLexError(source: Str): void {
+  try {
+    lex(source);
+  } catch (error) {
+    if (error instanceof TypeCError) return;
+    throw error;
+  }
+  throw new Error("Expected lexer error");
 }
 
 function assertEqualText(actual: Str[], expected: Str[]): void {
