@@ -5,17 +5,17 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 ## Current prototype subset
 
 > Important: TypeC now supports general assignment targets such as `obj.x = value`,
-> `arr[i] = value`, and `obj.pos.x += dx`. Remaining major TypeScript-style ergonomic gaps include
-> `for` loops, constructors, `implements`, and class inheritance. See `docs/ts-feature-analysis.md`
-> for the detailed support/gap matrix.
+> `arr[i] = value`, `obj.pos.x += dx`, and basic `for` loops. Remaining major TypeScript-style
+> ergonomic gaps include constructors, `implements`, and class inheritance. See
+> `docs/ts-feature-analysis.md` for the detailed support/gap matrix.
 
 - Function declarations
 - Required parameter and return type annotations
 - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`,
   `f64`, `void`
 - Module-level compile-time `const` declarations, local `const` statements, `let`, `return expr;`,
-  `return;`, function-call expression statements, `while`, `do while`, TypeScript-like `switch`,
-  `break`, empty statements, and static lvalue assignment statements
+  `return;`, function-call expression statements, `while`, `do while`, basic `for`, TypeScript-like
+  `switch`, `break`, empty statements, and static lvalue assignment statements
 - Integer literals, float literals, string literals, identifiers, calls, unary `+ - ! ~`, `!!`,
   ternary `? :`, nullish coalescing `??`, Elvis `?:`, logical `&&` / `||`, bitwise integer
   operators, `+ - * / %`, and comparisons
@@ -36,13 +36,13 @@ TypeC uses `.tc` files and TypeScript-like syntax, but compiles ahead-of-time to
 - Explicit C extern function declarations and generated C header imports
 - `//` and `/* */` comments
 
-Phases through 38 are implemented. The current TypeScript-like syntax includes general assignment
-lvalue targets, optional chaining, non-null assertions, nullish coalescing, bitwise operators,
-logical binary operators, compound local assignments, statement-only local increment/decrement,
-do-while, else-if, empty statements, trailing commas, numeric separators, single-quoted strings,
-record literal shorthand, comma-separated record type fields, parenthesized type refs, and named
-import aliases. Additional JavaScript runtime operators such as `typeof`, `void`, `delete`, and
-`await` remain unsupported unless a future static TypeC meaning is specified.
+Phases through 39 are implemented. The current TypeScript-like syntax includes basic `for` loops,
+general assignment lvalue targets, optional chaining, non-null assertions, nullish coalescing,
+bitwise operators, logical binary operators, compound local assignments, statement-only local
+increment/decrement, do-while, else-if, empty statements, trailing commas, numeric separators,
+single-quoted strings, record literal shorthand, comma-separated record type fields, parenthesized
+type refs, and named import aliases. Additional JavaScript runtime operators such as `typeof`,
+`void`, `delete`, and `await` remain unsupported unless a future static TypeC meaning is specified.
 
 ## Example
 
@@ -161,10 +161,10 @@ await expr;
 `bool`. `!!expr` is parsed as two unary `!` operators; it also requires `bool` and returns `bool`.
 Integers, pointers, arrays, records, enums, and optional values are not truthy or falsy.
 
-`~expr` is reserved for integer bitwise-not once bitwise integer operators are specified. `++` and
-`--` are reserved for typed numeric update operators. `typeof` may later become compile-time type
-introspection, not JavaScript runtime reflection. `void`, `delete`, and `await` are JavaScript
-runtime operators and are explicitly not valid TypeC expression operators in this phase.
+`~expr` is integer bitwise-not. `++` and `--` are statement-only typed integer update operators over
+static lvalue targets; they do not produce expression values. `typeof` may later become compile-time
+type introspection, not JavaScript runtime reflection. `void`, `delete`, and `await` are JavaScript
+runtime operators and are not valid TypeC expression operators.
 
 ### Ternary conditional
 

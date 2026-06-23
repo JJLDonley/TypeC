@@ -42,9 +42,16 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
     case "VarDeclStmt":
       return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, functions) };
     case "AssignmentStmt":
-      return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
+      return {
+        ...stmt,
+        target: namespaceExpression(stmt.target, namespace, functions) as typeof stmt.target,
+        expression: namespaceExpression(stmt.expression, namespace, functions),
+      };
     case "IncDecStmt":
-      return stmt;
+      return {
+        ...stmt,
+        target: namespaceExpression(stmt.target, namespace, functions) as typeof stmt.target,
+      };
     case "SwitchStmt":
       return {
         ...stmt,
@@ -78,6 +85,18 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
         ...stmt,
         body: namespaceBlock(stmt.body, namespace, functions),
         condition: namespaceExpression(stmt.condition, namespace, functions),
+      };
+    case "ForStmt":
+      return {
+        ...stmt,
+        initializer: stmt.initializer
+          ? namespaceStatement(stmt.initializer, namespace, functions) as typeof stmt.initializer
+          : null,
+        condition: namespaceExpression(stmt.condition, namespace, functions),
+        update: stmt.update
+          ? namespaceStatement(stmt.update, namespace, functions) as typeof stmt.update
+          : null,
+        body: namespaceBlock(stmt.body, namespace, functions),
       };
     case "IfStmt":
       return {

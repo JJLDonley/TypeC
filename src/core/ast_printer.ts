@@ -180,6 +180,15 @@ class AstPrinter {
           this.expression(statement.condition);
         });
         return;
+      case "ForStmt":
+        this.line("ForStmt");
+        this.indented(() => {
+          if (statement.initializer) this.statement(statement.initializer);
+          this.expression(statement.condition);
+          if (statement.update) this.statement(statement.update);
+          this.block(statement.body);
+        });
+        return;
       case "IfStmt":
         this.line("IfStmt");
         this.indented(() => {

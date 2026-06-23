@@ -2780,6 +2780,59 @@ items[i].count++;
 
 ---
 
+# Phase 39: Basic `for` Loops
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript/C-style counted `for` loops for explicit imperative iteration without introducing
+JavaScript iterator semantics.
+
+## Syntax
+
+```ts
+function sum(count: usize): i32 {
+  let total: i32 = 0;
+  for (let i: usize = 0; i < count; i++) {
+    total += 1;
+  }
+  return total;
+}
+```
+
+The initializer may be a local variable declaration, assignment/update statement, expression
+statement, or empty. The condition is required and must be `bool`. The update may be an assignment,
+`++`/`--`, expression statement, or empty.
+
+## Semantics
+
+- `for (init; condition; update) { body }` is equivalent to evaluating `init` once, then repeatedly
+  evaluating `condition`, executing `body`, and evaluating `update` after each completed iteration.
+- The initializer introduces a loop-local scope visible to the condition, update, and body, but not
+  after the loop.
+- The condition is statically checked as `bool`; TypeC does not use JavaScript truthiness.
+- Assignment and update clauses reuse existing statement-only assignment/update rules.
+- Emission uses a scoped C block plus `while` loop to preserve TypeC block scoping and existing
+  defer behavior.
+
+## Do
+
+- Parse basic `for` headers with semicolon-separated initializer, condition, and update clauses.
+- Support `let`/`const` initializer declarations.
+- Type-check loop scopes, condition type, and update/initializer statements.
+- Emit readable C.
+- Add parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add `for..in` or `for..of`.
+- Do not add iterators or JavaScript collection semantics.
+- Do not add `continue` in this phase.
+- Do not make assignment an expression.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

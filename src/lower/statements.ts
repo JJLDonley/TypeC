@@ -4,6 +4,8 @@ import type {
   DeferStmt,
   DoWhileStmt,
   ExpressionStmt,
+  ForClauseStmt,
+  ForStmt,
   IfStmt,
   IncDecStmt,
   Statement,
@@ -17,6 +19,8 @@ import type {
   CastDeferStmt,
   CastDoWhileStmt,
   CastExpressionStmt,
+  CastForClauseStmt,
+  CastForStmt,
   CastIfStmt,
   CastIncDecStmt,
   CastStatement,
@@ -63,6 +67,8 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerWhileStmt(statement);
     case "DoWhileStmt":
       return lowerDoWhileStmt(statement);
+    case "ForStmt":
+      return lowerForStmt(statement);
     case "IfStmt":
       return lowerIfStmt(statement);
   }
@@ -148,6 +154,21 @@ function lowerDoWhileStmt(statement: CastDoWhileStmt): DoWhileStmt {
     condition: lowerExpression(statement.condition),
     span: statement.span,
   };
+}
+
+function lowerForStmt(statement: CastForStmt): ForStmt {
+  return {
+    kind: "ForStmt",
+    initializer: statement.initializer ? lowerForClauseStmt(statement.initializer) : null,
+    condition: lowerExpression(statement.condition),
+    update: statement.update ? lowerForClauseStmt(statement.update) : null,
+    body: lowerBlockStmt(statement.body),
+    span: statement.span,
+  };
+}
+
+function lowerForClauseStmt(statement: CastForClauseStmt): ForClauseStmt {
+  return lowerStatement(statement) as ForClauseStmt;
 }
 
 function lowerVarDeclStmt(statement: CastVarDeclStmt): VarDeclStmt {

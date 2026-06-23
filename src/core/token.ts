@@ -26,6 +26,7 @@ export const keywords = new Set([
   "if",
   "else",
   "while",
+  "for",
   "true",
   "false",
   "type",

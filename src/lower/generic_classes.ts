@@ -9,6 +9,7 @@ import type {
   CastConstDecl,
   CastDoWhileStmt,
   CastExpression,
+  CastForStmt,
   CastFunctionDecl,
   CastFunctionTypeRef,
   CastIfStmt,
@@ -210,13 +211,18 @@ class GenericClassInstantiator {
       case "AssignmentStmt":
         return this.rewriteAssignment(statement);
       case "IncDecStmt":
-        return statement;
+        return {
+          ...statement,
+          target: this.rewriteExpression(statement.target) as typeof statement.target,
+        };
       case "SwitchStmt":
         return this.rewriteSwitch(statement);
       case "WhileStmt":
         return this.rewriteWhile(statement);
       case "DoWhileStmt":
         return this.rewriteDoWhile(statement);
+      case "ForStmt":
+        return this.rewriteFor(statement);
       case "IfStmt":
         return this.rewriteIf(statement);
     }
@@ -276,6 +282,20 @@ class GenericClassInstantiator {
       ...statement,
       body: this.rewriteBlock(statement.body),
       condition: this.rewriteExpression(statement.condition),
+    };
+  }
+
+  private rewriteFor(statement: CastForStmt): CastForStmt {
+    return {
+      ...statement,
+      initializer: statement.initializer
+        ? this.rewriteStatement(statement.initializer) as CastForStmt["initializer"]
+        : null,
+      condition: this.rewriteExpression(statement.condition),
+      update: statement.update
+        ? this.rewriteStatement(statement.update) as CastForStmt["update"]
+        : null,
+      body: this.rewriteBlock(statement.body),
     };
   }
 
@@ -628,6 +648,20 @@ function substituteStatement(
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "DoWhileStmt":
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
+    case "ForStmt":
+      return {
+        ...statement,
+        initializer: statement.initializer
+          ? substituteStatement(
+            statement.initializer,
+            substitutions,
+          ) as typeof statement.initializer
+          : null,
+        update: statement.update
+          ? substituteStatement(statement.update, substitutions) as typeof statement.update
+          : null,
+        body: substituteBlock(statement.body, substitutions),
+      };
     case "IfStmt":
       return {
         ...statement,

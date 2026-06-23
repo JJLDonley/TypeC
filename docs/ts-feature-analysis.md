@@ -7,7 +7,20 @@ predictably emitted to C.
 This document distinguishes between **syntax accepted today** and **practical TypeScript-style
 ergonomics**.
 
-## Recently completed critical feature
+## Recently completed critical features
+
+### Phase 39: Basic `for` Loops
+
+TypeC now supports basic TypeScript/C-style counted loops:
+
+```ts
+for (let i: usize = 0; i < count; i++) {
+  update(i);
+}
+```
+
+The initializer is scoped to the loop. Conditions must be `bool`. `for..in`, `for..of`, iterators,
+and `continue` are still not implemented.
 
 ### Phase 38: General Assignment Targets
 
@@ -32,7 +45,6 @@ These are the most important missing or partial features for writing real TypeSc
 
 | Priority | Feature                                     | Status          | Why it matters                                     | Current impact                                                                   |
 | -------- | ------------------------------------------- | --------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| P1       | `for` loops                                 | Missing         | Core TS/C loop ergonomics.                         | Must use verbose `while` loops.                                                  |
 | P1       | Function/local type inference               | Partial         | Reduces annotation noise.                          | Some local initializer cases work; no broad TS-style inference.                  |
 | P1       | Constructors / initialization methods       | Missing         | Needed for class ergonomics and invariant setup.   | Classes must be initialized with record literals.                                |
 | P1       | Class contracts with `implements`           | Missing         | Needed for explicit static interface satisfaction. | Generic constraints can check structure, but classes cannot declare intent.      |
@@ -80,7 +92,7 @@ These are intentionally rejected unless a future phase defines a static, C-emitt
 | --------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Function declarations | Implemented        | TS-like syntax with required static types.                                                                                                                                              |
 | Locals                | Implemented subset | `const`/`let` exist; assignments target static lvalues and remain statements only.                                                                                                      |
-| Control flow          | Partial            | `if`, `else`, `else if`, `while`, `do while`, `switch`, `break`, empty statements exist; no `for`, `for..of`, `for..in`, labeled statements, `continue`, `try`, or `throw`.             |
+| Control flow          | Partial            | `if`, `else`, `else if`, `while`, `do while`, basic `for`, `switch`, `break`, empty statements exist; no `for..of`, `for..in`, labeled statements, `continue`, `try`, or `throw`.       |
 | Expressions           | Partial            | Numeric, boolean, calls, field/index reads and writes, conditionals, nullish/optional operators, logical/bitwise operators exist; many JS/TS expression forms are intentionally absent. |
 | Records/objects       | Partial            | Creation, read access, and field mutation exist; TS object type features are mostly missing.                                                                                            |
 | Arrays                | Partial            | Static arrays/slices, reads, and indexed mutation exist; no JS array API.                                                                                                               |
@@ -91,18 +103,6 @@ These are intentionally rejected unless a future phase defines a static, C-emitt
 | C interop             | Implemented subset | Externs/header imports work for supported C ABI shapes; complex macros and unsupported C forms are excluded.                                                                            |
 
 ## Recommended next phases
-
-### Phase 39: `for` loops
-
-Should support the basic C/TS-style counted loop:
-
-```ts
-for (let i: usize = 0; i < count; i++) {
-  update(i);
-}
-```
-
-Do not add `for..in` or `for..of` until iterable semantics exist.
 
 ### Phase 40: Class `implements`
 

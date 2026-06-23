@@ -106,6 +106,34 @@ Deno.test("parses increment and decrement statements", () => {
   assertText(prefix.target.kind, "IdentifierExpr");
 });
 
+Deno.test("parses for statements", () => {
+  const stmt = parseStatementWith(
+    parserFor([
+      keyword("for"),
+      punct("("),
+      keyword("let"),
+      identifier("i"),
+      punct(":"),
+      identifier("usize"),
+      punct("="),
+      integer("0"),
+      punct(";"),
+      identifier("ok"),
+      punct(";"),
+      identifier("i"),
+      operator("++"),
+      punct(")"),
+      punct("{"),
+      punct("}"),
+    ]),
+  );
+
+  assertText(stmt.kind, "ForStmt");
+  if (stmt.kind !== "ForStmt") throw new Error("Expected for");
+  assertText(stmt.initializer?.kind ?? "", "VarDeclStmt");
+  assertText(stmt.update?.kind ?? "", "IncDecStmt");
+});
+
 Deno.test("parses do while statements", () => {
   const stmt = parseStatementWith(
     parserFor([

@@ -1401,6 +1401,22 @@ Deno.test("emits inferred array parameters as C pointers", () => {
   assertIncludes(c, "return first(values);");
 });
 
+Deno.test("emits C for basic for loops", () => {
+  const source =
+    `function main(): i32 { let total: i32 = 0; for (let i: usize = 0; i < 3; i++) { total += 2; } return total; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "usize i = 0;");
+  assertIncludes(c, "while (i < 3)");
+  assertInOrder(c, "total += 2;", "i++;", "return total;");
+});
+
+Deno.test("rejects non-bool for conditions", () => {
+  assertCompileError(
+    `function main(): i32 { for (let i: usize = 0; 1; i++) {} return 0; }`,
+    "While condition type 'i32' is not assignable to 'bool'",
+  );
+});
+
 function assertCompileError(source: Str, message: Str): void {
   try {
     emitC(check(resolve(instantiateGenerics(parse(lex(source))))));

@@ -215,6 +215,7 @@ export type Statement =
   | SwitchStmt
   | WhileStmt
   | DoWhileStmt
+  | ForStmt
   | IfStmt;
 
 export interface EmptyStmt {
@@ -317,6 +318,17 @@ export interface DoWhileStmt {
   kind: "DoWhileStmt";
   body: BlockStmt;
   condition: Expression;
+  span: SourceSpan;
+}
+
+export type ForClauseStmt = VarDeclStmt | AssignmentStmt | IncDecStmt | ExpressionStmt;
+
+export interface ForStmt {
+  kind: "ForStmt";
+  initializer: ForClauseStmt | null;
+  condition: Expression;
+  update: ForClauseStmt | null;
+  body: BlockStmt;
   span: SourceSpan;
 }
 

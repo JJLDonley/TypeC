@@ -7,6 +7,7 @@ type IncDecStmt = Extract<Statement, { kind: "IncDecStmt" }>;
 type SwitchStmt = Extract<Statement, { kind: "SwitchStmt" }>;
 type WhileStmt = Extract<Statement, { kind: "WhileStmt" }>;
 type DoWhileStmt = Extract<Statement, { kind: "DoWhileStmt" }>;
+type ForStmt = Extract<Statement, { kind: "ForStmt" }>;
 type IfStmt = Extract<Statement, { kind: "IfStmt" }>;
 
 export interface StatementCheckHandlers {
@@ -21,6 +22,7 @@ export interface StatementCheckHandlers {
   switchStatement(stmt: SwitchStmt): void;
   whileStatement(stmt: WhileStmt): void;
   doWhileStatement(stmt: DoWhileStmt): void;
+  forStatement(stmt: ForStmt): void;
   ifStatement(stmt: IfStmt): void;
 }
 
@@ -58,6 +60,9 @@ export function checkStatementDispatch(stmt: Statement, handlers: StatementCheck
       return;
     case "DoWhileStmt":
       handlers.doWhileStatement(stmt);
+      return;
+    case "ForStmt":
+      handlers.forStatement(stmt);
       return;
     case "IfStmt":
       handlers.ifStatement(stmt);

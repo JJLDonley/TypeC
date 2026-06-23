@@ -91,9 +91,12 @@ function statementGenericCallDiagnostics(
     case "VarDeclStmt":
       return expressionGenericCallDiagnostics(statement.initializer, templates);
     case "AssignmentStmt":
-      return expressionGenericCallDiagnostics(statement.expression, templates);
+      return [
+        ...expressionGenericCallDiagnostics(statement.target, templates),
+        ...expressionGenericCallDiagnostics(statement.expression, templates),
+      ];
     case "IncDecStmt":
-      return [];
+      return expressionGenericCallDiagnostics(statement.target, templates);
     case "SwitchStmt":
       return [
         ...expressionGenericCallDiagnostics(statement.expression, templates),
@@ -116,6 +119,15 @@ function statementGenericCallDiagnostics(
       return [
         ...statementListGenericCallDiagnostics(statement.body.statements, templates),
         ...expressionGenericCallDiagnostics(statement.condition, templates),
+      ];
+    case "ForStmt":
+      return [
+        ...(statement.initializer
+          ? statementGenericCallDiagnostics(statement.initializer, templates)
+          : []),
+        ...expressionGenericCallDiagnostics(statement.condition, templates),
+        ...(statement.update ? statementGenericCallDiagnostics(statement.update, templates) : []),
+        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
       ];
     case "IfStmt":
       return [
@@ -321,9 +333,16 @@ class GenericInstantiator {
       case "VarDeclStmt":
         return { ...statement, initializer: this.rewriteExpr(statement.initializer) };
       case "AssignmentStmt":
-        return { ...statement, expression: this.rewriteExpr(statement.expression) };
+        return {
+          ...statement,
+          target: this.rewriteExpr(statement.target) as typeof statement.target,
+          expression: this.rewriteExpr(statement.expression),
+        };
       case "IncDecStmt":
-        return statement;
+        return {
+          ...statement,
+          target: this.rewriteExpr(statement.target) as typeof statement.target,
+        };
       case "SwitchStmt":
         return {
           ...statement,
@@ -353,6 +372,18 @@ class GenericInstantiator {
           ...statement,
           body: this.rewriteBlock(statement.body),
           condition: this.rewriteExpr(statement.condition),
+        };
+      case "ForStmt":
+        return {
+          ...statement,
+          initializer: statement.initializer
+            ? this.rewriteStatement(statement.initializer) as typeof statement.initializer
+            : null,
+          condition: this.rewriteExpr(statement.condition),
+          update: statement.update
+            ? this.rewriteStatement(statement.update) as typeof statement.update
+            : null,
+          body: this.rewriteBlock(statement.body),
         };
       case "IfStmt":
         return {
@@ -487,6 +518,20 @@ function substituteStatement(statement: Statement, substitutions: TypeSubstituti
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "DoWhileStmt":
       return { ...statement, body: substituteBlock(statement.body, substitutions) };
+    case "ForStmt":
+      return {
+        ...statement,
+        initializer: statement.initializer
+          ? substituteStatement(
+            statement.initializer,
+            substitutions,
+          ) as typeof statement.initializer
+          : null,
+        update: statement.update
+          ? substituteStatement(statement.update, substitutions) as typeof statement.update
+          : null,
+        body: substituteBlock(statement.body, substitutions),
+      };
     case "IfStmt":
       return {
         ...statement,

@@ -96,6 +96,8 @@ function emitStatementWithDefers(
       return [emitWhileWithDefers(stmt, returnType, context, locals, defers)];
     case "DoWhileStmt":
       return [emitDoWhileWithDefers(stmt, returnType, context, locals, defers)];
+    case "ForStmt":
+      return [emitForWithDefers(stmt, returnType, context, locals, defers)];
     case "IfStmt":
       return [emitIfWithDefers(stmt, returnType, context, locals, defers)];
   }
@@ -209,6 +211,50 @@ function emitDoWhileWithDefers(
     `while (${emitExpression(stmt.condition, context)});`,
   ]
     .join("\n");
+}
+
+function emitForWithDefers(
+  stmt: Extract<Statement, { kind: "ForStmt" }>,
+  returnType: Str,
+  context: EmitContext,
+  locals: LocalTypes,
+  outerDefers: DeferredContext,
+): Str {
+  const loopLocals = childLocalTypes(locals);
+  const lines: Str[] = ["{"];
+  if (stmt.initializer) lines.push(`  ${emitForClause(stmt.initializer, context, loopLocals)}`);
+  const body = emitChildStatements(
+    stmt.body.statements,
+    returnType,
+    context,
+    loopLocals,
+    breakableDeferredContext(outerDefers),
+  );
+  if (stmt.update) body.push(emitForClause(stmt.update, context, loopLocals));
+  lines.push(
+    ...emitBracedBlock(`while (${emitExpression(stmt.condition, context)}) {`, body).split("\n")
+      .map(indentCaseLine),
+  );
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function emitForClause(
+  stmt: Extract<Statement, { kind: "ForStmt" }>["initializer"] & {},
+  context: EmitContext,
+  locals: LocalTypes,
+): Str {
+  switch (stmt.kind) {
+    case "VarDeclStmt":
+      registerLocalType(locals, stmt.name, stmt.type, context.typeAliases);
+      return emitVarDecl(stmt, context);
+    case "AssignmentStmt":
+      return emitAssignment(stmt, context, locals);
+    case "IncDecStmt":
+      return emitIncDec(stmt, context);
+    case "ExpressionStmt":
+      return emitExpressionStatement(stmt, context);
+  }
 }
 
 function emitSwitchWithDefers(

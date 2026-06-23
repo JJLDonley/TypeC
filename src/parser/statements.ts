@@ -14,6 +14,14 @@ import { span } from "parser/helpers.ts";
 type Str = string;
 type b8 = boolean;
 type i32 = number;
+type CastForInitializer = Extract<
+  CastStatement,
+  { kind: "VarDeclStmt" | "AssignmentStmt" | "IncDecStmt" | "ExpressionStmt" }
+>;
+type CastForUpdate = Extract<
+  CastStatement,
+  { kind: "AssignmentStmt" | "IncDecStmt" | "ExpressionStmt" }
+>;
 
 export interface StatementParser {
   check(kind: TokenKind): b8;
@@ -39,6 +47,7 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("if")) return parseIf(parser);
   if (parser.checkText("while")) return parseWhile(parser);
   if (parser.checkText("do")) return parseDoWhile(parser);
+  if (parser.checkText("for")) return parseFor(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
   if (isPrefixIncDecStart(parser)) return parsePrefixIncDec(parser);
   return parseExpressionOrAssignmentStatement(parser);
@@ -49,12 +58,19 @@ function parseEmpty(parser: StatementParser): CastStatement {
   return { kind: "EmptyStmt", span: semi.span };
 }
 
-function parseExpressionOrAssignmentStatement(parser: StatementParser): CastStatement {
+function parseExpressionOrAssignmentStatement(
+  parser: StatementParser,
+  consumeSemicolon = true,
+): CastStatement {
   const expression = parser.parseExpression();
-  if (isAssignmentOperator(parser.peek().text)) return parseAssignment(parser, expression);
-  if (isIncDecOperator(parser.peek().text)) return parsePostfixIncDec(parser, expression);
-  const semi = parser.expectText(";");
-  return { kind: "ExpressionStmt", expression, span: span(expression.span.start, semi.span.end) };
+  if (isAssignmentOperator(parser.peek().text)) {
+    return parseAssignment(parser, expression, consumeSemicolon);
+  }
+  if (isIncDecOperator(parser.peek().text)) {
+    return parsePostfixIncDec(parser, expression, consumeSemicolon);
+  }
+  const end = consumeSemicolon ? parser.expectText(";").span.end : expression.span.end;
+  return { kind: "ExpressionStmt", expression, span: span(expression.span.start, end) };
 }
 
 function parseReturn(parser: StatementParser): CastStatement {
@@ -174,6 +190,43 @@ function parseDoWhile(parser: StatementParser): CastStatement {
   return { kind: "DoWhileStmt", body, condition, span: span(start.span.start, semi.span.end) };
 }
 
+function parseFor(parser: StatementParser): CastStatement {
+  const start = parser.expectText("for");
+  parser.expectText("(");
+  const initializer = parser.checkText(";")
+    ? parseEmptyForInitializer(parser)
+    : parseForInitializer(parser);
+  const condition = parser.parseExpression();
+  parser.expectText(";");
+  const update = parser.checkText(")") ? null : parseForUpdate(parser);
+  parser.expectText(")");
+  const body = parser.parseBlock();
+  return {
+    kind: "ForStmt",
+    initializer,
+    condition,
+    update,
+    body,
+    span: span(start.span.start, body.span.end),
+  };
+}
+
+function parseEmptyForInitializer(parser: StatementParser): null {
+  parser.expectText(";");
+  return null;
+}
+
+function parseForInitializer(parser: StatementParser): CastForInitializer {
+  if (isVariableDeclarationStart(parser)) return parseVarDecl(parser, true) as CastForInitializer;
+  if (isPrefixIncDecStart(parser)) return parsePrefixIncDec(parser, true) as CastForInitializer;
+  return parseExpressionOrAssignmentStatement(parser, true) as CastForInitializer;
+}
+
+function parseForUpdate(parser: StatementParser): CastForUpdate {
+  if (isPrefixIncDecStart(parser)) return parsePrefixIncDec(parser, false) as CastForUpdate;
+  return parseExpressionOrAssignmentStatement(parser, false) as CastForUpdate;
+}
+
 function parseCondition(parser: StatementParser): CastExpression {
   parser.expectText("(");
   const condition = parser.parseExpression();
@@ -181,17 +234,21 @@ function parseCondition(parser: StatementParser): CastExpression {
   return condition;
 }
 
-function parseAssignment(parser: StatementParser, targetExpression: CastExpression): CastStatement {
+function parseAssignment(
+  parser: StatementParser,
+  targetExpression: CastExpression,
+  consumeSemicolon = true,
+): CastStatement {
   const target = assignmentTarget(parser, targetExpression);
   const operator = parseAssignmentOperator(parser);
   const expression = parser.parseExpression();
-  const semi = parser.expectText(";");
+  const end = consumeSemicolon ? parser.expectText(";").span.end : expression.span.end;
   return {
     kind: "AssignmentStmt",
     target,
     operator,
     expression,
-    span: span(targetExpression.span.start, semi.span.end),
+    span: span(targetExpression.span.start, end),
   };
 }
 
@@ -202,32 +259,33 @@ function parseAssignmentOperator(parser: StatementParser): CastAssignmentOperato
   return "=";
 }
 
-function parsePrefixIncDec(parser: StatementParser): CastStatement {
+function parsePrefixIncDec(parser: StatementParser, consumeSemicolon = true): CastStatement {
   const operatorToken = parser.advance();
   const operator = parseIncDecOperator(operatorToken);
   const targetExpression = parser.parseExpression();
   const target = assignmentTarget(parser, targetExpression);
-  const semi = parser.expectText(";");
+  const end = consumeSemicolon ? parser.expectText(";").span.end : targetExpression.span.end;
   return {
     kind: "IncDecStmt",
     target,
     operator,
-    span: span(operatorToken.span.start, semi.span.end),
+    span: span(operatorToken.span.start, end),
   };
 }
 
 function parsePostfixIncDec(
   parser: StatementParser,
   targetExpression: CastExpression,
+  consumeSemicolon = true,
 ): CastStatement {
   const target = assignmentTarget(parser, targetExpression);
   const operator = parseIncDecOperator(parser.advance());
-  const semi = parser.expectText(";");
+  const end = consumeSemicolon ? parser.expectText(";").span.end : parser.previous().span.end;
   return {
     kind: "IncDecStmt",
     target,
     operator,
-    span: span(targetExpression.span.start, semi.span.end),
+    span: span(targetExpression.span.start, end),
   };
 }
 
@@ -258,21 +316,21 @@ function isAssignmentOperator(text: Str): text is CastAssignmentOperator {
     text === "^=" || text === "|=";
 }
 
-function parseVarDecl(parser: StatementParser): CastStatement {
+function parseVarDecl(parser: StatementParser, consumeSemicolon = true): CastStatement {
   const keyword = parser.advance();
   const name = parser.expectKind("identifier", "Expected variable name");
   parser.expectText(":");
   const type = parser.parseTypeRef();
   parser.expectText("=");
   const initializer = parser.parseExpression();
-  const semi = parser.expectText(";");
+  const end = consumeSemicolon ? parser.expectText(";").span.end : initializer.span.end;
   return {
     kind: "VarDeclStmt",
     mutable: keyword.text === "let",
     name: name.text,
     type,
     initializer,
-    span: span(keyword.span.start, semi.span.end),
+    span: span(keyword.span.start, end),
   };
 }
 

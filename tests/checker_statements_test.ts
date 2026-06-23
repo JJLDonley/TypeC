@@ -22,6 +22,7 @@ Deno.test("dispatches statement checks", () => {
   assertDispatch(switchStmt(), "switch");
   assertDispatch(whileStmt(), "while");
   assertDispatch(doWhileStmt(), "doWhile");
+  assertDispatch(forStmt(), "for");
   assertDispatch(ifStmt(), "if");
 });
 
@@ -45,6 +46,7 @@ function handlers(calls: Str[]): StatementCheckHandlers {
     switchStatement: () => calls.push("switch"),
     whileStatement: () => calls.push("while"),
     doWhileStatement: () => calls.push("doWhile"),
+    forStatement: () => calls.push("for"),
     ifStatement: () => calls.push("if"),
   };
 }
@@ -110,6 +112,17 @@ function whileStmt(): Statement {
 
 function doWhileStmt(): Statement {
   return { kind: "DoWhileStmt", body: block(), condition: boolLiteral(), span };
+}
+
+function forStmt(): Statement {
+  return {
+    kind: "ForStmt",
+    initializer: null,
+    condition: boolLiteral(),
+    update: null,
+    body: block(),
+    span,
+  };
 }
 
 function ifStmt(): Statement {

@@ -137,6 +137,9 @@ class Resolver {
         this.resolveBlock(statement.body.statements, scope);
         this.resolveExpression(statement.condition, scope);
         return;
+      case "ForStmt":
+        this.resolveFor(statement, scope);
+        return;
       case "IfStmt":
         this.resolveExpression(statement.condition, scope);
         this.resolveBlock(statement.thenBody.statements, scope);
@@ -148,6 +151,14 @@ class Resolver {
   private resolveBlock(statements: Statement[], parent: Scope): void {
     const scope = this.scopeTable.createScope("block", parent);
     for (const statement of statements) this.resolveStatement(statement, scope);
+  }
+
+  private resolveFor(statement: Extract<Statement, { kind: "ForStmt" }>, parent: Scope): void {
+    const scope = this.scopeTable.createScope("block", parent);
+    if (statement.initializer) this.resolveStatement(statement.initializer, scope);
+    this.resolveExpression(statement.condition, scope);
+    if (statement.update) this.resolveStatement(statement.update, scope);
+    this.resolveBlock(statement.body.statements, scope);
   }
 
   private resolveAssignmentTarget(

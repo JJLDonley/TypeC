@@ -241,6 +241,7 @@ export type CastStatement =
   | CastSwitchStmt
   | CastWhileStmt
   | CastDoWhileStmt
+  | CastForStmt
   | CastIfStmt;
 
 export interface CastEmptyStmt {
@@ -346,6 +347,21 @@ export interface CastDoWhileStmt {
   kind: "DoWhileStmt";
   body: CastBlockStmt;
   condition: CastExpression;
+  span: SourceSpan;
+}
+
+export type CastForClauseStmt =
+  | CastVarDeclStmt
+  | CastAssignmentStmt
+  | CastIncDecStmt
+  | CastExpressionStmt;
+
+export interface CastForStmt {
+  kind: "ForStmt";
+  initializer: CastForClauseStmt | null;
+  condition: CastExpression;
+  update: CastForClauseStmt | null;
+  body: CastBlockStmt;
   span: SourceSpan;
 }
 

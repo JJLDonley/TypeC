@@ -17,6 +17,7 @@ import {
   checkIfStatement,
   checkWhileStatement,
 } from "checker/control_flow.ts";
+import { checkWhileCondition } from "checker/conditions.ts";
 import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
 import { isEnumTypeName } from "checker/enums.ts";
@@ -205,6 +206,7 @@ class Checker {
       switchStatement: (value) => this.checkSwitch(value, locals, returnType),
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
       doWhileStatement: (value) => this.checkDoWhile(value, locals, returnType),
+      forStatement: (value) => this.checkFor(value, locals, returnType),
       ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
     });
   }
@@ -334,6 +336,19 @@ class Checker {
         (children, parent) => this.checkBlock(children, parent, returnType, false),
       ),
     );
+  }
+
+  private checkFor(
+    stmt: Extract<Statement, { kind: "ForStmt" }>,
+    parentLocals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    const locals = new Map<Str, LocalInfo>(parentLocals);
+    if (stmt.initializer) this.checkStatement(stmt.initializer, locals, returnType, false);
+    const conditionType = this.typeOf(stmt.condition, locals);
+    this.diagnostics.push(...checkWhileCondition(conditionType, stmt.condition.span));
+    if (stmt.update) this.checkStatement(stmt.update, locals, returnType, false);
+    this.diagnostics.push(...this.checkBlock(stmt.body.statements, locals, returnType, false));
   }
 
   private checkIf(

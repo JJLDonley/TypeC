@@ -56,6 +56,32 @@ Deno.test("emits switch statements", () => {
   );
 });
 
+Deno.test("emits for statements as scoped while loops", () => {
+  assertText(
+    emitStatement(
+      {
+        kind: "ForStmt",
+        initializer: varDecl(true, "i", named("usize"), int("0")) as Extract<
+          Statement,
+          { kind: "VarDeclStmt" }
+        >,
+        condition: bool("true"),
+        update: {
+          kind: "IncDecStmt",
+          target: { kind: "IdentifierExpr", name: "i", span },
+          operator: "++",
+          span,
+        },
+        body: block([{ kind: "ExpressionStmt", expression: int("1"), span }]),
+        span,
+      },
+      "i32",
+      context(),
+    ),
+    "{\n  usize i = 0;\n  while (true) {\n      1;\n      i++;\n    }\n}",
+  );
+});
+
 Deno.test("emits control flow statements", () => {
   assertText(
     emitStatement(
