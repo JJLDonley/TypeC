@@ -1,0 +1,14 @@
+function identity<T>(value: T): T {
+  return value;
+}
+
+function first<T>(items: Slice<T>): T {
+  return items[0];
+}
+
+function main(): i32 {
+  const values: i32[] = [42, 7];
+  const a: i32 = identity<i32>(41);
+  const b: i32 = first<i32>(values);
+  return a + b - 41;
+}

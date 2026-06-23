@@ -87,6 +87,22 @@ function main(): i32 { const v: Vec2 = { x: 1.0 }; const d: f64 = v.lengthSquare
   if (local.initializer.method !== "lengthSquared") throw new Error("Expected method name");
 });
 
+Deno.test("parses generic function declarations and calls", () => {
+  const program = parse(
+    lex(
+      `function identity<T>(value: T): T { return value; } function main(): i32 { return identity<i32>(42); }`,
+    ),
+  );
+  const fn = program.functions[0];
+  if ((fn.genericParams ?? []).length !== 1) throw new Error("Expected generic parameter");
+  const main = program.functions[1];
+  const statement = main.body?.statements[0];
+  if (statement?.kind !== "ReturnStmt" || statement.expression?.kind !== "CallExpr") {
+    throw new Error("Expected generic call");
+  }
+  if ((statement.expression.typeArgs ?? []).length !== 1) throw new Error("Expected type argument");
+});
+
 Deno.test("parses interface declarations", () => {
   const program = parse(
     lex(

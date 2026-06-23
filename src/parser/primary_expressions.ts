@@ -1,6 +1,6 @@
 import { TypeCError } from "core/diagnostics.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { CastExpression } from "core/cast.ts";
+import type { CastExpression, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { parseFloatLiteral, span } from "parser/helpers.ts";
 
@@ -19,6 +19,7 @@ export interface PrimaryExpressionParser {
   peek(offset?: i32): Token;
   error(token: Token, message: Str): void;
   parseExpression(): CastExpression;
+  parseTypeRef(): CastTypeRef;
   parseArrayLiteral(): CastExpression;
   parseRecordLiteral(): CastExpression;
 }
@@ -78,8 +79,9 @@ function parseIdentifierExpression(parser: PrimaryExpressionParser): CastExpress
   }
   const namespaceCall = parseNamespaceCall(parser, ident);
   if (namespaceCall) return namespaceCall;
+  const typeArgs = parseGenericCallTypeArgs(parser);
   if (!parser.matchText("(")) return { kind: "IdentifierExpr", name: ident.text, span: ident.span };
-  return parseCallExpression(parser, ident.text, ident.span.start);
+  return parseCallExpression(parser, ident.text, typeArgs, ident.span.start);
 }
 
 function isPostfixLengthAccess(parser: PrimaryExpressionParser): b8 {
@@ -113,14 +115,40 @@ function parseNamespaceCall(
   };
 }
 
+function parseGenericCallTypeArgs(parser: PrimaryExpressionParser): CastTypeRef[] {
+  if (!isGenericCallStart(parser)) return [];
+  parser.expectText("<");
+  const typeArgs: CastTypeRef[] = [];
+  do typeArgs.push(parser.parseTypeRef()); while (parser.matchText(","));
+  parser.expectText(">");
+  return typeArgs;
+}
+
+function isGenericCallStart(parser: PrimaryExpressionParser): b8 {
+  if (!parser.checkText("<")) return false;
+  let depth: i32 = 0;
+  let offset: i32 = 0;
+  while (true) {
+    const token = parser.peek(offset);
+    if (token.kind === "eof") return false;
+    if (token.text === "<") depth += 1;
+    if (token.text === ">") {
+      depth -= 1;
+      if (depth === 0) return parser.peek(offset + 1).text === "(";
+    }
+    offset += 1;
+  }
+}
+
 function parseCallExpression(
   parser: PrimaryExpressionParser,
   callee: Str,
+  typeArgs: CastTypeRef[],
   start: Token["span"]["start"],
 ): CastExpression {
   const args = parseCallArguments(parser);
   const close = parser.expectText(")");
-  return { kind: "CallExpr", callee, args, span: span(start, close.span.end) };
+  return { kind: "CallExpr", callee, typeArgs, args, span: span(start, close.span.end) };
 }
 
 function parseCallArguments(parser: PrimaryExpressionParser): CastExpression[] {

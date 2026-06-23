@@ -2,6 +2,7 @@ import { check } from "checker";
 import { formatDiagnostic, TypeCError } from "core/diagnostics.ts";
 import { emitC } from "emitter";
 import { hasMain } from "core/entrypoint.ts";
+import { instantiateGenerics } from "core/generics.ts";
 import { loadProgram } from "module/loader.ts";
 import { buildOutputPaths } from "paths";
 import { loadProjectConfig } from "project/config.ts";
@@ -40,7 +41,7 @@ async function compileSource(
   inputPath: Str,
 ): Promise<{ cSource: Str; hasMain: b8; compilerFlags: Str[] }> {
   const config = await loadProjectConfig(inputPath);
-  const ast = await loadProgram(inputPath, config);
+  const ast = instantiateGenerics(await loadProgram(inputPath, config));
   const resolved = resolve(ast);
   const checked = check(resolved);
   return {

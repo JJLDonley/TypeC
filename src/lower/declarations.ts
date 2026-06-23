@@ -117,6 +117,7 @@ export function lowerFunctionDecl(fn: CastFunctionDecl): FunctionDecl {
     external: fn.external,
     name: fn.name,
     cName: fn.cName,
+    genericParams: fn.genericParams?.map((param) => ({ ...param })) ?? [],
     params: fn.params.map(lowerParam),
     variadic: fn.variadic,
     returnType: lowerTypeRef(fn.returnType),

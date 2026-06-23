@@ -1428,6 +1428,8 @@ TypeScript structural compatibility rules are not implied unless specified expli
 
 # Phase 17: Generics
 
+Status: In progress. Implementing explicit generic function instantiation first.
+
 ## Goal
 
 Allow reusable typed functions and data structures through compile-time instantiation.
@@ -1454,6 +1456,32 @@ function drawAll<T extends Drawable>(items: Slice<T>): void {
   // body syntax depends on earlier implemented phases
 }
 ```
+
+The implemented subset for this phase is explicit generic function instantiation:
+
+```ts
+function identity<T>(value: T): T {
+  return value;
+}
+
+function main(): i32 {
+  return identity<i32>(42);
+}
+```
+
+## Implemented Subset Semantics
+
+- Generic function declarations use TypeScript-like `function name<T>(...)` syntax.
+- Generic calls must use explicit TypeScript-like type arguments: `name<i32>(value)`.
+- Generic function templates are compile-time only and emit no C directly.
+- Each concrete call monomorphizes the template into a non-generic function before resolution,
+  checking, and C emission.
+- Instantiation C names are deterministic and include sanitized type argument names.
+- Generic type parameters may appear in parameter types, return types, and nested type references.
+- Generic type parameters may not be shadowed or duplicated in the same declaration.
+- Type-parameter constraints and generic classes remain out of scope until specified and tested.
+- Generic function type inference is not implemented; omitting call type arguments calls only
+  ordinary non-generic functions.
 
 ## Do
 

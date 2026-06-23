@@ -32,6 +32,7 @@ import type {
   CastStringLiteral,
   CastUnaryExpr,
 } from "core/cast.ts";
+import { lowerTypeRef } from "lower/types.ts";
 
 export function lowerExpression(expression: CastExpression): Expression {
   switch (expression.kind) {
@@ -124,6 +125,7 @@ function lowerCallExpr(expression: CastCallExpr): CallExpr {
   return {
     kind: "CallExpr",
     callee: expression.callee,
+    typeArgs: expression.typeArgs?.map((typeArg) => lowerTypeRef(typeArg)),
     args: expression.args.map(lowerExpression),
     span: expression.span,
   };

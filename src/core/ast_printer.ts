@@ -68,8 +68,10 @@ class AstPrinter {
   }
 
   private functionDecl(fn: FunctionDecl): void {
+    const generics = (fn.genericParams ?? []).map((param) => param.name).join(", ");
+    const genericText = generics.length > 0 ? `<${generics}>` : "";
     this.line(
-      `${fn.external ? "ExternFunctionDecl" : "FunctionDecl"} ${fn.name} -> ${
+      `${fn.external ? "ExternFunctionDecl" : "FunctionDecl"} ${fn.name}${genericText} -> ${
         this.type(fn.returnType)
       }`,
     );
@@ -185,12 +187,15 @@ class AstPrinter {
           this.expression(expression.right);
         });
         return;
-      case "CallExpr":
-        this.line(`CallExpr ${expression.callee}`);
+      case "CallExpr": {
+        const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
+        const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";
+        this.line(`CallExpr ${expression.callee}${typeArgText}`);
         this.indented(() => {
           for (const arg of expression.args) this.expression(arg);
         });
         return;
+      }
       case "MethodCallExpr":
         this.line(`MethodCallExpr ${expression.method}`);
         this.indented(() => {

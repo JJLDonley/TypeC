@@ -2,6 +2,7 @@ import { check } from "checker";
 import { compileFile } from "driver/compiler.ts";
 import { emitC } from "emitter";
 import { TypeCError } from "core/diagnostics.ts";
+import { instantiateGenerics } from "core/generics.ts";
 import { loadProgram } from "module/loader.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser";
@@ -93,6 +94,22 @@ Deno.test("rejects interface names as value types", () => {
   assertCompileError(
     `interface Drawable { draw(): void; } function use(value: Drawable): void { return; } function main(): i32 { return 0; }`,
     "Unknown type 'Drawable'",
+  );
+});
+
+Deno.test("compiles generic function example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/generic.tc", dir);
+
+  assertNotIncludes(result.cSource, "identity<T>");
+  assertIncludes(result.cSource, "identity_i32");
+  assertIncludes(result.cSource, "first_i32");
+});
+
+Deno.test("rejects invalid generic function calls", () => {
+  assertCompileError(
+    `function identity<T>(value: T): T { return value; } function main(): i32 { return identity<i32, i64>(42); }`,
+    "Generic function 'identity' expects 1 type argument(s)",
   );
 });
 
@@ -1025,7 +1042,7 @@ Deno.test("emits inferred array parameters as C pointers", () => {
 
 function assertCompileError(source: Str, message: Str): void {
   try {
-    emitC(check(resolve(parse(lex(source)))));
+    emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
   } catch (error) {
     if (!(error instanceof TypeCError)) throw error;
     const text = error.diagnostics.map((diagnostic) => diagnostic.message).join("\n");

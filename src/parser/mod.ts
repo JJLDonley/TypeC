@@ -173,6 +173,7 @@ class Parser {
       peek: (offset = 0) => this.peek(offset),
       error: (token, message) => this.error(token, message),
       parseExpression: () => this.parseExpression(),
+      parseTypeRef: () => this.parseTypeRef(),
       parseArrayLiteral: () => this.parseArrayLiteral(),
       parseRecordLiteral: () => this.parseRecordLiteral(),
     };

@@ -1,5 +1,5 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { CastExpression } from "core/cast.ts";
+import type { CastExpression, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
 
@@ -78,10 +78,16 @@ function parserFixture(tokens: Token[]): ParserFixture {
     peek: (offset = 0) => peek(tokens, current + offset),
     error: (next, message) => diagnostics.push({ message, span: next.span }),
     parseExpression: () => parsePrimaryWith(parser),
+    parseTypeRef: () => parseTestTypeRef(tokens, current++),
     parseArrayLiteral: () => ({ kind: "ArrayLiteralExpr", elements: [], span: sourceSpan }),
     parseRecordLiteral: () => ({ kind: "RecordLiteralExpr", fields: [], span: sourceSpan }),
   };
   return { diagnostics, parser };
+}
+
+function parseTestTypeRef(tokens: Token[], index: i32): CastTypeRef {
+  const next = peek(tokens, index);
+  return { kind: "NamedTypeRef", name: next.text, span: next.span };
 }
 
 function peek(tokens: Token[], index: i32): Token {

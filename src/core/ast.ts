@@ -80,10 +80,16 @@ export interface FunctionDecl {
   external: b8;
   name: Str;
   cName?: Str | null;
+  genericParams?: GenericParam[];
   params: Param[];
   variadic?: b8;
   returnType: TypeRef;
   body: BlockStmt | null;
+  span: SourceSpan;
+}
+
+export interface GenericParam {
+  name: Str;
   span: SourceSpan;
 }
 
@@ -309,6 +315,7 @@ export interface BinaryExpr {
 export interface CallExpr {
   kind: "CallExpr";
   callee: Str;
+  typeArgs?: TypeRef[];
   args: Expression[];
   span: SourceSpan;
 }

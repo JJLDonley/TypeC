@@ -105,10 +105,16 @@ export interface CastFunctionDecl {
   external: b8;
   name: Str;
   cName?: Str | null;
+  genericParams?: CastGenericParam[];
   params: CastParam[];
   variadic?: b8;
   returnType: CastTypeRef;
   body: CastBlockStmt | null;
+  span: SourceSpan;
+}
+
+export interface CastGenericParam {
+  name: Str;
   span: SourceSpan;
 }
 
@@ -334,6 +340,7 @@ export interface CastBinaryExpr {
 export interface CastCallExpr {
   kind: "CallExpr";
   callee: Str;
+  typeArgs?: CastTypeRef[];
   args: CastExpression[];
   span: SourceSpan;
 }

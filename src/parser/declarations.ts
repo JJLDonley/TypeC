@@ -9,6 +9,7 @@ import type {
   CastEnumMember,
   CastExpression,
   CastFunctionDecl,
+  CastGenericParam,
   CastImportDecl,
   CastInterfaceDecl,
   CastInterfaceMethod,
@@ -321,6 +322,7 @@ function parseFunctionDeclaration(
   );
   const functionToken = parser.expectText("function");
   const name = parser.expectKind("identifier", "Expected function name");
+  const genericParams = parseGenericParams(parser);
   parser.expectText("(");
   const params = parseFunctionParams(parser);
   parser.expectText(")");
@@ -332,6 +334,7 @@ function parseFunctionDeclaration(
       modifiers.exported,
       functionToken,
       name.text,
+      genericParams,
       params.params,
       params.variadic,
       returnType,
@@ -343,10 +346,22 @@ function parseFunctionDeclaration(
     modifiers.external,
     functionToken,
     name.text,
+    genericParams,
     params.params,
     params.variadic,
     returnType,
   );
+}
+
+function parseGenericParams(parser: DeclarationParser): CastGenericParam[] {
+  const params: CastGenericParam[] = [];
+  if (!parser.matchText("<")) return params;
+  do {
+    const name = parser.expectKind("identifier", "Expected generic parameter name");
+    params.push({ name: name.text, span: name.span });
+  } while (parser.matchText(","));
+  parser.expectText(">");
+  return params;
 }
 
 function parseFunctionParams(parser: DeclarationParser): FunctionParamsParse {
@@ -374,6 +389,7 @@ function parseExternFunction(
   exported: b8,
   functionToken: Token,
   name: Str,
+  genericParams: CastGenericParam[],
   params: CastParam[],
   variadic: b8,
   returnType: CastTypeRef,
@@ -385,6 +401,7 @@ function parseExternFunction(
     external: true,
     name,
     cName: null,
+    genericParams,
     params,
     variadic,
     returnType,
@@ -399,6 +416,7 @@ function parseBodyFunction(
   external: b8,
   functionToken: Token,
   name: Str,
+  genericParams: CastGenericParam[],
   params: CastParam[],
   variadic: b8,
   returnType: CastTypeRef,
@@ -410,6 +428,7 @@ function parseBodyFunction(
     external,
     name,
     cName: null,
+    genericParams,
     params,
     variadic,
     returnType,

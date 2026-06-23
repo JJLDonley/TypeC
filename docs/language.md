@@ -178,6 +178,24 @@ Runnable example:
 deno run -A src/driver/main.ts run examples/switch.tc
 ```
 
+## Generics
+
+TypeC supports explicit generic function instantiation:
+
+```ts
+function identity<T>(value: T): T {
+  return value;
+}
+
+function main(): i32 {
+  return identity<i32>(42);
+}
+```
+
+Generic function templates are compile-time only. Calls must provide explicit type arguments, and
+the compiler monomorphizes each concrete call before checking and C emission. Generic classes,
+constraints, and type inference are not part of the current subset.
+
 ## Interfaces
 
 TypeC supports TypeScript-like interface declarations as compile-time-only method-signature sets:
