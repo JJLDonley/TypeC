@@ -5,8 +5,10 @@ type b8 = boolean;
 
 export function typeName(type: TypeRef): Str {
   switch (type.kind) {
-    case "NamedTypeRef":
-      return type.name;
+    case "NamedTypeRef": {
+      const args = type.typeArgs?.map(typeName).join(", ") ?? "";
+      return args.length > 0 ? `${type.name}<${args}>` : type.name;
+    }
     case "PointerTypeRef":
       return `${typeName(type.element)}*`;
     case "ReferenceTypeRef":

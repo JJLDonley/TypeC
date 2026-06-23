@@ -192,9 +192,22 @@ function main(): i32 {
 }
 ```
 
-Generic function templates are compile-time only. Calls must provide explicit type arguments, and
-the compiler monomorphizes each concrete call before checking and C emission. Generic classes,
-constraints, and type inference are not part of the current subset.
+Generic function and class templates are compile-time only. Calls and generic class value types must
+provide explicit type arguments, and the compiler monomorphizes each concrete use before checking
+and C emission:
+
+```ts
+class Box<T> {
+  value: T;
+}
+
+function main(): i32 {
+  const box: Box<i32> = { value: 42 };
+  return box.value;
+}
+```
+
+Constraints and type inference are not part of the current subset.
 
 ## Interfaces
 

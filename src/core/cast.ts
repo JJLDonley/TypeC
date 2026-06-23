@@ -38,6 +38,7 @@ export interface CastClassDecl {
   kind: "ClassDecl";
   exported: b8;
   name: Str;
+  genericParams?: CastGenericParam[];
   fields: CastClassField[];
   methods: CastClassMethod[];
   span: SourceSpan;
@@ -137,6 +138,7 @@ export type CastTypeRef =
 export interface CastNamedTypeRef {
   kind: "NamedTypeRef";
   name: Str;
+  typeArgs?: CastTypeRef[];
   span: SourceSpan;
 }
 

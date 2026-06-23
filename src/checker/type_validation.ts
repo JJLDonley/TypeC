@@ -51,6 +51,9 @@ function checkNamedType(
   type: Extract<TypeRef, { kind: "NamedTypeRef" }>,
   typeAliases: Map<Str, TypeRef>,
 ): Diagnostic[] {
+  if ((type.typeArgs ?? []).length > 0) {
+    return [{ message: `Uninstantiated generic type '${type.name}'`, span: type.span }];
+  }
   if (primitiveTypes.has(type.name) || typeAliases.has(type.name)) return [];
   return [{ message: `Unknown type '${type.name}'`, span: type.span }];
 }

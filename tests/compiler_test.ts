@@ -97,6 +97,22 @@ Deno.test("rejects interface names as value types", () => {
   );
 });
 
+Deno.test("rejects invalid generic class type refs", () => {
+  assertCompileError(
+    `class Box<T> { value: T; } function main(): i32 { const box: Box<i32, i64> = { value: 42 }; return 0; }`,
+    "Generic class 'Box' expects 1 type argument(s)",
+  );
+});
+
+Deno.test("compiles generic class example", async () => {
+  const dir = await Deno.makeTempDir();
+  const result = await compileFile("examples/generic_class.tc", dir);
+
+  assertIncludes(result.cSource, "} Box_i32;");
+  assertIncludes(result.cSource, "Box_i32_get");
+  assertNotIncludes(result.cSource, "Box<T>");
+});
+
 Deno.test("compiles generic function example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/generic.tc", dir);

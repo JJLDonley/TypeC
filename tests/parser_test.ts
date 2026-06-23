@@ -87,6 +87,22 @@ function main(): i32 { const v: Vec2 = { x: 1.0 }; const d: f64 = v.lengthSquare
   if (local.initializer.method !== "lengthSquared") throw new Error("Expected method name");
 });
 
+Deno.test("parses generic class declarations and type refs", () => {
+  const program = parse(
+    lex(
+      `class Box<T> { value: T; } function main(): i32 { const box: Box<i32> = { value: 42 }; return 0; }`,
+    ),
+  );
+  const classDecl = program.typeAliases.find((typeAlias) => typeAlias.name === "Box_i32");
+  if (!classDecl) throw new Error("Expected instantiated class type alias");
+  const main = program.functions[0];
+  const statement = main.body?.statements[0];
+  if (statement?.kind !== "VarDeclStmt" || statement.type.kind !== "NamedTypeRef") {
+    throw new Error("Expected generic class local type");
+  }
+  if (statement.type.name !== "Box_i32") throw new Error("Expected instantiated class type");
+});
+
 Deno.test("parses generic function declarations and calls", () => {
   const program = parse(
     lex(

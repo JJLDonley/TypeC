@@ -112,6 +112,7 @@ export type TypeRef =
 export interface NamedTypeRef {
   kind: "NamedTypeRef";
   name: Str;
+  typeArgs?: TypeRef[];
   span: SourceSpan;
 }
 

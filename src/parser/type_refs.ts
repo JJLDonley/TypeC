@@ -50,7 +50,20 @@ function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
     return parseCanonicalGenericTypeRef(parser, token);
   }
   if (parser.matchText(".")) return parseQualifiedNamedTypeRef(parser, token);
+  if (parser.matchText("<")) return parseGenericNamedTypeRef(parser, token);
   return { kind: "NamedTypeRef", name: token.text, span: token.span };
+}
+
+function parseGenericNamedTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
+  const typeArgs: CastTypeRef[] = [];
+  do typeArgs.push(parseTypeRefWith(parser)); while (parser.matchText(","));
+  const close = parser.expectText(">");
+  return {
+    kind: "NamedTypeRef",
+    name: token.text,
+    typeArgs,
+    span: span(token.span.start, close.span.end),
+  };
 }
 
 function parseQualifiedNamedTypeRef(parser: TypeRefParser, namespace: Token): CastTypeRef {

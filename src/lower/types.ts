@@ -24,7 +24,12 @@ import type {
 export function lowerTypeRef(type: CastTypeRef): TypeRef {
   switch (type.kind) {
     case "NamedTypeRef":
-      return { kind: "NamedTypeRef", name: type.name, span: type.span };
+      return {
+        kind: "NamedTypeRef",
+        name: type.name,
+        typeArgs: type.typeArgs?.map(lowerTypeRef),
+        span: type.span,
+      };
     case "PointerTypeRef":
       return lowerPointerTypeRef(type);
     case "ReferenceTypeRef":

@@ -10,27 +10,30 @@ import {
   lowerInterfaceDecl,
   lowerTypeAliasDecl,
 } from "lower/declarations.ts";
+import { instantiateGenericClasses } from "lower/generic_classes.ts";
 
 export function lowerCast(program: CastProgram): Program {
+  const cast = instantiateGenericClasses(program);
   return {
     kind: "Program",
-    imports: program.imports.map(lowerImportDecl),
+    imports: cast.imports.map(lowerImportDecl),
     typeAliases: [
-      ...program.typeAliases.map(lowerTypeAliasDecl),
-      ...(program.classes ?? []).map(lowerClassTypeAlias),
+      ...cast.typeAliases.map(lowerTypeAliasDecl),
+      ...(cast.classes ?? []).map(lowerClassTypeAlias),
     ],
-    interfaces: (program.interfaces ?? []).map(lowerInterfaceDecl),
-    enums: (program.enums ?? []).map(lowerEnumDecl),
-    constants: (program.constants ?? []).map(lowerConstDecl),
+    interfaces: (cast.interfaces ?? []).map(lowerInterfaceDecl),
+    enums: (cast.enums ?? []).map(lowerEnumDecl),
+    constants: (cast.constants ?? []).map(lowerConstDecl),
     functions: [
-      ...program.functions.map(lowerFunctionDecl),
-      ...(program.classes ?? []).flatMap(lowerClassMethods),
+      ...cast.functions.map(lowerFunctionDecl),
+      ...(cast.classes ?? []).flatMap(lowerClassMethods),
     ],
-    span: program.span,
+    span: cast.span,
   };
 }
 
 export * from "lower/declarations.ts";
+export * from "lower/generic_classes.ts";
 export * from "lower/expressions.ts";
 export * from "lower/statements.ts";
 export * from "lower/types.ts";

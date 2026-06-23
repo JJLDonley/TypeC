@@ -153,6 +153,7 @@ function parseClassDeclaration(
   parser.diagnostics().push(...classModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("class");
   const name = parser.expectKind("identifier", "Expected class name");
+  const genericParams = parseGenericParams(parser);
   parser.expectText("{");
   const members = parseClassMembers(parser, modifiers.exported);
   const close = parser.expectText("}");
@@ -160,6 +161,7 @@ function parseClassDeclaration(
     kind: "ClassDecl",
     exported: modifiers.exported,
     name: name.text,
+    genericParams,
     fields: members.fields,
     methods: members.methods,
     span: span(start.span.start, close.span.end),
