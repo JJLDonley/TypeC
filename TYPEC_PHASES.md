@@ -2641,6 +2641,50 @@ type Size = { width: i32; height: i32 };
 
 ---
 
+# Phase 36: Parenthesized Type References
+
+Status: Complete.
+
+## Goal
+
+Accept TypeScript-style parentheses around type references for grouping and readability.
+
+## Syntax
+
+```ts
+function id(value: (i32)): (i32) {
+  return value;
+}
+
+type Cell = { value: (i32), next: (i32)* };
+function apply(cb: (value: i32) => i32, value: (i32)): i32 {
+  return cb(value);
+}
+```
+
+## Semantics
+
+- Parentheses around a type reference are syntax only.
+- `(T)` has the same type as `T`.
+- Postfix type syntax applies to the grouped type, for example `(i32)*` is `i32*`.
+- Function type syntax remains unchanged.
+
+## Do
+
+- Accept parenthesized type refs where type refs are accepted today.
+- Preserve existing function type parsing for `(name: Type) => Return`.
+- Reuse existing checker, lowering, and emitter behavior by returning the inner type ref with an
+  expanded span.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add tuple types.
+- Do not add function overload types.
+- Do not add JavaScript runtime semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

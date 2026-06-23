@@ -1068,6 +1068,14 @@ Deno.test("emits C typedef for comma-separated record aliases", () => {
   assertOrdered(c, "  f32 x;", "  f32 y;");
 });
 
+Deno.test("compiles parenthesized type refs", () => {
+  const source =
+    `function id(value: (i32)): i32 { return value; } function main(): i32 { const value: (i32) = 1; return id(value); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32 id(i32 value)");
+  assertIncludes(c, "const i32 value = 1;");
+});
+
 Deno.test("emits C typedef for fixed array record fields", () => {
   const source = `type Block = { values: i32[3]; }; function main(): i32 { return 0; }`;
   const c = emitC(check(resolve(parse(lex(source)))));

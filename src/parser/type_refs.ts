@@ -5,6 +5,7 @@ import { span } from "parser/helpers.ts";
 
 type Str = string;
 type b8 = boolean;
+type i32 = number;
 
 export interface TypeRefParser {
   check(kind: TokenKind): b8;
@@ -13,13 +14,14 @@ export interface TypeRefParser {
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
   previous(): Token;
+  peek(offset?: i32): Token;
 }
 
 export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
   let type: CastTypeRef = parser.checkText("{")
     ? parseRecordTypeRef(parser)
     : parser.checkText("(")
-    ? parseFunctionTypeRef(parser)
+    ? parseParenthesizedOrFunctionTypeRef(parser)
     : parseNamedTypeRef(parser);
 
   while (isTypePostfixStart(parser)) {
@@ -160,6 +162,24 @@ function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTyp
     sizeText: size.text,
     span: span(element.span.start, close.span.end),
   };
+}
+
+function parseParenthesizedOrFunctionTypeRef(parser: TypeRefParser): CastTypeRef {
+  return isFunctionTypeStart(parser)
+    ? parseFunctionTypeRef(parser)
+    : parseParenthesizedTypeRef(parser);
+}
+
+function isFunctionTypeStart(parser: TypeRefParser): b8 {
+  if (parser.peek(1).text === ")") return parser.peek(2).text === "=>";
+  return parser.peek(1).kind === "identifier" && parser.peek(2).text === ":";
+}
+
+function parseParenthesizedTypeRef(parser: TypeRefParser): CastTypeRef {
+  const open = parser.expectText("(");
+  const type = parseTypeRefWith(parser);
+  const close = parser.expectText(")");
+  return { ...type, span: span(open.span.start, close.span.end) };
 }
 
 function parseFunctionTypeRef(parser: TypeRefParser): CastTypeRef {

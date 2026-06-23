@@ -95,6 +95,7 @@ class Parser {
       expectKind: (kind, message) => this.expectKind(kind, message),
       expectText: (text) => this.expectText(text),
       previous: () => this.previous(),
+      peek: (offset = 0) => this.peek(offset),
     });
   }
 

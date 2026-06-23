@@ -129,6 +129,16 @@ Deno.test("parses function type refs", () => {
   assertText(typeName(trailing), "(value: i32) => i32");
 });
 
+Deno.test("parses parenthesized type refs", () => {
+  const scalar = parseTypeRefWith(parserFor([punct("("), identifier("i32"), punct(")"), eof()]));
+  const pointer = parseTypeRefWith(
+    parserFor([punct("("), identifier("i32"), punct(")"), punct("*"), eof()]),
+  );
+
+  assertText(typeName(scalar), "i32");
+  assertText(typeName(pointer), "i32*");
+});
+
 Deno.test("parses safe pointer type refs", () => {
   const type = parseTypeRefWith(
     parserFor([identifier("SafePtr"), punct("<"), identifier("i32"), punct(">"), eof()]),
@@ -178,6 +188,7 @@ function parserFor(tokens: Token[]): TypeRefParser {
       return token;
     },
     previous: () => peek(tokens, current - 1),
+    peek: (offset = 0) => peek(tokens, current + offset),
   };
 }
 
