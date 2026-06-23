@@ -400,7 +400,9 @@ function parseGenericParams(parser: DeclarationParser): CastGenericParam[] {
     const name = parser.expectKind("identifier", "Expected generic parameter name");
     const constraint = parser.matchText("extends") ? parser.parseTypeRef() : null;
     params.push({ name: name.text, constraint, span: name.span });
-  } while (parser.matchText(","));
+    if (!parser.matchText(",")) break;
+    if (parser.checkText(">")) break;
+  } while (true);
   parser.expectText(">");
   return params;
 }
@@ -409,6 +411,7 @@ function parseFunctionParams(parser: DeclarationParser): FunctionParamsParse {
   const params: CastParam[] = [];
   if (parser.checkText(")")) return { params, variadic: false };
   do {
+    if (parser.checkText(")")) break;
     if (parser.matchText("...")) {
       parser.expectKind("identifier", "Expected rest parameter name");
       return { params, variadic: true };

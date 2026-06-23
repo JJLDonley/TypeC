@@ -2423,6 +2423,66 @@ function main(): i32 {
 
 ---
 
+# Phase 31: Trailing Commas in Delimited Lists
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style trailing comma tolerance in comma-delimited syntax lists where it does not
+affect type checking or emitted C.
+
+## Syntax
+
+```ts
+function sum(
+  a: i32,
+  b: i32,
+): i32 {
+  return a + b;
+}
+
+sum(
+  1,
+  2,
+);
+
+const values: [i32] = [
+  1,
+  2,
+];
+```
+
+## Semantics
+
+- A trailing comma is syntax only.
+- It does not create an empty element, parameter, argument, field, or variant.
+- It does not affect type checking, lowering, or C emission.
+- TypeC does not add JavaScript array holes or elisions.
+
+## Covered Lists
+
+- Function parameters.
+- Function call arguments.
+- Generic type arguments and parameters where already supported.
+- Array literal elements.
+- Record literal fields.
+- Record type fields are semicolon-delimited today and remain unchanged.
+
+## Do
+
+- Accept one optional trailing comma before the closing delimiter in covered lists.
+- Keep existing diagnostics for missing list elements.
+- Add parser and compile tests.
+
+## Do Not
+
+- Do not add omitted elements like `[1,,2]`.
+- Do not add rest/spread syntax.
+- Do not change emitted C formatting or semantics.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.

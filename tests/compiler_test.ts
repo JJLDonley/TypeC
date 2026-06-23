@@ -1267,6 +1267,13 @@ Deno.test("emits C for empty statements", () => {
   assertIncludes(c, "  ;");
 });
 
+Deno.test("compiles trailing commas in supported lists", () => {
+  const source =
+    `function id(value: i32,): i32 { return value; } function main(): i32 { const values: i32[] = [1, 2,]; return id(values[0],); }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "return id(values[0]);");
+});
+
 Deno.test("emits C string literals for u8 pointer calls", () => {
   const source =
     `extern function puts(s: u8*): i32; function main(): i32 { return puts("hello"); }`;

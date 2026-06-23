@@ -26,6 +26,26 @@ Deno.test("parses identifier calls", () => {
   assertText(expr.kind, "CallExpr");
 });
 
+Deno.test("parses trailing comma call arguments and type arguments", () => {
+  const expr = parsePrimaryWith(
+    parserFor([
+      identifier("id"),
+      punct("<"),
+      identifier("i32"),
+      punct(","),
+      punct(">"),
+      punct("("),
+      identifier("x"),
+      punct(","),
+      punct(")"),
+    ]),
+  );
+
+  assertText(expr.kind, "CallExpr");
+  if (expr.kind !== "CallExpr") throw new Error("Expected call");
+  assertText(`${expr.typeArgs?.length ?? 0}:${expr.args.length}`, "1:1");
+});
+
 Deno.test("reports missing primary expressions", () => {
   const fixture = parserFixture([punct(";")]);
 

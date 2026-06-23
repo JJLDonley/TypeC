@@ -49,9 +49,13 @@ Deno.test("parses canonical pointer and reference type refs", () => {
   const reference = parseTypeRefWith(
     parserFor([identifier("Ref"), punct("<"), identifier("i32"), punct(">"), eof()]),
   );
+  const trailing = parseTypeRefWith(
+    parserFor([identifier("Ptr"), punct("<"), identifier("i32"), punct(","), punct(">"), eof()]),
+  );
 
   assertText(typeName(pointer), "i32*");
   assertText(typeName(reference), "i32&");
+  assertText(typeName(trailing), "i32*");
 });
 
 Deno.test("parses canonical array type refs", () => {
@@ -87,8 +91,22 @@ Deno.test("parses function type refs", () => {
       eof(),
     ]),
   );
+  const trailing = parseTypeRefWith(
+    parserFor([
+      punct("("),
+      identifier("value"),
+      punct(":"),
+      identifier("i32"),
+      punct(","),
+      punct(")"),
+      operator("=>"),
+      identifier("i32"),
+      eof(),
+    ]),
+  );
 
   assertText(typeName(fn), "(value: i32) => i32");
+  assertText(typeName(trailing), "(value: i32) => i32");
 });
 
 Deno.test("parses safe pointer type refs", () => {

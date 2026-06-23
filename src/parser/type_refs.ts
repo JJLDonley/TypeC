@@ -61,7 +61,11 @@ function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
 
 function parseGenericNamedTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const typeArgs: CastTypeRef[] = [];
-  do typeArgs.push(parseTypeRefWith(parser)); while (parser.matchText(","));
+  do {
+    typeArgs.push(parseTypeRefWith(parser));
+    if (!parser.matchText(",")) break;
+    if (parser.checkText(">")) break;
+  } while (true);
   const close = parser.expectText(">");
   return {
     kind: "NamedTypeRef",
@@ -90,24 +94,28 @@ function parseCanonicalGenericTypeRef(parser: TypeRefParser, token: Token): Cast
 
 function parsePointerGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const element = parseTypeRefWith(parser);
+  parser.matchText(",");
   const close = parser.expectText(">");
   return { kind: "PointerTypeRef", element, span: span(token.span.start, close.span.end) };
 }
 
 function parseReferenceGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const element = parseTypeRefWith(parser);
+  parser.matchText(",");
   const close = parser.expectText(">");
   return { kind: "ReferenceTypeRef", element, span: span(token.span.start, close.span.end) };
 }
 
 function parseSafePointerGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const element = parseTypeRefWith(parser);
+  parser.matchText(",");
   const close = parser.expectText(">");
   return { kind: "SafePointerTypeRef", element, span: span(token.span.start, close.span.end) };
 }
 
 function parseSliceGenericTypeRef(parser: TypeRefParser, token: Token): CastTypeRef {
   const element = parseTypeRefWith(parser);
+  parser.matchText(",");
   const close = parser.expectText(">");
   return { kind: "SliceTypeRef", element, span: span(token.span.start, close.span.end) };
 }
@@ -119,6 +127,7 @@ function parseArrayGenericTypeRef(parser: TypeRefParser, token: Token): CastType
     return { kind: "InferredArrayTypeRef", element, span: span(token.span.start, close.span.end) };
   }
   const size = parser.expectKind("integer", "Expected array size");
+  parser.matchText(",");
   const close = parser.expectText(">");
   return {
     kind: "FixedArrayTypeRef",
@@ -169,7 +178,10 @@ function parseFunctionTypeRef(parser: TypeRefParser): CastTypeRef {
 function parseFunctionTypeParams(parser: TypeRefParser): CastParam[] {
   const params: CastParam[] = [];
   if (!parser.checkText(")")) {
-    do params.push(parseFunctionTypeParam(parser)); while (parser.matchText(","));
+    do {
+      if (parser.checkText(")")) break;
+      params.push(parseFunctionTypeParam(parser));
+    } while (parser.matchText(","));
   }
   parser.expectText(")");
   return params;

@@ -119,7 +119,11 @@ function parseGenericCallTypeArgs(parser: PrimaryExpressionParser): CastTypeRef[
   if (!isGenericCallStart(parser)) return [];
   parser.expectText("<");
   const typeArgs: CastTypeRef[] = [];
-  do typeArgs.push(parser.parseTypeRef()); while (parser.matchText(","));
+  do {
+    typeArgs.push(parser.parseTypeRef());
+    if (!parser.matchText(",")) break;
+    if (parser.checkText(">")) break;
+  } while (true);
   parser.expectText(">");
   return typeArgs;
 }
@@ -154,7 +158,10 @@ function parseCallExpression(
 function parseCallArguments(parser: PrimaryExpressionParser): CastExpression[] {
   const args: CastExpression[] = [];
   if (!parser.checkText(")")) {
-    do args.push(parser.parseExpression()); while (parser.matchText(","));
+    do {
+      if (parser.checkText(")")) break;
+      args.push(parser.parseExpression());
+    } while (parser.matchText(","));
   }
   return args;
 }

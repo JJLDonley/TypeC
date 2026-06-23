@@ -40,6 +40,21 @@ Deno.test("parses empty function params", () => {
   assertLen(params.length, 0);
 });
 
+Deno.test("parses trailing comma function params", () => {
+  const parser = parserFor([
+    identifier("value"),
+    punct(":"),
+    identifier("i32"),
+    punct(","),
+    punct(")"),
+  ]);
+
+  const params = parseParamsWith(parser);
+
+  assertLen(params.length, 1);
+  assertText(params[0]?.name ?? "", "value");
+});
+
 function parserFor(tokens: Token[]): ParamParser {
   let current: i32 = 0;
   return {
