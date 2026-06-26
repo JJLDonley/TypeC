@@ -43,14 +43,75 @@ export function parseStatementWith(parser: StatementParser): CastStatement {
   if (parser.checkText("return")) return parseReturn(parser);
   if (parser.checkText("defer")) return parseDefer(parser);
   if (parser.checkText("break")) return parseBreak(parser);
+  if (parser.checkText("continue")) return parseContinue(parser);
   if (parser.checkText("switch")) return parseSwitch(parser);
   if (parser.checkText("if")) return parseIf(parser);
   if (parser.checkText("while")) return parseWhile(parser);
   if (parser.checkText("do")) return parseDoWhile(parser);
   if (parser.checkText("for")) return parseFor(parser);
+  if (isRecordRestDeclarationStart(parser)) return parseRecordRestDecl(parser);
+  if (isArrayDestructureDeclarationStart(parser)) return parseArrayDestructureDecl(parser);
   if (isVariableDeclarationStart(parser)) return parseVarDecl(parser);
   if (isPrefixIncDecStart(parser)) return parsePrefixIncDec(parser);
   return parseExpressionOrAssignmentStatement(parser);
+}
+
+function isRecordRestDeclarationStart(parser: StatementParser): b8 {
+  return (parser.checkText("const") || parser.checkText("let")) && parser.peek(1).text === "{";
+}
+
+function isArrayDestructureDeclarationStart(parser: StatementParser): b8 {
+  return (parser.checkText("const") || parser.checkText("let")) && parser.peek(1).text === "[";
+}
+
+function parseRecordRestDecl(parser: StatementParser): CastStatement {
+  const start = parser.advance();
+  const mutable = start.text === "let";
+  parser.expectText("{");
+  const names: Str[] = [];
+  let restName: Str | null = null;
+  while (!parser.checkText("}") && !parser.check("eof")) {
+    if (parser.matchText("...")) {
+      restName = parser.expectKind("identifier", "Expected rest binding name").text;
+      break;
+    }
+    names.push(parser.expectKind("identifier", "Expected binding name").text);
+    if (!parser.matchText(",")) break;
+  }
+  parser.expectText("}");
+  parser.expectText("=");
+  const source = parser.parseExpression();
+  const semi = parser.expectText(";");
+  return {
+    kind: "RecordRestStmt",
+    mutable,
+    names,
+    restName,
+    source,
+    span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseArrayDestructureDecl(parser: StatementParser): CastStatement {
+  const start = parser.advance();
+  const mutable = start.text === "let";
+  parser.expectText("[");
+  const names: Str[] = [];
+  while (!parser.checkText("]") && !parser.check("eof")) {
+    names.push(parser.expectKind("identifier", "Expected binding name").text);
+    if (!parser.matchText(",")) break;
+  }
+  parser.expectText("]");
+  parser.expectText("=");
+  const source = parser.parseExpression();
+  const semi = parser.expectText(";");
+  return {
+    kind: "ArrayDestructureStmt",
+    mutable,
+    names,
+    source,
+    span: span(start.span.start, semi.span.end),
+  };
 }
 
 function parseEmpty(parser: StatementParser): CastStatement {
@@ -94,6 +155,12 @@ function parseBreak(parser: StatementParser): CastStatement {
   const start = parser.expectText("break");
   const semi = parser.expectText(";");
   return { kind: "BreakStmt", span: span(start.span.start, semi.span.end) };
+}
+
+function parseContinue(parser: StatementParser): CastStatement {
+  const start = parser.expectText("continue");
+  const semi = parser.expectText(";");
+  return { kind: "ContinueStmt", span: span(start.span.start, semi.span.end) };
 }
 
 function parseSwitch(parser: StatementParser): CastStatement {
@@ -193,6 +260,8 @@ function parseDoWhile(parser: StatementParser): CastStatement {
 function parseFor(parser: StatementParser): CastStatement {
   const start = parser.expectText("for");
   parser.expectText("(");
+  if (isForOfStart(parser)) return parseForOf(parser, start);
+  if (isForInStart(parser)) return parseForIn(parser, start);
   const initializer = parser.checkText(";")
     ? parseEmptyForInitializer(parser)
     : parseForInitializer(parser);
@@ -209,6 +278,49 @@ function parseFor(parser: StatementParser): CastStatement {
     body,
     span: span(start.span.start, body.span.end),
   };
+}
+
+function parseForOf(parser: StatementParser, start: Token): CastStatement {
+  const keyword = parser.advance();
+  const name = parser.expectKind("identifier", "Expected loop variable name");
+  parser.expectText("of");
+  const iterable = parser.parseExpression();
+  parser.expectText(")");
+  const body = parser.parseBlock();
+  return {
+    kind: "ForOfStmt",
+    mutable: keyword.text === "let",
+    name: name.text,
+    iterable,
+    body,
+    span: span(start.span.start, body.span.end),
+  };
+}
+
+function isForOfStart(parser: StatementParser): b8 {
+  return (parser.checkText("let") || parser.checkText("const")) &&
+    parser.peek(1).kind === "identifier" && parser.peek(2).text === "of";
+}
+
+function parseForIn(parser: StatementParser, start: Token): CastStatement {
+  parser.expectText("const");
+  const name = parser.expectKind("identifier", "Expected loop variable name");
+  parser.expectText("in");
+  const iterable = parser.parseExpression();
+  parser.expectText(")");
+  const body = parser.parseBlock();
+  return {
+    kind: "ForInStmt",
+    name: name.text,
+    iterable,
+    body,
+    span: span(start.span.start, body.span.end),
+  };
+}
+
+function isForInStart(parser: StatementParser): b8 {
+  return parser.checkText("const") && parser.peek(1).kind === "identifier" &&
+    parser.peek(2).text === "in";
 }
 
 function parseEmptyForInitializer(parser: StatementParser): null {
@@ -319,8 +431,7 @@ function isAssignmentOperator(text: Str): text is CastAssignmentOperator {
 function parseVarDecl(parser: StatementParser, consumeSemicolon = true): CastStatement {
   const keyword = parser.advance();
   const name = parser.expectKind("identifier", "Expected variable name");
-  parser.expectText(":");
-  const type = parser.parseTypeRef();
+  const type = parser.matchText(":") ? parser.parseTypeRef() : null;
   parser.expectText("=");
   const initializer = parser.parseExpression();
   const end = consumeSemicolon ? parser.expectText(";").span.end : initializer.span.end;

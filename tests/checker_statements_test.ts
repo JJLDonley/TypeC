@@ -16,13 +16,17 @@ Deno.test("dispatches statement checks", () => {
   assertDispatch(deferStmt(), "defer");
   assertDispatch(expressionStmt(), "expression");
   assertDispatch(breakStmt(), "break");
+  assertDispatch(continueStmt(), "continue");
   assertDispatch(varDecl(), "var");
+  assertDispatch(arrayDestructure(), "arrayDestructure");
   assertDispatch(assignment(), "assign");
   assertDispatch(incDec(), "incDec");
   assertDispatch(switchStmt(), "switch");
   assertDispatch(whileStmt(), "while");
   assertDispatch(doWhileStmt(), "doWhile");
   assertDispatch(forStmt(), "for");
+  assertDispatch(forOfStmt(), "forOf");
+  assertDispatch(forInStmt(), "forIn");
   assertDispatch(ifStmt(), "if");
 });
 
@@ -40,13 +44,18 @@ function handlers(calls: Str[]): StatementCheckHandlers {
     deferStatement: () => calls.push("defer"),
     expressionStatement: () => calls.push("expression"),
     breakStatement: () => calls.push("break"),
+    continueStatement: () => calls.push("continue"),
     variableDeclaration: () => calls.push("var"),
+    recordRestDeclaration: () => calls.push("recordRest"),
+    arrayDestructureDeclaration: () => calls.push("arrayDestructure"),
     assignment: () => calls.push("assign"),
     incDec: () => calls.push("incDec"),
     switchStatement: () => calls.push("switch"),
     whileStatement: () => calls.push("while"),
     doWhileStatement: () => calls.push("doWhile"),
     forStatement: () => calls.push("for"),
+    forOfStatement: () => calls.push("forOf"),
+    forInStatement: () => calls.push("forIn"),
     ifStatement: () => calls.push("if"),
   };
 }
@@ -71,6 +80,10 @@ function breakStmt(): Statement {
   return { kind: "BreakStmt", span };
 }
 
+function continueStmt(): Statement {
+  return { kind: "ContinueStmt", span };
+}
+
 function varDecl(): Statement {
   return {
     kind: "VarDeclStmt",
@@ -78,6 +91,16 @@ function varDecl(): Statement {
     name: "x",
     type: named("i32"),
     initializer: integer("1"),
+    span,
+  };
+}
+
+function arrayDestructure(): Statement {
+  return {
+    kind: "ArrayDestructureStmt",
+    mutable: false,
+    names: ["a"],
+    source: identifier("pair"),
     span,
   };
 }
@@ -120,6 +143,27 @@ function forStmt(): Statement {
     initializer: null,
     condition: boolLiteral(),
     update: null,
+    body: block(),
+    span,
+  };
+}
+
+function forOfStmt(): Statement {
+  return {
+    kind: "ForOfStmt",
+    mutable: false,
+    name: "value",
+    iterable: identifier("values"),
+    body: block(),
+    span,
+  };
+}
+
+function forInStmt(): Statement {
+  return {
+    kind: "ForInStmt",
+    name: "key",
+    iterable: identifier("value"),
     body: block(),
     span,
   };

@@ -697,6 +697,24 @@ function main(): i32 {
 An `Array<T, N>` may decay to `Ptr<T>` only when a raw pointer or C ABI parameter is expected. C
 APIs that need length should pass an explicit `usize`; TypeC-owned APIs can use `Slice<T>`.
 
+## Fixed Array Initialization
+
+Fixed arrays support explicit zero/default initialization and static fill construction:
+
+```ts
+let zeroed: i32[16] = {0};
+let canonical: Array<i32, 16> = {0};
+let repeated: i32[4] = Array.fill(7);
+let indexed: usize[4] = Array.fill((i) => i + 1);
+```
+
+`{0}` is TypeC zero/default initialization shorthand. For fixed arrays it initializes every element
+with the element type's zero/default representation and emits portable C aggregate initialization.
+
+`Array.fill(value)` requires an expected fixed array type and initializes every element with
+`value`. `Array.fill((i) => expr)` is a static indexed fill form; `i` has type `usize`, the callback
+result must match the array element type, and the compiler emits a fixed aggregate initializer.
+
 ## Pointer and Reference Operators
 
 Pointer/reference expression operators are postfix only:
@@ -3044,15 +3062,1012 @@ const empty: i32? = None<i32>();
 
 ---
 
+# Phase 44: `continue` Statements
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript/C-style `continue` for loops without adding labelled control flow or JavaScript
+runtime semantics.
+
+## Syntax
+
+```ts
+for (let i: usize = 0; i < count; i++) {
+  if (skip(i)) {
+    continue;
+  }
+  use(i);
+}
+```
+
+## Semantics
+
+- `continue` is valid only inside `while`, `do...while`, and basic `for` loops.
+- In `while` and `do...while`, `continue` jumps to the next condition check.
+- In `for`, `continue` runs the loop update clause before the next condition check.
+- Existing `defer` cleanup for scopes exited by the jump must run in the correct order.
+
+## Do Not
+
+- Do not add labelled `continue`.
+- Do not add `continue` for `switch` outside a loop.
+- Do not change assignment/update expression rules.
+
+---
+
+# Phase 45: Static `for..of` over Arrays and Slices
+
+Status: Complete.
+
+## Goal
+
+Add ergonomic value iteration for TypeC arrays and slices only, with no JavaScript iterator
+protocol.
+
+## Syntax
+
+```ts
+for (const value of values) {
+  total += value;
+}
+```
+
+Optional index binding may be considered only if explicitly specified before implementation.
+
+## Semantics
+
+- The iterable expression must be a fixed array, inferred local array, string array where valid, or
+  `Slice<T>`.
+- The loop lowers to an indexed counted loop using `.length()`/slice length and indexing.
+- The loop variable is block-scoped and immutable for `const`, mutable for `let` if allowed by the
+  final syntax.
+- Iteration yields values by copy unless a later explicit reference-iteration syntax is specified.
+
+## Do Not
+
+- Do not add JavaScript `Symbol.iterator` or dynamic iterables.
+- Do not add `for await`.
+- Do not add mutation-during-iteration semantics beyond normal indexed loop behavior.
+
+---
+
+# Phase 46: Static `for..in` over Record Fields and Enum Members
+
+Status: Complete.
+
+## Goal
+
+Add a constrained compile-time `for..in` form only where keys are statically known.
+
+## Syntax
+
+```ts
+for (const key in point) {
+  // key is a compile-time-known field name value or lowered branch selector
+}
+```
+
+Record and class field keys are represented as immutable `u8*` C string pointers containing the
+field name. Enum iteration yields enum member values with the enum type.
+
+## Semantics
+
+- `for..in` is allowed only over static record/class values or enum namespaces.
+- Iterated keys are known at compile time from the type declaration.
+- Record and class iteration lowers by unrolling the loop body once per field in declaration order.
+- Enum iteration lowers by unrolling the loop body once per enum member in declaration order.
+- Lowering must not require a dynamic object table or reflection runtime.
+- Dynamic field access is not introduced in this phase.
+
+## Do Not
+
+- Do not copy JavaScript enumerable-property semantics.
+- Do not include prototype keys, insertion order rules, symbols, or dynamic fields.
+- Do not allow arbitrary dynamic object iteration.
+
+---
+
+# Phase 47: Tuple Types and Tuple Literals
+
+Status: Complete.
+
+## Goal
+
+Add fixed-size positional product types with static element types.
+
+## Syntax
+
+```ts
+const pair: [u8[], i32] = ["age", 42];
+const name: u8[] = pair[0];
+const age: i32 = pair[1];
+```
+
+## Semantics
+
+- Tuple length and element types are part of the static type.
+- Tuple indexes must be compile-time constants in range, unless a separate dynamic-index rule is
+  specified.
+- Lower to generated C structs with positional fields.
+- Tuple fields are emitted as `_0`, `_1`, and so on.
+- Tuples are value types with no JavaScript array methods or sparse elements.
+
+## Do Not
+
+- Do not add JS array holes.
+- Do not add rest tuples or variadic tuple types in this phase.
+- Do not add dynamic heterogeneous indexing without a clear result type.
+
+---
+
+# Phase 48: Static Record Spread and Rest
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-like object spread/rest only for statically known record/class shapes.
+
+## Syntax
+
+```ts
+const b: Point3 = { ...a, z: 3 };
+const { x, ...rest } = point;
+```
+
+## Semantics
+
+- Spread operands must have statically known record/class types.
+- Field conflicts are resolved by explicit source order, matching TypeScript syntax where practical.
+- The result type must be known from context or an explicitly specified static shape.
+- Rest destructuring creates a statically known record value containing the remaining fields.
+- Lowering emits direct field copies.
+- Record literal duplicate/conflicting fields use source order, with the last applicable field value
+  winning.
+
+## Do Not
+
+- Do not add dynamic property bags.
+- Do not add computed property names in this phase.
+- Do not add JavaScript enumerability, accessors, prototypes, or symbols.
+
+---
+
+# Phase 49: Static Template Literals
+
+Status: Complete.
+
+## Goal
+
+Add backtick string syntax without JavaScript `String` objects or runtime dependency.
+
+## Syntax
+
+```ts
+const name: u8[] = "TypeC";
+const msg: u8[] = `hello ${name}`;
+```
+
+## Semantics
+
+- Plain template literals without interpolation are string literals and may contain multiline
+  content.
+- Interpolated templates lower through compile-time string construction only.
+- Supported interpolation forms are compile-time primitive literals and C string literals.
+- Allocation strategy is compile-time only for constant expressions.
+- Runtime interpolation is rejected until a fixed-buffer, arena, or caller-provided formatting
+  facility is specified in a later phase.
+
+## Do Not
+
+- Do not add JavaScript `String` objects.
+- Do not add implicit heap allocation.
+- Do not add locale-sensitive or dynamic coercion semantics.
+
+---
+
+# Phase 50: TypeScript-Style Union Type Sugar
+
+Status: Complete.
+
+## Goal
+
+Add `A | B` type syntax as static sugar over explicit TypeC tagged unions where layout and tags are
+clear.
+
+## Syntax
+
+```ts
+type Value = i32 | f64;
+```
+
+## Semantics
+
+- Union types are closed, statically known sum types.
+- Lowering produces the same tag-plus-payload representation as existing `union` forms.
+- `type Value = i32 | f64;` lowers to a tagged union named `Value` with variants named after
+  members.
+- Construction and payload access use existing tagged union syntax, such as `Value.i32(1)` and
+  `value.i32`.
+- Optional `T?` remains the preferred spelling for `Optional<T>`.
+
+## Do Not
+
+- Do not add JavaScript runtime type coercion.
+- Do not add implicit `null` or `undefined`.
+- Do not add broad structural TS control-flow narrowing until specified.
+
+---
+
+# Phase 51: Intersection Types
+
+Status: Complete.
+
+## Goal
+
+Add `A & B` as a static composition type for compatible record/interface shapes.
+
+## Syntax
+
+```ts
+type Named = { name: u8[] };
+type Aged = { age: i32 };
+type Person = Named & Aged;
+```
+
+## Semantics
+
+- Intersections over records/classes produce a statically known combined shape when fields are
+  compatible.
+- Intersections over interfaces require values/classes to satisfy all methods.
+- Conflicting field names or incompatible method signatures are diagnostics.
+- Lowering emits ordinary records or compile-time constraints; no runtime merge object is required.
+
+## Do Not
+
+- Do not add dynamic object mutation.
+- Do not add impossible/`never`-heavy TypeScript edge cases in the first phase.
+- Do not add prototype behavior.
+
+---
+
+# Phase 52: Conditional and Mapped Types
+
+Status: Complete.
+
+## Goal
+
+Add a small compile-time-only type transformation subset after TypeC has enough type metadata to
+make diagnostics predictable.
+
+## Syntax
+
+```ts
+type Boxed<T> = { value: T };
+type ReadonlyLike<T> = { [K in keyof T]: T[K] };
+type IsI32<T> = T extends i32 ? true : false;
+```
+
+Initial supported syntax is non-distributive conditional type aliases of the form
+`A extends B ? X : Y` and concrete mapped aliases of the form `{ [K in keyof T]: T[K] }` over
+statically known record aliases.
+
+## Semantics
+
+- All evaluation happens at compile time.
+- Mapped types operate only over statically known record/interface keys.
+- Conditional types must avoid TypeScript distributive edge cases unless deliberately specified.
+- Emitted C sees only the final concrete types.
+
+## Do Not
+
+- Do not add runtime reflection.
+- Do not add arbitrary type-level computation without termination rules.
+- Do not clone all TypeScript conditional-type behavior by default.
+
+---
+
+# Phase 53: Contextual Static Type Inference
+
+Status: Complete.
+
+## Goal
+
+Reduce annotation noise by inferring types whenever a unique static type is available from local
+syntax or surrounding context, while keeping TypeC predictable and diagnostics clear.
+
+## Syntax Examples
+
+```ts
+let count = 0; // inferred from initializer/context
+const p: Point = { x: 1, y: 2 }; // record literal fields inferred from assigned type
+const values: i32[] = [1, 2, 3]; // array literal elements inferred from assigned type
+
+function apply(cb: (x: i32) => i32): i32 {
+  return cb(1);
+}
+
+apply((x) => x + 1); // callback parameter/result inferred from expected function type
+
+function add(a: i32, b: i32) {
+  return a + b; // return type inferred as i32 when unambiguous
+}
+
+const value: i32 = identity(42); // generic type args inferred from args/assigned result type
+```
+
+## Scope Candidates
+
+Completed subset: local `const`/`let` variable types from unique primitive, named, optional,
+non-empty fixed array, and simple record initializer types; contextual non-empty array literals for
+array and slice targets; non-capturing expression-bodied parenthesized and single-param arrow
+callbacks from expected function types; optional constructor type arguments from assigned/contextual
+optional types; generic call type arguments from ordinary literal/unary literal/binary
+literal/conditional literal/nullish literal/optional constructor/string literal/array/local
+identifier/global callback identifier/typed and inferred callback local/record-field/typed call
+arguments, including callback fields of inferred simple-record locals, callback elements of inferred
+fixed-array locals, callback elements of typed tuple locals, non-null-asserted optional arguments,
+dereferenced pointer and address-of reference arguments, fields of inferred simple-record and named
+locals, assigned result types, return types, function/method parameter contexts, record/array/tuple
+literal expected contexts, conditional expression contexts, nullish fallback contexts, and
+identifier/record-field/index assignment target contexts; generic class constructor `new` type
+arguments from assigned variable types, return types, function parameter contexts,
+record/array/tuple literal expected contexts, conditional expression contexts, nullish fallback
+contexts, identifier/record-field/index assignment target contexts, and ordinary literal/unary
+literal/binary literal/conditional literal/nullish literal/string literal/array/simple-record/local
+identifier/record-field/index/generic-class-field/typed-call/non-null-asserted optional/dereferenced
+pointer/address-of reference constructor arguments; non-exported function return types from
+unambiguous return statements.
+
+- Local variable types from initializers.
+- Expression types from assigned/contextual types.
+- Record literal field types from expected record/struct/class type.
+- Array literal element types from expected array/slice type.
+- Callback parameter and result types from expected function type.
+- Function return types from complete return statements.
+- Generic call type arguments from ordinary arguments.
+- Generic call type arguments from expected/assigned result type.
+- Constructor/generic class type arguments from arguments and assigned type.
+- Optional constructor type arguments from assigned type, for example `None()` in `const x: i32?`.
+
+## Semantics
+
+- Inference is compile-time only and must not change runtime representation.
+- Assigned/contextual types flow inward to expressions only when the expected type is unique.
+- Inferred result types must be stable and ABI-clear before exported APIs may omit annotations.
+- Public exported APIs may still require explicit annotations unless a stable rule is specified.
+- Ambiguous, lossy, or cyclic inference should produce clear diagnostics instead of guessing.
+- Integer and float literals may be inferred from context; without context they use TypeC's existing
+  explicit literal/default rules.
+
+## Do
+
+- Prefer local, syntax-directed inference over global whole-program guessing.
+- Keep diagnostics pointing to the missing/ambiguous annotation or expression.
+- Add checker tests for assigned type, parameter context, callback context, return inference, and
+  generic result inference.
+
+## Do Not
+
+- Do not infer `any`.
+- Do not add JavaScript widening rules such as general `number`.
+- Do not hide ABI-relevant types in exported C interop boundaries.
+- Do not infer through runtime control flow in a way that changes emitted representation.
+
+---
+
+# Phase 54: Plain `struct` Declarations
+
+Status: Complete.
+
+## Goal
+
+Separate plain data records from object-like classes. `struct` is the simple C-shaped data form and
+has no methods.
+
+## Syntax
+
+```ts
+struct Vec2 {
+  x: f32;
+  y: f32;
+}
+
+function lengthSquared(v: Vec2): f32 {
+  return v.x * v.x + v.y * v.y;
+}
+```
+
+## Semantics
+
+- `struct Name { fields }` declares a plain value type with C-compatible field layout.
+- Struct fields use the same static field typing rules as record type aliases.
+- Structs do not contain methods, constructors, inheritance, `implements`, vtables, or runtime type
+  metadata.
+- Struct values use existing `let`/`const` binding mutability rules.
+- Lowering emits an ordinary C `typedef struct`.
+- Existing record type aliases may remain valid; this phase adds an explicit nominal data keyword.
+
+## Do
+
+- Parse `struct` declarations with fields only.
+- Reject methods and constructors inside structs.
+- Reuse record field checking and C emission where possible.
+- Add parser, checker, emitter, and compile tests.
+
+## Do Not
+
+- Do not add struct methods.
+- Do not add struct inheritance or interfaces.
+- Do not add hidden metadata or vtables to structs.
+
+---
+
+# Phase 55: Static Class VTables
+
+Status: Complete.
+
+## Goal
+
+Lower class methods through generated per-class vtables while preserving static dispatch. This gives
+classes an object-table shape without adding dynamic dispatch yet.
+
+## Syntax
+
+```ts
+class Circle {
+  radius: f32;
+
+  draw(): void {
+    return;
+  }
+
+  size(): f32 {
+    return this.radius * this.radius;
+  }
+}
+
+function main(): i32 {
+  let circle: Circle = { radius: 2.0 };
+  circle.draw();
+  return 0;
+}
+```
+
+## Lowering Model
+
+A class lowers to a data struct, a vtable struct, method functions, and one global vtable instance:
+
+```c
+typedef struct {
+  f32 radius;
+} Circle;
+
+typedef struct {
+  void (*draw)(Circle* self);
+  f32 (*size)(Circle* self);
+} CircleVTable;
+
+void Circle_draw(Circle* self) {
+  return;
+}
+
+f32 Circle_size(Circle* self) {
+  return self->radius * self->radius;
+}
+
+const CircleVTable vCircle = {
+  .draw = Circle_draw,
+  .size = Circle_size,
+};
+```
+
+A concrete method call:
+
+```ts
+circle.draw();
+```
+
+lowers statically to:
+
+```c
+vCircle.draw(&circle);
+```
+
+## Semantics
+
+- Class methods are represented as entries in a generated `ClassNameVTable`.
+- Each class has one generated global vtable instance, for example `vCircle`.
+- Method calls still dispatch statically from the receiver's known concrete type.
+- The vtable is not stored in each object in this phase.
+- There are no interface values, fat pointers, runtime type objects, or virtual override selection.
+- Method receivers are lowered as pointers so methods can observe and update the receiver when the
+  source mutability rules allow it.
+- Constructors initialize and return the plain class data struct; they do not allocate.
+
+## Do
+
+- Generate one vtable struct per class containing method function pointers.
+- Generate one global vtable value per class.
+- Lower `obj.method(args)` to `vClass.method(&obj, args)` for concrete class receivers.
+- Preserve existing static `implements` checks as compile-time validation only.
+- Add emitter tests showing the generated data struct, vtable struct, vtable instance, and call
+  lowering.
+
+## Do Not
+
+- Do not add dynamic dispatch.
+- Do not add `dyn Interface` values.
+- Do not add object-embedded vptr fields.
+- Do not add hidden heap allocation, GC, prototypes, or implicit subtype conversion.
+
+---
+
+# Phase 56: Default and Optional Parameters
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-like parameter convenience while keeping call lowering static.
+
+## Syntax
+
+```ts
+function move(dx: i32 = 1, dy: i32 = 0): void {}
+function log(value: i32, prefix?: u8[]): void {}
+```
+
+## Semantics
+
+- Default parameter expressions are evaluated at the call site or through generated wrapper helpers;
+  the final lowering must be specified before implementation.
+- Optional parameters lower to explicit optional values or generated overload wrappers.
+- Parameter defaults must be type checked against the parameter type.
+- Defaults cannot depend on JavaScript `undefined`.
+
+## Do Not
+
+- Do not add implicit `undefined`.
+- Do not add runtime argument-count reflection.
+- Do not add dynamic dispatch.
+
+---
+
+# Phase 57: Function Overload Declarations
+
+Status: Complete.
+
+## Goal
+
+Add TypeScript-style overload declarations resolved completely at compile time.
+
+## Syntax
+
+```ts
+function read(x: i32): i32;
+function read(x: u8[]): i32;
+function read(x: i32 | u8[]): i32 {
+  return 0;
+}
+```
+
+## Semantics
+
+- Overload selection is based on static argument types.
+- Emitted C must have unambiguous generated function names or wrapper functions.
+- Ambiguous calls are diagnostics.
+
+## Do Not
+
+- Do not add runtime overload resolution.
+- Do not add JS coercion-based overload matching.
+
+---
+
+# Phase 58: Destructuring Bindings
+
+Status: Complete.
+
+## Goal
+
+Add ergonomic static destructuring for records, structs, tuples, and arrays where shapes are known.
+
+## Syntax
+
+```ts
+const { x, y } = point;
+const [a, b] = pair;
+```
+
+## Semantics
+
+- Object destructuring requires statically known fields.
+- Array/tuple destructuring requires statically known indexes and compatible element types.
+- Rest destructuring reuses the static record/tuple rest rules once those phases exist.
+- Lowering emits ordinary local declarations and field/index reads.
+
+## Do Not
+
+- Do not add dynamic property lookup.
+- Do not add JS iterator destructuring.
+- Do not add sparse array holes.
+
+---
+
+# Phase 59: Access Modifiers and `readonly`
+
+Status: Planned.
+
+## Goal
+
+Add compile-time visibility and immutability annotations.
+
+## Syntax
+
+```ts
+class Counter {
+  private value: i32;
+  public get(): i32 {
+    return this.value;
+  }
+}
+
+type Vec2 = { readonly x: f32; readonly y: f32 };
+```
+
+## Semantics
+
+- `public`, `private`, and possibly `protected` are checked at compile time only.
+- `readonly` prevents assignment after initialization according to clear initialization rules.
+- Emitted C layout is unchanged unless name-hiding is deliberately added later.
+
+## Do Not
+
+- Do not add JS private field runtime semantics.
+- Do not add reflection of access modifiers.
+
+---
+
+# Phase 60: Static Class Members
+
+Status: Planned.
+
+## Goal
+
+Add TypeScript-like `static` fields and methods as namespaced class members.
+
+## Syntax
+
+```ts
+class MathUtil {
+  static abs(x: i32): i32 {
+    return x < 0 ? -x : x;
+  }
+}
+
+const x: i32 = MathUtil.abs(-1);
+```
+
+## Semantics
+
+- Static methods lower to ordinary namespaced functions.
+- Static fields lower to compile-time constants or module-level storage depending on mutability.
+- Static members do not require an object instance.
+
+## Do Not
+
+- Do not add JS constructor objects.
+- Do not add dynamic static property mutation.
+
+---
+
+# Phase 61: Namespaces
+
+Status: Planned.
+
+## Goal
+
+Add static namespace declarations for grouping declarations without a JavaScript module object.
+
+## Syntax
+
+```ts
+namespace Math {
+  export function abs(x: i32): i32 {
+    return x < 0 ? -x : x;
+  }
+}
+```
+
+## Semantics
+
+- Namespaces are compile-time name scopes.
+- Qualified names lower to unique C symbols.
+- No runtime namespace object is emitted unless explicitly required for C interop.
+
+## Do Not
+
+- Do not add dynamic namespace mutation.
+- Do not add JS namespace/module merging until specified.
+
+---
+
+# Phase 62: Type-Only Imports, Re-exports, and Default Imports
+
+Status: Planned.
+
+## Goal
+
+Improve module ergonomics while preserving static module loading.
+
+## Syntax
+
+```ts
+import type { Vec2 } from "./vec.tc";
+export type { Vec2 };
+export { add } from "./math.tc";
+import MainThing from "./thing.tc";
+```
+
+## Semantics
+
+- Type-only imports are erased after checking.
+- Re-exports are compile-time module forwarding.
+- Default imports/exports are aliases to one statically known exported declaration.
+
+## Do Not
+
+- Do not add dynamic import.
+- Do not add CommonJS or JS module runtime semantics.
+
+---
+
+# Phase 63: Enum Improvements
+
+Status: Planned.
+
+## Goal
+
+Make enums more TypeScript-like while keeping representation explicit.
+
+## Scope Candidates
+
+- Explicit backing types: `enum Color: u8 { Red, Green }`.
+- Explicit member initializers with range checks.
+- String-like enums as compile-time C string constants if approved.
+
+## Do Not
+
+- Do not add JS enum reverse-mapping objects.
+- Do not add runtime reflection by default.
+
+---
+
+# Phase 64: Literal Types and Const Narrowing
+
+Status: Planned.
+
+## Goal
+
+Track literal values in the type checker where useful for diagnostics, overloads, and type-level
+features.
+
+## Syntax
+
+```ts
+const answer = 42;
+type Mode = "read" | "write";
+```
+
+## Semantics
+
+- Literal types are compile-time facts only.
+- Numeric literal types must still map to explicit machine types before C emission.
+- Const narrowing must not create JavaScript `number`/`string` semantics.
+
+## Do Not
+
+- Do not add boxed string/number values.
+- Do not add runtime type tags for ordinary literals.
+
+---
+
+# Phase 65: Checked Numeric Casts with `as` and `@T(expr)`
+
+Status: Complete.
+
+## Goal
+
+Add explicit checked numeric cast syntax without JavaScript runtime coercions.
+
+## Syntax
+
+```ts
+const width: i32 = 1280;
+const wf: f32 = @f32(width);
+const truncated: i32 = value as i32;
+```
+
+## Semantics
+
+- `@T(expr)` and `expr as T` are equivalent explicit cast forms.
+- This phase permits numeric casts only: integer ↔ integer, integer ↔ float, and float ↔ float.
+- Cast targets are normal TypeC type refs and are validated before emission.
+- Lowering emits C casts only after type checking approves the conversion category.
+
+Pointer casts, enum backing casts, ABI reinterpretation, and unsafe casts are reserved for later
+phases with explicit safety rules.
+
+## Do Not
+
+- Do not make `as` a way to bypass all type checking silently.
+- Do not add JS runtime coercions.
+- Do not allow record, class, array, optional, or pointer casts in this phase.
+
+---
+
+# Phase 66: `satisfies`
+
+Status: Planned.
+
+## Goal
+
+Add compile-time conformance checking without changing the expression's inferred type.
+
+## Syntax
+
+```ts
+const config = value satisfies Config;
+```
+
+## Semantics
+
+- The left expression is checked as assignable/conformant to the right type.
+- The expression keeps its original static type.
+- No C code is emitted for the `satisfies` operator itself.
+
+## Do Not
+
+- Do not add runtime validation.
+- Do not change object layout.
+
+---
+
+# Phase 67: `keyof` and Type-Position `typeof`
+
+Status: Planned.
+
+## Goal
+
+Add small compile-time type reflection features over statically known declarations.
+
+## Syntax
+
+```ts
+type Keys = keyof Point;
+type ValueType = typeof value;
+```
+
+## Semantics
+
+- `keyof` works over records, structs, classes, interfaces, and namespaces where keys are static.
+- Type-position `typeof` extracts the compile-time type of a value symbol or expression if allowed.
+- Both features are erased before C emission.
+
+## Do Not
+
+- Do not add runtime reflection.
+- Do not add JavaScript `typeof` expression semantics in this phase.
+
+---
+
+# Phase 68: Tagged Union Narrowing and Pattern Matching
+
+Status: Planned.
+
+## Goal
+
+Make existing tagged unions feel ergonomic and safe.
+
+## Syntax Candidates
+
+```ts
+if (value.tag == MaybeI32.Some) {
+  return value.Some;
+}
+
+match (value) {
+  Some(v) => return v;
+  None => return 0;
+}
+```
+
+## Semantics
+
+- Narrowing is based on explicit tag checks or `match` arms.
+- Payload access is only allowed when the active variant is known.
+- Exhaustiveness checking should be added for `match`.
+
+## Do Not
+
+- Do not add JS `instanceof` semantics.
+- Do not add dynamic type tests unrelated to tagged union tags.
+
+---
+
+# Phase 69: Module and Package Ergonomics
+
+Status: Planned.
+
+## Goal
+
+Improve project-scale TypeC workflows.
+
+## Scope Candidates
+
+- Barrel files through static re-exports.
+- Package aliases beyond single-project dependencies.
+- Cleaner standard-library import conventions.
+- Package metadata and versioning if needed.
+
+## Do Not
+
+- Do not add runtime module loading.
+- Do not add URL/network imports unless security rules are specified.
+
+---
+
+# Phase 70: Formatter
+
+Status: Planned.
+
+## Goal
+
+Add an official formatter for `.tc` files.
+
+## Semantics
+
+- Formatting changes syntax layout only.
+- Formatter must preserve comments and produce stable output.
+
+---
+
+# Phase 71: Rich LSP Tooling
+
+Status: Planned.
+
+## Goal
+
+Make TypeC feel productive in editors.
+
+## Scope Candidates
+
+- Semantic diagnostics.
+- Hover type information.
+- Completion.
+- Go-to-definition.
+- Rename.
+- Find references.
+- Code actions and quick fixes.
+- Formatting integration.
+
+## Do Not
+
+- Do not make LSP behavior depend on a runtime execution environment.
+- Do not allow editor tooling to accept programs the compiler rejects.
+
+---
+
 # Future Features
 
 Only add after their syntax, semantics, examples, lowering, and tests are documented.
 
 Possible future work:
 
-- package manager
-- inheritance, if ever needed
-- runtime dynamic dispatch, if explicitly chosen
+- dynamic/interface dispatch later, only after static class vtables are stable
 - garbage collection, only if TypeC explicitly chooses that path later
 
 ## Do

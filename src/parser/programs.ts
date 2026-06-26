@@ -8,6 +8,7 @@ import type {
   CastImportDecl,
   CastInterfaceDecl,
   CastProgram,
+  CastStructDecl,
   CastTaggedUnionDecl,
   CastTypeAliasDecl,
 } from "core/cast.ts";
@@ -31,6 +32,7 @@ interface ProgramDeclarations {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
   classes: CastClassDecl[];
+  structs: CastStructDecl[];
   interfaces: CastInterfaceDecl[];
   taggedUnions: CastTaggedUnionDecl[];
   enums: CastEnumDecl[];
@@ -59,6 +61,7 @@ function emptyProgramDeclarations(): ProgramDeclarations {
     imports: [],
     typeAliases: [],
     classes: [],
+    structs: [],
     interfaces: [],
     taggedUnions: [],
     enums: [],
@@ -71,6 +74,7 @@ function addDeclaration(declarations: ProgramDeclarations, declaration: CastDecl
   if (declaration.kind === "ImportDecl") declarations.imports.push(declaration);
   if (declaration.kind === "TypeAliasDecl") declarations.typeAliases.push(declaration);
   if (declaration.kind === "ClassDecl") declarations.classes.push(declaration);
+  if (declaration.kind === "StructDecl") declarations.structs.push(declaration);
   if (declaration.kind === "InterfaceDecl") declarations.interfaces.push(declaration);
   if (declaration.kind === "TaggedUnionDecl") declarations.taggedUnions.push(declaration);
   if (declaration.kind === "EnumDecl") declarations.enums.push(declaration);

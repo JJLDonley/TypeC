@@ -1,10 +1,11 @@
-import type { CastTypeRef } from "core/cast.ts";
+import type { CastExpression, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { type ParamParser, parseParamsWith } from "parser/params.ts";
 
 type Str = string;
 type i32 = number;
 type usize = number;
+type b8 = boolean;
 
 const sourceSpan = {
   start: { offset: 0, line: 1, column: 1 },
@@ -38,6 +39,28 @@ Deno.test("parses empty function params", () => {
   const params = parseParamsWith(parser);
 
   assertLen(params.length, 0);
+});
+
+Deno.test("parses optional and default function params", () => {
+  const parser = parserFor([
+    identifier("prefix"),
+    punct("?"),
+    punct(":"),
+    identifier("i32"),
+    punct(","),
+    identifier("value"),
+    punct(":"),
+    identifier("i32"),
+    punct("="),
+    integer("42"),
+    punct(")"),
+  ]);
+
+  const params = parseParamsWith(parser);
+
+  assertLen(params.length, 2);
+  assertBool(params[0]?.optional === true, true);
+  assertText(params[1]?.defaultValue?.kind ?? "", "IntegerLiteral");
 });
 
 Deno.test("parses trailing comma function params", () => {
@@ -82,6 +105,7 @@ function parserFor(tokens: Token[]): ParamParser {
       current += 1;
       return { kind: "NamedTypeRef", name: token.text, span: token.span };
     },
+    parseExpression: () => parseInteger(tokens, current, (next) => current = next),
   };
 }
 
@@ -90,8 +114,22 @@ function typeName(type: CastTypeRef | undefined): Str {
   return type.name;
 }
 
+function parseInteger(
+  tokens: Token[],
+  current: i32,
+  setCurrent: (next: i32) => void,
+): CastExpression {
+  const token = tokens[current] ?? eof();
+  setCurrent(current + 1);
+  return { kind: "IntegerLiteral", value: BigInt(token.text), text: token.text, span: token.span };
+}
+
 function identifier(text: Str): Token {
   return token("identifier", text);
+}
+
+function integer(text: Str): Token {
+  return token("integer", text);
 }
 
 function punct(text: Str): Token {
@@ -111,5 +149,9 @@ function assertText(actual: Str, expected: Str): void {
 }
 
 function assertLen(actual: usize, expected: usize): void {
+  if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+}
+
+function assertBool(actual: b8, expected: b8): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
 }

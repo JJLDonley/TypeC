@@ -10,6 +10,7 @@ export interface CastProgram {
   imports: CastImportDecl[];
   typeAliases: CastTypeAliasDecl[];
   classes?: CastClassDecl[];
+  structs?: CastStructDecl[];
   interfaces?: CastInterfaceDecl[];
   taggedUnions?: CastTaggedUnionDecl[];
   enums?: CastEnumDecl[];
@@ -75,6 +76,14 @@ export interface CastClassMethod {
   span: SourceSpan;
 }
 
+export interface CastStructDecl {
+  kind: "StructDecl";
+  exported: b8;
+  name: Str;
+  fields: CastRecordField[];
+  span: SourceSpan;
+}
+
 export interface CastInterfaceDecl {
   kind: "InterfaceDecl";
   exported: b8;
@@ -136,6 +145,7 @@ export interface CastFunctionDecl {
   kind: "FunctionDecl";
   exported: b8;
   external: b8;
+  overload?: b8;
   name: Str;
   cName?: Str | null;
   genericParams?: CastGenericParam[];
@@ -154,7 +164,9 @@ export interface CastGenericParam {
 
 export interface CastParam {
   name: Str;
+  optional?: b8;
   type: CastTypeRef;
+  defaultValue?: CastExpression | null;
   span: SourceSpan;
 }
 
@@ -166,6 +178,12 @@ export type CastTypeRef =
   | CastSliceTypeRef
   | CastInferredArrayTypeRef
   | CastFixedArrayTypeRef
+  | CastTupleTypeRef
+  | CastUnionTypeRef
+  | CastIntersectionTypeRef
+  | CastConditionalTypeRef
+  | CastIndexedAccessTypeRef
+  | CastMappedTypeRef
   | CastFunctionTypeRef
   | CastRecordTypeRef;
 
@@ -213,6 +231,48 @@ export interface CastFixedArrayTypeRef {
   span: SourceSpan;
 }
 
+export interface CastTupleTypeRef {
+  kind: "TupleTypeRef";
+  elements: CastTypeRef[];
+  span: SourceSpan;
+}
+
+export interface CastUnionTypeRef {
+  kind: "UnionTypeRef";
+  members: CastTypeRef[];
+  span: SourceSpan;
+}
+
+export interface CastIntersectionTypeRef {
+  kind: "IntersectionTypeRef";
+  members: CastTypeRef[];
+  span: SourceSpan;
+}
+
+export interface CastConditionalTypeRef {
+  kind: "ConditionalTypeRef";
+  checkType: CastTypeRef;
+  extendsType: CastTypeRef;
+  trueType: CastTypeRef;
+  falseType: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastIndexedAccessTypeRef {
+  kind: "IndexedAccessTypeRef";
+  objectType: CastTypeRef;
+  indexName: Str;
+  span: SourceSpan;
+}
+
+export interface CastMappedTypeRef {
+  kind: "MappedTypeRef";
+  keyName: Str;
+  sourceType: CastTypeRef;
+  valueType: CastTypeRef;
+  span: SourceSpan;
+}
+
 export interface CastFunctionTypeRef {
   kind: "FunctionTypeRef";
   params: CastParam[];
@@ -244,13 +304,18 @@ export type CastStatement =
   | CastDeferStmt
   | CastExpressionStmt
   | CastBreakStmt
+  | CastContinueStmt
   | CastVarDeclStmt
+  | CastRecordRestStmt
+  | CastArrayDestructureStmt
   | CastAssignmentStmt
   | CastIncDecStmt
   | CastSwitchStmt
   | CastWhileStmt
   | CastDoWhileStmt
   | CastForStmt
+  | CastForOfStmt
+  | CastForInStmt
   | CastIfStmt;
 
 export interface CastEmptyStmt {
@@ -281,12 +346,34 @@ export interface CastBreakStmt {
   span: SourceSpan;
 }
 
+export interface CastContinueStmt {
+  kind: "ContinueStmt";
+  span: SourceSpan;
+}
+
 export interface CastVarDeclStmt {
   kind: "VarDeclStmt";
   mutable: b8;
   name: Str;
-  type: CastTypeRef;
+  type: CastTypeRef | null;
   initializer: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastRecordRestStmt {
+  kind: "RecordRestStmt";
+  mutable: b8;
+  names: Str[];
+  restName: Str | null;
+  source: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastArrayDestructureStmt {
+  kind: "ArrayDestructureStmt";
+  mutable: b8;
+  names: Str[];
+  source: CastExpression;
   span: SourceSpan;
 }
 
@@ -374,6 +461,23 @@ export interface CastForStmt {
   span: SourceSpan;
 }
 
+export interface CastForOfStmt {
+  kind: "ForOfStmt";
+  mutable: b8;
+  name: Str;
+  iterable: CastExpression;
+  body: CastBlockStmt;
+  span: SourceSpan;
+}
+
+export interface CastForInStmt {
+  kind: "ForInStmt";
+  name: Str;
+  iterable: CastExpression;
+  body: CastBlockStmt;
+  span: SourceSpan;
+}
+
 export interface CastIfStmt {
   kind: "IfStmt";
   condition: CastExpression;
@@ -386,12 +490,15 @@ export type CastExpression =
   | CastIntegerLiteral
   | CastFloatLiteral
   | CastBoolLiteral
+  | CastZeroValueExpr
   | CastStringLiteral
+  | CastArrowFunctionExpr
   | CastIdentifierExpr
   | CastUnaryExpr
   | CastBinaryExpr
   | CastConditionalExpr
   | CastNullishCoalesceExpr
+  | CastCastExpr
   | CastCallExpr
   | CastNewExpr
   | CastMethodCallExpr
@@ -432,6 +539,18 @@ export interface CastStringLiteral {
   span: SourceSpan;
 }
 
+export interface CastZeroValueExpr {
+  kind: "ZeroValueExpr";
+  span: SourceSpan;
+}
+
+export interface CastArrowFunctionExpr {
+  kind: "ArrowFunctionExpr";
+  params: Str[];
+  body: CastExpression;
+  span: SourceSpan;
+}
+
 export interface CastIdentifierExpr {
   kind: "IdentifierExpr";
   name: Str;
@@ -466,6 +585,13 @@ export interface CastNullishCoalesceExpr {
   operator: "??" | "?:";
   left: CastExpression;
   fallback: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastCastExpr {
+  kind: "CastExpr";
+  type: CastTypeRef;
+  expression: CastExpression;
   span: SourceSpan;
 }
 
@@ -537,12 +663,21 @@ export interface CastOptionalIndexExpr {
 
 export interface CastRecordLiteralExpr {
   kind: "RecordLiteralExpr";
-  fields: CastRecordLiteralField[];
+  fields: CastRecordLiteralEntry[];
   span: SourceSpan;
 }
 
+export type CastRecordLiteralEntry = CastRecordLiteralField | CastRecordLiteralSpread;
+
 export interface CastRecordLiteralField {
+  kind?: "Field";
   name: Str;
+  expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastRecordLiteralSpread {
+  kind: "Spread";
   expression: CastExpression;
   span: SourceSpan;
 }

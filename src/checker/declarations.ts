@@ -2,8 +2,10 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { ConstDecl, FunctionDecl, TypeRef } from "core/ast.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkValueType } from "checker/value_types.ts";
+import { isInferredFunctionReturn } from "checker/function_return_inference.ts";
 import { checkTaggedUnions } from "checker/tagged_unions.ts";
 import { checkTypeAliasOrder } from "checker/type_alias_order.ts";
+import { runtimeFunctions } from "checker/overloads.ts";
 import { checkTypeRef } from "checker/type_validation.ts";
 
 type Str = string;
@@ -43,7 +45,7 @@ function collectTypeAliases(program: ResolvedProgram): Map<Str, TypeRef> {
 }
 
 function collectFunctions(program: ResolvedProgram): Map<Str, FunctionDecl> {
-  return new Map(program.functions.map((fn) => [fn.name, fn]));
+  return new Map(runtimeFunctions(program.functions).map((fn) => [fn.name, fn]));
 }
 
 function collectConstants(program: ResolvedProgram): Map<Str, ConstDecl> {
@@ -94,7 +96,9 @@ function checkFunctions(program: ResolvedProgram, typeAliases: Map<Str, TypeRef>
 }
 
 function checkFunctionDeclaration(fn: FunctionDecl, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
-  const diagnostics: Diagnostic[] = checkTypeRef(fn.returnType, typeAliases);
+  const diagnostics: Diagnostic[] = isInferredFunctionReturn(fn)
+    ? []
+    : checkTypeRef(fn.returnType, typeAliases);
   for (const param of fn.params) {
     diagnostics.push(...checkTypeRef(param.type, typeAliases));
     diagnostics.push(

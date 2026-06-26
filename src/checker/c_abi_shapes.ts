@@ -37,6 +37,20 @@ export function cTypeShape(type: TypeRef, aliases: TypeAliasIndex): Str {
       return `(${
         type.params.map((param) => `${param.name}:${cTypeShape(param.type, aliases)}`).join(",")
       })=>${cTypeShape(type.returnType, aliases)}`;
+    case "TupleTypeRef":
+      return `[${type.elements.map((element) => cTypeShape(element, aliases)).join(",")}]`;
+    case "UnionTypeRef":
+      return type.members.map((member) => cTypeShape(member, aliases)).join("|");
+    case "IntersectionTypeRef":
+      return type.members.map((member) => cTypeShape(member, aliases)).join("&");
+    case "ConditionalTypeRef":
+      return `${cTypeShape(type.checkType, aliases)}?${cTypeShape(type.trueType, aliases)}:${
+        cTypeShape(type.falseType, aliases)
+      }`;
+    case "IndexedAccessTypeRef":
+      return `${cTypeShape(type.objectType, aliases)}[${type.indexName}]`;
+    case "MappedTypeRef":
+      return `{[${type.keyName} in keyof ${cTypeShape(type.sourceType, aliases)}]}`;
     case "RecordTypeRef":
       return recordTypeShape(type, aliases);
   }

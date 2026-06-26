@@ -70,7 +70,10 @@ export function isConstantExpression(
       );
     case "ArrayLiteralExpr":
       return expr.elements.every((element) => isConstantExpression(element, availableConstants));
+    case "CastExpr":
+      return isConstantExpression(expr.expression, availableConstants);
     case "ZeroValueExpr":
+    case "ArrowFunctionExpr":
     case "CallExpr":
     case "NewExpr":
     case "MethodCallExpr":

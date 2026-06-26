@@ -25,6 +25,7 @@ export function checkRecordLiteralFields(
   const diagnostics: Diagnostic[] = [];
   const seen = new Set<Str>();
   for (const field of expr.fields) {
+    if (field.kind === "Spread") continue;
     diagnostics.push(...checkRecordLiteralField(field, record, expected, seen, resolveType));
   }
   diagnostics.push(...checkRecordLiteralMissingFields(expr, record, expected, seen));
@@ -32,7 +33,7 @@ export function checkRecordLiteralFields(
 }
 
 function checkRecordLiteralField(
-  field: RecordLiteralExpr["fields"][usize],
+  field: Extract<RecordLiteralExpr["fields"][usize], { kind?: "Field" }>,
   record: RecordTypeRef,
   expected: TypeName,
   seen: Set<Str>,

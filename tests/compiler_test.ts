@@ -66,6 +66,247 @@ Deno.test("rejects invalid tagged union constructors", () => {
   );
 });
 
+Deno.test("emits C for union type sugar", () => {
+  const source = `
+    type Value = i32 | f64;
+    function main(): i32 {
+      const value: Value = Value.i32(7);
+      return value.i32;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "typedef struct Value");
+  assertIncludes(c, "static const i32 Value_i32_TAG = 0;");
+  assertIncludes(c, "const Value value = (Value){ .tag = Value_i32_TAG, .data.i32 = 7 };");
+  assertIncludes(c, "return value.data.i32;");
+});
+
+Deno.test("emits C for intersection type aliases", () => {
+  const source = `
+    type Named = { name: u8*; };
+    type Aged = { age: i32; };
+    type Person = Named & Aged;
+    function main(): i32 {
+      const person: Person = { name: "Ada", age: 42 };
+      return person.age;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "} Person;");
+  assertIncludes(c, "u8* name;");
+  assertIncludes(c, "i32 age;");
+  assertIncludes(c, "return person.age;");
+});
+
+Deno.test("rejects conflicting intersection fields", () => {
+  assertCompileError(
+    `type Named = { value: i32; }; type Labelled = { value: u8*; }; type Both = Named & Labelled; function main(): i32 { return 0; }`,
+    "Duplicate field 'value'",
+  );
+});
+
+Deno.test("emits C for static conditional type aliases", () => {
+  const source = `
+    type I32Box = { value: i32; };
+    type F64Box = { value: f64; };
+    type Selected = i32 extends i32 ? I32Box : F64Box;
+    function main(): i32 {
+      const box: Selected = { value: 7 };
+      return box.value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "} Selected;");
+  assertIncludes(c, "i32 value;");
+  assertIncludes(c, "return box.value;");
+});
+
+Deno.test("emits C for mapped type aliases", () => {
+  const source = `
+    type Point = { x: i32; y: f64; };
+    type PointCopy = { [K in keyof Point]: Point[K] };
+    function main(): i32 {
+      const point: PointCopy = { x: 1, y: 2.0 };
+      return point.x;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "} PointCopy;");
+  assertIncludes(c, "i32 x;");
+  assertIncludes(c, "f64 y;");
+  assertIncludes(c, "return point.x;");
+});
+
+Deno.test("checks function overload declarations", () => {
+  const source = `
+    function read(value: i32): i32;
+    function read(value: bool): bool;
+    function read(value: i32): i32 { return value; }
+    function main(): i32 { return read(7); }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "static i32 read(i32 value)");
+  assertIncludes(c, "return read(7);");
+});
+
+Deno.test("rejects ambiguous function overload calls", () => {
+  assertCompileError(
+    `
+      function pick(value: i32): i32;
+      function pick(value: i32): b8;
+      function pick(value: i32): i32 { return value; }
+      function main(): i32 { return pick(1); }
+    `,
+    "Call to overloaded function 'pick' is ambiguous",
+  );
+});
+
+Deno.test("emits C for default parameters at call sites", () => {
+  const source = `
+    function add(x: i32, y: i32 = 1): i32 { return x + y; }
+    function main(): i32 { return add(41); }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "static i32 add(i32 x, i32 y)");
+  assertIncludes(c, "return add(41, 1);");
+});
+
+Deno.test("emits C for optional parameters at call sites", () => {
+  const source = `
+    function accept(value?: i32): i32 { return 0; }
+    function main(): i32 { accept(42); return accept(); }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "static i32 accept(Optional_i32 value)");
+  assertIncludes(c, "accept((Optional_i32){ .present = true, .value = 42 })");
+  assertIncludes(c, "return accept((Optional_i32){ .present = false });");
+});
+
+Deno.test("checks default parameter types", () => {
+  assertCompileError(
+    `function bad(value: i32 = true): i32 { return value; } function main(): i32 { return bad(); }`,
+    "Default value type 'bool' is not assignable to parameter 'value' type 'i32'",
+  );
+});
+
+Deno.test("emits C for inferred local variable types", () => {
+  const source = `
+    function main(): i32 {
+      const value = 7;
+      const ok = true;
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 value = 7;");
+  assertIncludes(c, "const b8 ok = true;");
+});
+
+Deno.test("emits C for inferred local optional types", () => {
+  const source = `
+    function main(): i32 {
+      const present = Some<i32>(42);
+      const empty = None<i32>();
+      return present!;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const Optional_i32 present = (Optional_i32){ .present = true, .value = 42 };");
+  assertIncludes(c, "const Optional_i32 empty = (Optional_i32){ .present = false };");
+  assertIncludes(c, "return __typec_unwrap_Optional_i32(present);");
+});
+
+Deno.test("emits C for inferred local array types", () => {
+  const source = `
+    function main(): i32 {
+      const values = [1, 2, 3];
+      return values[1];
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 values[3] = { 1, 2, 3 };");
+  assertIncludes(c, "return values[1];");
+});
+
+Deno.test("rejects empty inferred local arrays", () => {
+  assertCompileError(
+    `function main(): i32 { const values = []; return 0; }`,
+    "Cannot infer empty array type",
+  );
+});
+
+Deno.test("emits C for inferred local record types", () => {
+  const source = `
+    function main(): i32 {
+      const point = { x: 1, y: 2 };
+      return point.y;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "typedef struct Record_");
+  assertIncludes(c, "i32 x;");
+  assertIncludes(c, "i32 y;");
+  assertIncludes(c, "const Record_");
+  assertIncludes(c, ".x = 1");
+  assertIncludes(c, "return point.y;");
+});
+
+Deno.test("emits C for inferred function return types", () => {
+  const source = `
+    function add(a: i32, b: i32) {
+      return a + b;
+    }
+    function main(): i32 {
+      return add(1, 2);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 add(i32 a, i32 b);");
+  assertIncludes(c, "i32 add(i32 a, i32 b) {");
+  assertIncludes(c, "return add(1, 2);");
+});
+
+Deno.test("emits C for contextual slice array literals", () => {
+  const source = `
+    function sum(values: Slice<i32>): i32 {
+      return values[0] + values[1];
+    }
+    function main(): i32 {
+      const values: Slice<i32> = [40, 2];
+      return sum([1, values[1]]);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(
+    c,
+    "const Slice_i32 values = (Slice_i32){ .data = (i32[]){ 40, 2 }, .length = 2 };",
+  );
+  assertIncludes(
+    c,
+    "return sum((Slice_i32){ .data = (i32[]){ 1, values.data[1] }, .length = 2 });",
+  );
+});
+
+Deno.test("rejects empty contextual slice array literals", () => {
+  assertCompileError(
+    `function main(): i32 { const values: Slice<i32> = []; return 0; }`,
+    "Cannot infer empty array type",
+  );
+});
+
 Deno.test("compiles tagged union example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/tagged_union.tc", dir);
@@ -146,6 +387,7 @@ Deno.test("emits C for defer before return", () => {
 
   assertIncludes(c, "i32 __typec_return_");
   assertInOrder(c, "i32 __typec_return_", "cleanup();", "return __typec_return_");
+  assertCount(c, "cleanup();", 1);
 });
 
 Deno.test("rejects non-call defers", () => {
@@ -173,6 +415,48 @@ Deno.test("emits switch-local defers before break", () => {
 
   assertInOrder(c, "case 1:", "inner();", "break;", "outer();");
   assertNotInOrder(c, "case 1:", "outer();", "break;");
+});
+
+Deno.test("emits for update before continue", () => {
+  const source = `
+    function skip(value: i32): bool { return value == 1; }
+    function main(): i32 {
+      let total: i32 = 0;
+      for (let i: i32 = 0; i < 3; i++) {
+        if (skip(i)) {
+          continue;
+        }
+        total += i;
+      }
+      return total;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertInOrder(c, "if (skip(i)) {", "i++;", "continue;", "total += i;");
+});
+
+Deno.test("emits local defers before continue", () => {
+  const source = `
+    function cleanup(): void { return; }
+    function main(): i32 {
+      for (let i: i32 = 0; i < 3; i++) {
+        defer cleanup();
+        continue;
+      }
+      return 0;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertInOrder(c, "cleanup();", "i++;", "continue;");
+});
+
+Deno.test("rejects continue outside loops", () => {
+  assertCompileError(
+    `function main(): i32 { continue; return 0; }`,
+    "Continue statement is only valid inside a loop",
+  );
 });
 
 Deno.test("compiles defer example", async () => {
@@ -285,6 +569,419 @@ Deno.test("compiles generic class example", async () => {
   assertNotIncludes(result.cSource, "Box<T>");
 });
 
+Deno.test("emits C for generic class new expressions inferred from assigned type", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box: Box<i32> = new Box(42);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value)");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(42);");
+  assertIncludes(c, "return vBox_i32.get(&box);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function read(box: Box<i32>): i32 { return box.get(); }
+    function main(): i32 { return read(new Box(42)); }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value)");
+  assertIncludes(c, "return read(Box_i32_new(42));");
+});
+
+Deno.test("emits C for generic class new expressions inferred from nullish literal arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box = new Box(Some<i32>(42) ?? 0);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(
+    c,
+    "const Box_i32 box = Box_i32_new((Optional_i32){ .present = true, .value = 42 }.present ? (Optional_i32){ .present = true, .value = 42 }.value : 0);",
+  );
+});
+
+Deno.test("emits C for generic class new expressions inferred from conditional literal arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box = new Box(true ? 1 : 2);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(true ? 1 : 2);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from binary literal arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box = new Box(40 + 2);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(40 + 2);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from unary literal arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box = new Box(-42);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(-42);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from string arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+    }
+    function main(): i32 {
+      const box = new Box("hi");
+      return 0;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_u8_ Box_u8__new(u8* value);");
+  assertIncludes(c, 'const Box_u8_ box = Box_u8__new((u8*)"hi");');
+});
+
+Deno.test("emits C for generic class new expressions inferred from parameter context", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function read(box: Box<i32>): i32 { return box.get(); }
+    function main(): i32 { return read(new Box()); }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(void)");
+  assertIncludes(c, "return read(Box_i32_new());");
+});
+
+Deno.test("emits C for generic class new expressions inferred from return context", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function make(): Box<i32> { return new Box(); }
+    function main(): i32 { return make().get(); }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(void)");
+  assertIncludes(c, "return Box_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from assignment target", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      let box: Box<i32> = new Box();
+      box = new Box();
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = Box_i32_new();");
+  assertIncludes(c, "box = Box_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from field assignment target", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      let box: Box<i32> = new Box();
+      let holder: { box: Box<i32> } = { box };
+      holder.box = new Box();
+      return holder.box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "holder.box = Box_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from index contexts", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    class EmptyBox<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const values = [42];
+      const tuple: [i32] = [42];
+      const box = new Box(values[0]);
+      const tupleBox = new Box(tuple[0]);
+      const tupleEmpty: [EmptyBox<i32>] = [new EmptyBox()];
+      let boxes: EmptyBox<i32>[1] = [new EmptyBox()];
+      boxes[0] = new EmptyBox();
+      return box.get() + tupleBox.get() + tupleEmpty[0].get() + boxes[0].get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = Box_i32_new(values[0]);");
+  assertIncludes(c, "Box_i32 tupleBox = Box_i32_new(tuple._0);");
+  assertIncludes(c, "._0 = EmptyBox_i32_new()");
+  assertIncludes(c, "boxes[0] = EmptyBox_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from nullish fallback contexts", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      let maybe: Box<i32>? = None();
+      const box = maybe ?? new Box();
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = maybe.present ? maybe.value : Box_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from conditional contexts", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const box: Box<i32> = true ? new Box() : new Box();
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const Box_i32 box = true ? Box_i32_new() : Box_i32_new();");
+});
+
+Deno.test("emits C for generic class new expressions inferred from aggregate expected contexts", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor() { }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const holder: { box: Box<i32> } = { box: new Box() };
+      const boxes: Box<i32>[1] = [new Box()];
+      return holder.box.get() + boxes[0].get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, ".box = Box_i32_new()");
+  assertIncludes(c, "const Box_i32 boxes[1] = { Box_i32_new() };");
+});
+
+Deno.test("emits C for generic class new expressions inferred from address-of reference arguments", () => {
+  const source = `
+    class RefBox<T> {
+      value: Ref<T>;
+      constructor(value: Ref<T>) { this.value = value; }
+      get(): T { return this.value.*; }
+    }
+    function main(): i32 {
+      const value: i32 = 7;
+      const box = new RefBox(value.&);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static RefBox_i32 RefBox_i32_new(i32* value);");
+  assertIncludes(c, "const RefBox_i32 box = RefBox_i32_new(&value);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from dereferenced pointer arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const value: i32 = 7;
+      const ptr: Ptr<i32> = value.&;
+      const box = new Box(ptr.*);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(*ptr);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from non-null asserted optional arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const maybe: i32? = Some(7);
+      const box = new Box(maybe!);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Box_i32 Box_i32_new(i32 value);");
+  assertIncludes(c, "const Box_i32 box = Box_i32_new(__typec_unwrap_Optional_i32(maybe));");
+});
+
+Deno.test("emits C for generic class new expressions inferred from local arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const seed = 42;
+      const box = new Box(seed);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = Box_i32_new(seed);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from record-field arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const holder = { value: 42 };
+      const box = new Box(holder.value);
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = Box_i32_new(holder.value);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from generic class field arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function main(): i32 {
+      const first = new Box(42);
+      const second = new Box(first.value);
+      return second.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 first = Box_i32_new(42);");
+  assertIncludes(c, "Box_i32 second = Box_i32_new(first.value);");
+});
+
+Deno.test("emits C for generic class new expressions inferred from typed call arguments", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+      get(): T { return this.value; }
+    }
+    function make(): i32 { return 42; }
+    function main(): i32 {
+      const box = new Box(make());
+      return box.get();
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "Box_i32 box = Box_i32_new(make());");
+});
+
 Deno.test("compiles generic function example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/generic.tc", dir);
@@ -352,9 +1049,9 @@ Deno.test("emits C for static class inheritance", () => {
 
   assertIncludes(c, "typedef struct {");
   assertInOrder(c, "i32 x;", "i32 hp;");
-  assertIncludes(c, "static i32 Ship_shifted(Ship this, i32 dx)");
+  assertIncludes(c, "static i32 Ship_shifted(Ship* this, i32 dx)");
   assertIncludes(c, "const Ship ship = Ship_new(1, 2);");
-  assertIncludes(c, "Ship_shifted(ship, 3)");
+  assertIncludes(c, "vShip.shifted(&ship, 3)");
 });
 
 Deno.test("rejects invalid class inheritance", () => {
@@ -424,9 +1121,13 @@ Deno.test("emits C for classes and methods", () => {
   assertIncludes(c, "f64 x;");
   assertIncludes(c, "f64 y;");
   assertIncludes(c, "} Vec2;");
-  assertIncludes(c, "static f64 Vec2_lengthSquared(Vec2 this)");
-  assertIncludes(c, "this.x * this.x + this.y * this.y");
-  assertIncludes(c, "const f64 d = Vec2_lengthSquared(v);");
+  assertIncludes(c, "typedef struct Vec2VTable {");
+  assertIncludes(c, "  f64 (*lengthSquared)(Vec2*)");
+  assertIncludes(c, "static const Vec2VTable vVec2 = {");
+  assertIncludes(c, "  .lengthSquared = Vec2_lengthSquared");
+  assertIncludes(c, "static f64 Vec2_lengthSquared(Vec2* this)");
+  assertIncludes(c, "this->x * this->x + this->y * this->y");
+  assertIncludes(c, "const f64 d = vVec2.lengthSquared(&v);");
 });
 
 Deno.test("emits C for imported class methods", async () => {
@@ -448,16 +1149,16 @@ function main(): i32 {
 
   const c = emitC(check(resolve(await loadProgram(`${dir}/main.tc`))));
 
-  assertIncludes(c, "f64 Vec2_lengthSquared(Vec2 this)");
-  assertIncludes(c, "Vec2_lengthSquared(v)");
+  assertIncludes(c, "f64 Vec2_lengthSquared(Vec2* this)");
+  assertIncludes(c, "vVec2.lengthSquared(&v)");
 });
 
 Deno.test("compiles class example", async () => {
   const dir = await Deno.makeTempDir();
   const result = await compileFile("examples/class.tc", dir);
 
-  assertIncludes(result.cSource, "static f64 Vec2_lengthSquared(Vec2 this)");
-  assertIncludes(result.cSource, "Vec2_lengthSquared(v)");
+  assertIncludes(result.cSource, "static f64 Vec2_lengthSquared(Vec2* this)");
+  assertIncludes(result.cSource, "vVec2.lengthSquared(&v)");
 });
 
 Deno.test("compiles enum example", async () => {
@@ -1153,6 +1854,40 @@ Deno.test("emits C for canonical inferred array syntax", () => {
   assertIncludes(c, "const i32 values[2] = { 40, 2 };");
 });
 
+Deno.test("emits C for explicit numeric casts", () => {
+  const source =
+    `function main(): i32 { const width: i32 = 1280; const wf: f32 = @f32(width); const x: i32 = 1.8 as i32; return x; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const f32 wf = ((f32)width);");
+  assertIncludes(c, "const i32 x = ((i32)1.8);");
+});
+
+Deno.test("emits C for fixed array zero initialization", () => {
+  const source = `function main(): i32 { let values: Array<i32, 4> = {0}; return values[0]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32 values[4] = {0};");
+});
+
+Deno.test("emits C for fixed array fill initialization", () => {
+  const source = `function main(): i32 { let values: i32[4] = Array.fill(7); return values[2]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "i32 values[4] = { 7, 7, 7, 7 };");
+});
+
+Deno.test("emits C for indexed fixed array fill initialization", () => {
+  const source =
+    `function main(): i32 { let values: usize[4] = Array.fill((i) => i + 1); return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "usize values[4] = { 0 + 1, 1 + 1, 2 + 1, 3 + 1 };");
+});
+
+Deno.test("emits C for fixed array zero initialization in records", () => {
+  const source =
+    `type Game = { values: i32[4]; }; function main(): i32 { const game: Game = { values: {0} }; return game.values[0]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const Game game = (Game){ .values = {0} };");
+});
+
 Deno.test("emits C for field access through dereference", () => {
   const source =
     `type Vec2 = { x: i32; y: i32; }; function main(): i32 { const v: Vec2 = { x: 1, y: 2 }; const p: Vec2* = v.&; return p.*.x; }`;
@@ -1168,6 +1903,47 @@ Deno.test("emits C typedef for record aliases", () => {
   assertIncludes(c, "  f32 y;");
   assertIncludes(c, "} Vec2;");
   assertOrdered(c, "  f32 x;", "  f32 y;");
+});
+
+Deno.test("emits C typedef for plain structs", () => {
+  const source = `
+    struct Vec2 {
+      x: f32;
+      y: f32;
+    }
+    function lengthSquared(v: Vec2): f32 {
+      return v.x * v.x + v.y * v.y;
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "typedef struct Vec2 {");
+  assertIncludes(c, "  f32 x;");
+  assertIncludes(c, "  f32 y;");
+  assertIncludes(c, "} Vec2;");
+  assertIncludes(c, "f32 lengthSquared(Vec2 v)");
+  assertIncludes(c, "return v.x * v.x + v.y * v.y;");
+});
+
+Deno.test("rejects invalid field types in plain structs", () => {
+  assertCompileError(
+    `struct Bad { field: Missing; } function main(): i32 { return 0; }`,
+    "Unknown type 'Missing'",
+  );
+});
+
+Deno.test("rejects methods in plain structs", () => {
+  assertCompileError(
+    `struct Vec2 { length(): f32 { return 0.0; } } function main(): i32 { return 0; }`,
+    "Structs cannot have methods",
+  );
+});
+
+Deno.test("rejects constructors in plain structs", () => {
+  assertCompileError(
+    `struct Vec2 { constructor() {} } function main(): i32 { return 0; }`,
+    "Structs cannot have constructors",
+  );
 });
 
 Deno.test("emits C typedef for comma-separated record aliases", () => {
@@ -1312,6 +2088,630 @@ Deno.test("emits C for optional value constructors", () => {
   assertIncludes(c, "const Optional_i32 empty = (Optional_i32){ .present = false };");
 });
 
+Deno.test("emits C for contextual optional constructors", () => {
+  const source = `
+    function keep(value: i32?): i32? {
+      return value;
+    }
+    function main(): i32 {
+      const present: i32? = Some(42);
+      const empty: i32? = None();
+      keep(Some(7));
+      keep(None());
+      return present! + (empty ?? 1);
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const Optional_i32 present = (Optional_i32){ .present = true, .value = 42 };");
+  assertIncludes(c, "const Optional_i32 empty = (Optional_i32){ .present = false };");
+  assertIncludes(c, "keep((Optional_i32){ .present = true, .value = 7 });");
+  assertIncludes(c, "keep((Optional_i32){ .present = false });");
+});
+
+Deno.test("emits C for contextual arrow function callbacks", () => {
+  const source = `
+    extern function apply(callback: (x: i32) => i32, value: i32): i32;
+    function main(): i32 {
+      return apply((x) => x + 1, 41);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 __typec_arrow_");
+  assertIncludes(c, "i32 x)");
+  assertIncludes(c, "return x + 1;");
+  assertIncludes(c, "return apply(__typec_arrow_");
+});
+
+Deno.test("emits C for contextual zero-param arrow function callbacks", () => {
+  const source = `
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      return result(() => 42);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 __typec_arrow_");
+  assertIncludes(c, "(void)");
+  assertIncludes(c, "return 42;");
+  assertIncludes(c, "return result(__typec_arrow_");
+});
+
+Deno.test("emits C for contextual multi-param arrow function callbacks", () => {
+  const source = `
+    extern function apply(callback: (x: i32, y: i32) => i32): i32;
+    function main(): i32 {
+      return apply((x, y) => x + y);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 __typec_arrow_");
+  assertIncludes(c, "i32 x, i32 y)");
+  assertIncludes(c, "return x + y;");
+  assertIncludes(c, "return apply(__typec_arrow_");
+});
+
+Deno.test("emits C for contextual single-param arrow function callbacks", () => {
+  const source = `
+    extern function apply(callback: (x: i32) => i32, value: i32): i32;
+    function main(): i32 {
+      return apply(x => x + 1, 41);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 __typec_arrow_");
+  assertIncludes(c, "i32 x)");
+  assertIncludes(c, "return x + 1;");
+  assertIncludes(c, "return apply(__typec_arrow_");
+});
+
+Deno.test("rejects capturing contextual arrow function callbacks", () => {
+  assertCompileError(
+    `
+      extern function apply(callback: (x: i32) => i32, value: i32): i32;
+      function main(): i32 {
+        const delta = 1;
+        return apply((x) => x + delta, 41);
+      }
+    `,
+    "Arrow function cannot capture local 'delta'",
+  );
+});
+
+Deno.test("emits C for generic calls inferred from assigned result", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value: i32 = identity(42);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(42);");
+  assertIncludes(c, "i32 identity_i32(i32 value) {");
+});
+
+Deno.test("emits C for generic calls inferred from ordinary arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value = identity(42);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(42);");
+  assertIncludes(c, "return value;");
+});
+
+Deno.test("emits C for generic calls inferred from nullish literal arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value = identity(Some<i32>(42) ?? 0);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(
+    c,
+    "const i32 value = identity_i32((Optional_i32){ .present = true, .value = 42 }.present ? (Optional_i32){ .present = true, .value = 42 }.value : 0);",
+  );
+});
+
+Deno.test("emits C for generic calls inferred from optional constructor arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value: i32? = identity(Some(42));
+      return 0;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static Optional_i32 identity_i32_(Optional_i32 value);");
+  assertIncludes(
+    c,
+    "const Optional_i32 value = identity_i32_((Optional_i32){ .present = true, .value = 42 });",
+  );
+});
+
+Deno.test("emits C for generic calls inferred from conditional literal arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value = identity(true ? 1 : 2);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(true ? 1 : 2);");
+});
+
+Deno.test("emits C for generic calls inferred from binary literal arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value = identity(40 + 2);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(40 + 2);");
+});
+
+Deno.test("emits C for generic calls inferred from unary literal arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const value = identity(-42);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(-42);");
+});
+
+Deno.test("emits C for generic calls inferred from string arguments", () => {
+  const source = `
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function main(): i32 {
+      const text: Ptr<u8> = identity("hi");
+      return 0;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static u8* identity_u8_(u8* value);");
+  assertIncludes(c, 'const u8* text = identity_u8_((u8*)"hi");');
+});
+
+Deno.test("emits C for generic calls inferred from array arguments", () => {
+  const source = `
+    function first<T>(values: T[]): T {
+      return values[0];
+    }
+    function main(): i32 {
+      const value = first([42, 7]);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 first_i32(i32* values);");
+  assertIncludes(c, "const i32 value = first_i32((i32[]){ 42, 7 });");
+  assertIncludes(c, "return value;");
+});
+
+Deno.test("emits C for inferred function pointer local declarations", () => {
+  const source = `
+    function make(): i32 { return 1; }
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      const cb = make;
+      return result(cb);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 (*cb)() = make;");
+  assertIncludes(c, "return result(cb);");
+});
+
+Deno.test("emits C for generic calls inferred from address-of reference arguments", () => {
+  const source = `
+    extern function load<T>(ref: Ref<T>): T;
+    function main(): i32 {
+      const value: i32 = 7;
+      const copy = load(value.&);
+      return copy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 load_i32(i32* ref);");
+  assertIncludes(c, "const i32 copy = load_i32(&value);");
+});
+
+Deno.test("emits C for generic calls inferred from dereferenced pointer arguments", () => {
+  const source = `
+    extern function identity<T>(value: T): T;
+    function main(): i32 {
+      const value: i32 = 7;
+      const ptr: Ptr<i32> = value.&;
+      const copy = identity(ptr.*);
+      return copy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 copy = identity_i32(*ptr);");
+});
+
+Deno.test("emits C for generic calls inferred from non-null asserted optional arguments", () => {
+  const source = `
+    extern function identity<T>(value: T): T;
+    function main(): i32 {
+      const maybe: i32? = Some(7);
+      const value = identity(maybe!);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 identity_i32(i32 value);");
+  assertIncludes(c, "const i32 value = identity_i32(__typec_unwrap_Optional_i32(maybe));");
+});
+
+Deno.test("emits C for generic calls inferred from inferred callback local arguments", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const cb = make;
+      const value = result(cb);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "const i32 (*cb)() = make;");
+  assertIncludes(c, "const i32 value = result_i32(cb);");
+});
+
+Deno.test("emits C for function pointer tuple elements", () => {
+  const source = `
+    function make(): i32 { return 1; }
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      const callbacks: [() => i32] = [make];
+      return result(callbacks[0]);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 (*_0)();");
+  assertIncludes(c, "._0 = make");
+  assertIncludes(c, "return result(callbacks._0);");
+});
+
+Deno.test("emits C for generic calls inferred from typed callback tuple elements", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const callbacks: [() => i32] = [make];
+      const value = result(callbacks[0]);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "i32 (*_0)();");
+  assertIncludes(c, "const i32 value = result_i32(callbacks._0);");
+});
+
+Deno.test("emits C for inferred function pointer arrays", () => {
+  const source = `
+    function make(): i32 { return 1; }
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      const callbacks = [make];
+      return result(callbacks[0]);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 (*callbacks[1])() = { make };");
+  assertIncludes(c, "return result(callbacks[0]);");
+});
+
+Deno.test("emits C for generic calls inferred from inferred callback array elements", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const callbacks = [make];
+      const value = result(callbacks[0]);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "const i32 (*callbacks[1])() = { make };");
+  assertIncludes(c, "const i32 value = result_i32(callbacks[0]);");
+});
+
+Deno.test("emits C for inferred record function pointer fields", () => {
+  const source = `
+    function make(): i32 { return 1; }
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      const holder = { cb: make };
+      return result(holder.cb);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 (*cb)();");
+  assertIncludes(c, ".cb = make");
+  assertIncludes(c, "return result(holder.cb);");
+});
+
+Deno.test("emits C for generic calls inferred from inferred record callback fields", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const holder = { cb: make };
+      const value = result(holder.cb);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "i32 (*cb)();");
+  assertIncludes(c, "const i32 value = result_i32(holder.cb);");
+});
+
+Deno.test("emits C for function pointer local declarations", () => {
+  const source = `
+    function make(): i32 { return 1; }
+    extern function result(callback: () => i32): i32;
+    function main(): i32 {
+      const cb: () => i32 = make;
+      return result(cb);
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 (*cb)() = make;");
+  assertIncludes(c, "return result(cb);");
+});
+
+Deno.test("emits C for generic calls inferred from typed callback local arguments", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const cb: () => i32 = make;
+      const value = result(cb);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "const i32 (*cb)() = make;");
+  assertIncludes(c, "const i32 value = result_i32(cb);");
+});
+
+Deno.test("emits C for generic calls inferred from callback arguments", () => {
+  const source = `
+    extern function result<T>(callback: () => T): T;
+    function make(): i32 { return 1; }
+    function main(): i32 {
+      const value = result(make);
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "static i32 result_i32(i32 (*callback)());");
+  assertIncludes(c, "const i32 value = result_i32(make);");
+});
+
+Deno.test("emits C for generic calls inferred from method parameter contexts", () => {
+  const source = `
+    class Sink {
+      constructor() { }
+      consume(value: i32): i32 { return value; }
+    }
+    function produce<T>(): T { return 42; }
+    function main(): i32 {
+      const sink = new Sink();
+      return sink.consume(produce());
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "return vSink.consume(&sink, produce_i32());");
+});
+
+Deno.test("emits C for generic calls inferred from expected contexts", () => {
+  const source = `
+    type Box = { value: i32; };
+    function identity<T>(value: T): T {
+      return value;
+    }
+    function consume(value: i32): i32 {
+      return value;
+    }
+    function make(): i32 {
+      return identity(42);
+    }
+    function main(): i32 {
+      let value: i32 = 0;
+      const seed = 9;
+      const copy = identity(seed);
+      let box: Box = { value: 0 };
+      const inferredBox = { value: 13 };
+      const fieldCopy = identity(box.value);
+      const inferredFieldCopy = identity(inferredBox.value);
+      value = identity(5);
+      box.value = identity(11);
+      return consume(identity(7)) + make() + value + copy + box.value + fieldCopy + inferredFieldCopy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 identity_i32(i32 value);");
+  assertIncludes(c, "return identity_i32(42);");
+  assertIncludes(c, "const i32 seed = 9;");
+  assertIncludes(c, "const i32 copy = identity_i32(seed);");
+  assertIncludes(c, "value = identity_i32(5);");
+  assertIncludes(c, "const i32 fieldCopy = identity_i32(box.value);");
+  assertIncludes(c, "const i32 inferredFieldCopy = identity_i32(inferredBox.value);");
+  assertIncludes(c, "box.value = identity_i32(11);");
+  assertIncludes(
+    c,
+    "return consume(identity_i32(7)) + make() + value + copy + box.value + fieldCopy + inferredFieldCopy;",
+  );
+});
+
+Deno.test("emits C for generic calls inferred from index contexts", () => {
+  const source = `
+    function identity<T>(value: T): T { return value; }
+    function main(): i32 {
+      let values: i32[2] = [0, 1];
+      const tuple: [i32, i32] = [identity(2), identity(3)];
+      values[0] = identity(7);
+      const copy = identity(values[1]);
+      const tupleCopy = identity(tuple[1]);
+      return values[0] + copy + tuple[0] + tupleCopy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "._0 = identity_i32(2)");
+  assertIncludes(c, "values[0] = identity_i32(7);");
+  assertIncludes(c, "const i32 copy = identity_i32(values[1]);");
+  assertIncludes(c, "const i32 tupleCopy = identity_i32(tuple._1);");
+});
+
+Deno.test("emits C for generic calls inferred from nullish fallback contexts", () => {
+  const source = `
+    function produce<T>(): T { return 42; }
+    function main(): i32 {
+      let maybe: i32? = None();
+      const value = maybe ?? produce();
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 value = maybe.present ? maybe.value : produce_i32();");
+});
+
+Deno.test("emits C for generic calls inferred from conditional contexts", () => {
+  const source = `
+    function produce<T>(): T { return 42; }
+    function main(): i32 {
+      const value: i32 = true ? produce() : produce();
+      return value;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 value = true ? produce_i32() : produce_i32();");
+});
+
+Deno.test("emits C for generic calls inferred from aggregate expected contexts", () => {
+  const source = `
+    type Holder = { value: i32; };
+    function produce<T>(): T { return 42; }
+    function main(): i32 {
+      const holder: Holder = { value: produce() };
+      const values: i32[2] = [produce(), produce()];
+      return holder.value + values[0] + values[1];
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "i32 produce_i32(void);");
+  assertIncludes(c, ".value = produce_i32()");
+  assertIncludes(c, "const i32 values[2] = { produce_i32(), produce_i32() };");
+});
+
+Deno.test("emits C for generic calls inferred from inferred named local fields", () => {
+  const source = `
+    class Box<T> {
+      value: T;
+      constructor(value: T) { this.value = value; }
+    }
+    function identity<T>(value: T): T { return value; }
+    function main(): i32 {
+      const box = new Box(42);
+      const copy = identity(box.value);
+      return copy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 copy = identity_i32(box.value);");
+});
+
+Deno.test("emits C for generic calls inferred from typed call arguments", () => {
+  const source = `
+    function make(): i32 { return 42; }
+    function identity<T>(value: T): T { return value; }
+    function main(): i32 {
+      const copy = identity(make());
+      return copy;
+    }
+  `;
+  const c = emitC(check(resolve(instantiateGenerics(parse(lex(source))))));
+
+  assertIncludes(c, "const i32 copy = identity_i32(make());");
+});
+
 Deno.test("rejects invalid optional value constructors", () => {
   assertCompileError(
     `function main(): i32 { const value: i32? = Some<i32>(); return 0; }`,
@@ -1322,7 +2722,7 @@ Deno.test("rejects invalid optional value constructors", () => {
     "None expects 0 arguments, got 1",
   );
   assertCompileError(
-    `function main(): i32 { const value: i32? = Some(1); return 0; }`,
+    `function main(): i32 { const value = Some(1); return 0; }`,
     "Some requires exactly one type argument",
   );
 });
@@ -1466,6 +2866,20 @@ Deno.test("emits C string literals for single-quoted strings", () => {
   assertIncludes(c, 'return puts((u8*)"hello");');
 });
 
+Deno.test("emits C string literals for plain template literals", () => {
+  const source =
+    "extern function puts(s: u8*): i32; function main(): i32 { return puts(`hello\\nTypeC`); }";
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, 'return puts((u8*)"hello\\\\nTypeC");');
+});
+
+Deno.test("emits C string literals for static template interpolation", () => {
+  const source =
+    'extern function puts(s: u8*): i32; function main(): i32 { return puts(`hello ${"TypeC"} ${42}`); }';
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, 'return puts((u8*)"hello TypeC 42");');
+});
+
 Deno.test("emits C string literals for canonical u8 pointer calls", () => {
   const source =
     `extern function puts(s: Ptr<u8>): i32; function main(): i32 { return puts("hello"); }`;
@@ -1531,6 +2945,162 @@ Deno.test("emits C for basic for loops", () => {
   assertIncludes(c, "usize i = 0;");
   assertIncludes(c, "while (i < 3)");
   assertInOrder(c, "total += 2;", "i++;", "return total;");
+});
+
+Deno.test("emits C for tuple literals and indexing", () => {
+  const source = `function main(): i32 { const pair: [u8*, i32] = ["age", 42]; return pair[1]; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "typedef struct Tuple_u8_x2a__i32 {");
+  assertIncludes(c, "u8* _0;");
+  assertIncludes(c, "i32 _1;");
+  assertIncludes(
+    c,
+    'const Tuple_u8_x2a__i32 pair = (Tuple_u8_x2a__i32){ ._0 = (u8*)"age", ._1 = 42 };',
+  );
+  assertIncludes(c, "return pair._1;");
+});
+
+Deno.test("rejects tuple index out of bounds", () => {
+  assertCompileError(
+    `function main(): i32 { const pair: [u8*, i32] = ["age", 42]; return pair[2]; }`,
+    "Tuple index 2 is out of bounds",
+  );
+});
+
+Deno.test("rejects dynamic tuple indexes", () => {
+  assertCompileError(
+    `function main(): i32 { const pair: [u8*, i32] = ["age", 42]; const index: usize = 1; return pair[index]; }`,
+    "Tuple index must be an integer literal",
+  );
+});
+
+Deno.test("rejects tuple literal length mismatch", () => {
+  assertCompileError(
+    `function main(): i32 { const pair: [u8*, i32] = ["age"]; return 0; }`,
+    "Tuple literal length 1 does not match expected length 2",
+  );
+});
+
+Deno.test("emits C for record destructuring", () => {
+  const source = `
+    type Point = { x: i32; y: i32 };
+    function main(): i32 {
+      const point: Point = { x: 1, y: 2 };
+      const { x, y } = point;
+      return x + y;
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const i32 x = point.x;");
+  assertIncludes(c, "const i32 y = point.y;");
+});
+
+Deno.test("emits C for tuple destructuring", () => {
+  const source = `
+    function main(): i32 {
+      const pair: [i32, i32] = [1, 2];
+      const [a, b] = pair;
+      return a + b;
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const i32 a = pair._0;");
+  assertIncludes(c, "const i32 b = pair._1;");
+});
+
+Deno.test("emits C for fixed array destructuring", () => {
+  const source = `
+    function main(): i32 {
+      const values: i32[2] = [1, 2];
+      const [a, b] = values;
+      return a + b;
+    }
+  `;
+  const c = emitC(check(resolve(parse(lex(source)))));
+
+  assertIncludes(c, "const i32 a = values[0];");
+  assertIncludes(c, "const i32 b = values[1];");
+});
+
+Deno.test("rejects destructuring too many array elements", () => {
+  assertCompileError(
+    `function main(): i32 { const values: i32[1] = [1]; const [a, b] = values; return a; }`,
+    "Array destructuring expects at most 1 binding(s), got 2",
+  );
+});
+
+Deno.test("emits C for record spread", () => {
+  const source =
+    `type Point2 = { x: i32; y: i32; }; type Point3 = { x: i32; y: i32; z: i32; }; function main(): i32 { const a: Point2 = { x: 1, y: 2 }; const b: Point3 = { ...a, y: 4, z: 3 }; return b.y; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const Point3 b = (Point3){ .x = a.x, .y = 4, .z = 3 };");
+});
+
+Deno.test("emits C for record rest destructuring", () => {
+  const source =
+    `type Point3 = { x: i32; y: i32; z: i32; }; function main(): i32 { const point: Point3 = { x: 1, y: 2, z: 3 }; const { x, ...rest } = point; return x + rest.y; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const i32 x = point.x;");
+  assertIncludes(c, "const Record_");
+  assertIncludes(c, ".y = point.y");
+  assertIncludes(c, "return x + rest.y;");
+});
+
+Deno.test("rejects non-record spread operands", () => {
+  assertCompileError(
+    `type Point = { x: i32; }; function main(): i32 { const p: Point = { ...1, x: 2 }; return p.x; }`,
+    "Record spread operand must be a record type",
+  );
+});
+
+Deno.test("emits C for for-of arrays", () => {
+  const source =
+    `function main(): i32 { const values: i32[] = [1, 2, 3]; let total: i32 = 0; for (const value of values) { total += value; } return total; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "usize __typec_for_of_");
+  assertIncludes(c, "const i32 value = values[__typec_for_of_");
+  assertInOrder(c, "while (__typec_for_of_", "total += value;", "__typec_for_of_");
+});
+
+Deno.test("emits C for for-of slices", () => {
+  const source =
+    `function sum(values: Slice<i32>): i32 { let total: i32 = 0; for (const value of values) { total += value; } return total; } function main(): i32 { return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, ".length");
+  assertIncludes(c, "const i32 value = values.data[__typec_for_of_");
+});
+
+Deno.test("rejects non-array for-of iterables", () => {
+  assertCompileError(
+    `function main(): i32 { for (const value of 1) {} return 0; }`,
+    "For-of iterable must be an array or slice",
+  );
+});
+
+Deno.test("emits C for for-in record fields", () => {
+  const source =
+    `extern function puts(value: u8*): i32; type Point = { x: i32; y: i32; }; function main(): i32 { const point: Point = { x: 1, y: 2 }; for (const key in point) { puts(key); } return 0; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, 'const u8* key = "x";');
+  assertIncludes(c, 'const u8* key = "y";');
+  assertInOrder(c, '"x"', "puts(key);", '"y"');
+});
+
+Deno.test("emits C for for-in enum members", () => {
+  const source =
+    `enum Direction { Up, Down } function main(): i32 { let total: i32 = 0; for (const key in Direction) { switch (key) { case Direction.Up: total += 1; case Direction.Down: total += 2; } } return total; }`;
+  const c = emitC(check(resolve(parse(lex(source)))));
+  assertIncludes(c, "const Direction key = Direction_Up;");
+  assertIncludes(c, "const Direction key = Direction_Down;");
+});
+
+Deno.test("rejects invalid for-in iterables", () => {
+  assertCompileError(
+    `function main(): i32 { for (const key in 1) {} return 0; }`,
+    "For-in iterable must be a record, class, or enum",
+  );
 });
 
 Deno.test("rejects non-bool for conditions", () => {

@@ -32,9 +32,10 @@ function collectStatement(statement: Statement, namespace: Str, members: Set<Str
       collectExpression(statement.expression, namespace, members);
       return;
     case "BreakStmt":
+    case "ContinueStmt":
       return;
     case "VarDeclStmt":
-      collectType(statement.type, namespace, members);
+      if (statement.type !== null) collectType(statement.type, namespace, members);
       collectExpression(statement.initializer, namespace, members);
       return;
     case "AssignmentStmt":
@@ -60,6 +61,11 @@ function collectStatement(statement: Statement, namespace: Str, members: Set<Str
       for (const child of statement.body.statements) collectStatement(child, namespace, members);
       collectExpression(statement.condition, namespace, members);
       return;
+    case "ForOfStmt":
+    case "ForInStmt":
+      collectExpression(statement.iterable, namespace, members);
+      for (const child of statement.body.statements) collectStatement(child, namespace, members);
+      return;
     case "IfStmt":
       collectExpression(statement.condition, namespace, members);
       for (const child of statement.thenBody.statements) {
@@ -78,6 +84,9 @@ function collectExpression(expression: Expression, namespace: Str, members: Set<
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+      return;
+    case "ArrowFunctionExpr":
+      collectExpression(expression.body, namespace, members);
       return;
     case "IdentifierExpr":
       return;
@@ -171,6 +180,19 @@ function collectType(type: TypeRef, namespace: Str, members: Set<Str>): void {
     case "FunctionTypeRef":
       for (const param of type.params) collectType(param.type, namespace, members);
       collectType(type.returnType, namespace, members);
+      return;
+    case "TupleTypeRef":
+      for (const element of type.elements) collectType(element, namespace, members);
+      return;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      for (const member of type.members) collectType(member, namespace, members);
+      return;
+    case "ConditionalTypeRef":
+      collectType(type.checkType, namespace, members);
+      collectType(type.extendsType, namespace, members);
+      collectType(type.trueType, namespace, members);
+      collectType(type.falseType, namespace, members);
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectType(field.type, namespace, members);

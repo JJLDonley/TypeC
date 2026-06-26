@@ -1,5 +1,6 @@
 import type { Diagnostic, SourcePos } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
+import { type StaticTemplateText, staticTemplateText } from "core/static_template_literals.ts";
 import { keywords, type Token } from "core/token.ts";
 
 type i32 = number;
@@ -54,7 +55,13 @@ class Lexer {
       }
 
       if (ch === '"' || ch === "'") {
-        const text = this.readString(start, ch);
+        const text: Str = this.readString(start, ch);
+        this.tokens.push({ kind: "string", text, span: { start, end: this.pos() } });
+        continue;
+      }
+
+      if (ch === "`") {
+        const text: Str = this.readTemplateString(start);
         this.tokens.push({ kind: "string", text, span: { start, end: this.pos() } });
         continue;
       }
@@ -83,7 +90,7 @@ class Lexer {
         continue;
       }
 
-      if ("(){}[]:;,.?".includes(ch)) {
+      if ("(){}[]:;,.?@".includes(ch)) {
         this.advance();
         this.tokens.push({ kind: "punctuation", text: ch, span: { start, end: this.pos() } });
         continue;
@@ -222,7 +229,7 @@ class Lexer {
         this.reportUnterminatedString(start);
         return text;
       }
-      text += this.advance();
+      text += this.peek() === "\\" ? this.readStringEscape(start) : this.advance();
     }
     if (this.isAtEnd()) {
       this.reportUnterminatedString(start);
@@ -232,6 +239,46 @@ class Lexer {
     return text;
   }
 
+  private readStringEscape(start: SourcePos): Str {
+    this.advance();
+    if (this.isAtEnd()) {
+      this.reportUnterminatedString(start);
+      return "";
+    }
+    const escaped: Str = this.advance();
+    switch (escaped) {
+      case "n":
+        return "\n";
+      case "r":
+        return "\r";
+      case "t":
+        return "\t";
+      case "0":
+        return "\0";
+      case "\\":
+        return "\\";
+      case '"':
+        return '"';
+      case "'":
+        return "'";
+    }
+    return `\\${escaped}`;
+  }
+
+  private readTemplateString(start: SourcePos): Str {
+    this.advance();
+    let raw: Str = "";
+    while (!this.isAtEnd() && this.peek() !== "`") raw += this.advance();
+    if (this.isAtEnd()) {
+      this.reportUnterminatedTemplateString(start);
+      return raw;
+    }
+    this.advance();
+    const result: StaticTemplateText = staticTemplateText(raw);
+    if (result.error !== null) this.reportTemplateError(start, result.error);
+    return result.text;
+  }
+
   private reportUnterminatedString(start: SourcePos): void {
     this.diagnostics.push({
       message: "Unterminated string literal",
@@ -239,8 +286,22 @@ class Lexer {
     });
   }
 
+  private reportUnterminatedTemplateString(start: SourcePos): void {
+    this.diagnostics.push({
+      message: "Unterminated template literal",
+      span: { start, end: this.pos() },
+    });
+  }
+
+  private reportTemplateError(start: SourcePos, message: Str): void {
+    this.diagnostics.push({
+      message,
+      span: { start, end: this.pos() },
+    });
+  }
+
   private readWhile(pred: (ch: Str) => b8): Str {
-    let text = "";
+    let text: Str = "";
     while (!this.isAtEnd() && pred(this.peek())) text += this.advance();
     return text;
   }

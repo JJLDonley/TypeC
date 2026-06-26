@@ -88,6 +88,7 @@ function checkConstantRecordRanges(
   const record = lookupRecordAlias(expectedType, aliases);
   if (record === null) return [];
   return expr.fields.flatMap((field) => {
+    if (field.kind === "Spread") return [];
     const expected = record.fields.find((candidate) => candidate.name === field.name);
     if (expected === undefined) return [];
     return checkConstantRanges(

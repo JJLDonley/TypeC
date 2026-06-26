@@ -40,11 +40,13 @@ Deno.test("reports untyped aggregate expressions", () => {
 
 function handlers(): ExpressionTypeHandlers {
   return {
+    arrow: resolveI64,
     identifier: resolveI64,
     unary: resolveI64,
     binary: resolveI64,
     conditional: resolveI64,
     nullish: resolveI64,
+    cast: resolveI64,
     call: resolveI64,
     newExpr: resolveI64,
     methodCall: resolveI64,

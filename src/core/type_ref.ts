@@ -24,6 +24,22 @@ export function typeName(type: TypeRef): Str {
       return `${typeName(type.element)}[]`;
     case "FixedArrayTypeRef":
       return `${typeName(type.element)}[${type.sizeText}]`;
+    case "TupleTypeRef":
+      return `[${type.elements.map(typeName).join(", ")}]`;
+    case "UnionTypeRef":
+      return type.members.map(typeName).join(" | ");
+    case "IntersectionTypeRef":
+      return type.members.map(typeName).join(" & ");
+    case "ConditionalTypeRef":
+      return `${typeName(type.checkType)} extends ${typeName(type.extendsType)} ? ${
+        typeName(type.trueType)
+      } : ${typeName(type.falseType)}`;
+    case "IndexedAccessTypeRef":
+      return `${typeName(type.objectType)}[${type.indexName}]`;
+    case "MappedTypeRef":
+      return `{[${type.keyName} in keyof ${typeName(type.sourceType)}]:${
+        typeName(type.valueType)
+      }}`;
     case "FunctionTypeRef":
       return `(${
         type.params.map((param) => `${param.name}: ${typeName(param.type)}`).join(", ")

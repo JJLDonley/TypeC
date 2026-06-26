@@ -10,6 +10,7 @@ export interface Program {
   imports: ImportDecl[];
   typeAliases: TypeAliasDecl[];
   interfaces?: InterfaceDecl[];
+  classVTables?: ClassVTableDecl[];
   taggedUnions?: TaggedUnionDecl[];
   enums?: EnumDecl[];
   constants?: ConstDecl[];
@@ -45,6 +46,21 @@ export interface InterfaceDecl {
   exported: b8;
   name: Str;
   methods: InterfaceMethod[];
+  span: SourceSpan;
+}
+
+export interface ClassVTableDecl {
+  kind: "ClassVTableDecl";
+  className: Str;
+  typeName: Str;
+  cName: Str;
+  methods: ClassVTableMethod[];
+  span: SourceSpan;
+}
+
+export interface ClassVTableMethod {
+  name: Str;
+  functionCName: Str;
   span: SourceSpan;
 }
 
@@ -101,6 +117,7 @@ export interface FunctionDecl {
   kind: "FunctionDecl";
   exported: b8;
   external: b8;
+  overload?: b8;
   name: Str;
   cName?: Str | null;
   genericParams?: GenericParam[];
@@ -119,7 +136,9 @@ export interface GenericParam {
 
 export interface Param {
   name: Str;
+  optional?: b8;
   type: TypeRef;
+  defaultValue?: Expression | null;
   span: SourceSpan;
 }
 
@@ -131,6 +150,12 @@ export type TypeRef =
   | SliceTypeRef
   | InferredArrayTypeRef
   | FixedArrayTypeRef
+  | TupleTypeRef
+  | UnionTypeRef
+  | IntersectionTypeRef
+  | ConditionalTypeRef
+  | IndexedAccessTypeRef
+  | MappedTypeRef
   | FunctionTypeRef
   | RecordTypeRef;
 
@@ -178,6 +203,48 @@ export interface FixedArrayTypeRef {
   span: SourceSpan;
 }
 
+export interface TupleTypeRef {
+  kind: "TupleTypeRef";
+  elements: TypeRef[];
+  span: SourceSpan;
+}
+
+export interface UnionTypeRef {
+  kind: "UnionTypeRef";
+  members: TypeRef[];
+  span: SourceSpan;
+}
+
+export interface IntersectionTypeRef {
+  kind: "IntersectionTypeRef";
+  members: TypeRef[];
+  span: SourceSpan;
+}
+
+export interface ConditionalTypeRef {
+  kind: "ConditionalTypeRef";
+  checkType: TypeRef;
+  extendsType: TypeRef;
+  trueType: TypeRef;
+  falseType: TypeRef;
+  span: SourceSpan;
+}
+
+export interface IndexedAccessTypeRef {
+  kind: "IndexedAccessTypeRef";
+  objectType: TypeRef;
+  indexName: Str;
+  span: SourceSpan;
+}
+
+export interface MappedTypeRef {
+  kind: "MappedTypeRef";
+  keyName: Str;
+  sourceType: TypeRef;
+  valueType: TypeRef;
+  span: SourceSpan;
+}
+
 export interface FunctionTypeRef {
   kind: "FunctionTypeRef";
   params: Param[];
@@ -209,13 +276,18 @@ export type Statement =
   | DeferStmt
   | ExpressionStmt
   | BreakStmt
+  | ContinueStmt
   | VarDeclStmt
+  | RecordRestStmt
+  | ArrayDestructureStmt
   | AssignmentStmt
   | IncDecStmt
   | SwitchStmt
   | WhileStmt
   | DoWhileStmt
   | ForStmt
+  | ForOfStmt
+  | ForInStmt
   | IfStmt;
 
 export interface EmptyStmt {
@@ -246,12 +318,34 @@ export interface BreakStmt {
   span: SourceSpan;
 }
 
+export interface ContinueStmt {
+  kind: "ContinueStmt";
+  span: SourceSpan;
+}
+
 export interface VarDeclStmt {
   kind: "VarDeclStmt";
   mutable: b8;
   name: Str;
-  type: TypeRef;
+  type: TypeRef | null;
   initializer: Expression;
+  span: SourceSpan;
+}
+
+export interface RecordRestStmt {
+  kind: "RecordRestStmt";
+  mutable: b8;
+  names: Str[];
+  restName: Str | null;
+  source: Expression;
+  span: SourceSpan;
+}
+
+export interface ArrayDestructureStmt {
+  kind: "ArrayDestructureStmt";
+  mutable: b8;
+  names: Str[];
+  source: Expression;
   span: SourceSpan;
 }
 
@@ -332,6 +426,23 @@ export interface ForStmt {
   span: SourceSpan;
 }
 
+export interface ForOfStmt {
+  kind: "ForOfStmt";
+  mutable: b8;
+  name: Str;
+  iterable: Expression;
+  body: BlockStmt;
+  span: SourceSpan;
+}
+
+export interface ForInStmt {
+  kind: "ForInStmt";
+  name: Str;
+  iterable: Expression;
+  body: BlockStmt;
+  span: SourceSpan;
+}
+
 export interface IfStmt {
   kind: "IfStmt";
   condition: Expression;
@@ -346,11 +457,13 @@ export type Expression =
   | BoolLiteral
   | ZeroValueExpr
   | StringLiteral
+  | ArrowFunctionExpr
   | IdentifierExpr
   | UnaryExpr
   | BinaryExpr
   | ConditionalExpr
   | NullishCoalesceExpr
+  | CastExpr
   | CallExpr
   | NewExpr
   | MethodCallExpr
@@ -396,6 +509,13 @@ export interface ZeroValueExpr {
   span: SourceSpan;
 }
 
+export interface ArrowFunctionExpr {
+  kind: "ArrowFunctionExpr";
+  params: Str[];
+  body: Expression;
+  span: SourceSpan;
+}
+
 export interface IdentifierExpr {
   kind: "IdentifierExpr";
   name: Str;
@@ -430,6 +550,13 @@ export interface NullishCoalesceExpr {
   operator: "??" | "?:";
   left: Expression;
   fallback: Expression;
+  span: SourceSpan;
+}
+
+export interface CastExpr {
+  kind: "CastExpr";
+  type: TypeRef;
+  expression: Expression;
   span: SourceSpan;
 }
 
@@ -501,12 +628,21 @@ export interface OptionalIndexExpr {
 
 export interface RecordLiteralExpr {
   kind: "RecordLiteralExpr";
-  fields: RecordLiteralField[];
+  fields: RecordLiteralEntry[];
   span: SourceSpan;
 }
 
+export type RecordLiteralEntry = RecordLiteralField | RecordLiteralSpread;
+
 export interface RecordLiteralField {
+  kind?: "Field";
   name: Str;
+  expression: Expression;
+  span: SourceSpan;
+}
+
+export interface RecordLiteralSpread {
+  kind: "Spread";
   expression: Expression;
   span: SourceSpan;
 }

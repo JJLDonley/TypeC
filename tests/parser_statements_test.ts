@@ -41,6 +41,35 @@ Deno.test("parses variable declarations", () => {
   assertBool(stmt.mutable, false);
 });
 
+Deno.test("parses inferred variable declarations", () => {
+  const stmt = parseStatementWith(
+    parserFor([keyword("const"), identifier("x"), punct("="), integer("1"), punct(";")]),
+  );
+
+  assertText(stmt.kind, "VarDeclStmt");
+  if (stmt.kind !== "VarDeclStmt") throw new Error("Expected variable declaration");
+  assertNull(stmt.type);
+});
+
+Deno.test("parses array destructuring declarations", () => {
+  const statement = parseStatementWith(parserFor([
+    keyword("const"),
+    punct("["),
+    identifier("a"),
+    punct(","),
+    identifier("b"),
+    punct("]"),
+    punct("="),
+    identifier("pair"),
+    punct(";"),
+  ]));
+
+  assertText(statement.kind, "ArrayDestructureStmt");
+  if (statement.kind !== "ArrayDestructureStmt") throw new Error("Expected destructuring");
+  assertText(statement.names[0] ?? "", "a");
+  assertText(statement.names[1] ?? "", "b");
+});
+
 Deno.test("parses assignments before expression statements", () => {
   const stmt = parseStatementWith(
     parserFor([identifier("x"), punct("="), identifier("value"), punct(";")]),
@@ -106,6 +135,42 @@ Deno.test("parses increment and decrement statements", () => {
   assertText(prefix.target.kind, "IdentifierExpr");
 });
 
+Deno.test("parses for-of statements", () => {
+  const stmt = parseStatementWith(
+    parserFor([
+      keyword("for"),
+      punct("("),
+      keyword("const"),
+      identifier("value"),
+      keyword("of"),
+      identifier("values"),
+      punct(")"),
+      punct("{"),
+      punct("}"),
+    ]),
+  );
+
+  assertText(stmt.kind, "ForOfStmt");
+});
+
+Deno.test("parses for-in statements", () => {
+  const stmt = parseStatementWith(
+    parserFor([
+      keyword("for"),
+      punct("("),
+      keyword("const"),
+      identifier("key"),
+      keyword("in"),
+      identifier("point"),
+      punct(")"),
+      punct("{"),
+      punct("}"),
+    ]),
+  );
+
+  assertText(stmt.kind, "ForInStmt");
+});
+
 Deno.test("parses for statements", () => {
   const stmt = parseStatementWith(
     parserFor([
@@ -155,6 +220,12 @@ Deno.test("parses break statements", () => {
   const stmt = parseStatementWith(parserFor([keyword("break"), punct(";")]));
 
   assertText(stmt.kind, "BreakStmt");
+});
+
+Deno.test("parses continue statements", () => {
+  const stmt = parseStatementWith(parserFor([keyword("continue"), punct(";")]));
+
+  assertText(stmt.kind, "ContinueStmt");
 });
 
 Deno.test("parses switch statements", () => {
@@ -366,4 +437,8 @@ function assertText(actual: Str, expected: Str): void {
 
 function assertBool(actual: b8, expected: b8): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
+}
+
+function assertNull(actual: CastTypeRef | null): void {
+  if (actual !== null) throw new Error("Expected null");
 }

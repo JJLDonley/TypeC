@@ -11,6 +11,7 @@ export interface AggregateLiteralParser {
   matchText(text: Str): b8;
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
+  previous(): Token;
   parseExpression(): CastExpression;
 }
 
@@ -29,6 +30,11 @@ export function parseArrayLiteralWith(parser: AggregateLiteralParser): CastExpre
 
 export function parseRecordLiteralWith(parser: AggregateLiteralParser): CastExpression {
   const open = parser.expectText("{");
+  if (parser.checkText("0")) {
+    parser.expectKind("integer", "Expected zero initializer");
+    const close = parser.expectText("}");
+    return { kind: "ZeroValueExpr", span: span(open.span.start, close.span.end) };
+  }
   const fields: Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"] = [];
   if (!parser.checkText("}")) {
     do {
@@ -43,10 +49,19 @@ export function parseRecordLiteralWith(parser: AggregateLiteralParser): CastExpr
 function parseRecordLiteralField(
   parser: AggregateLiteralParser,
 ): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+  if (parser.matchText("...")) return parseRecordLiteralSpread(parser);
   const name = parser.expectKind("identifier", "Expected field name");
   if (!parser.matchText(":")) return parseShorthandRecordLiteralField(name);
   const expression = parser.parseExpression();
   return { name: name.text, expression, span: span(name.span.start, expression.span.end) };
+}
+
+function parseRecordLiteralSpread(
+  parser: AggregateLiteralParser,
+): Extract<CastExpression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+  const start = parser.previous();
+  const expression = parser.parseExpression();
+  return { kind: "Spread", expression, span: span(start.span.start, expression.span.end) };
 }
 
 function parseShorthandRecordLiteralField(

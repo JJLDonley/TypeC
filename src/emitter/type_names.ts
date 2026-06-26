@@ -1,5 +1,6 @@
 import type { FixedArrayTypeRef, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { type CTypeAliases, emitCType } from "c/type.ts";
+import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 
@@ -9,6 +10,7 @@ export function emitCTypeName(
 ): Str {
   if (type.kind === "FixedArrayTypeRef") return emitFixedArrayCTypeName(type, aliases);
   if (type.kind === "InferredArrayTypeRef") return emitInferredArrayCTypeName(type, aliases);
+  if (type.kind === "FunctionTypeRef") return typeName(type);
   return emitCType(type, aliases);
 }
 
@@ -22,7 +24,10 @@ function emitInferredArrayCTypeName(
 
 function emitFixedArrayCTypeName(type: FixedArrayTypeRef, aliases: CTypeAliases): Str {
   const shape = fixedArrayShape(type);
-  return `${emitCType(shape.element, aliases)}${shape.sizes.map(arraySuffix).join("")}`;
+  const element = shape.element.kind === "FunctionTypeRef"
+    ? typeName(shape.element)
+    : emitCType(shape.element, aliases);
+  return `${element}${shape.sizes.map(arraySuffix).join("")}`;
 }
 
 type FixedArrayShape = {

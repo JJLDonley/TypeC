@@ -1,8 +1,10 @@
 import type {
   ArrayLiteralExpr,
+  ArrowFunctionExpr,
   BinaryExpr,
   BoolLiteral,
   CallExpr,
+  CastExpr,
   ConditionalExpr,
   Expression,
   FieldAccessExpr,
@@ -21,12 +23,15 @@ import type {
   RecordLiteralExpr,
   StringLiteral,
   UnaryExpr,
+  ZeroValueExpr,
 } from "core/ast.ts";
 import type {
   CastArrayLiteralExpr,
+  CastArrowFunctionExpr,
   CastBinaryExpr,
   CastBoolLiteral,
   CastCallExpr,
+  CastCastExpr,
   CastConditionalExpr,
   CastExpression,
   CastFieldAccessExpr,
@@ -45,8 +50,11 @@ import type {
   CastRecordLiteralExpr,
   CastStringLiteral,
   CastUnaryExpr,
+  CastZeroValueExpr,
 } from "core/cast.ts";
 import { lowerTypeRef } from "lower/types.ts";
+
+type usize = number;
 
 export function lowerExpression(expression: CastExpression): Expression {
   switch (expression.kind) {
@@ -56,8 +64,12 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerFloatLiteral(expression);
     case "BoolLiteral":
       return lowerBoolLiteral(expression);
+    case "ZeroValueExpr":
+      return lowerZeroValueExpr(expression);
     case "StringLiteral":
       return lowerStringLiteral(expression);
+    case "ArrowFunctionExpr":
+      return lowerArrowFunctionExpr(expression);
     case "IdentifierExpr":
       return lowerIdentifierExpr(expression);
     case "UnaryExpr":
@@ -68,6 +80,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerConditionalExpr(expression);
     case "NullishCoalesceExpr":
       return lowerNullishCoalesceExpr(expression);
+    case "CastExpr":
+      return lowerCastExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
     case "NewExpr":
@@ -104,6 +118,10 @@ function lowerIntegerLiteral(expression: CastIntegerLiteral): IntegerLiteral {
   };
 }
 
+function lowerZeroValueExpr(expression: CastZeroValueExpr): ZeroValueExpr {
+  return { kind: "ZeroValueExpr", span: expression.span };
+}
+
 function lowerFloatLiteral(expression: CastFloatLiteral): FloatLiteral {
   return {
     kind: "FloatLiteral",
@@ -124,6 +142,15 @@ function lowerBoolLiteral(expression: CastBoolLiteral): BoolLiteral {
 
 function lowerStringLiteral(expression: CastStringLiteral): StringLiteral {
   return { kind: "StringLiteral", text: expression.text, span: expression.span };
+}
+
+function lowerArrowFunctionExpr(expression: CastArrowFunctionExpr): ArrowFunctionExpr {
+  return {
+    kind: "ArrowFunctionExpr",
+    params: expression.params,
+    body: lowerExpression(expression.body),
+    span: expression.span,
+  };
 }
 
 function lowerIdentifierExpr(expression: CastIdentifierExpr): IdentifierExpr {
@@ -165,6 +192,15 @@ function lowerNullishCoalesceExpr(expression: CastNullishCoalesceExpr): NullishC
     operator: expression.operator,
     left: lowerExpression(expression.left),
     fallback: lowerExpression(expression.fallback),
+    span: expression.span,
+  };
+}
+
+function lowerCastExpr(expression: CastCastExpr): CastExpr {
+  return {
+    kind: "CastExpr",
+    type: lowerTypeRef(expression.type),
+    expression: lowerExpression(expression.expression),
     span: expression.span,
   };
 }
@@ -260,13 +296,18 @@ function lowerOptionalIndexExpr(expression: CastOptionalIndexExpr): OptionalInde
 function lowerRecordLiteralExpr(expression: CastRecordLiteralExpr): RecordLiteralExpr {
   return {
     kind: "RecordLiteralExpr",
-    fields: expression.fields.map((field) => ({
-      name: field.name,
-      expression: lowerExpression(field.expression),
-      span: field.span,
-    })),
+    fields: expression.fields.map(lowerRecordLiteralEntry),
     span: expression.span,
   };
+}
+
+function lowerRecordLiteralEntry(
+  field: CastRecordLiteralExpr["fields"][usize],
+): RecordLiteralExpr["fields"][usize] {
+  if (field.kind === "Spread") {
+    return { kind: "Spread", expression: lowerExpression(field.expression), span: field.span };
+  }
+  return { name: field.name, expression: lowerExpression(field.expression), span: field.span };
 }
 
 function lowerArrayLiteralExpr(expression: CastArrayLiteralExpr): ArrayLiteralExpr {

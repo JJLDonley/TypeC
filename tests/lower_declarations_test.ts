@@ -3,10 +3,16 @@ import type {
   CastBlockStmt,
   CastFunctionDecl,
   CastImportDecl,
+  CastStructDecl,
   CastTypeAliasDecl,
   CastTypeRef,
 } from "core/cast.ts";
-import { lowerFunctionDecl, lowerImportDecl, lowerTypeAliasDecl } from "lower/declarations.ts";
+import {
+  lowerFunctionDecl,
+  lowerImportDecl,
+  lowerStructTypeAlias,
+  lowerTypeAliasDecl,
+} from "lower/declarations.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -38,6 +44,27 @@ Deno.test("lowers type alias declarations", () => {
 
   assertText(lowered.name, "Value");
   assertSame(lowered.exported, true);
+});
+
+Deno.test("lowers struct declarations to record type aliases", () => {
+  const decl: CastStructDecl = {
+    kind: "StructDecl",
+    exported: true,
+    name: "Vec2",
+    fields: [
+      { name: "x", type: named("f32"), span },
+      { name: "y", type: named("f32"), span },
+    ],
+    span,
+  };
+  const lowered = lowerStructTypeAlias(decl);
+
+  assertText(lowered.name, "Vec2");
+  assertText(lowered.cName ?? "", "Vec2");
+  assertSame(lowered.exported, true);
+  if (lowered.type.kind !== "RecordTypeRef") throw new Error("Expected record type");
+  assertText(lowered.type.fields[0]?.name ?? "", "x");
+  assertText(lowered.type.fields[1]?.name ?? "", "y");
 });
 
 Deno.test("lowers function declarations", () => {

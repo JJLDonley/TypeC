@@ -30,12 +30,17 @@ export function emitConstantExpressionExpected(
       return emitConstantBinaryExpression(expr, expectedType, context);
     case "ConditionalExpr":
       return emitConstantConditionalExpression(expr, expectedType, context);
+    case "CastExpr":
+      return `((${emitCTypeName(expr.type, context.typeAliases)})${
+        emitConstantExpressionExpected(expr.expression, expectedType, context)
+      })`;
     case "RecordLiteralExpr":
       return emitConstantRecordLiteral(expr, expectedType, context);
     case "ArrayLiteralExpr":
       return emitConstantArrayLiteral(expr, expectedType, context);
     case "FieldAccessExpr":
       return emitQualifiedConstantReference(expr, expectedType, context);
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "CallExpr":
     case "NewExpr":
@@ -121,14 +126,17 @@ function emitConstantRecordLiteral(
   context: EmitContext,
 ): Str {
   const record = expectedRecordType(expectedType, context);
-  const fields = expr.fields.map((field) => emitConstantRecordField(field, record, context)).join(
-    ", ",
-  );
+  const fields = expr.fields.filter((field) => field.kind !== "Spread").map((field) =>
+    emitConstantRecordField(field, record, context)
+  ).join(", ");
   return `(${expectedType}){ ${fields} }`;
 }
 
 function emitConstantRecordField(
-  field: Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize],
+  field: Extract<
+    Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize],
+    { kind?: "Field" }
+  >,
   record: RecordTypeRef | null,
   context: EmitContext,
 ): Str {

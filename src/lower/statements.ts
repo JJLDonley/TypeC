@@ -1,28 +1,36 @@
 import type {
+  ArrayDestructureStmt,
   AssignmentStmt,
   BlockStmt,
   DeferStmt,
   DoWhileStmt,
   ExpressionStmt,
   ForClauseStmt,
+  ForInStmt,
+  ForOfStmt,
   ForStmt,
   IfStmt,
   IncDecStmt,
+  RecordRestStmt,
   Statement,
   SwitchStmt,
   VarDeclStmt,
   WhileStmt,
 } from "core/ast.ts";
 import type {
+  CastArrayDestructureStmt,
   CastAssignmentStmt,
   CastBlockStmt,
   CastDeferStmt,
   CastDoWhileStmt,
   CastExpressionStmt,
   CastForClauseStmt,
+  CastForInStmt,
+  CastForOfStmt,
   CastForStmt,
   CastIfStmt,
   CastIncDecStmt,
+  CastRecordRestStmt,
   CastStatement,
   CastSwitchStmt,
   CastVarDeclStmt,
@@ -55,8 +63,14 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerExpressionStmt(statement);
     case "BreakStmt":
       return { kind: "BreakStmt", span: statement.span };
+    case "ContinueStmt":
+      return { kind: "ContinueStmt", span: statement.span };
     case "VarDeclStmt":
       return lowerVarDeclStmt(statement);
+    case "RecordRestStmt":
+      return lowerRecordRestStmt(statement);
+    case "ArrayDestructureStmt":
+      return lowerArrayDestructureStmt(statement);
     case "AssignmentStmt":
       return lowerAssignmentStmt(statement);
     case "IncDecStmt":
@@ -69,6 +83,10 @@ function lowerStatement(statement: CastStatement): Statement {
       return lowerDoWhileStmt(statement);
     case "ForStmt":
       return lowerForStmt(statement);
+    case "ForOfStmt":
+      return lowerForOfStmt(statement);
+    case "ForInStmt":
+      return lowerForInStmt(statement);
     case "IfStmt":
       return lowerIfStmt(statement);
   }
@@ -96,6 +114,27 @@ function lowerIfStmt(statement: CastIfStmt): IfStmt {
     condition: lowerExpression(statement.condition),
     thenBody: lowerBlockStmt(statement.thenBody),
     elseBody: statement.elseBody ? lowerBlockStmt(statement.elseBody) : null,
+    span: statement.span,
+  };
+}
+
+function lowerRecordRestStmt(statement: CastRecordRestStmt): RecordRestStmt {
+  return {
+    kind: "RecordRestStmt",
+    mutable: statement.mutable,
+    names: statement.names,
+    restName: statement.restName,
+    source: lowerExpression(statement.source),
+    span: statement.span,
+  };
+}
+
+function lowerArrayDestructureStmt(statement: CastArrayDestructureStmt): ArrayDestructureStmt {
+  return {
+    kind: "ArrayDestructureStmt",
+    mutable: statement.mutable,
+    names: statement.names,
+    source: lowerExpression(statement.source),
     span: statement.span,
   };
 }
@@ -171,12 +210,33 @@ function lowerForClauseStmt(statement: CastForClauseStmt): ForClauseStmt {
   return lowerStatement(statement) as ForClauseStmt;
 }
 
+function lowerForOfStmt(statement: CastForOfStmt): ForOfStmt {
+  return {
+    kind: "ForOfStmt",
+    mutable: statement.mutable,
+    name: statement.name,
+    iterable: lowerExpression(statement.iterable),
+    body: lowerBlockStmt(statement.body),
+    span: statement.span,
+  };
+}
+
+function lowerForInStmt(statement: CastForInStmt): ForInStmt {
+  return {
+    kind: "ForInStmt",
+    name: statement.name,
+    iterable: lowerExpression(statement.iterable),
+    body: lowerBlockStmt(statement.body),
+    span: statement.span,
+  };
+}
+
 function lowerVarDeclStmt(statement: CastVarDeclStmt): VarDeclStmt {
   return {
     kind: "VarDeclStmt",
     mutable: statement.mutable,
     name: statement.name,
-    type: lowerTypeRef(statement.type),
+    type: statement.type ? lowerTypeRef(statement.type) : null,
     initializer: lowerExpression(statement.initializer),
     span: statement.span,
   };

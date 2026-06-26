@@ -1,7 +1,7 @@
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
-import { parseArrayTypeName } from "checker/type_name_shapes.ts";
+import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
 import { isAssignable } from "checker/types.ts";
 
 type usize = number;
@@ -25,6 +25,8 @@ export function checkArrayLiteralTarget(
 ): ArrayLiteralTargetCheck {
   const array = parseArrayTypeName(expected);
   if (array) return { array, diagnostics: [] };
+  const slice = parseSliceTypeName(expected);
+  if (slice) return { array: { element: slice.element, length: null }, diagnostics: [] };
   return {
     array: null,
     diagnostics: [{

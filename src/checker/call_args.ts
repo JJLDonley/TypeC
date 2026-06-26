@@ -13,14 +13,21 @@ export function checkCallArity(
   variadic: b8,
   functionName: Str,
   span: SourceSpan,
+  minArgsLength: usize = paramsLength,
 ): Diagnostic[] {
-  if (variadic && argsLength >= paramsLength) return [];
-  if (!variadic && argsLength === paramsLength) return [];
-  const expected = variadic ? `at least ${paramsLength}` : `${paramsLength}`;
+  if (variadic && argsLength >= minArgsLength) return [];
+  if (!variadic && argsLength >= minArgsLength && argsLength <= paramsLength) return [];
+  const expected = arityExpected(paramsLength, minArgsLength, variadic);
   return [{
     message: `Function '${functionName}' expects ${expected} arguments, got ${argsLength}`,
     span,
   }];
+}
+
+function arityExpected(paramsLength: usize, minArgsLength: usize, variadic: b8): Str {
+  if (variadic) return `at least ${minArgsLength}`;
+  if (minArgsLength === paramsLength) return `${paramsLength}`;
+  return `${minArgsLength} to ${paramsLength}`;
 }
 
 export function checkCallArgumentType(

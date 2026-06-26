@@ -12,11 +12,13 @@ type BasicExpr = Extract<
 type NonBasicExpr = Exclude<Expression, BasicExpr>;
 
 export interface ExpressionTypeHandlers {
+  arrow(expr: Extract<Expression, { kind: "ArrowFunctionExpr" }>): TypeName;
   identifier(name: Str, span: SourceSpan): TypeName;
   unary(expr: Extract<Expression, { kind: "UnaryExpr" }>): TypeName;
   binary(expr: Extract<Expression, { kind: "BinaryExpr" }>): TypeName;
   conditional(expr: Extract<Expression, { kind: "ConditionalExpr" }>): TypeName;
   nullish(expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>): TypeName;
+  cast(expr: Extract<Expression, { kind: "CastExpr" }>): TypeName;
   call(expr: Extract<Expression, { kind: "CallExpr" }>): TypeName;
   newExpr(expr: Extract<Expression, { kind: "NewExpr" }>): TypeName;
   methodCall(expr: Extract<Expression, { kind: "MethodCallExpr" }>): TypeName;
@@ -49,6 +51,8 @@ function computeNonBasicExpressionType(
   handlers: ExpressionTypeHandlers,
 ): ExpressionTypeCheck {
   switch (expr.kind) {
+    case "ArrowFunctionExpr":
+      return ok(handlers.arrow(expr));
     case "IdentifierExpr":
       return ok(handlers.identifier(expr.name, expr.span));
     case "UnaryExpr":
@@ -59,6 +63,8 @@ function computeNonBasicExpressionType(
       return ok(handlers.conditional(expr));
     case "NullishCoalesceExpr":
       return ok(handlers.nullish(expr));
+    case "CastExpr":
+      return ok(handlers.cast(expr));
     case "CallExpr":
       return ok(handlers.call(expr));
     case "NewExpr":
@@ -89,9 +95,10 @@ function computeNonBasicExpressionType(
 }
 
 function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
-  return expr.kind === "IdentifierExpr" || expr.kind === "UnaryExpr" ||
-    expr.kind === "BinaryExpr" || expr.kind === "ConditionalExpr" ||
-    expr.kind === "NullishCoalesceExpr" || expr.kind === "CallExpr" ||
+  return expr.kind === "ArrowFunctionExpr" || expr.kind === "IdentifierExpr" ||
+    expr.kind === "UnaryExpr" || expr.kind === "BinaryExpr" ||
+    expr.kind === "ConditionalExpr" ||
+    expr.kind === "NullishCoalesceExpr" || expr.kind === "CastExpr" || expr.kind === "CallExpr" ||
     expr.kind === "NewExpr" || expr.kind === "MethodCallExpr" ||
     expr.kind === "PostfixPointerExpr" || expr.kind === "NonNullAssertExpr" ||
     expr.kind === "FieldAccessExpr" || expr.kind === "OptionalFieldAccessExpr" ||

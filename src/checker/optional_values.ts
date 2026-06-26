@@ -8,6 +8,7 @@ import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 type b8 = boolean;
+type usize = number;
 
 export interface OptionalConstructorCheck {
   handled: b8;
@@ -65,7 +66,7 @@ function singleTypeArg(expr: Extract<Expression, { kind: "CallExpr" }>): TypeRef
 
 function checkArity(
   expr: Extract<Expression, { kind: "CallExpr" }>,
-  expected: number,
+  expected: usize,
 ): Diagnostic[] {
   return expr.args.length === expected ? [] : [{
     message: `${expr.callee} expects ${expected} arguments, got ${expr.args.length}`,

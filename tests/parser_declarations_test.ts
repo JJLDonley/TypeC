@@ -82,6 +82,33 @@ Deno.test("parses enum declarations", () => {
   assertText(decl.kind, "EnumDecl");
 });
 
+Deno.test("parses struct declarations", () => {
+  const fixture = parserFixture([
+    keyword("export"),
+    keyword("struct"),
+    identifier("Vec2"),
+    punct("{"),
+    identifier("x"),
+    punct(":"),
+    identifier("f32"),
+    punct(";"),
+    identifier("y"),
+    punct(":"),
+    identifier("f32"),
+    punct(";"),
+    punct("}"),
+  ]);
+
+  const declaration = parseDeclarationWith(fixture.parser);
+
+  assertText(declaration.kind, "StructDecl");
+  if (declaration.kind !== "StructDecl") throw new Error("Expected struct");
+  assertBool(declaration.exported, true);
+  assertText(declaration.name, "Vec2");
+  assertText(declaration.fields[0]?.name ?? "", "x");
+  assertText(declaration.fields[1]?.name ?? "", "y");
+});
+
 Deno.test("parses module constant declarations", () => {
   const fixture = parserFixture([
     keyword("export"),
@@ -122,6 +149,28 @@ Deno.test("parses extern function declarations", () => {
   assertText(declaration.kind, "FunctionDecl");
   if (declaration.kind !== "FunctionDecl") throw new Error("Expected function");
   assertBool(declaration.external, true);
+});
+
+Deno.test("parses function overload declarations", () => {
+  const fixture = parserFixture([
+    keyword("function"),
+    identifier("read"),
+    punct("("),
+    identifier("value"),
+    punct(":"),
+    identifier("i32"),
+    punct(")"),
+    punct(":"),
+    identifier("i32"),
+    punct(";"),
+  ]);
+
+  const declaration = parseDeclarationWith(fixture.parser);
+
+  assertText(declaration.kind, "FunctionDecl");
+  if (declaration.kind !== "FunctionDecl") throw new Error("Expected function");
+  assertBool(declaration.overload === true, true);
+  assertBool(declaration.external, false);
 });
 
 Deno.test("parses variadic extern function declarations", () => {

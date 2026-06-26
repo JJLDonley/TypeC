@@ -6,7 +6,7 @@ type Str = string;
 type usize = number;
 
 type RecordLiteralExpr = Extract<Expression, { kind: "RecordLiteralExpr" }>;
-type RecordLiteralField = RecordLiteralExpr["fields"][usize];
+type RecordLiteralField = Extract<RecordLiteralExpr["fields"][usize], { kind?: "Field" }>;
 
 export function checkRecordLiteralTarget(
   record: RecordTypeRef | null,

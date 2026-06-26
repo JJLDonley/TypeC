@@ -1,6 +1,8 @@
 import type { TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { optionalCTypeName } from "c/optional_names.ts";
+import { recordCTypeName } from "c/records.ts";
 import { sliceCTypeName } from "c/slice_names.ts";
+import { tupleCTypeName } from "c/tuples.ts";
 import { optionalTypeElement } from "core/optional_types.ts";
 
 type Str = string;
@@ -25,10 +27,22 @@ export function emitCType(
       throw new Error("Cannot emit inferred array type without a declarator");
     case "FixedArrayTypeRef":
       throw new Error("Cannot emit fixed array type without a declarator");
+    case "TupleTypeRef":
+      return tupleCTypeName(type.elements);
+    case "UnionTypeRef":
+      throw new Error("Cannot emit union type sugar directly");
+    case "IntersectionTypeRef":
+      throw new Error("Cannot emit intersection type sugar directly");
+    case "ConditionalTypeRef":
+      throw new Error("Cannot emit conditional type directly");
+    case "IndexedAccessTypeRef":
+      throw new Error("Cannot emit indexed access type directly");
+    case "MappedTypeRef":
+      throw new Error("Cannot emit mapped type directly");
     case "FunctionTypeRef":
       throw new Error("Cannot emit function pointer type without a declarator");
     case "RecordTypeRef":
-      throw new Error("Record type literals must be emitted through a type alias");
+      return recordCTypeName(type);
   }
 }
 
@@ -65,6 +79,16 @@ function emitFunctionPointerCDeclarator(
   return `${emitCType(type.returnType, aliases)} (*${name})(${params})`;
 }
 
+function emitFunctionPointerArrayCDeclarator(
+  type: Extract<TypeRef, { kind: "FunctionTypeRef" }>,
+  name: Str,
+  sizes: Str[],
+  aliases: CTypeAliases,
+): Str {
+  const params = type.params.map((param) => emitCType(param.type, aliases)).join(", ");
+  return `${emitCType(type.returnType, aliases)} (*${name}${arrayDimensions(sizes)})(${params})`;
+}
+
 function emitInferredArrayParamCDeclarator(
   type: Extract<TypeRef, { kind: "InferredArrayTypeRef" }>,
   name: Str,
@@ -83,6 +107,9 @@ function emitFixedArrayCDeclarator(
   aliases: CTypeAliases,
 ): Str {
   const shape = fixedArrayShape(type);
+  if (shape.element.kind === "FunctionTypeRef") {
+    return emitFunctionPointerArrayCDeclarator(shape.element, name, shape.sizes, aliases);
+  }
   return `${emitCType(shape.element, aliases)} ${name}${arrayDimensions(shape.sizes)}`;
 }
 
@@ -92,8 +119,22 @@ function emitFixedArrayParamCDeclarator(
   aliases: CTypeAliases,
 ): Str {
   const shape = fixedArrayShape(type);
+  if (shape.element.kind === "FunctionTypeRef") {
+    return emitFunctionPointerArrayParamCDeclarator(shape.element, name, shape.sizes, aliases);
+  }
   if (shape.sizes.length === 1) return `${emitCType(shape.element, aliases)}* ${name}`;
   return `${emitCType(shape.element, aliases)} (*${name})${arrayDimensions(shape.sizes.slice(1))}`;
+}
+
+function emitFunctionPointerArrayParamCDeclarator(
+  type: Extract<TypeRef, { kind: "FunctionTypeRef" }>,
+  name: Str,
+  sizes: Str[],
+  aliases: CTypeAliases,
+): Str {
+  const params = type.params.map((param) => emitCType(param.type, aliases)).join(", ");
+  const dimensions = sizes.length === 1 ? "" : arrayDimensions(sizes.slice(1));
+  return `${emitCType(type.returnType, aliases)} (*${name}${dimensions})(${params})`;
 }
 
 type FixedArrayShape = {

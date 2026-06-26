@@ -1,6 +1,6 @@
 import type { CastParam, CastRecordField, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
-import { optionalTypeRefWithEnd } from "core/optional_types.ts";
+import type { SourcePos } from "core/diagnostics.ts";
 import { span } from "parser/helpers.ts";
 
 type Str = string;
@@ -18,13 +18,59 @@ export interface TypeRefParser {
 }
 
 export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
+  return parseConditionalTypeRef(parser);
+}
+
+function parseConditionalTypeRef(parser: TypeRefParser): CastTypeRef {
+  const checkType: CastTypeRef = parseUnionTypeRef(parser);
+  if (!parser.matchText("extends")) return checkType;
+  const extendsType: CastTypeRef = parseUnionTypeRef(parser, true);
+  parser.expectText("?");
+  const trueType: CastTypeRef = parseTypeRefWith(parser);
+  parser.expectText(":");
+  const falseType: CastTypeRef = parseTypeRefWith(parser);
+  return {
+    kind: "ConditionalTypeRef",
+    checkType,
+    extendsType,
+    trueType,
+    falseType,
+    span: span(checkType.span.start, falseType.span.end),
+  };
+}
+
+function parseUnionTypeRef(parser: TypeRefParser, stopQuestion: b8 = false): CastTypeRef {
+  const first: CastTypeRef = parseIntersectionTypeRef(parser, stopQuestion);
+  if (!parser.matchText("|")) return first;
+  const members: CastTypeRef[] = [first];
+  do {
+    members.push(parseIntersectionTypeRef(parser, stopQuestion));
+  } while (parser.matchText("|"));
+  const last: CastTypeRef = members[members.length - 1]!;
+  return { kind: "UnionTypeRef", members, span: span(first.span.start, last.span.end) };
+}
+
+function parseIntersectionTypeRef(parser: TypeRefParser, stopQuestion: b8 = false): CastTypeRef {
+  const first: CastTypeRef = parsePostfixTypeRef(parser, stopQuestion);
+  if (!parser.matchText("&")) return first;
+  const members: CastTypeRef[] = [first];
+  do {
+    members.push(parsePostfixTypeRef(parser, stopQuestion));
+  } while (parser.matchText("&"));
+  const last: CastTypeRef = members[members.length - 1]!;
+  return { kind: "IntersectionTypeRef", members, span: span(first.span.start, last.span.end) };
+}
+
+function parsePostfixTypeRef(parser: TypeRefParser, stopQuestion: b8 = false): CastTypeRef {
   let type: CastTypeRef = parser.checkText("{")
     ? parseRecordTypeRef(parser)
+    : parser.checkText("[")
+    ? parseTupleTypeRef(parser)
     : parser.checkText("(")
     ? parseParenthesizedOrFunctionTypeRef(parser)
     : parseNamedTypeRef(parser);
 
-  while (isTypePostfixStart(parser)) {
+  while (isTypePostfixStart(parser, stopQuestion)) {
     if (parser.matchText("*")) {
       type = {
         kind: "PointerTypeRef",
@@ -42,13 +88,22 @@ export function parseTypeRefWith(parser: TypeRefParser): CastTypeRef {
       continue;
     }
     if (parser.matchText("?")) {
-      type = optionalTypeRefWithEnd(type, parser.previous().span.end);
+      type = castOptionalTypeRefWithEnd(type, parser.previous().span.end);
       continue;
     }
-    type = parseArrayTypeRef(parser, type);
+    type = parseBracketPostfixTypeRef(parser, type);
   }
 
   return type;
+}
+
+function castOptionalTypeRefWithEnd(element: CastTypeRef, end: SourcePos): CastTypeRef {
+  return {
+    kind: "NamedTypeRef",
+    name: "Optional",
+    typeArgs: [element],
+    span: { start: element.span.start, end },
+  };
 }
 
 function parseNamedTypeRef(parser: TypeRefParser): CastTypeRef {
@@ -144,16 +199,33 @@ function isCanonicalGenericType(name: Str): b8 {
     name === "Slice";
 }
 
-function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
+function parseBracketPostfixTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
   parser.expectText("[");
-  if (parser.matchText("]")) {
-    return {
-      kind: "InferredArrayTypeRef",
-      element,
-      span: span(element.span.start, parser.previous().span.end),
-    };
-  }
+  if (parser.matchText("]")) return inferredArrayTypeRef(parser, element);
+  if (parser.check("identifier")) return parseIndexedAccessTypeRef(parser, element);
+  return parseFixedArrayTypeRef(parser, element);
+}
 
+function inferredArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
+  return {
+    kind: "InferredArrayTypeRef",
+    element,
+    span: span(element.span.start, parser.previous().span.end),
+  };
+}
+
+function parseIndexedAccessTypeRef(parser: TypeRefParser, objectType: CastTypeRef): CastTypeRef {
+  const index = parser.expectKind("identifier", "Expected mapped type key name");
+  const close = parser.expectText("]");
+  return {
+    kind: "IndexedAccessTypeRef",
+    objectType,
+    indexName: index.text,
+    span: span(objectType.span.start, close.span.end),
+  };
+}
+
+function parseFixedArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTypeRef {
   const size = parser.expectKind("integer", "Expected array size");
   const close = parser.expectText("]");
   return {
@@ -162,6 +234,19 @@ function parseArrayTypeRef(parser: TypeRefParser, element: CastTypeRef): CastTyp
     sizeText: size.text,
     span: span(element.span.start, close.span.end),
   };
+}
+
+function parseTupleTypeRef(parser: TypeRefParser): CastTypeRef {
+  const open = parser.expectText("[");
+  const elements: CastTypeRef[] = [];
+  if (!parser.checkText("]")) {
+    do {
+      if (parser.checkText("]")) break;
+      elements.push(parseTypeRefWith(parser));
+    } while (parser.matchText(","));
+  }
+  const close = parser.expectText("]");
+  return { kind: "TupleTypeRef", elements, span: span(open.span.start, close.span.end) };
 }
 
 function parseParenthesizedOrFunctionTypeRef(parser: TypeRefParser): CastTypeRef {
@@ -216,6 +301,7 @@ function parseFunctionTypeParam(parser: TypeRefParser): CastParam {
 
 function parseRecordTypeRef(parser: TypeRefParser): CastTypeRef {
   const open = parser.expectText("{");
+  if (parser.checkText("[")) return parseMappedTypeRef(parser, open);
   const fields: CastRecordField[] = [];
   while (!parser.checkText("}") && !parser.check("eof")) {
     fields.push(parseRecordField(parser));
@@ -225,6 +311,26 @@ function parseRecordTypeRef(parser: TypeRefParser): CastTypeRef {
   }
   const close = parser.expectText("}");
   return { kind: "RecordTypeRef", fields, span: span(open.span.start, close.span.end) };
+}
+
+function parseMappedTypeRef(parser: TypeRefParser, open: Token): CastTypeRef {
+  parser.expectText("[");
+  const key = parser.expectKind("identifier", "Expected mapped type key name");
+  parser.expectText("in");
+  parser.expectText("keyof");
+  const sourceType = parseTypeRefWith(parser);
+  parser.expectText("]");
+  parser.expectText(":");
+  const valueType = parseTypeRefWith(parser);
+  parseRecordFieldSeparator(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "MappedTypeRef",
+    keyName: key.text,
+    sourceType,
+    valueType,
+    span: span(open.span.start, close.span.end),
+  };
 }
 
 function parseRecordField(parser: TypeRefParser): CastRecordField {
@@ -238,7 +344,16 @@ function parseRecordFieldSeparator(parser: TypeRefParser): b8 {
   return parser.matchText(";") || parser.matchText(",");
 }
 
-function isTypePostfixStart(parser: TypeRefParser): b8 {
-  return parser.checkText("*") || parser.checkText("&") || parser.checkText("[") ||
-    parser.checkText("?");
+function isTypePostfixStart(parser: TypeRefParser, stopQuestion: b8): b8 {
+  return parser.checkText("*") || isReferencePostfix(parser) || parser.checkText("[") ||
+    (!stopQuestion && parser.checkText("?"));
+}
+
+function isReferencePostfix(parser: TypeRefParser): b8 {
+  return parser.checkText("&") && !isTypeStart(parser.peek(1));
+}
+
+function isTypeStart(token: Token): b8 {
+  return token.kind === "identifier" || token.text === "{" || token.text === "[" ||
+    token.text === "(";
 }

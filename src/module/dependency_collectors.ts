@@ -102,9 +102,10 @@ function collectStatementDeps(
       collectExpressionDeps(statement.expression, selected, ignoredTypes);
       return;
     case "BreakStmt":
+    case "ContinueStmt":
       return;
     case "VarDeclStmt":
-      collectTypeDeps(statement.type, selected, ignoredTypes);
+      if (statement.type !== null) collectTypeDeps(statement.type, selected, ignoredTypes);
       collectExpressionDeps(statement.initializer, selected, ignoredTypes);
       return;
     case "AssignmentStmt":
@@ -122,6 +123,11 @@ function collectStatementDeps(
     case "DoWhileStmt":
       collectBlockDeps(statement.body, selected, ignoredTypes);
       collectExpressionDeps(statement.condition, selected, ignoredTypes);
+      return;
+    case "ForOfStmt":
+    case "ForInStmt":
+      collectExpressionDeps(statement.iterable, selected, ignoredTypes);
+      collectBlockDeps(statement.body, selected, ignoredTypes);
       return;
     case "IfStmt":
       collectExpressionDeps(statement.condition, selected, ignoredTypes);
@@ -157,6 +163,9 @@ function collectExpressionDeps(
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+      return;
+    case "ArrowFunctionExpr":
+      collectExpressionDeps(expression.body, selected, ignoredTypes);
       return;
     case "IdentifierExpr":
       selected.constants.add(expression.name);
@@ -252,6 +261,19 @@ function collectTypeDeps(
     case "FunctionTypeRef":
       for (const param of type.params) collectTypeDeps(param.type, selected, ignoredTypes);
       collectTypeDeps(type.returnType, selected, ignoredTypes);
+      return;
+    case "TupleTypeRef":
+      for (const element of type.elements) collectTypeDeps(element, selected, ignoredTypes);
+      return;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      for (const member of type.members) collectTypeDeps(member, selected, ignoredTypes);
+      return;
+    case "ConditionalTypeRef":
+      collectTypeDeps(type.checkType, selected, ignoredTypes);
+      collectTypeDeps(type.extendsType, selected, ignoredTypes);
+      collectTypeDeps(type.trueType, selected, ignoredTypes);
+      collectTypeDeps(type.falseType, selected, ignoredTypes);
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeDeps(field.type, selected, ignoredTypes);

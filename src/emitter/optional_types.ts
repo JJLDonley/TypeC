@@ -21,9 +21,11 @@ export function collectOptionalTypeDefinitions(
   const definitions = [...elements.values()].map((element) =>
     emitOptionalCType(element, context.typeAliases)
   );
+  const emitted = new Set(elements.keys());
   for (const type of context.expressionTypes?.values() ?? []) {
     const element = optionalTypeNameElement(type.type);
-    if (element !== null && !elements.has(element)) {
+    if (element !== null && !emitted.has(element)) {
+      emitted.add(element);
       definitions.push(emitOptionalCTypeNameDefinition(element, context));
     }
   }
@@ -53,7 +55,7 @@ function collectFunctionOptionals(fn: FunctionDecl, elements: Map<Str, TypeRef>)
 }
 
 function collectStatementOptionals(stmt: Statement, elements: Map<Str, TypeRef>): void {
-  if (stmt.kind === "VarDeclStmt") collectTypeOptionals(stmt.type, elements);
+  if (stmt.kind === "VarDeclStmt" && stmt.type !== null) collectTypeOptionals(stmt.type, elements);
   if (stmt.kind === "WhileStmt" || stmt.kind === "DoWhileStmt") {
     collectBlockOptionals(stmt.body.statements, elements);
   }
@@ -85,6 +87,19 @@ function collectTypeOptionals(type: TypeRef, elements: Map<Str, TypeRef>): void 
     case "FunctionTypeRef":
       for (const param of type.params) collectTypeOptionals(param.type, elements);
       collectTypeOptionals(type.returnType, elements);
+      return;
+    case "TupleTypeRef":
+      for (const element of type.elements) collectTypeOptionals(element, elements);
+      return;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      for (const member of type.members) collectTypeOptionals(member, elements);
+      return;
+    case "ConditionalTypeRef":
+      collectTypeOptionals(type.checkType, elements);
+      collectTypeOptionals(type.extendsType, elements);
+      collectTypeOptionals(type.trueType, elements);
+      collectTypeOptionals(type.falseType, elements);
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeOptionals(field.type, elements);

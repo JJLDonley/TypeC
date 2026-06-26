@@ -18,3 +18,7 @@ export function registerLocalType(
 ): void {
   locals.set(name, emitCTypeName(type, typeAliases));
 }
+
+export function registerLocalTypeName(locals: LocalTypes, name: Str, type: Str): void {
+  locals.set(name, type);
+}

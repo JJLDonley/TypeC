@@ -16,6 +16,8 @@ import type {
   CastInterfaceDecl,
   CastInterfaceMethod,
   CastParam,
+  CastRecordField,
+  CastStructDecl,
   CastTaggedUnionDecl,
   CastTaggedUnionVariant,
   CastTypeAliasDecl,
@@ -66,6 +68,7 @@ export type CastDeclaration =
   | CastImportDecl
   | CastTypeAliasDecl
   | CastClassDecl
+  | CastStructDecl
   | CastInterfaceDecl
   | CastTaggedUnionDecl
   | CastEnumDecl
@@ -77,6 +80,7 @@ export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
   if (parser.checkText("class")) return parseClassDeclaration(parser, modifiers);
+  if (parser.checkText("struct")) return parseStructDeclaration(parser, modifiers);
   if (parser.checkText("interface")) return parseInterfaceDeclaration(parser, modifiers);
   if (parser.checkText("union")) return parseTaggedUnionDeclaration(parser, modifiers);
   if (parser.checkText("enum")) return parseEnumDeclaration(parser, modifiers);
@@ -253,6 +257,41 @@ function parseClassMethod(
   };
 }
 
+function parseStructDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastStructDecl {
+  parser.diagnostics().push(...typeAliasModifierDiagnostics(modifiers.externToken));
+  const start = parser.expectText("struct");
+  const name = parser.expectKind("identifier", "Expected struct name");
+  parser.expectText("{");
+  const fields = parseStructFields(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "StructDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    fields,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseStructFields(parser: DeclarationParser): CastRecordField[] {
+  const fields: CastRecordField[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    if (parser.checkText("constructor")) {
+      parser.error(parser.peek(), "Structs cannot have constructors");
+    }
+    const name = parser.expectKind("identifier", "Expected struct field name");
+    if (parser.checkText("(")) parser.error(name, "Structs cannot have methods");
+    parser.expectText(":");
+    const type = parser.parseTypeRef();
+    const semi = parser.expectText(";");
+    fields.push({ name: name.text, type, span: span(name.span.start, semi.span.end) });
+  }
+  return fields;
+}
+
 function parseInterfaceDeclaration(
   parser: DeclarationParser,
   modifiers: DeclarationModifiers,
@@ -405,10 +444,21 @@ function parseFunctionDeclaration(
   parser.expectText("(");
   const params = parseFunctionParams(parser);
   parser.expectText(")");
-  parser.expectText(":");
-  const returnType = parser.parseTypeRef();
+  const returnType = parseFunctionReturnType(parser, modifiers, functionToken);
   if (modifiers.external) {
     return parseExternFunction(
+      parser,
+      modifiers.exported,
+      functionToken,
+      name.text,
+      genericParams,
+      params.params,
+      params.variadic,
+      returnType,
+    );
+  }
+  if (parser.checkText(";")) {
+    return parseOverloadFunction(
       parser,
       modifiers.exported,
       functionToken,
@@ -430,6 +480,21 @@ function parseFunctionDeclaration(
     params.variadic,
     returnType,
   );
+}
+
+function parseFunctionReturnType(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+  functionToken: Token,
+): CastTypeRef {
+  if (parser.matchText(":")) return parser.parseTypeRef();
+  if (modifiers.external) {
+    parser.error(functionToken, "Extern functions require explicit return types");
+  }
+  if (modifiers.exported) {
+    parser.error(functionToken, "Exported functions require explicit return types");
+  }
+  return { kind: "NamedTypeRef", name: "<infer>", span: functionToken.span };
 }
 
 function parseGenericParams(parser: DeclarationParser): CastGenericParam[] {
@@ -462,9 +527,17 @@ function parseFunctionParams(parser: DeclarationParser): FunctionParamsParse {
 
 function parseFunctionParam(parser: DeclarationParser): CastParam {
   const name = parser.expectKind("identifier", "Expected parameter name");
+  const optional = parser.matchText("?");
   parser.expectText(":");
   const type = parser.parseTypeRef();
-  return { name: name.text, type, span: span(name.span.start, type.span.end) };
+  const defaultValue = parser.matchText("=") ? parser.parseExpression() : null;
+  return {
+    name: name.text,
+    optional,
+    type,
+    defaultValue,
+    span: span(name.span.start, (defaultValue ?? type).span.end),
+  };
 }
 
 function parseExternFunction(
@@ -482,6 +555,33 @@ function parseExternFunction(
     kind: "FunctionDecl",
     exported,
     external: true,
+    name,
+    cName: null,
+    genericParams,
+    params,
+    variadic,
+    returnType,
+    body: null,
+    span: span(functionToken.span.start, semi.span.end),
+  };
+}
+
+function parseOverloadFunction(
+  parser: DeclarationParser,
+  exported: b8,
+  functionToken: Token,
+  name: Str,
+  genericParams: CastGenericParam[],
+  params: CastParam[],
+  variadic: b8,
+  returnType: CastTypeRef,
+): CastFunctionDecl {
+  const semi = parser.expectText(";");
+  return {
+    kind: "FunctionDecl",
+    exported,
+    external: false,
+    overload: true,
     name,
     cName: null,
     genericParams,

@@ -19,7 +19,7 @@ function collectFunctionSlices(fn: FunctionDecl, elements: Map<Str, TypeRef>): v
 }
 
 function collectStatementSlices(stmt: Statement, elements: Map<Str, TypeRef>): void {
-  if (stmt.kind === "VarDeclStmt") collectTypeSlices(stmt.type, elements);
+  if (stmt.kind === "VarDeclStmt" && stmt.type !== null) collectTypeSlices(stmt.type, elements);
   if (stmt.kind === "WhileStmt" || stmt.kind === "DoWhileStmt") {
     for (const child of stmt.body.statements) collectStatementSlices(child, elements);
   }
@@ -46,6 +46,19 @@ function collectTypeSlices(type: TypeRef, elements: Map<Str, TypeRef>): void {
     case "FunctionTypeRef":
       for (const param of type.params) collectTypeSlices(param.type, elements);
       collectTypeSlices(type.returnType, elements);
+      return;
+    case "TupleTypeRef":
+      for (const element of type.elements) collectTypeSlices(element, elements);
+      return;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      for (const member of type.members) collectTypeSlices(member, elements);
+      return;
+    case "ConditionalTypeRef":
+      collectTypeSlices(type.checkType, elements);
+      collectTypeSlices(type.extendsType, elements);
+      collectTypeSlices(type.trueType, elements);
+      collectTypeSlices(type.falseType, elements);
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeSlices(field.type, elements);

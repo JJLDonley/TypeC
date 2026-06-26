@@ -23,8 +23,15 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
     case "FunctionTypeRef":
       return type.params.every((param) => isCAbiTypeSeen(param.type, typeAliases, seen)) &&
         isCAbiTypeSeen(type.returnType, typeAliases, seen);
+    case "TupleTypeRef":
+      return type.elements.every((element) => isCAbiTypeSeen(element, typeAliases, seen));
     case "ReferenceTypeRef":
     case "SliceTypeRef":
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+    case "ConditionalTypeRef":
+    case "IndexedAccessTypeRef":
+    case "MappedTypeRef":
       return false;
   }
 }

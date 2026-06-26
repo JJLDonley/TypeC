@@ -18,6 +18,22 @@ Deno.test("parses unary expressions", () => {
   assertText(expr.operator, "-");
 });
 
+Deno.test("parses cast expressions", () => {
+  const atCast = parseExpressionWith(parserFor([
+    punctuation("@"),
+    identifier("f32"),
+    punctuation("("),
+    identifier("value"),
+    punctuation(")"),
+  ]));
+  const asCast = parseExpressionWith(
+    parserFor([identifier("value"), keyword("as"), identifier("i32")]),
+  );
+
+  assertText(atCast.kind, "CastExpr");
+  assertText(asCast.kind, "CastExpr");
+});
+
 Deno.test("parses logical not expressions", () => {
   const expr = parseExpressionWith(parserFor([operator("!"), operator("!"), identifier("a")]));
 
@@ -143,6 +159,12 @@ function parserFor(tokens: Token[]): ExpressionParser {
       current += 1;
       return token;
     },
+    parseTypeRef: () => {
+      const token = peek(tokens, current);
+      if (token.kind !== "identifier") throw new Error("Expected type");
+      current += 1;
+      return { kind: "NamedTypeRef", name: token.text, span: token.span };
+    },
     parsePostfixExpression: () => {
       const token = peek(tokens, current);
       if (token.kind !== "identifier") throw new Error("Expected identifier");
@@ -166,6 +188,10 @@ function identifier(text: Str): Token {
 
 function operator(text: Str): Token {
   return token("operator", text);
+}
+
+function keyword(text: Str): Token {
+  return token("keyword", text);
 }
 
 function punctuation(text: Str): Token {

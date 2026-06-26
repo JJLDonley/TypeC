@@ -101,6 +101,33 @@ Deno.test("lexes single-quoted string literals", () => {
   assertEqualText(tokens.map((token) => token.text), ["hello", ""]);
 });
 
+Deno.test("lexes escaped string literals", () => {
+  const tokens = lex(`"a\\n\\t\\\"" 'b\\n\\t\\\''`);
+  assertEqualText(tokens.map((token) => token.kind), ["string", "string", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ['a\n\t"', "b\n\t'", ""]);
+});
+
+Deno.test("preserves unknown string escapes", () => {
+  const tokens = lex(`"path\\file"`);
+  assertEqualText(tokens.map((token) => token.text), ["path\\file", ""]);
+});
+
+Deno.test("lexes plain template literals", () => {
+  const tokens = lex("`hello\nTypeC`");
+  assertEqualText(tokens.map((token) => token.kind), ["string", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ["hello\nTypeC", ""]);
+});
+
+Deno.test("lexes static template interpolation", () => {
+  const tokens = lex('`hello ${"TypeC"} ${42} ${true}`');
+  assertEqualText(tokens.map((token) => token.kind), ["string", "eof"]);
+  assertEqualText(tokens.map((token) => token.text), ["hello TypeC 42 true", ""]);
+});
+
+Deno.test("rejects runtime template interpolation", () => {
+  assertLexError("`hello ${name}`");
+});
+
 Deno.test("lexes numeric separators", () => {
   const tokens = lex("1_000 12_345.67_89");
   assertEqualText(tokens.map((token) => token.kind), ["integer", "float", "eof"]);

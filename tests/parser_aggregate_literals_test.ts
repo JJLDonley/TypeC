@@ -39,6 +39,12 @@ Deno.test("parses aggregate record literals", () => {
   assertLen(expr.kind === "RecordLiteralExpr" ? expr.fields.length : 0, 1);
 });
 
+Deno.test("parses zero initializer literal", () => {
+  const expr = parseRecordLiteralWith(parserFor([punct("{"), token("integer", "0"), punct("}")]));
+
+  assertText(expr.kind, "ZeroValueExpr");
+});
+
 Deno.test("parses shorthand aggregate record literal fields", () => {
   const expr = parseRecordLiteralWith(
     parserFor([punct("{"), identifier("x"), punct(","), identifier("y"), punct("}")]),
@@ -47,8 +53,10 @@ Deno.test("parses shorthand aggregate record literal fields", () => {
   assertText(expr.kind, "RecordLiteralExpr");
   if (expr.kind !== "RecordLiteralExpr") throw new Error("Expected record literal");
   assertLen(expr.fields.length, 2);
-  assertText(expr.fields[0]?.name ?? "", "x");
-  assertText(recordFieldExprName(expr.fields[1]?.expression), "y");
+  const first = expr.fields[0];
+  const second = expr.fields[1];
+  assertText(first?.kind === "Spread" ? "" : first?.name ?? "", "x");
+  assertText(second?.kind === "Spread" ? "" : recordFieldExprName(second?.expression), "y");
 });
 
 function parserFor(tokens: Token[]): AggregateLiteralParser {
@@ -72,6 +80,7 @@ function parserFor(tokens: Token[]): AggregateLiteralParser {
       current += 1;
       return token;
     },
+    previous: () => peek(tokens, current - 1),
     parseExpression: () => {
       const token = peek(tokens, current);
       if (token.kind !== "identifier") throw new Error("Expected expression");

@@ -89,14 +89,26 @@ class Resolver {
   }
 
   private declareFunctions(): void {
+    const groups = new Map<Str, { declared: b8; implemented: b8 }>();
     for (const fn of this.program.functions) {
-      this.declare(this.globalScope, fn.name, "function", fn.span);
+      const group = groups.get(fn.name) ?? { declared: false, implemented: false };
+      if (!group.declared) this.declare(this.globalScope, fn.name, "function", fn.span);
+      if (fn.overload !== true && group.implemented) {
+        this.diagnostics.push({ message: `Duplicate function '${fn.name}'`, span: fn.span });
+      }
+      groups.set(fn.name, {
+        declared: true,
+        implemented: group.implemented || fn.overload !== true,
+      });
     }
   }
 
   private resolveFunction(fn: FunctionDecl): void {
     const scope = this.scopeTable.createScope("function", this.globalScope);
     for (const param of fn.params) this.declare(scope, param.name, "parameter", param.span);
+    for (const param of fn.params) {
+      if (param.defaultValue) this.resolveExpression(param.defaultValue, scope);
+    }
     if (!fn.body) return;
     for (const statement of fn.body.statements) this.resolveStatement(statement, scope);
   }
@@ -115,10 +127,22 @@ class Resolver {
         this.resolveExpression(statement.expression, scope);
         return;
       case "BreakStmt":
+      case "ContinueStmt":
         return;
       case "VarDeclStmt":
         this.resolveExpression(statement.initializer, scope);
         this.declare(scope, statement.name, "local", statement.span);
+        return;
+      case "RecordRestStmt":
+        this.resolveExpression(statement.source, scope);
+        for (const name of statement.names) this.declare(scope, name, "local", statement.span);
+        if (statement.restName !== null) {
+          this.declare(scope, statement.restName, "local", statement.span);
+        }
+        return;
+      case "ArrayDestructureStmt":
+        this.resolveExpression(statement.source, scope);
+        for (const name of statement.names) this.declare(scope, name, "local", statement.span);
         return;
       case "AssignmentStmt":
         this.resolveAssignmentTarget(statement.target, scope);
@@ -146,6 +170,12 @@ class Resolver {
       case "ForStmt":
         this.resolveFor(statement, scope);
         return;
+      case "ForOfStmt":
+        this.resolveForOf(statement, scope);
+        return;
+      case "ForInStmt":
+        this.resolveForIn(statement, scope);
+        return;
       case "IfStmt":
         this.resolveExpression(statement.condition, scope);
         this.resolveBlock(statement.thenBody.statements, scope);
@@ -165,6 +195,27 @@ class Resolver {
     this.resolveExpression(statement.condition, scope);
     if (statement.update) this.resolveStatement(statement.update, scope);
     this.resolveBlock(statement.body.statements, scope);
+  }
+
+  private resolveForOf(statement: Extract<Statement, { kind: "ForOfStmt" }>, parent: Scope): void {
+    this.resolveExpression(statement.iterable, parent);
+    const scope = this.scopeTable.createScope("block", parent);
+    this.declare(scope, statement.name, "local", statement.span);
+    this.resolveBlock(statement.body.statements, scope);
+  }
+
+  private resolveForIn(statement: Extract<Statement, { kind: "ForInStmt" }>, parent: Scope): void {
+    if (!this.isEnumNamespaceExpression(statement.iterable)) {
+      this.resolveExpression(statement.iterable, parent);
+    }
+    const scope = this.scopeTable.createScope("block", parent);
+    this.declare(scope, statement.name, "local", statement.span);
+    this.resolveBlock(statement.body.statements, scope);
+  }
+
+  private isEnumNamespaceExpression(expression: Expression): b8 {
+    if (expression.kind !== "IdentifierExpr") return false;
+    return this.program.enums?.some((enumDecl) => enumDecl.name === expression.name) ?? false;
   }
 
   private resolveAssignmentTarget(
@@ -204,6 +255,9 @@ class Resolver {
       case "StringLiteral":
       case "ZeroValueExpr":
         return;
+      case "ArrowFunctionExpr":
+        this.resolveArrowFunctionExpression(expression, scope);
+        return;
       case "IdentifierExpr":
         this.requireSymbol(scope, expression.name, expression.span);
         return;
@@ -223,6 +277,9 @@ class Resolver {
         this.resolveExpression(expression.left, scope);
         this.resolveExpression(expression.fallback, scope);
         return;
+      case "CastExpr":
+        this.resolveExpression(expression.expression, scope);
+        return;
       case "CallExpr":
         if (!builtinFunctions.has(expression.callee)) {
           this.requireSymbol(this.globalScope, expression.callee, expression.span);
@@ -234,6 +291,10 @@ class Resolver {
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
       case "MethodCallExpr":
+        if (this.isBuiltinMethodCall(expression)) {
+          for (const arg of expression.args) this.resolveExpression(arg, scope);
+          return;
+        }
         if (!this.resolveMethodFunction(expression, scope)) {
           this.resolveExpression(expression.receiver, scope);
         }
@@ -269,6 +330,22 @@ class Resolver {
         this.resolveExpression(expression.index, scope);
         return;
     }
+  }
+
+  private resolveArrowFunctionExpression(
+    expression: Extract<Expression, { kind: "ArrowFunctionExpr" }>,
+    scope: Scope,
+  ): void {
+    const child = this.scopeTable.createScope("block", scope);
+    for (const param of expression.params) this.declare(child, param, "local", expression.span);
+    this.resolveExpression(expression.body, child);
+  }
+
+  private isBuiltinMethodCall(
+    expression: Extract<Expression, { kind: "MethodCallExpr" }>,
+  ): b8 {
+    return expression.receiver.kind === "IdentifierExpr" && expression.receiver.name === "Array" &&
+      expression.method === "fill";
   }
 
   private resolveMethodFunction(

@@ -129,9 +129,14 @@ class AstPrinter {
       case "BreakStmt":
         this.line("BreakStmt");
         return;
+      case "ContinueStmt":
+        this.line("ContinueStmt");
+        return;
       case "VarDeclStmt":
         this.line(
-          `${statement.mutable ? "Let" : "Const"} ${statement.name}: ${this.type(statement.type)}`,
+          `${statement.mutable ? "Let" : "Const"} ${statement.name}: ${
+            this.varDeclType(statement)
+          }`,
         );
         this.indented(() => this.expression(statement.initializer));
         return;
@@ -189,6 +194,20 @@ class AstPrinter {
           this.block(statement.body);
         });
         return;
+      case "ForOfStmt":
+        this.line(`${statement.mutable ? "Let" : "Const"} ${statement.name} of`);
+        this.indented(() => {
+          this.expression(statement.iterable);
+          this.block(statement.body);
+        });
+        return;
+      case "ForInStmt":
+        this.line(`Const ${statement.name} in`);
+        this.indented(() => {
+          this.expression(statement.iterable);
+          this.block(statement.body);
+        });
+        return;
       case "IfStmt":
         this.line("IfStmt");
         this.indented(() => {
@@ -216,6 +235,10 @@ class AstPrinter {
         return;
       case "ZeroValueExpr":
         this.line("ZeroValueExpr");
+        return;
+      case "ArrowFunctionExpr":
+        this.line(`ArrowFunctionExpr (${expression.params.join(", ")})`);
+        this.indented(() => this.expression(expression.body));
         return;
       case "IdentifierExpr":
         this.line(`IdentifierExpr ${expression.name}`);
@@ -305,8 +328,13 @@ class AstPrinter {
         this.line("RecordLiteralExpr");
         this.indented(() => {
           for (const field of expression.fields) {
-            this.line(`Field ${field.name}`);
-            this.indented(() => this.expression(field.expression));
+            if (field.kind === "Spread") {
+              this.line("Spread");
+              this.indented(() => this.expression(field.expression));
+            } else {
+              this.line(`Field ${field.name}`);
+              this.indented(() => this.expression(field.expression));
+            }
           }
         });
         return;
@@ -324,6 +352,10 @@ class AstPrinter {
         });
         return;
     }
+  }
+
+  private varDeclType(statement: Extract<Statement, { kind: "VarDeclStmt" }>): Str {
+    return statement.type === null ? "<inferred>" : this.type(statement.type);
   }
 
   private type(type: TypeRef): Str {

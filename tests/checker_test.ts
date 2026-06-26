@@ -272,11 +272,10 @@ Deno.test("rejects unknown record fields", () => {
   );
 });
 
-Deno.test("rejects duplicate record literal fields", () => {
-  assertCheckError(
+Deno.test("accepts duplicate record literal fields with last value winning", () => {
+  check(resolve(parse(lex(
     `type Vec2 = { x: f64; y: f64; }; function main(): i32 { const v: Vec2 = { x: 1.5, x: 2.5, y: 3.5 }; return 0; }`,
-    "Duplicate field 'x'",
-  );
+  ))));
 });
 
 Deno.test("rejects unknown field access", () => {

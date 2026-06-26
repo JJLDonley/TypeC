@@ -24,9 +24,11 @@ export function evaluateIntegerConstant(
     case "ConditionalExpr":
       return evaluateConditionalIntegerConstant(expr, constants);
     case "NullishCoalesceExpr":
+    case "CastExpr":
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "CallExpr":
     case "NewExpr":
@@ -61,9 +63,11 @@ export function evaluateBoolConstant(
     case "ConditionalExpr":
       return evaluateConditionalBoolConstant(expr, constants);
     case "NullishCoalesceExpr":
+    case "CastExpr":
     case "IntegerLiteral":
     case "FloatLiteral":
     case "StringLiteral":
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "CallExpr":
     case "NewExpr":
@@ -195,8 +199,10 @@ export function evaluateFloatConstant(
     case "ConditionalExpr":
       return evaluateConditionalFloatConstant(expr, constants);
     case "NullishCoalesceExpr":
+    case "CastExpr":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "CallExpr":
     case "NewExpr":

@@ -2,6 +2,7 @@ import type { Expression, FunctionDecl } from "core/ast.ts";
 import { optionalCTypeNameFromTypeName } from "c/optional_names.ts";
 import { emitCType } from "c/type.ts";
 import { emitArenaCallExpression } from "emitter/arenas.ts";
+import { emitCallArguments } from "emitter/call_arguments.ts";
 import { spanKey } from "checker/exprs.ts";
 import { parseArrayTypeName } from "checker/type_name_shapes.ts";
 import type { EmitContext } from "emitter/context.ts";
@@ -32,17 +33,28 @@ export function emitCallExpression(
   const optionalCall = emitOptionalConstructorCall(expr, context, emitExpressionExpected);
   if (optionalCall !== null) return optionalCall;
   const fn = context.functions.get(expr.callee);
-  const args = expr.args.map((arg, index) =>
-    emitCallArg(
-      arg,
-      fn?.params[index],
-      context,
-      emitExpression,
-      emitExpressionExpected,
-      emitArrayLiteralExpression,
-    )
+  if (!fn) {
+    return `${expr.callee}(${expr.args.map((arg) => emitExpression(arg, context)).join(", ")})`;
+  }
+  const args = emitCallArguments(
+    expr.args,
+    fn.params,
+    context,
+    (arg, param) =>
+      emitCallArg(
+        arg,
+        param,
+        context,
+        emitExpression,
+        emitExpressionExpected,
+        emitArrayLiteralExpression,
+      ),
+    emitExpressionExpected,
   );
-  return `${fn?.cName ?? expr.callee}(${args.join(", ")})`;
+  if (fn.variadic === true && expr.args.length > fn.params.length) {
+    args.push(...expr.args.slice(fn.params.length).map((arg) => emitExpression(arg, context)));
+  }
+  return `${fn.cName ?? expr.callee}(${args.join(", ")})`;
 }
 
 function emitOptionalConstructorCall(
@@ -72,6 +84,10 @@ function emitCallArg(
   if (!param) return emitExpression(arg, context);
   if (param.type.kind === "FunctionTypeRef") return emitExpression(arg, context);
   const expectedType = emitCTypeName(param.type, context.typeAliases);
+  if (param.type.kind === "SliceTypeRef") {
+    if (arg.kind === "ArrayLiteralExpr") return emitExpressionExpected(arg, expectedType, context);
+    return emitSliceCallArg(arg, expectedType, context, emitExpression);
+  }
   if (arg.kind === "ArrayLiteralExpr") {
     return emitArrayCompoundLiteral(
       arg,
@@ -81,9 +97,6 @@ function emitCallArg(
     );
   }
   if (isStringLiteralU8ArrayArgument(arg, param.type)) return emitCStringPointer(arg.text);
-  if (param.type.kind === "SliceTypeRef") {
-    return emitSliceCallArg(arg, expectedType, context, emitExpression);
-  }
   return emitExpressionExpected(arg, expectedType, context);
 }
 

@@ -117,7 +117,8 @@ function statementUsesArena(stmt: Statement): b8 {
     case "ExpressionStmt":
       return expressionUsesArena(stmt.expression);
     case "VarDeclStmt":
-      return typeUsesArena(stmt.type) || expressionUsesArena(stmt.initializer);
+      return (stmt.type !== null && typeUsesArena(stmt.type)) ||
+        expressionUsesArena(stmt.initializer);
     case "AssignmentStmt":
       return expressionUsesArena(stmt.target) || expressionUsesArena(stmt.expression);
     case "IncDecStmt":
@@ -159,6 +160,8 @@ function expressionUsesArena(expr: Expression): b8 {
         expressionUsesArena(expr.whenFalse);
     case "NullishCoalesceExpr":
       return expressionUsesArena(expr.left) || expressionUsesArena(expr.fallback);
+    case "CastExpr":
+      return expressionUsesArena(expr.expression);
     case "OptionalFieldAccessExpr":
       return expressionUsesArena(expr.operand);
     case "OptionalMethodCallExpr":
@@ -175,6 +178,7 @@ function expressionUsesArena(expr: Expression): b8 {
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "IdentifierExpr":
       return false;
@@ -195,6 +199,18 @@ function typeUsesArena(type: TypeRef): b8 {
     case "FunctionTypeRef":
       return type.params.some((param) => typeUsesArena(param.type)) ||
         typeUsesArena(type.returnType);
+    case "TupleTypeRef":
+      return type.elements.some(typeUsesArena);
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      return type.members.some(typeUsesArena);
+    case "ConditionalTypeRef":
+      return typeUsesArena(type.checkType) || typeUsesArena(type.extendsType) ||
+        typeUsesArena(type.trueType) || typeUsesArena(type.falseType);
+    case "IndexedAccessTypeRef":
+      return typeUsesArena(type.objectType);
+    case "MappedTypeRef":
+      return typeUsesArena(type.sourceType) || typeUsesArena(type.valueType);
     case "RecordTypeRef":
       return type.fields.some((field) => typeUsesArena(field.type));
   }

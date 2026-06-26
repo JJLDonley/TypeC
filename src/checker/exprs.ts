@@ -38,11 +38,13 @@ export function isAddressable(expr: Expression): b8 {
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
+    case "ArrowFunctionExpr":
     case "ZeroValueExpr":
     case "UnaryExpr":
     case "BinaryExpr":
     case "ConditionalExpr":
     case "NullishCoalesceExpr":
+    case "CastExpr":
     case "NonNullAssertExpr":
     case "CallExpr":
     case "NewExpr":

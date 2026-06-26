@@ -139,6 +139,7 @@ class Parser {
       peek: (offset = 0) => this.peek(offset),
       advance: () => this.advance(),
       expectText: (text) => this.expectText(text),
+      parseTypeRef: () => this.parseTypeRef(),
       parsePostfixExpression: () => this.parsePostfixExpression(),
     };
   }
@@ -195,6 +196,7 @@ class Parser {
       matchText: (text: Str) => this.matchText(text),
       expectKind: (kind: TokenKind, message: Str) => this.expectKind(kind, message),
       expectText: (text: Str) => this.expectText(text),
+      previous: () => this.previous(),
       parseExpression: () => this.parseExpression(),
     };
   }

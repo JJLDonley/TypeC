@@ -1,4 +1,4 @@
-import type { CastParam, CastTypeRef } from "core/cast.ts";
+import type { CastExpression, CastParam, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { span } from "parser/helpers.ts";
 
@@ -11,6 +11,7 @@ export interface ParamParser {
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
   parseTypeRef(): CastTypeRef;
+  parseExpression?(): CastExpression;
 }
 
 export function parseParamsWith(parser: ParamParser): CastParam[] {
@@ -25,7 +26,15 @@ export function parseParamsWith(parser: ParamParser): CastParam[] {
 
 function parseParam(parser: ParamParser): CastParam {
   const name = parser.expectKind("identifier", "Expected parameter name");
+  const optional = parser.matchText("?");
   parser.expectText(":");
   const type = parser.parseTypeRef();
-  return { name: name.text, type, span: span(name.span.start, type.span.end) };
+  const defaultValue = parser.matchText("=") ? parser.parseExpression?.() ?? null : null;
+  return {
+    name: name.text,
+    optional,
+    type,
+    defaultValue,
+    span: span(name.span.start, (defaultValue ?? type).span.end),
+  };
 }

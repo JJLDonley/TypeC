@@ -10,6 +10,7 @@ import {
 import { checkDeclarations } from "checker/declarations.ts";
 import { checkEnums } from "checker/enums.ts";
 import { checkInterfaces } from "checker/interfaces.ts";
+import { runtimeFunctions } from "checker/overloads.ts";
 
 type Str = string;
 
@@ -33,10 +34,14 @@ export function collectProgramDeclarations(program: ResolvedProgram): CheckedDec
       ...declarations.diagnostics,
       ...checkInterfaces(program.interfaces ?? [], declarations.typeAliases),
       ...enums.diagnostics,
-      ...checkCFunctionSymbols(program.functions, program.typeAliases),
+      ...checkCFunctionSymbols(runtimeFunctions(program.functions), program.typeAliases),
       ...checkCTypeAliasSymbols(program.typeAliases),
       ...checkCConstantSymbols(program.constants ?? []),
-      ...checkCOrdinarySymbols(program.functions, program.typeAliases, program.constants ?? []),
+      ...checkCOrdinarySymbols(
+        runtimeFunctions(program.functions),
+        program.typeAliases,
+        program.constants ?? [],
+      ),
     ],
   };
 }

@@ -1,11 +1,13 @@
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
-import type { ConstDecl, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
+import type { ConstDecl, Expression, FunctionDecl, Param, Statement, TypeRef } from "core/ast.ts";
+import { arrowFunctionName } from "core/arrow_functions.ts";
 import { classConstructorName, classMethodName } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkArenaCall, checkExpectedArenaCall } from "checker/arenas.ts";
+import { checkArrowFunctionCaptures } from "checker/arrow_function_captures.ts";
 import { assignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
@@ -22,14 +24,22 @@ import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
 import { isEnumTypeName } from "checker/enums.ts";
 import { checkExpectedExpression } from "checker/expected_expressions.ts";
+import { checkExpectedOptionalConstructorCall } from "checker/expected_optional_values.ts";
 import { checkExpressionStatement as collectExpressionStatementDiagnostics } from "checker/expression_statements.ts";
 import { computeExpressionType } from "checker/expression_types.ts";
 import { checkFieldAccessExpression } from "checker/field_access_expressions.ts";
+import { checkForInIterable } from "checker/for_in.ts";
+import { checkForOfIterable } from "checker/for_of.ts";
+import {
+  inferFunctionReturnType,
+  isInferredFunctionReturn,
+} from "checker/function_return_inference.ts";
 import { checkFunctionHeader as collectFunctionHeaderDiagnostics } from "checker/function_checks.ts";
 import { checkIdentifierType } from "checker/identifiers.ts";
 import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkIncDec as collectIncDecDiagnostics } from "checker/inc_dec.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
+import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
 import { checkNullishCoalesceExpression } from "checker/nullish_coalescing.ts";
@@ -39,7 +49,9 @@ import {
   checkOptionalMethodCallExpression,
 } from "checker/optional_chaining.ts";
 import { checkOptionalConstructorCall } from "checker/optional_values.ts";
+import { checkOverloadDeclarations, matchingOverloads, overloadGroups } from "checker/overloads.ts";
 import { checkPostfixPointerExpression } from "checker/pointer_expressions.ts";
+import { checkParameterDefaults } from "checker/parameter_defaults.ts";
 import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkUnaryExpression } from "checker/unary_expressions.ts";
@@ -50,11 +62,21 @@ import {
   checkTaggedUnionFieldAccess,
 } from "checker/tagged_union_expressions.ts";
 import { checkSwitchStatement } from "checker/switch_statements.ts";
-import { optionalTypeNameElement } from "checker/type_name_shapes.ts";
+import {
+  optionalTypeNameElement,
+  parseArrayTypeName,
+  parseFunctionTypeName,
+  parseTupleTypeName,
+} from "checker/type_name_shapes.ts";
+import { isNumericType } from "checker/types.ts";
+import { checkTypeRef } from "checker/type_validation.ts";
 import { typeName } from "core/type_ref.ts";
+import { typeRefFromTypeName } from "checker/type_name_type_refs.ts";
 
 type Str = string;
 type b8 = boolean;
+type i32 = number;
+type IntLiteralValue = bigint;
 
 export type CheckedProgram = TypedProgram;
 
@@ -62,6 +84,7 @@ export * from "checker/array_indexes.ts";
 export * from "checker/array_initializers.ts";
 export * from "checker/array_literal_expressions.ts";
 export * from "checker/array_literals.ts";
+export * from "checker/arrow_function_captures.ts";
 export * from "checker/assignments.ts";
 export * from "checker/basic_expressions.ts";
 export * from "checker/binary_expressions.ts";
@@ -85,6 +108,7 @@ export * from "checker/constant_values.ts";
 export * from "checker/constants.ts";
 export * from "checker/enums.ts";
 export * from "checker/expected_expressions.ts";
+export * from "checker/expected_optional_values.ts";
 export * from "checker/expression_statements.ts";
 export * from "checker/expression_types.ts";
 export * from "checker/exprs.ts";
@@ -103,6 +127,7 @@ export * from "checker/main.ts";
 export * from "checker/non_null_assertions.ts";
 export * from "checker/nullish_coalescing.ts";
 export * from "checker/optional_chaining.ts";
+export * from "checker/overloads.ts";
 export * from "checker/pointer_compatibility.ts";
 export * from "checker/pointer_expressions.ts";
 export * from "checker/pointer_ops.ts";
@@ -134,9 +159,11 @@ export function check(program: ResolvedProgram): CheckedProgram {
 class Checker {
   private diagnostics: Diagnostic[] = [];
   private functions = new Map<Str, FunctionDecl>();
+  private overloads = new Map<Str, FunctionDecl[]>();
   private constants = new Map<Str, ConstDecl>();
   private typeAliases = new Map<Str, TypeRef>();
   private expressionTypes = new Map<Str, { type: TypeName }>();
+  private arrowFunctions: FunctionDecl[] = [];
 
   constructor(private program: ResolvedProgram) {}
 
@@ -145,15 +172,21 @@ class Checker {
     this.checkConstants();
     for (const fn of this.program.functions) this.checkFunction(fn);
     if (this.diagnostics.length > 0) throw new TypeCError(this.diagnostics);
-    return { ...this.program, expressionTypes: this.expressionTypes };
+    return {
+      ...this.program,
+      functions: [...this.program.functions, ...this.arrowFunctions],
+      expressionTypes: this.expressionTypes,
+    };
   }
 
   private collectFunctions(): void {
     const declarations = collectProgramDeclarations(this.program);
     this.functions = declarations.functions;
+    this.overloads = overloadGroups(this.program.functions);
     this.constants = declarations.constants;
     this.typeAliases = declarations.typeAliases;
     this.diagnostics.push(...declarations.diagnostics);
+    this.diagnostics.push(...checkOverloadDeclarations(this.program.functions));
   }
 
   private checkConstants(): void {
@@ -182,11 +215,27 @@ class Checker {
 
   private checkFunction(fn: FunctionDecl): void {
     const locals = createFunctionLocals(fn);
-    const returnType = typeName(fn.returnType);
+    const returnType = this.functionReturnType(fn, locals);
     this.diagnostics.push(...collectFunctionHeaderDiagnostics(fn, returnType, this.typeAliases));
+    this.diagnostics.push(
+      ...checkParameterDefaults(
+        fn,
+        (expr, expected) => this.typeOfExpected(expr, locals, expected),
+      ),
+    );
     if (!fn.body) return;
-    for (const stmt of fn.body.statements) this.checkStatement(stmt, locals, returnType, false);
+    for (const stmt of fn.body.statements) {
+      this.checkStatement(stmt, locals, returnType, false, false);
+    }
     this.diagnostics.push(...collectMissingFunctionReturnDiagnostics(fn, returnType));
+  }
+
+  private functionReturnType(fn: FunctionDecl, locals: Map<Str, LocalInfo>): TypeName {
+    if (!isInferredFunctionReturn(fn)) return typeName(fn.returnType);
+    const inferred = inferFunctionReturnType(fn, (expr) => this.typeOf(expr, locals));
+    this.diagnostics.push(...inferred.diagnostics);
+    fn.returnType = inferred.type;
+    return inferred.typeName;
   }
 
   private checkStatement(
@@ -194,6 +243,7 @@ class Checker {
     locals: Map<Str, LocalInfo>,
     returnType: TypeName,
     inSwitch: b8,
+    inLoop: b8,
   ): void {
     checkStatementDispatch(stmt, {
       emptyStatement: () => {},
@@ -201,14 +251,19 @@ class Checker {
       deferStatement: (expr, span) => this.checkDefer(expr, locals, span),
       expressionStatement: (expr) => this.checkExpressionStatement(expr, locals),
       breakStatement: (span) => this.checkBreak(span, inSwitch),
+      continueStatement: (span) => this.checkContinue(span, inLoop),
       variableDeclaration: (value) => this.checkVarDecl(value, locals),
+      recordRestDeclaration: (value) => this.checkRecordRest(value, locals),
+      arrayDestructureDeclaration: (value) => this.checkArrayDestructure(value, locals),
       assignment: (value) => this.checkAssignment(value, locals),
       incDec: (value) => this.checkIncDec(value, locals),
-      switchStatement: (value) => this.checkSwitch(value, locals, returnType),
+      switchStatement: (value) => this.checkSwitch(value, locals, returnType, inLoop),
       whileStatement: (value) => this.checkWhile(value, locals, returnType),
       doWhileStatement: (value) => this.checkDoWhile(value, locals, returnType),
       forStatement: (value) => this.checkFor(value, locals, returnType),
-      ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch),
+      forOfStatement: (value) => this.checkForOf(value, locals, returnType),
+      forInStatement: (value) => this.checkForIn(value, locals, returnType),
+      ifStatement: (value) => this.checkIf(value, locals, returnType, inSwitch, inLoop),
     });
   }
 
@@ -246,6 +301,11 @@ class Checker {
     this.diagnostics.push({ message: "Break statement is only valid inside a switch", span });
   }
 
+  private checkContinue(span: SourceSpan, inLoop: b8): void {
+    if (inLoop) return;
+    this.diagnostics.push({ message: "Continue statement is only valid inside a loop", span });
+  }
+
   private checkVarDecl(
     stmt: Extract<Statement, { kind: "VarDeclStmt" }>,
     locals: Map<Str, LocalInfo>,
@@ -256,6 +316,9 @@ class Checker {
       (expr, expected) => this.typeOfExpected(expr, locals, expected),
     );
     this.diagnostics.push(...result.diagnostics);
+    if (stmt.type === null) {
+      this.expressionTypes.set(spanKey(stmt.initializer.span), { type: result.type });
+    }
     locals.set(stmt.name, { type: result.type, mutable: stmt.mutable });
   }
 
@@ -296,6 +359,7 @@ class Checker {
     stmt: Extract<Statement, { kind: "SwitchStmt" }>,
     locals: Map<Str, LocalInfo>,
     returnType: TypeName,
+    inLoop: b8,
   ): void {
     this.diagnostics.push(
       ...checkSwitchStatement(
@@ -303,7 +367,7 @@ class Checker {
         this.constants,
         (expr) => this.typeOf(expr, locals),
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
-        (children) => this.checkBlock(children, locals, returnType, true),
+        (children) => this.checkBlock(children, locals, returnType, true, inLoop),
         (type) => isEnumTypeName(type, this.program.enums ?? []),
       ),
     );
@@ -319,7 +383,7 @@ class Checker {
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType, false),
+        (children, parent) => this.checkBlock(children, parent, returnType, false, true),
       ),
     );
   }
@@ -334,7 +398,7 @@ class Checker {
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType, false),
+        (children, parent) => this.checkBlock(children, parent, returnType, false, true),
       ),
     );
   }
@@ -345,11 +409,141 @@ class Checker {
     returnType: TypeName,
   ): void {
     const locals = new Map<Str, LocalInfo>(parentLocals);
-    if (stmt.initializer) this.checkStatement(stmt.initializer, locals, returnType, false);
+    if (stmt.initializer) this.checkStatement(stmt.initializer, locals, returnType, false, false);
     const conditionType = this.typeOf(stmt.condition, locals);
     this.diagnostics.push(...checkWhileCondition(conditionType, stmt.condition.span));
-    if (stmt.update) this.checkStatement(stmt.update, locals, returnType, false);
-    this.diagnostics.push(...this.checkBlock(stmt.body.statements, locals, returnType, false));
+    if (stmt.update) this.checkStatement(stmt.update, locals, returnType, false, false);
+    this.diagnostics.push(
+      ...this.checkBlock(stmt.body.statements, locals, returnType, false, true),
+    );
+  }
+
+  private checkForOf(
+    stmt: Extract<Statement, { kind: "ForOfStmt" }>,
+    parentLocals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    const iterableType = this.typeOf(stmt.iterable, parentLocals);
+    const iterable = checkForOfIterable(stmt, iterableType);
+    this.diagnostics.push(...iterable.diagnostics);
+    const locals = new Map<Str, LocalInfo>(parentLocals);
+    locals.set(stmt.name, { type: iterable.elementType, mutable: stmt.mutable });
+    this.diagnostics.push(
+      ...this.checkBlock(stmt.body.statements, locals, returnType, false, true),
+    );
+  }
+
+  private checkRecordRest(
+    stmt: Extract<Statement, { kind: "RecordRestStmt" }>,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    const sourceType = this.typeOf(stmt.source, locals);
+    const record = lookupRecordAlias(sourceType, this.typeAliases);
+    if (record === null) {
+      this.diagnostics.push({
+        message: `Record rest source must be a record type, got '${sourceType}'`,
+        span: stmt.span,
+      });
+      return;
+    }
+    for (const name of stmt.names) {
+      const field = record.fields.find((candidate) => candidate.name === name) ?? null;
+      if (field === null) {
+        this.diagnostics.push({
+          message: `Unknown field '${name}' on type '${sourceType}'`,
+          span: stmt.span,
+        });
+        continue;
+      }
+      locals.set(name, { type: typeName(field.type), mutable: stmt.mutable });
+    }
+    if (stmt.restName !== null) {
+      const restFields = record.fields.filter((field) => !stmt.names.includes(field.name));
+      const restType: TypeRef = { kind: "RecordTypeRef", fields: restFields, span: stmt.span };
+      locals.set(stmt.restName, { type: typeName(restType), mutable: stmt.mutable });
+    }
+  }
+
+  private checkArrayDestructure(
+    stmt: Extract<Statement, { kind: "ArrayDestructureStmt" }>,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    const sourceType = this.typeOf(stmt.source, locals);
+    const tuple = parseTupleTypeName(sourceType);
+    if (tuple !== null) {
+      this.checkTupleDestructure(stmt, tuple.elements, locals);
+      return;
+    }
+    const array = parseArrayTypeName(sourceType);
+    if (array !== null && array.length !== null) {
+      this.checkFixedArrayDestructure(stmt, array.element, array.length, locals);
+      return;
+    }
+    this.diagnostics.push({
+      message:
+        `Array destructuring source must be a tuple or fixed array type, got '${sourceType}'`,
+      span: stmt.span,
+    });
+  }
+
+  private checkTupleDestructure(
+    stmt: Extract<Statement, { kind: "ArrayDestructureStmt" }>,
+    elements: TypeName[],
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    if (stmt.names.length > elements.length) {
+      this.diagnostics.push({
+        message:
+          `Array destructuring expects at most ${elements.length} binding(s), got ${stmt.names.length}`,
+        span: stmt.span,
+      });
+    }
+    for (let index: i32 = 0; index < stmt.names.length && index < elements.length; index++) {
+      locals.set(stmt.names[index]!, { type: elements[index]!, mutable: stmt.mutable });
+    }
+  }
+
+  private checkFixedArrayDestructure(
+    stmt: Extract<Statement, { kind: "ArrayDestructureStmt" }>,
+    element: TypeName,
+    length: IntLiteralValue,
+    locals: Map<Str, LocalInfo>,
+  ): void {
+    if (BigInt(stmt.names.length) > length) {
+      this.diagnostics.push({
+        message:
+          `Array destructuring expects at most ${length} binding(s), got ${stmt.names.length}`,
+        span: stmt.span,
+      });
+    }
+    for (let index: i32 = 0; index < stmt.names.length && BigInt(index) < length; index++) {
+      locals.set(stmt.names[index]!, { type: element, mutable: stmt.mutable });
+    }
+  }
+
+  private checkForIn(
+    stmt: Extract<Statement, { kind: "ForInStmt" }>,
+    parentLocals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+  ): void {
+    const iterableType = this.forInIterableType(stmt.iterable, parentLocals);
+    const iterable = checkForInIterable(stmt.iterable, iterableType, this.program);
+    this.diagnostics.push(...iterable.diagnostics);
+    const locals = new Map<Str, LocalInfo>(parentLocals);
+    locals.set(stmt.name, { type: iterable.keyType, mutable: false });
+    this.diagnostics.push(
+      ...this.checkBlock(stmt.body.statements, locals, returnType, false, false),
+    );
+  }
+
+  private forInIterableType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName | null {
+    if (
+      expr.kind === "IdentifierExpr" &&
+      this.program.enums?.some((enumDecl) => enumDecl.name === expr.name)
+    ) {
+      return null;
+    }
+    return this.typeOf(expr, locals);
   }
 
   private checkIf(
@@ -357,13 +551,14 @@ class Checker {
     locals: Map<Str, LocalInfo>,
     returnType: TypeName,
     inSwitch: b8,
+    inLoop: b8,
   ): void {
     this.diagnostics.push(
       ...checkIfStatement(
         stmt,
         locals,
         (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType, inSwitch),
+        (children, parent) => this.checkBlock(children, parent, returnType, inSwitch, inLoop),
       ),
     );
   }
@@ -373,10 +568,13 @@ class Checker {
     parentLocals: Map<Str, LocalInfo>,
     returnType: TypeName,
     inSwitch: b8,
+    inLoop: b8,
   ): Diagnostic[] {
     const before = this.diagnostics.length;
     const locals = new Map<Str, LocalInfo>(parentLocals);
-    for (const child of statements) this.checkStatement(child, locals, returnType, inSwitch);
+    for (const child of statements) {
+      this.checkStatement(child, locals, returnType, inSwitch, inLoop);
+    }
     return this.diagnostics.splice(before);
   }
 
@@ -408,16 +606,96 @@ class Checker {
       this.expressionTypes.set(spanKey(expr.span), { type: callback.type });
       return callback.type;
     }
+    const arrow = this.arrowFunctionType(expr, locals, expected);
+    if (arrow !== null) return arrow;
+    const optional = checkExpectedOptionalConstructorCall(
+      expr,
+      expected,
+      (value, target) => this.typeOfExpected(value, locals, target),
+    );
+    if (optional.handled) {
+      this.diagnostics.push(...optional.diagnostics);
+      this.expressionTypes.set(spanKey(expr.span), { type: optional.type });
+      return optional.type;
+    }
     const result = checkExpectedExpression(
       expr,
       expected,
       this.typeAliases,
       (value, target) => this.typeOfExpected(value, locals, target),
+      (value) => this.typeOf(value, locals),
     );
     if (!result.handled) return this.typeOf(expr, locals);
     this.diagnostics.push(...result.diagnostics);
     this.expressionTypes.set(spanKey(expr.span), { type: result.type });
     return result.type;
+  }
+
+  private arrowFunctionType(
+    expr: Expression,
+    locals: Map<Str, LocalInfo>,
+    expected: TypeName,
+  ): TypeName | null {
+    if (expr.kind !== "ArrowFunctionExpr") return null;
+    const expectedFunction = parseFunctionTypeName(expected);
+    if (expectedFunction === null) {
+      this.diagnostics.push({
+        message: "Arrow functions require an expected function type",
+        span: expr.span,
+      });
+      return "<error>";
+    }
+    if (expr.params.length !== expectedFunction.params.length) {
+      this.diagnostics.push({
+        message:
+          `Arrow function expects ${expectedFunction.params.length} parameter(s), got ${expr.params.length}`,
+        span: expr.span,
+      });
+      return expected;
+    }
+    const captureDiagnostics = checkArrowFunctionCaptures(expr, locals);
+    if (captureDiagnostics.length > 0) {
+      this.diagnostics.push(...captureDiagnostics);
+      return expected;
+    }
+    const fn = this.createArrowFunction(expr, expected);
+    this.arrowFunctions.push(fn);
+    this.functions.set(fn.name, fn);
+    this.checkFunction(fn);
+    this.expressionTypes.set(spanKey(expr.span), { type: expected });
+    return expected;
+  }
+
+  private createArrowFunction(
+    expr: Extract<Expression, { kind: "ArrowFunctionExpr" }>,
+    expected: TypeName,
+  ): FunctionDecl {
+    const expectedFunction = parseFunctionTypeName(expected)!;
+    return {
+      kind: "FunctionDecl",
+      exported: false,
+      external: false,
+      name: arrowFunctionName(expr.span),
+      params: this.arrowParams(expr, expectedFunction.params.map((param) => param.type)),
+      returnType: typeRefFromTypeName(expectedFunction.returnType, expr.span),
+      body: {
+        kind: "BlockStmt",
+        statements: [{ kind: "ReturnStmt", expression: expr.body, span: expr.body.span }],
+        span: expr.span,
+      },
+      span: expr.span,
+    };
+  }
+
+  private arrowParams(
+    expr: Extract<Expression, { kind: "ArrowFunctionExpr" }>,
+    types: TypeName[],
+  ): Param[] {
+    return expr.params.map((name, index) => ({
+      name,
+      type: typeRefFromTypeName(types[index]!, expr.span),
+      span: expr.span,
+    }));
   }
 
   private globalCallbackType(
@@ -431,11 +709,13 @@ class Checker {
 
   private computeType(expr: Expression, locals: Map<Str, LocalInfo>): TypeName {
     const result = computeExpressionType(expr, {
+      arrow: (value) => this.unexpectedArrowFunctionType(value),
       identifier: (name, span) => this.identifierType(name, locals, span),
       unary: (value) => this.unaryType(value, locals),
       binary: (value) => this.binaryType(value, locals),
       conditional: (value) => this.conditionalType(value, locals),
       nullish: (value) => this.nullishType(value, locals),
+      cast: (value) => this.castType(value, locals),
       call: (value) => this.callType(value, locals),
       newExpr: (value) => this.newType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
@@ -451,8 +731,24 @@ class Checker {
     return result.type;
   }
 
+  private unexpectedArrowFunctionType(
+    expr: Extract<Expression, { kind: "ArrowFunctionExpr" }>,
+  ): TypeName {
+    this.diagnostics.push({
+      message: "Arrow functions require an expected function type",
+      span: expr.span,
+    });
+    return "<error>";
+  }
+
   private identifierType(name: Str, locals: Map<Str, LocalInfo>, span: SourceSpan): TypeName {
-    const result = checkIdentifierType(name, locals.get(name), this.constants.get(name), span);
+    const result = checkIdentifierType(
+      name,
+      locals.get(name),
+      this.constants.get(name),
+      span,
+      this.functions.get(name),
+    );
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
@@ -506,6 +802,23 @@ class Checker {
     return result.type;
   }
 
+  private castType(
+    expr: Extract<Expression, { kind: "CastExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const target = typeName(expr.type);
+    const actual = this.typeOf(expr.expression, locals);
+    this.diagnostics.push(...checkTypeRef(expr.type, this.typeAliases));
+    if (!isNumericType(actual) || !isNumericType(target)) {
+      this.diagnostics.push({
+        message: `Cannot cast '${actual}' to '${target}'`,
+        span: expr.span,
+      });
+      return "<error>";
+    }
+    return target;
+  }
+
   private callType(
     expr: Extract<Expression, { kind: "CallExpr" }>,
     locals: Map<Str, LocalInfo>,
@@ -528,6 +841,8 @@ class Checker {
       this.diagnostics.push(...optional.diagnostics);
       return optional.type;
     }
+    const overloaded = this.overloadedCallType(expr, locals);
+    if (overloaded !== null) return overloaded;
     const result = checkCallExpression(
       expr,
       this.functions.get(expr.callee),
@@ -536,6 +851,24 @@ class Checker {
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;
+  }
+
+  private overloadedCallType(
+    expr: Extract<Expression, { kind: "CallExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName | null {
+    const overloads = this.overloads.get(expr.callee) ?? [];
+    if (overloads.length === 0) return null;
+    const argTypes = expr.args.map((arg) => this.typeOf(arg, locals));
+    const matches = matchingOverloads(overloads, argTypes);
+    if (matches.length === 1) return typeName(matches[0]!.returnType);
+    this.diagnostics.push({
+      message: matches.length === 0
+        ? `No overload of '${expr.callee}' matches argument types (${argTypes.join(", ")})`
+        : `Call to overloaded function '${expr.callee}' is ambiguous`,
+      span: expr.span,
+    });
+    return "<error>";
   }
 
   private newType(
@@ -570,14 +903,16 @@ class Checker {
     if (namespaceCall !== null) return namespaceCall;
     const receiverType = this.typeOf(expr.receiver, locals);
     const methodName = classMethodName(receiverType, expr.method);
+    const fn = this.functions.get(methodName);
+    const callable = fn ? { ...fn, params: fn.params.slice(1) } : undefined;
     const result = checkCallExpression(
       {
         kind: "CallExpr",
         callee: methodName,
-        args: [expr.receiver, ...expr.args],
+        args: expr.args,
         span: expr.span,
       },
-      this.functions.get(methodName),
+      callable,
       (arg, expected) => this.typeOfExpected(arg, locals, expected),
       (arg) => this.typeOf(arg, locals),
     );

@@ -1,4 +1,4 @@
-import type { CastExpression } from "core/cast.ts";
+import type { CastExpression, CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { precedence, span } from "parser/helpers.ts";
 
@@ -12,6 +12,7 @@ export interface ExpressionParser {
   peek(offset?: i32): Token;
   advance(): Token;
   expectText(text: Str): Token;
+  parseTypeRef(): CastTypeRef;
   parsePostfixExpression(): CastExpression;
 }
 
@@ -20,6 +21,7 @@ export function parseExpressionWith(
   minPrecedence: i32 = 0,
 ): CastExpression {
   let expr = parseBinaryPrecedenceExpression(parser, minPrecedence);
+  if (minPrecedence <= 0) expr = parseAsCastExpressions(parser, expr);
   if (minPrecedence <= 0 && isElvisExpression(parser)) expr = parseElvisExpression(parser, expr);
   if (minPrecedence <= 0 && parser.checkText("?")) expr = parseConditionalExpression(parser, expr);
   return expr;
@@ -35,6 +37,7 @@ function parseBinaryPrecedenceExpression(
 }
 
 function parseUnaryExpression(parser: ExpressionParser): CastExpression {
+  if (parser.checkText("@")) return parseAtCastExpression(parser);
   if (!isUnaryOperator(parser)) return parser.parsePostfixExpression();
   const operator = parser.advance();
   const operand = parseExpressionWith(parser, 21);
@@ -46,9 +49,28 @@ function parseUnaryExpression(parser: ExpressionParser): CastExpression {
   };
 }
 
+function parseAtCastExpression(parser: ExpressionParser): CastExpression {
+  const start = parser.expectText("@");
+  const type = parser.parseTypeRef();
+  parser.expectText("(");
+  const expression = parseExpressionWith(parser);
+  const close = parser.expectText(")");
+  return { kind: "CastExpr", type, expression, span: span(start.span.start, close.span.end) };
+}
+
 function isUnaryOperator(parser: ExpressionParser): b8 {
   return parser.checkText("+") || parser.checkText("-") || parser.checkText("!") ||
     parser.checkText("~");
+}
+
+function parseAsCastExpressions(parser: ExpressionParser, left: CastExpression): CastExpression {
+  let expr = left;
+  while (parser.checkText("as")) {
+    parser.advance();
+    const type = parser.parseTypeRef();
+    expr = { kind: "CastExpr", type, expression: expr, span: span(expr.span.start, type.span.end) };
+  }
+  return expr;
 }
 
 function parseConditionalExpression(

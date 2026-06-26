@@ -9,6 +9,8 @@ import type {
   CastConstDecl,
   CastDoWhileStmt,
   CastExpression,
+  CastForInStmt,
+  CastForOfStmt,
   CastForStmt,
   CastFunctionDecl,
   CastFunctionTypeRef,
@@ -41,6 +43,11 @@ import type {
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { typeName } from "core/type_ref.ts";
+import {
+  inferGenericClassArgumentTypeRef,
+  inferGenericClassNewTypeArgsFromArgs,
+  inferGenericClassNewTypeArgsFromExpected,
+} from "lower/generic_class_inference.ts";
 import { lowerTypeRef } from "lower/types.ts";
 
 export type Str = string;
@@ -48,6 +55,16 @@ type b8 = boolean;
 type usize = number;
 
 type CastTypeSubstitutions = Map<Str, CastTypeRef>;
+type LocalTypes = Map<Str, CastTypeRef>;
+
+interface FieldEntry {
+  name: Str;
+  type: CastTypeRef;
+}
+
+interface FieldSource {
+  fields: FieldEntry[];
+}
 
 export function instantiateGenericClasses(program: CastProgram): CastProgram {
   const templates = genericClassTemplates(program.classes ?? []);
@@ -91,6 +108,172 @@ function genericClassParamDiagnostics(classes: CastClassDecl[]): Diagnostic[] {
   return classes.flatMap(genericClassDuplicateParamDiagnostics);
 }
 
+function functionMap(functions: CastFunctionDecl[]): Map<Str, CastFunctionDecl> {
+  return new Map(functions.map((fn) => [fn.name, fn]));
+}
+
+function localTypeMap(params: CastParam[]): LocalTypes {
+  return new Map(params.map((param) => [param.name, param.type]));
+}
+
+function assignmentTargetType(
+  target: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): CastTypeRef | null {
+  if (target.kind === "IdentifierExpr") return locals.get(target.name) ?? null;
+  if (target.kind === "FieldAccessExpr") return fieldAssignmentTargetType(target, locals, classes);
+  if (target.kind === "IndexExpr") return indexAssignmentTargetType(target, locals, classes);
+  return null;
+}
+
+function indexAssignmentTargetType(
+  target: Extract<CastExpression, { kind: "IndexExpr" }>,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): CastTypeRef | null {
+  const operand = assignmentTargetType(target.operand, locals, classes);
+  return operand === null ? null : indexedElementType(operand, target.index);
+}
+
+function fieldAssignmentTargetType(
+  target: Extract<CastExpression, { kind: "FieldAccessExpr" }>,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): CastTypeRef | null {
+  const fieldSource = fieldSourceType(target.operand, locals, classes);
+  return fieldSource?.fields.find((field) => field.name === target.field)?.type ?? null;
+}
+
+function fieldSourceType(
+  target: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): FieldSource | null {
+  const targetType = assignmentTargetType(target, locals, classes);
+  if (targetType?.kind === "RecordTypeRef") return targetType;
+  if (targetType?.kind !== "NamedTypeRef") return null;
+  return classes.get(targetType.name) ?? null;
+}
+
+function nullishFallbackType(
+  left: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): CastTypeRef | null {
+  const type = assignmentTargetType(left, locals, classes);
+  return type === null ? null : optionalTypeElement(type);
+}
+
+function optionalTypeElement(type: CastTypeRef): CastTypeRef | null {
+  if (type.kind !== "NamedTypeRef" || type.name !== "Optional") return null;
+  const typeArgs = type.typeArgs ?? [];
+  return typeArgs.length === 1 ? typeArgs[0] : null;
+}
+
+function expectedElementType(type: CastTypeRef, index: usize): CastTypeRef | null {
+  if (type.kind === "TupleTypeRef") return type.elements[index] ?? null;
+  return expectedArrayElementType(type);
+}
+
+function indexedElementType(type: CastTypeRef, index: CastExpression): CastTypeRef | null {
+  if (type.kind !== "TupleTypeRef") return expectedArrayElementType(type);
+  if (index.kind !== "IntegerLiteral") return null;
+  if (index.value < 0n || index.value >= BigInt(type.elements.length)) return null;
+  return type.elements[Number(index.value)] ?? null;
+}
+
+function expectedArrayElementType(type: CastTypeRef): CastTypeRef | null {
+  switch (type.kind) {
+    case "FixedArrayTypeRef":
+    case "InferredArrayTypeRef":
+    case "SliceTypeRef":
+      return type.element;
+    default:
+      return null;
+  }
+}
+
+function localInferredType(
+  expression: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+  functions: Map<Str, CastFunctionDecl>,
+): CastTypeRef | null {
+  return localArgumentType(expression, locals, classes, functions);
+}
+
+function localArgumentType(
+  expression: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+  functions: Map<Str, CastFunctionDecl>,
+): CastTypeRef | null {
+  if (expression.kind === "IdentifierExpr") return locals.get(expression.name) ?? null;
+  if (expression.kind === "FieldAccessExpr") {
+    return fieldAssignmentTargetType(expression, locals, classes);
+  }
+  if (expression.kind === "IndexExpr") {
+    return indexAssignmentTargetType(expression, locals, classes);
+  }
+  if (expression.kind === "NewExpr") {
+    return { kind: "NamedTypeRef", name: expression.className, span: expression.span };
+  }
+  if (expression.kind === "CallExpr") return functions.get(expression.callee)?.returnType ?? null;
+  if (expression.kind === "NonNullAssertExpr") {
+    return nonNullAssertArgumentType(expression, locals, classes, functions);
+  }
+  if (expression.kind === "PostfixPointerExpr") {
+    return postfixPointerArgumentType(expression, locals, classes, functions);
+  }
+  return inferGenericClassArgumentTypeRef(expression);
+}
+
+function nonNullAssertArgumentType(
+  expression: Extract<CastExpression, { kind: "NonNullAssertExpr" }>,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+  functions: Map<Str, CastFunctionDecl>,
+): CastTypeRef | null {
+  const operand = localArgumentOperandType(expression.operand, locals, classes, functions);
+  return operand === null ? null : optionalTypeElement(operand);
+}
+
+function postfixPointerArgumentType(
+  expression: Extract<CastExpression, { kind: "PostfixPointerExpr" }>,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+  functions: Map<Str, CastFunctionDecl>,
+): CastTypeRef | null {
+  const operand = localArgumentOperandType(expression.operand, locals, classes, functions);
+  if (operand === null) return null;
+  if (expression.operator === ".&") {
+    return { kind: "ReferenceTypeRef", element: operand, span: expression.span };
+  }
+  return pointerLikeElementType(operand);
+}
+
+function localArgumentOperandType(
+  expression: CastExpression,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+  functions: Map<Str, CastFunctionDecl>,
+): CastTypeRef | null {
+  return assignmentTargetType(expression, locals, classes) ??
+    localArgumentType(expression, locals, classes, functions);
+}
+
+function pointerLikeElementType(type: CastTypeRef): CastTypeRef | null {
+  switch (type.kind) {
+    case "PointerTypeRef":
+    case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
+      return type.element;
+    default:
+      return null;
+  }
+}
+
 function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const names = new Set<Str>();
@@ -108,6 +291,7 @@ function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagno
 
 class GenericClassInstantiator {
   private emitted = new Map<Str, CastClassDecl>();
+  private functions = new Map<Str, CastFunctionDecl>();
 
   constructor(
     private templates: Map<Str, CastClassDecl>,
@@ -116,6 +300,7 @@ class GenericClassInstantiator {
   ) {}
 
   rewriteProgram(program: CastProgram): CastProgram {
+    this.functions = functionMap(program.functions);
     const classes = (program.classes ?? []).filter((classDecl) => !isGenericClass(classDecl));
     const rewritten: CastProgram = {
       ...program,
@@ -165,14 +350,18 @@ class GenericClassInstantiator {
         ? {
           ...classDecl.constructorDecl,
           params: classDecl.constructorDecl.params.map((param) => this.rewriteParam(param)),
-          body: this.rewriteBlock(classDecl.constructorDecl.body),
+          body: this.rewriteBlock(
+            classDecl.constructorDecl.body,
+            null,
+            localTypeMap(classDecl.constructorDecl.params),
+          ),
         }
         : null,
       methods: classDecl.methods.map((method) => ({
         ...method,
         params: method.params.map((param) => this.rewriteParam(param)),
         returnType: this.rewriteTypeRef(method.returnType),
-        body: this.rewriteBlock(method.body),
+        body: this.rewriteBlock(method.body, method.returnType, localTypeMap(method.params)),
       })),
     };
   }
@@ -189,7 +378,15 @@ class GenericClassInstantiator {
   }
 
   private rewriteConst(constant: CastConstDecl): CastConstDecl {
-    return { ...constant, type: this.rewriteTypeRef(constant.type) };
+    return {
+      ...constant,
+      type: this.rewriteTypeRef(constant.type),
+      initializer: this.rewriteExpressionWithExpectedType(
+        constant.initializer,
+        constant.type,
+        new Map(),
+      ),
+    };
   }
 
   private rewriteFunction(fn: CastFunctionDecl): CastFunctionDecl {
@@ -197,7 +394,7 @@ class GenericClassInstantiator {
       ...fn,
       params: fn.params.map((param) => this.rewriteParam(param)),
       returnType: this.rewriteTypeRef(fn.returnType),
-      body: fn.body ? this.rewriteBlock(fn.body) : null,
+      body: fn.body ? this.rewriteBlock(fn.body, fn.returnType, localTypeMap(fn.params)) : null,
     };
   }
 
@@ -205,284 +402,514 @@ class GenericClassInstantiator {
     return { ...param, type: this.rewriteTypeRef(param.type) };
   }
 
-  private rewriteBlock(block: CastBlockStmt): CastBlockStmt {
+  private rewriteBlock(
+    block: CastBlockStmt,
+    returnType: CastTypeRef | null = null,
+    locals: LocalTypes = new Map(),
+  ): CastBlockStmt {
+    const scoped = new Map(locals);
     return {
       ...block,
-      statements: block.statements.map((statement) => this.rewriteStatement(statement)),
+      statements: block.statements.map((statement) =>
+        this.rewriteStatement(statement, returnType, scoped)
+      ),
     };
   }
 
-  private rewriteStatement(statement: CastStatement): CastStatement {
+  private rewriteStatement(
+    statement: CastStatement,
+    returnType: CastTypeRef | null = null,
+    locals: LocalTypes = new Map(),
+  ): CastStatement {
     switch (statement.kind) {
       case "EmptyStmt":
         return statement;
       case "ReturnStmt":
-        return this.rewriteReturn(statement);
+        return this.rewriteReturn(statement, returnType);
       case "DeferStmt":
-        return { ...statement, expression: this.rewriteExpression(statement.expression) };
+        return { ...statement, expression: this.rewriteExpression(statement.expression, locals) };
       case "ExpressionStmt":
-        return { ...statement, expression: this.rewriteExpression(statement.expression) };
+        return { ...statement, expression: this.rewriteExpression(statement.expression, locals) };
       case "BreakStmt":
+      case "ContinueStmt":
         return statement;
       case "VarDeclStmt":
-        return this.rewriteVarDecl(statement);
+        return this.rewriteVarDecl(statement, locals);
+      case "RecordRestStmt":
+        return { ...statement, source: this.rewriteExpression(statement.source, locals) };
+      case "ArrayDestructureStmt":
+        return { ...statement, source: this.rewriteExpression(statement.source, locals) };
       case "AssignmentStmt":
-        return this.rewriteAssignment(statement);
+        return this.rewriteAssignment(statement, locals);
       case "IncDecStmt":
         return {
           ...statement,
-          target: this.rewriteExpression(statement.target) as typeof statement.target,
+          target: this.rewriteExpression(statement.target, locals) as typeof statement.target,
         };
       case "SwitchStmt":
-        return this.rewriteSwitch(statement);
+        return this.rewriteSwitch(statement, returnType, locals);
       case "WhileStmt":
-        return this.rewriteWhile(statement);
+        return this.rewriteWhile(statement, returnType, locals);
       case "DoWhileStmt":
-        return this.rewriteDoWhile(statement);
+        return this.rewriteDoWhile(statement, returnType, locals);
       case "ForStmt":
-        return this.rewriteFor(statement);
+        return this.rewriteFor(statement, returnType, locals);
+      case "ForOfStmt":
+        return this.rewriteForOf(statement, returnType, locals);
+      case "ForInStmt":
+        return this.rewriteForIn(statement, returnType, locals);
       case "IfStmt":
-        return this.rewriteIf(statement);
+        return this.rewriteIf(statement, returnType, locals);
     }
   }
 
-  private rewriteReturn(statement: CastReturnStmt): CastReturnStmt {
+  private rewriteReturn(
+    statement: CastReturnStmt,
+    returnType: CastTypeRef | null,
+  ): CastReturnStmt {
     return {
       ...statement,
-      expression: statement.expression ? this.rewriteExpression(statement.expression) : null,
+      expression: statement.expression
+        ? this.rewriteExpressionWithExpectedType(statement.expression, returnType, new Map())
+        : null,
     };
   }
 
-  private rewriteVarDecl(statement: CastVarDeclStmt): CastVarDeclStmt {
+  private rewriteVarDecl(statement: CastVarDeclStmt, locals: LocalTypes): CastVarDeclStmt {
+    const rewritten = {
+      ...statement,
+      type: statement.type ? this.rewriteTypeRef(statement.type) : null,
+      initializer: this.rewriteExpressionWithExpectedType(
+        statement.initializer,
+        statement.type,
+        locals,
+      ),
+    };
+    const localType = statement.type ??
+      localInferredType(rewritten.initializer, locals, this.concrete, this.functions);
+    if (localType !== null) locals.set(statement.name, localType);
+    return rewritten;
+  }
+
+  private rewriteAssignment(
+    statement: CastAssignmentStmt,
+    locals: LocalTypes,
+  ): CastAssignmentStmt {
+    const target = this.rewriteExpression(statement.target, locals) as CastAssignmentStmt["target"];
     return {
       ...statement,
-      type: this.rewriteTypeRef(statement.type),
-      initializer: this.rewriteExpression(statement.initializer),
+      target,
+      expression: this.rewriteExpressionWithExpectedType(
+        statement.expression,
+        assignmentTargetType(statement.target, locals, this.concrete),
+        locals,
+      ),
     };
   }
 
-  private rewriteAssignment(statement: CastAssignmentStmt): CastAssignmentStmt {
+  private rewriteSwitch(
+    statement: CastSwitchStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastSwitchStmt {
     return {
       ...statement,
-      target: this.rewriteExpression(statement.target) as CastAssignmentStmt["target"],
-      expression: this.rewriteExpression(statement.expression),
-    };
-  }
-
-  private rewriteSwitch(statement: CastSwitchStmt): CastSwitchStmt {
-    return {
-      ...statement,
-      expression: this.rewriteExpression(statement.expression),
+      expression: this.rewriteExpression(statement.expression, locals),
       cases: statement.cases.map((switchCase) => ({
         ...switchCase,
-        labels: switchCase.labels.map((label) => this.rewriteExpression(label)),
-        statements: switchCase.statements.map((child) => this.rewriteStatement(child)),
+        labels: switchCase.labels.map((label) => this.rewriteExpression(label, locals)),
+        statements: switchCase.statements.map((child) =>
+          this.rewriteStatement(child, returnType, new Map(locals))
+        ),
       })),
       defaultCase: statement.defaultCase
         ? {
           ...statement.defaultCase,
-          statements: statement.defaultCase.statements.map((child) => this.rewriteStatement(child)),
+          statements: statement.defaultCase.statements.map((child) =>
+            this.rewriteStatement(child, returnType, new Map(locals))
+          ),
         }
         : null,
     };
   }
 
-  private rewriteWhile(statement: CastWhileStmt): CastWhileStmt {
+  private rewriteWhile(
+    statement: CastWhileStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastWhileStmt {
     return {
       ...statement,
-      condition: this.rewriteExpression(statement.condition),
-      body: this.rewriteBlock(statement.body),
+      condition: this.rewriteExpression(statement.condition, locals),
+      body: this.rewriteBlock(statement.body, returnType, locals),
     };
   }
 
-  private rewriteDoWhile(statement: CastDoWhileStmt): CastDoWhileStmt {
+  private rewriteDoWhile(
+    statement: CastDoWhileStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastDoWhileStmt {
     return {
       ...statement,
-      body: this.rewriteBlock(statement.body),
-      condition: this.rewriteExpression(statement.condition),
+      body: this.rewriteBlock(statement.body, returnType, locals),
+      condition: this.rewriteExpression(statement.condition, locals),
     };
   }
 
-  private rewriteFor(statement: CastForStmt): CastForStmt {
+  private rewriteFor(
+    statement: CastForStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastForStmt {
+    const scoped = new Map(locals);
     return {
       ...statement,
       initializer: statement.initializer
-        ? this.rewriteStatement(statement.initializer) as CastForStmt["initializer"]
+        ? this.rewriteStatement(
+          statement.initializer,
+          returnType,
+          scoped,
+        ) as CastForStmt["initializer"]
         : null,
-      condition: this.rewriteExpression(statement.condition),
+      condition: this.rewriteExpression(statement.condition, scoped),
       update: statement.update
-        ? this.rewriteStatement(statement.update) as CastForStmt["update"]
+        ? this.rewriteStatement(statement.update, returnType, scoped) as CastForStmt["update"]
         : null,
-      body: this.rewriteBlock(statement.body),
+      body: this.rewriteBlock(statement.body, returnType, scoped),
     };
   }
 
-  private rewriteIf(statement: CastIfStmt): CastIfStmt {
+  private rewriteForOf(
+    statement: CastForOfStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastForOfStmt {
     return {
       ...statement,
-      condition: this.rewriteExpression(statement.condition),
-      thenBody: this.rewriteBlock(statement.thenBody),
-      elseBody: statement.elseBody ? this.rewriteBlock(statement.elseBody) : null,
+      iterable: this.rewriteExpression(statement.iterable, locals),
+      body: this.rewriteBlock(statement.body, returnType, locals),
     };
   }
 
-  private rewriteExpression(expression: CastExpression): CastExpression {
+  private rewriteForIn(
+    statement: CastForInStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastForInStmt {
+    return {
+      ...statement,
+      iterable: this.rewriteExpression(statement.iterable, locals),
+      body: this.rewriteBlock(statement.body, returnType, locals),
+    };
+  }
+
+  private rewriteIf(
+    statement: CastIfStmt,
+    returnType: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastIfStmt {
+    return {
+      ...statement,
+      condition: this.rewriteExpression(statement.condition, locals),
+      thenBody: this.rewriteBlock(statement.thenBody, returnType, locals),
+      elseBody: statement.elseBody
+        ? this.rewriteBlock(statement.elseBody, returnType, locals)
+        : null,
+    };
+  }
+
+  private rewriteExpressionWithExpectedType(
+    expression: CastExpression,
+    expected: CastTypeRef | null,
+    locals: LocalTypes,
+  ): CastExpression {
+    if (expected === null) return this.rewriteExpression(expression, locals);
+    if (expression.kind === "NewExpr") {
+      return this.rewriteExpression(inferNewExpressionTypeArgs(expression, expected), locals);
+    }
+    if (expression.kind === "RecordLiteralExpr") {
+      return this.rewriteRecordLiteralWithExpectedType(expression, expected, locals);
+    }
+    if (expression.kind === "ArrayLiteralExpr") {
+      return this.rewriteArrayLiteralWithExpectedType(expression, expected, locals);
+    }
+    if (expression.kind === "ConditionalExpr") {
+      return this.rewriteConditionalWithExpectedType(expression, expected, locals);
+    }
+    return this.rewriteExpression(expression, locals);
+  }
+
+  private rewriteConditionalWithExpectedType(
+    expression: CastConditionalExpr,
+    expected: CastTypeRef,
+    locals: LocalTypes,
+  ): CastConditionalExpr {
+    return {
+      ...expression,
+      condition: this.rewriteExpression(expression.condition, locals),
+      whenTrue: this.rewriteExpressionWithExpectedType(expression.whenTrue, expected, locals),
+      whenFalse: this.rewriteExpressionWithExpectedType(expression.whenFalse, expected, locals),
+    };
+  }
+
+  private rewriteRecordLiteralWithExpectedType(
+    expression: CastRecordLiteralExpr,
+    expected: CastTypeRef,
+    locals: LocalTypes,
+  ): CastRecordLiteralExpr {
+    if (expected.kind !== "RecordTypeRef") return this.rewriteRecordLiteral(expression, locals);
+    return {
+      ...expression,
+      fields: expression.fields.map((field) => {
+        if (field.kind === "Spread") {
+          return { ...field, expression: this.rewriteExpression(field.expression, locals) };
+        }
+        return {
+          ...field,
+          expression: this.rewriteExpressionWithExpectedType(
+            field.expression,
+            expected.fields.find((candidate) => candidate.name === field.name)?.type ?? null,
+            locals,
+          ),
+        };
+      }),
+    };
+  }
+
+  private rewriteArrayLiteralWithExpectedType(
+    expression: CastArrayLiteralExpr,
+    expected: CastTypeRef,
+    locals: LocalTypes,
+  ): CastArrayLiteralExpr {
+    return {
+      ...expression,
+      elements: expression.elements.map((item, index) =>
+        this.rewriteExpressionWithExpectedType(item, expectedElementType(expected, index), locals)
+      ),
+    };
+  }
+
+  private inferNewExpressionTypeArgsFromArgs(
+    expression: CastNewExpr,
+    locals: LocalTypes,
+  ): CastNewExpr {
+    const template = this.templates.get(expression.className) ?? null;
+    if (template === null) return expression;
+    const typeArgs = inferGenericClassNewTypeArgsFromArgs(
+      template,
+      expression,
+      (arg) => localArgumentType(arg, locals, this.concrete, this.functions),
+    );
+    return typeArgs === null ? expression : { ...expression, typeArgs };
+  }
+
+  private rewriteExpression(
+    expression: CastExpression,
+    locals: LocalTypes = new Map(),
+  ): CastExpression {
     switch (expression.kind) {
       case "IntegerLiteral":
       case "FloatLiteral":
       case "BoolLiteral":
+      case "ZeroValueExpr":
       case "StringLiteral":
       case "IdentifierExpr":
         return expression;
+      case "ArrowFunctionExpr":
+        return { ...expression, body: this.rewriteExpression(expression.body, locals) };
       case "UnaryExpr":
-        return this.rewriteUnary(expression);
+        return this.rewriteUnary(expression, locals);
       case "BinaryExpr":
-        return this.rewriteBinary(expression);
+        return this.rewriteBinary(expression, locals);
       case "ConditionalExpr":
-        return this.rewriteConditional(expression);
+        return this.rewriteConditional(expression, locals);
       case "NullishCoalesceExpr":
-        return this.rewriteNullish(expression);
+        return this.rewriteNullish(expression, locals);
+      case "CastExpr":
+        return { ...expression, expression: this.rewriteExpression(expression.expression, locals) };
       case "CallExpr":
-        return this.rewriteCall(expression);
+        return this.rewriteCall(expression, locals);
       case "NewExpr":
-        return this.rewriteNew(expression);
+        return this.rewriteNew(expression, locals);
       case "MethodCallExpr":
-        return this.rewriteMethodCall(expression);
+        return this.rewriteMethodCall(expression, locals);
       case "PostfixPointerExpr":
-        return this.rewritePostfixPointer(expression);
+        return this.rewritePostfixPointer(expression, locals);
       case "NonNullAssertExpr":
-        return this.rewriteNonNullAssert(expression);
+        return this.rewriteNonNullAssert(expression, locals);
       case "FieldAccessExpr":
-        return { ...expression, operand: this.rewriteExpression(expression.operand) };
+        return { ...expression, operand: this.rewriteExpression(expression.operand, locals) };
       case "OptionalFieldAccessExpr":
-        return this.rewriteOptionalFieldAccess(expression);
+        return this.rewriteOptionalFieldAccess(expression, locals);
       case "OptionalMethodCallExpr":
-        return this.rewriteOptionalMethodCall(expression);
+        return this.rewriteOptionalMethodCall(expression, locals);
       case "OptionalIndexExpr":
-        return this.rewriteOptionalIndex(expression);
+        return this.rewriteOptionalIndex(expression, locals);
       case "RecordLiteralExpr":
-        return this.rewriteRecordLiteral(expression);
+        return this.rewriteRecordLiteral(expression, locals);
       case "ArrayLiteralExpr":
-        return this.rewriteArrayLiteral(expression);
+        return this.rewriteArrayLiteral(expression, locals);
       case "IndexExpr":
-        return this.rewriteIndex(expression);
+        return this.rewriteIndex(expression, locals);
     }
   }
 
-  private rewriteUnary(expression: CastUnaryExpr): CastUnaryExpr {
-    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  private rewriteUnary(expression: CastUnaryExpr, locals: LocalTypes): CastUnaryExpr {
+    return { ...expression, operand: this.rewriteExpression(expression.operand, locals) };
   }
 
-  private rewriteBinary(expression: CastBinaryExpr): CastBinaryExpr {
+  private rewriteBinary(expression: CastBinaryExpr, locals: LocalTypes): CastBinaryExpr {
     return {
       ...expression,
-      left: this.rewriteExpression(expression.left),
-      right: this.rewriteExpression(expression.right),
+      left: this.rewriteExpression(expression.left, locals),
+      right: this.rewriteExpression(expression.right, locals),
     };
   }
 
-  private rewriteConditional(expression: CastConditionalExpr): CastConditionalExpr {
+  private rewriteConditional(
+    expression: CastConditionalExpr,
+    locals: LocalTypes,
+  ): CastConditionalExpr {
     return {
       ...expression,
-      condition: this.rewriteExpression(expression.condition),
-      whenTrue: this.rewriteExpression(expression.whenTrue),
-      whenFalse: this.rewriteExpression(expression.whenFalse),
+      condition: this.rewriteExpression(expression.condition, locals),
+      whenTrue: this.rewriteExpression(expression.whenTrue, locals),
+      whenFalse: this.rewriteExpression(expression.whenFalse, locals),
     };
   }
 
-  private rewriteNullish(expression: CastNullishCoalesceExpr): CastNullishCoalesceExpr {
+  private rewriteNullish(
+    expression: CastNullishCoalesceExpr,
+    locals: LocalTypes,
+  ): CastNullishCoalesceExpr {
     return {
       ...expression,
-      left: this.rewriteExpression(expression.left),
-      fallback: this.rewriteExpression(expression.fallback),
+      left: this.rewriteExpression(expression.left, locals),
+      fallback: this.rewriteExpressionWithExpectedType(
+        expression.fallback,
+        nullishFallbackType(expression.left, locals, this.concrete),
+        locals,
+      ),
     };
   }
 
-  private rewriteCall(expression: CastCallExpr): CastCallExpr {
+  private rewriteCall(expression: CastCallExpr, locals: LocalTypes): CastCallExpr {
     return {
       ...expression,
       typeArgs: expression.typeArgs?.map((typeArg) => this.rewriteTypeRef(typeArg)),
-      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+      args: expression.args.map((arg, index) =>
+        this.rewriteExpressionWithExpectedType(
+          arg,
+          this.callParamType(expression.callee, index),
+          locals,
+        )
+      ),
     };
   }
 
-  private rewriteNew(expression: CastNewExpr): CastNewExpr {
+  private callParamType(callee: Str, index: usize): CastTypeRef | null {
+    return this.functions.get(callee)?.params[index]?.type ?? null;
+  }
+
+  private rewriteNew(expression: CastNewExpr, locals: LocalTypes): CastNewExpr {
+    const inferred = this.inferNewExpressionTypeArgsFromArgs(expression, locals);
     const typeRef = this.rewriteTypeRef({
       kind: "NamedTypeRef",
-      name: expression.className,
-      typeArgs: expression.typeArgs,
-      span: expression.span,
+      name: inferred.className,
+      typeArgs: inferred.typeArgs,
+      span: inferred.span,
     });
     return {
-      ...expression,
-      className: typeRef.kind === "NamedTypeRef" ? typeRef.name : expression.className,
+      ...inferred,
+      className: typeRef.kind === "NamedTypeRef" ? typeRef.name : inferred.className,
       typeArgs: [],
-      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+      args: inferred.args.map((arg) => this.rewriteExpression(arg, locals)),
     };
   }
 
-  private rewriteMethodCall(expression: CastMethodCallExpr): CastMethodCallExpr {
+  private rewriteMethodCall(
+    expression: CastMethodCallExpr,
+    locals: LocalTypes,
+  ): CastMethodCallExpr {
     return {
       ...expression,
-      receiver: this.rewriteExpression(expression.receiver),
-      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+      receiver: this.rewriteExpression(expression.receiver, locals),
+      args: expression.args.map((arg) => this.rewriteExpression(arg, locals)),
     };
   }
 
-  private rewritePostfixPointer(expression: CastPostfixPointerExpr): CastPostfixPointerExpr {
-    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  private rewritePostfixPointer(
+    expression: CastPostfixPointerExpr,
+    locals: LocalTypes,
+  ): CastPostfixPointerExpr {
+    return { ...expression, operand: this.rewriteExpression(expression.operand, locals) };
   }
 
-  private rewriteNonNullAssert(expression: CastNonNullAssertExpr): CastNonNullAssertExpr {
-    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+  private rewriteNonNullAssert(
+    expression: CastNonNullAssertExpr,
+    locals: LocalTypes,
+  ): CastNonNullAssertExpr {
+    return { ...expression, operand: this.rewriteExpression(expression.operand, locals) };
   }
 
   private rewriteOptionalFieldAccess(
     expression: CastOptionalFieldAccessExpr,
+    locals: LocalTypes,
   ): CastOptionalFieldAccessExpr {
-    return { ...expression, operand: this.rewriteExpression(expression.operand) };
+    return { ...expression, operand: this.rewriteExpression(expression.operand, locals) };
   }
 
   private rewriteOptionalMethodCall(
     expression: CastOptionalMethodCallExpr,
+    locals: LocalTypes,
   ): CastOptionalMethodCallExpr {
     return {
       ...expression,
-      receiver: this.rewriteExpression(expression.receiver),
-      args: expression.args.map((arg) => this.rewriteExpression(arg)),
+      receiver: this.rewriteExpression(expression.receiver, locals),
+      args: expression.args.map((arg) => this.rewriteExpression(arg, locals)),
     };
   }
 
-  private rewriteOptionalIndex(expression: CastOptionalIndexExpr): CastOptionalIndexExpr {
+  private rewriteOptionalIndex(
+    expression: CastOptionalIndexExpr,
+    locals: LocalTypes,
+  ): CastOptionalIndexExpr {
     return {
       ...expression,
-      operand: this.rewriteExpression(expression.operand),
-      index: this.rewriteExpression(expression.index),
+      operand: this.rewriteExpression(expression.operand, locals),
+      index: this.rewriteExpression(expression.index, locals),
     };
   }
 
-  private rewriteRecordLiteral(expression: CastRecordLiteralExpr): CastRecordLiteralExpr {
+  private rewriteRecordLiteral(
+    expression: CastRecordLiteralExpr,
+    locals: LocalTypes,
+  ): CastRecordLiteralExpr {
     return {
       ...expression,
       fields: expression.fields.map((field) => ({
         ...field,
-        expression: this.rewriteExpression(field.expression),
+        expression: this.rewriteExpression(field.expression, locals),
       })),
     };
   }
 
-  private rewriteArrayLiteral(expression: CastArrayLiteralExpr): CastArrayLiteralExpr {
+  private rewriteArrayLiteral(
+    expression: CastArrayLiteralExpr,
+    locals: LocalTypes,
+  ): CastArrayLiteralExpr {
     return {
       ...expression,
-      elements: expression.elements.map((element) => this.rewriteExpression(element)),
+      elements: expression.elements.map((element) => this.rewriteExpression(element, locals)),
     };
   }
 
-  private rewriteIndex(expression: CastIndexExpr): CastIndexExpr {
+  private rewriteIndex(expression: CastIndexExpr, locals: LocalTypes): CastIndexExpr {
     return {
       ...expression,
-      operand: this.rewriteExpression(expression.operand),
-      index: this.rewriteExpression(expression.index),
+      operand: this.rewriteExpression(expression.operand, locals),
+      index: this.rewriteExpression(expression.index, locals),
     };
   }
 
@@ -608,6 +1035,24 @@ function rewriteTypeChildren(
       return { ...type, element: rewrite(type.element) };
     case "FunctionTypeRef":
       return rewriteFunctionType(type, rewrite);
+    case "TupleTypeRef":
+      return { ...type, elements: type.elements.map(rewrite) };
+    case "UnionTypeRef":
+      return { ...type, members: type.members.map(rewrite) };
+    case "IntersectionTypeRef":
+      return { ...type, members: type.members.map(rewrite) };
+    case "ConditionalTypeRef":
+      return {
+        ...type,
+        checkType: rewrite(type.checkType),
+        extendsType: rewrite(type.extendsType),
+        trueType: rewrite(type.trueType),
+        falseType: rewrite(type.falseType),
+      };
+    case "IndexedAccessTypeRef":
+      return { ...type, objectType: rewrite(type.objectType) };
+    case "MappedTypeRef":
+      return { ...type, sourceType: rewrite(type.sourceType), valueType: rewrite(type.valueType) };
     case "RecordTypeRef":
       return rewriteRecordType(type, rewrite);
   }
@@ -668,11 +1113,18 @@ function substituteStatement(
     case "DeferStmt":
     case "ExpressionStmt":
     case "BreakStmt":
+    case "ContinueStmt":
     case "AssignmentStmt":
     case "IncDecStmt":
       return statement;
     case "VarDeclStmt":
-      return { ...statement, type: substituteTypeRef(statement.type, substitutions) };
+      return {
+        ...statement,
+        type: statement.type ? substituteTypeRef(statement.type, substitutions) : null,
+      };
+    case "RecordRestStmt":
+    case "ArrayDestructureStmt":
+      return statement;
     case "SwitchStmt":
       return {
         ...statement,
@@ -709,6 +1161,9 @@ function substituteStatement(
           : null,
         body: substituteBlock(statement.body, substitutions),
       };
+    case "ForOfStmt":
+    case "ForInStmt":
+      return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "IfStmt":
       return {
         ...statement,
@@ -863,6 +1318,14 @@ function castMethodSignatureMatches(
     typeName(lowerTypeRef(param.type)) ===
       typeName(lowerTypeRef(interfaceMethod.params[index].type))
   );
+}
+
+function inferNewExpressionTypeArgs(
+  expression: CastNewExpr,
+  expected: CastTypeRef,
+): CastNewExpr {
+  const typeArgs = inferGenericClassNewTypeArgsFromExpected(expression, expected);
+  return typeArgs === null ? expression : { ...expression, typeArgs };
 }
 
 function classInstantiationName(name: Str, typeArgs: CastTypeRef[]): Str {

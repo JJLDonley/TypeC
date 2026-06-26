@@ -32,6 +32,27 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
         ...checkArrayElementType(type),
         ...checkArraySize(type.sizeText, type),
       ];
+    case "TupleTypeRef":
+      return checkTupleType(type, typeAliases);
+    case "UnionTypeRef":
+      return [{ message: "Union type syntax is only supported in type aliases", span: type.span }];
+    case "IntersectionTypeRef":
+      return [{
+        message: "Intersection type syntax is only supported for record type aliases",
+        span: type.span,
+      }];
+    case "ConditionalTypeRef":
+      return [{
+        message: "Conditional type syntax is only supported in type aliases",
+        span: type.span,
+      }];
+    case "IndexedAccessTypeRef":
+      return [{
+        message: "Indexed access type syntax is only supported in mapped type aliases",
+        span: type.span,
+      }];
+    case "MappedTypeRef":
+      return [{ message: "Mapped type syntax is only supported in type aliases", span: type.span }];
     case "FunctionTypeRef":
       return checkFunctionType(type, typeAliases);
     case "InferredArrayTypeRef":
@@ -39,6 +60,20 @@ export function checkTypeRef(type: TypeRef, typeAliases: Map<Str, TypeRef>): Dia
     case "RecordTypeRef":
       return checkRecordType(type, typeAliases);
   }
+}
+
+function checkTupleType(
+  type: Extract<TypeRef, { kind: "TupleTypeRef" }>,
+  typeAliases: Map<Str, TypeRef>,
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const element of type.elements) {
+    diagnostics.push(...checkTypeRef(element, typeAliases));
+    diagnostics.push(
+      ...checkValueType(element, "Tuple element cannot have type 'void'", element.span),
+    );
+  }
+  return diagnostics;
 }
 
 function checkFunctionType(

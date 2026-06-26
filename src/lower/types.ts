@@ -1,26 +1,38 @@
 import type {
+  ConditionalTypeRef,
   FixedArrayTypeRef,
   FunctionTypeRef,
+  IndexedAccessTypeRef,
   InferredArrayTypeRef,
+  IntersectionTypeRef,
+  MappedTypeRef,
   PointerTypeRef,
   RecordField,
   RecordTypeRef,
   ReferenceTypeRef,
   SafePointerTypeRef,
   SliceTypeRef,
+  TupleTypeRef,
   TypeRef,
+  UnionTypeRef,
 } from "core/ast.ts";
 import type {
+  CastConditionalTypeRef,
   CastFixedArrayTypeRef,
   CastFunctionTypeRef,
+  CastIndexedAccessTypeRef,
   CastInferredArrayTypeRef,
+  CastIntersectionTypeRef,
+  CastMappedTypeRef,
   CastPointerTypeRef,
   CastRecordField,
   CastRecordTypeRef,
   CastReferenceTypeRef,
   CastSafePointerTypeRef,
   CastSliceTypeRef,
+  CastTupleTypeRef,
   CastTypeRef,
+  CastUnionTypeRef,
 } from "core/cast.ts";
 
 export function lowerTypeRef(type: CastTypeRef): TypeRef {
@@ -44,6 +56,18 @@ export function lowerTypeRef(type: CastTypeRef): TypeRef {
       return lowerInferredArrayTypeRef(type);
     case "FixedArrayTypeRef":
       return lowerFixedArrayTypeRef(type);
+    case "TupleTypeRef":
+      return lowerTupleTypeRef(type);
+    case "UnionTypeRef":
+      return lowerUnionTypeRef(type);
+    case "IntersectionTypeRef":
+      return lowerIntersectionTypeRef(type);
+    case "ConditionalTypeRef":
+      return lowerConditionalTypeRef(type);
+    case "IndexedAccessTypeRef":
+      return lowerIndexedAccessTypeRef(type);
+    case "MappedTypeRef":
+      return lowerMappedTypeRef(type);
     case "FunctionTypeRef":
       return lowerFunctionTypeRef(type);
     case "RecordTypeRef":
@@ -76,6 +100,48 @@ function lowerFixedArrayTypeRef(type: CastFixedArrayTypeRef): FixedArrayTypeRef 
     kind: "FixedArrayTypeRef",
     element: lowerTypeRef(type.element),
     sizeText: type.sizeText,
+    span: type.span,
+  };
+}
+
+function lowerTupleTypeRef(type: CastTupleTypeRef): TupleTypeRef {
+  return { kind: "TupleTypeRef", elements: type.elements.map(lowerTypeRef), span: type.span };
+}
+
+function lowerUnionTypeRef(type: CastUnionTypeRef): UnionTypeRef {
+  return { kind: "UnionTypeRef", members: type.members.map(lowerTypeRef), span: type.span };
+}
+
+function lowerIntersectionTypeRef(type: CastIntersectionTypeRef): IntersectionTypeRef {
+  return { kind: "IntersectionTypeRef", members: type.members.map(lowerTypeRef), span: type.span };
+}
+
+function lowerConditionalTypeRef(type: CastConditionalTypeRef): ConditionalTypeRef {
+  return {
+    kind: "ConditionalTypeRef",
+    checkType: lowerTypeRef(type.checkType),
+    extendsType: lowerTypeRef(type.extendsType),
+    trueType: lowerTypeRef(type.trueType),
+    falseType: lowerTypeRef(type.falseType),
+    span: type.span,
+  };
+}
+
+function lowerIndexedAccessTypeRef(type: CastIndexedAccessTypeRef): IndexedAccessTypeRef {
+  return {
+    kind: "IndexedAccessTypeRef",
+    objectType: lowerTypeRef(type.objectType),
+    indexName: type.indexName,
+    span: type.span,
+  };
+}
+
+function lowerMappedTypeRef(type: CastMappedTypeRef): MappedTypeRef {
+  return {
+    kind: "MappedTypeRef",
+    keyName: type.keyName,
+    sourceType: lowerTypeRef(type.sourceType),
+    valueType: lowerTypeRef(type.valueType),
     span: type.span,
   };
 }

@@ -38,9 +38,14 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
     case "ExpressionStmt":
       return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
     case "BreakStmt":
+    case "ContinueStmt":
       return stmt;
     case "VarDeclStmt":
       return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, functions) };
+    case "RecordRestStmt":
+      return { ...stmt, source: namespaceExpression(stmt.source, namespace, functions) };
+    case "ArrayDestructureStmt":
+      return { ...stmt, source: namespaceExpression(stmt.source, namespace, functions) };
     case "AssignmentStmt":
       return {
         ...stmt,
@@ -98,6 +103,18 @@ function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>
           : null,
         body: namespaceBlock(stmt.body, namespace, functions),
       };
+    case "ForOfStmt":
+      return {
+        ...stmt,
+        iterable: namespaceExpression(stmt.iterable, namespace, functions),
+        body: namespaceBlock(stmt.body, namespace, functions),
+      };
+    case "ForInStmt":
+      return {
+        ...stmt,
+        iterable: namespaceExpression(stmt.iterable, namespace, functions),
+        body: namespaceBlock(stmt.body, namespace, functions),
+      };
     case "IfStmt":
       return {
         ...stmt,
@@ -148,6 +165,8 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
         left: namespaceExpression(expr.left, namespace, functions),
         fallback: namespaceExpression(expr.fallback, namespace, functions),
       };
+    case "CastExpr":
+      return { ...expr, expression: namespaceExpression(expr.expression, namespace, functions) };
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
       return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
@@ -194,6 +213,8 @@ function namespaceExpression(expr: Expression, namespace: Str, functions: Set<St
     case "ZeroValueExpr":
     case "IdentifierExpr":
       return expr;
+    case "ArrowFunctionExpr":
+      return { ...expr, body: namespaceExpression(expr.body, namespace, functions) };
   }
 }
 

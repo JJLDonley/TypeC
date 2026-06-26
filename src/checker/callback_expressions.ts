@@ -1,9 +1,9 @@
 import type { Expression, FunctionDecl } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
+import { functionTypeName } from "checker/function_type_names.ts";
 import { parseFunctionTypeName } from "checker/type_name_shapes.ts";
 import { isAssignable } from "checker/types.ts";
-import { typeName } from "core/type_ref.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -28,11 +28,6 @@ export function checkExpectedCallbackExpression(
     message: `Callback '${expr.name}' type '${actual}' is not assignable to '${expected}'`,
     span: expr.span,
   }]);
-}
-
-function functionTypeName(fn: FunctionDecl): TypeName {
-  const params = fn.params.map((param) => `${param.name}: ${typeName(param.type)}`).join(", ");
-  return `(${params}) => ${typeName(fn.returnType)}`;
 }
 
 function handled(type: TypeName, diagnostics: Diagnostic[]): CallbackExpressionCheck {

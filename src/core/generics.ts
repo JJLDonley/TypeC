@@ -4,12 +4,21 @@ import type {
   FunctionDecl,
   Param,
   Program,
+  RecordField,
   Statement,
   TypeRef,
 } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
+import { classMethodName } from "core/classes.ts";
 import { checkGenericConstraints, type ConstraintContext } from "core/generic_constraints.ts";
+import {
+  inferGenericCallTypeArgsFromArgs,
+  inferGenericCallTypeArgsFromResult,
+  inferGenericCallTypeArgsFromTypedArgs,
+  inferGenericLocalContextTypeRef,
+} from "core/generic_inference.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { typeName } from "core/type_ref.ts";
 
 export type Str = string;
@@ -25,10 +34,14 @@ export function instantiateGenerics(program: Program): Program {
   const diagnostics = genericDiagnostics(program.functions, templates);
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   const ordinary = program.functions.filter((fn) => !isGenericFunction(fn));
-  const instantiator = new GenericInstantiator(templates, {
-    interfaces: program.interfaces ?? [],
-    functions: program.functions,
-  });
+  const instantiator = new GenericInstantiator(
+    templates,
+    {
+      interfaces: program.interfaces ?? [],
+      functions: program.functions,
+    },
+    typeAliasMap(program.typeAliases),
+  );
   const functions = ordinary.map((fn) => instantiator.rewriteFunction(fn));
   return { ...program, functions: [...functions, ...instantiator.instantiations()] };
 }
@@ -89,9 +102,14 @@ function statementGenericCallDiagnostics(
     case "ExpressionStmt":
       return expressionGenericCallDiagnostics(statement.expression, templates);
     case "BreakStmt":
+    case "ContinueStmt":
       return [];
     case "VarDeclStmt":
       return expressionGenericCallDiagnostics(statement.initializer, templates);
+    case "RecordRestStmt":
+      return expressionGenericCallDiagnostics(statement.source, templates);
+    case "ArrayDestructureStmt":
+      return expressionGenericCallDiagnostics(statement.source, templates);
     case "AssignmentStmt":
       return [
         ...expressionGenericCallDiagnostics(statement.target, templates),
@@ -131,6 +149,12 @@ function statementGenericCallDiagnostics(
         ...(statement.update ? statementGenericCallDiagnostics(statement.update, templates) : []),
         ...statementListGenericCallDiagnostics(statement.body.statements, templates),
       ];
+    case "ForOfStmt":
+    case "ForInStmt":
+      return [
+        ...expressionGenericCallDiagnostics(statement.iterable, templates),
+        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
+      ];
     case "IfStmt":
       return [
         ...expressionGenericCallDiagnostics(statement.condition, templates),
@@ -154,6 +178,8 @@ function expressionGenericCallDiagnostics(
     case "ZeroValueExpr":
     case "IdentifierExpr":
       return [];
+    case "ArrowFunctionExpr":
+      return expressionGenericCallDiagnostics(expr.body, templates);
     case "UnaryExpr":
       return expressionGenericCallDiagnostics(expr.operand, templates);
     case "BinaryExpr":
@@ -172,6 +198,8 @@ function expressionGenericCallDiagnostics(
         ...expressionGenericCallDiagnostics(expr.left, templates),
         ...expressionGenericCallDiagnostics(expr.fallback, templates),
       ];
+    case "CastExpr":
+      return expressionGenericCallDiagnostics(expr.expression, templates);
     case "CallExpr":
       return [
         ...genericCallArityDiagnostics(expr, templates),
@@ -244,37 +272,51 @@ function isGenericFunction(fn: FunctionDecl): b8 {
 
 class GenericInstantiator {
   private emitted = new Map<Str, FunctionDecl>();
+  private functions: Map<Str, FunctionDecl>;
 
-  constructor(private templates: Map<Str, FunctionDecl>, private constraints: ConstraintContext) {}
+  constructor(
+    private templates: Map<Str, FunctionDecl>,
+    private constraints: ConstraintContext,
+    private aliases: Map<Str, TypeRef>,
+  ) {
+    this.functions = new Map(constraints.functions.map((fn) => [fn.name, fn]));
+  }
 
   rewriteFunction(fn: FunctionDecl): FunctionDecl {
-    return { ...fn, body: fn.body ? this.rewriteBlock(fn.body) : null };
+    const locals = localTypeMap(fn.params);
+    return { ...fn, body: fn.body ? this.rewriteBlock(fn.body, fn.returnType, locals) : null };
   }
 
   instantiations(): FunctionDecl[] {
     return [...this.emitted.values()];
   }
 
-  private instantiateCall(expr: Extract<Expression, { kind: "CallExpr" }>): Expression {
-    const typeArgs = expr.typeArgs ?? [];
+  private instantiateCall(
+    expr: Extract<Expression, { kind: "CallExpr" }>,
+    inferredTypeArgs: TypeRef[] | null = null,
+    locals: Map<Str, TypeRef> = new Map(),
+  ): Expression {
+    const typeArgs = callTypeArgs(
+      expr,
+      inferredTypeArgs ?? this.inferCallTypeArgsFromArgs(expr, locals),
+    );
     if (typeArgs.length === 0) {
-      return {
-        ...expr,
-        args: expr.args.map((arg) => this.rewriteExpr(arg)),
-      };
+      return { ...expr, args: this.rewriteCallArgs(expr.callee, expr.args, locals) };
     }
     const template = this.templates.get(expr.callee);
-    if (!template) return { ...expr, args: expr.args.map((arg) => this.rewriteExpr(arg)) };
+    if (!template) return { ...expr, args: this.rewriteCallArgs(expr.callee, expr.args, locals) };
     this.checkConstraints(template, typeArgs, expr.span);
     const name = instantiationName(template.name, typeArgs);
     if (!this.emitted.has(name)) {
-      this.emitted.set(name, this.createInstantiation(template, typeArgs, name));
+      const instantiation = this.createInstantiation(template, typeArgs, name);
+      this.emitted.set(name, instantiation);
+      this.functions.set(name, instantiation);
     }
     return {
       ...expr,
       callee: name,
       typeArgs: [],
-      args: expr.args.map((arg) => this.rewriteExpr(arg)),
+      args: this.rewriteCallArgs(name, expr.args, locals),
     };
   }
 
@@ -313,55 +355,97 @@ class GenericInstantiator {
     return this.rewriteFunction(substituted);
   }
 
-  private rewriteBlock(block: BlockStmt): BlockStmt {
-    return {
-      ...block,
-      statements: block.statements.map((statement) => this.rewriteStatement(statement)),
-    };
+  private rewriteBlock(
+    block: BlockStmt,
+    returnType: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): BlockStmt {
+    const scoped = new Map(locals);
+    return { ...block, statements: this.rewriteStatements(block.statements, returnType, scoped) };
   }
 
-  private rewriteStatement(statement: Statement): Statement {
+  private rewriteStatements(
+    statements: Statement[],
+    returnType: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): Statement[] {
+    const scoped = new Map(locals);
+    return statements.map((statement) => this.rewriteStatement(statement, returnType, scoped));
+  }
+
+  private rewriteStatement(
+    statement: Statement,
+    returnType: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): Statement {
     switch (statement.kind) {
       case "EmptyStmt":
         return statement;
       case "ReturnStmt":
         return {
           ...statement,
-          expression: statement.expression ? this.rewriteExpr(statement.expression) : null,
+          expression: statement.expression
+            ? this.rewriteExprWithExpectedType(statement.expression, returnType, locals)
+            : null,
         };
       case "DeferStmt":
-        return { ...statement, expression: this.rewriteExpr(statement.expression) };
+        return { ...statement, expression: this.rewriteExpr(statement.expression, locals) };
       case "ExpressionStmt":
-        return { ...statement, expression: this.rewriteExpr(statement.expression) };
+        return { ...statement, expression: this.rewriteExpr(statement.expression, locals) };
       case "BreakStmt":
+      case "ContinueStmt":
         return statement;
-      case "VarDeclStmt":
-        return { ...statement, initializer: this.rewriteExpr(statement.initializer) };
-      case "AssignmentStmt":
+      case "VarDeclStmt": {
+        const rewritten = {
+          ...statement,
+          initializer: this.rewriteExprWithExpectedType(
+            statement.initializer,
+            statement.type,
+            locals,
+          ),
+        };
+        const localType = statement.type ??
+          localContextType(rewritten.initializer, this.functions);
+        if (localType !== null) locals.set(statement.name, localType);
+        return rewritten;
+      }
+      case "RecordRestStmt":
+        return { ...statement, source: this.rewriteExpr(statement.source, locals) };
+      case "ArrayDestructureStmt":
+        return { ...statement, source: this.rewriteExpr(statement.source, locals) };
+      case "AssignmentStmt": {
+        const target = this.rewriteExpr(statement.target, locals) as typeof statement.target;
         return {
           ...statement,
-          target: this.rewriteExpr(statement.target) as typeof statement.target,
-          expression: this.rewriteExpr(statement.expression),
+          target,
+          expression: this.rewriteExprWithExpectedType(
+            statement.expression,
+            assignmentTargetType(target, locals, this.aliases),
+            locals,
+          ),
         };
+      }
       case "IncDecStmt":
         return {
           ...statement,
-          target: this.rewriteExpr(statement.target) as typeof statement.target,
+          target: this.rewriteExpr(statement.target, locals) as typeof statement.target,
         };
       case "SwitchStmt":
         return {
           ...statement,
-          expression: this.rewriteExpr(statement.expression),
+          expression: this.rewriteExpr(statement.expression, locals),
           cases: statement.cases.map((switchCase) => ({
             ...switchCase,
-            labels: switchCase.labels.map((label) => this.rewriteExpr(label)),
-            statements: switchCase.statements.map((child) => this.rewriteStatement(child)),
+            labels: switchCase.labels.map((label) => this.rewriteExpr(label, locals)),
+            statements: this.rewriteStatements(switchCase.statements, returnType, locals),
           })),
           defaultCase: statement.defaultCase
             ? {
               ...statement.defaultCase,
-              statements: statement.defaultCase.statements.map((child) =>
-                this.rewriteStatement(child)
+              statements: this.rewriteStatements(
+                statement.defaultCase.statements,
+                returnType,
+                locals,
               ),
             }
             : null,
@@ -369,38 +453,202 @@ class GenericInstantiator {
       case "WhileStmt":
         return {
           ...statement,
-          condition: this.rewriteExpr(statement.condition),
-          body: this.rewriteBlock(statement.body),
+          condition: this.rewriteExpr(statement.condition, locals),
+          body: this.rewriteBlock(statement.body, returnType, locals),
         };
       case "DoWhileStmt":
         return {
           ...statement,
-          body: this.rewriteBlock(statement.body),
-          condition: this.rewriteExpr(statement.condition),
+          body: this.rewriteBlock(statement.body, returnType, locals),
+          condition: this.rewriteExpr(statement.condition, locals),
         };
-      case "ForStmt":
+      case "ForStmt": {
+        const scoped = new Map(locals);
         return {
           ...statement,
           initializer: statement.initializer
-            ? this.rewriteStatement(statement.initializer) as typeof statement.initializer
+            ? this.rewriteStatement(
+              statement.initializer,
+              returnType,
+              scoped,
+            ) as typeof statement.initializer
             : null,
-          condition: this.rewriteExpr(statement.condition),
+          condition: this.rewriteExpr(statement.condition, scoped),
           update: statement.update
-            ? this.rewriteStatement(statement.update) as typeof statement.update
+            ? this.rewriteStatement(statement.update, returnType, scoped) as typeof statement.update
             : null,
-          body: this.rewriteBlock(statement.body),
+          body: this.rewriteBlock(statement.body, returnType, scoped),
+        };
+      }
+      case "ForOfStmt":
+      case "ForInStmt":
+        return {
+          ...statement,
+          iterable: this.rewriteExpr(statement.iterable, locals),
+          body: this.rewriteBlock(statement.body, returnType, locals),
         };
       case "IfStmt":
         return {
           ...statement,
-          condition: this.rewriteExpr(statement.condition),
-          thenBody: this.rewriteBlock(statement.thenBody),
-          elseBody: statement.elseBody ? this.rewriteBlock(statement.elseBody) : null,
+          condition: this.rewriteExpr(statement.condition, locals),
+          thenBody: this.rewriteBlock(statement.thenBody, returnType, locals),
+          elseBody: statement.elseBody
+            ? this.rewriteBlock(statement.elseBody, returnType, locals)
+            : null,
         };
     }
   }
 
-  private rewriteExpr(expr: Expression): Expression {
+  private rewriteExprWithExpectedType(
+    expr: Expression,
+    expected: TypeRef | null,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    if (expected === null) return this.rewriteExpr(expr, locals);
+    if (expr.kind === "CallExpr") {
+      const typeArgs = this.inferCallTypeArgsFromResult(expr, expected);
+      return this.instantiateCall(expr, typeArgs, locals);
+    }
+    if (expr.kind === "RecordLiteralExpr") {
+      return this.rewriteRecordLiteralWithExpectedType(expr, expected, locals);
+    }
+    if (expr.kind === "ArrayLiteralExpr") {
+      return this.rewriteArrayLiteralWithExpectedType(expr, expected, locals);
+    }
+    if (expr.kind === "ConditionalExpr") {
+      return this.rewriteConditionalWithExpectedType(expr, expected, locals);
+    }
+    return this.rewriteExpr(expr, locals);
+  }
+
+  private rewriteConditionalWithExpectedType(
+    expr: Extract<Expression, { kind: "ConditionalExpr" }>,
+    expected: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    return {
+      ...expr,
+      condition: this.rewriteExpr(expr.condition, locals),
+      whenTrue: this.rewriteExprWithExpectedType(expr.whenTrue, expected, locals),
+      whenFalse: this.rewriteExprWithExpectedType(expr.whenFalse, expected, locals),
+    };
+  }
+
+  private rewriteRecordLiteralWithExpectedType(
+    expr: Extract<Expression, { kind: "RecordLiteralExpr" }>,
+    expected: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    const record = expectedRecordType(expected, this.aliases);
+    if (record === null) return this.rewriteExpr(expr, locals);
+    return {
+      ...expr,
+      fields: expr.fields.map((field) => {
+        if (field.kind === "Spread") {
+          return { ...field, expression: this.rewriteExpr(field.expression, locals) };
+        }
+        return {
+          ...field,
+          expression: this.rewriteExprWithExpectedType(
+            field.expression,
+            record.fields.find((candidate) => candidate.name === field.name)?.type ?? null,
+            locals,
+          ),
+        };
+      }),
+    };
+  }
+
+  private rewriteArrayLiteralWithExpectedType(
+    expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>,
+    expected: TypeRef,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    return {
+      ...expr,
+      elements: expr.elements.map((item, index) =>
+        this.rewriteExprWithExpectedType(item, expectedElementType(expected, index), locals)
+      ),
+    };
+  }
+
+  private rewriteCallArgs(
+    callee: Str,
+    args: Expression[],
+    locals: Map<Str, TypeRef>,
+  ): Expression[] {
+    const fn = this.functions.get(callee) ?? null;
+    return args.map((arg, index) =>
+      this.rewriteExprWithExpectedType(arg, fn?.params[index]?.type ?? null, locals)
+    );
+  }
+
+  private inferCallTypeArgsFromResult(
+    expr: Extract<Expression, { kind: "CallExpr" }>,
+    expected: TypeRef,
+  ): TypeRef[] | null {
+    if ((expr.typeArgs ?? []).length > 0) return null;
+    const template = this.templates.get(expr.callee) ?? null;
+    if (template === null) return null;
+    return inferGenericCallTypeArgsFromResult(template, expected);
+  }
+
+  private inferCallTypeArgsFromArgs(
+    expr: Extract<Expression, { kind: "CallExpr" }>,
+    locals: Map<Str, TypeRef>,
+  ): TypeRef[] | null {
+    if ((expr.typeArgs ?? []).length > 0) return null;
+    const template = this.templates.get(expr.callee) ?? null;
+    if (template === null) return null;
+    return inferGenericCallTypeArgsFromTypedArgs(
+      template,
+      expr.args,
+      (arg) => argumentType(arg, locals, this.aliases, this.functions),
+    );
+  }
+
+  private rewriteMethodCall(
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    return {
+      ...expr,
+      receiver: this.rewriteExpr(expr.receiver, locals),
+      args: expr.args.map((arg, index) =>
+        this.rewriteExprWithExpectedType(arg, this.methodParamType(expr, index, locals), locals)
+      ),
+    };
+  }
+
+  private methodParamType(
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+    index: usize,
+    locals: Map<Str, TypeRef>,
+  ): TypeRef | null {
+    const namespaceParam = namespaceMethodParamType(expr, index, locals, this.functions);
+    if (namespaceParam !== null) return namespaceParam;
+    const receiver = assignmentTargetType(expr.receiver, locals, this.aliases);
+    if (receiver?.kind !== "NamedTypeRef") return null;
+    return this.functions.get(classMethodName(receiver.name, expr.method))?.params[index + 1]
+      ?.type ?? null;
+  }
+
+  private rewriteNullishCoalesce(
+    expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>,
+    locals: Map<Str, TypeRef>,
+  ): Expression {
+    return {
+      ...expr,
+      left: this.rewriteExpr(expr.left, locals),
+      fallback: this.rewriteExprWithExpectedType(
+        expr.fallback,
+        nullishFallbackType(expr.left, locals, this.aliases),
+        locals,
+      ),
+    };
+  }
+
+  private rewriteExpr(expr: Expression, locals: Map<Str, TypeRef>): Expression {
     switch (expr.kind) {
       case "IntegerLiteral":
       case "FloatLiteral":
@@ -409,69 +657,308 @@ class GenericInstantiator {
       case "ZeroValueExpr":
       case "IdentifierExpr":
         return expr;
+      case "ArrowFunctionExpr":
+        return { ...expr, body: this.rewriteExpr(expr.body, locals) };
       case "UnaryExpr":
-        return { ...expr, operand: this.rewriteExpr(expr.operand) };
+        return { ...expr, operand: this.rewriteExpr(expr.operand, locals) };
       case "BinaryExpr":
-        return { ...expr, left: this.rewriteExpr(expr.left), right: this.rewriteExpr(expr.right) };
+        return {
+          ...expr,
+          left: this.rewriteExpr(expr.left, locals),
+          right: this.rewriteExpr(expr.right, locals),
+        };
       case "ConditionalExpr":
         return {
           ...expr,
-          condition: this.rewriteExpr(expr.condition),
-          whenTrue: this.rewriteExpr(expr.whenTrue),
-          whenFalse: this.rewriteExpr(expr.whenFalse),
+          condition: this.rewriteExpr(expr.condition, locals),
+          whenTrue: this.rewriteExpr(expr.whenTrue, locals),
+          whenFalse: this.rewriteExpr(expr.whenFalse, locals),
         };
       case "NullishCoalesceExpr":
-        return {
-          ...expr,
-          left: this.rewriteExpr(expr.left),
-          fallback: this.rewriteExpr(expr.fallback),
-        };
+        return this.rewriteNullishCoalesce(expr, locals);
+      case "CastExpr":
+        return { ...expr, expression: this.rewriteExpr(expr.expression, locals) };
       case "CallExpr":
-        return this.instantiateCall(expr);
+        return this.instantiateCall(expr, null, locals);
       case "NewExpr":
-        return { ...expr, args: expr.args.map((arg) => this.rewriteExpr(arg)) };
+        return { ...expr, args: expr.args.map((arg) => this.rewriteExpr(arg, locals)) };
       case "MethodCallExpr":
-        return {
-          ...expr,
-          receiver: this.rewriteExpr(expr.receiver),
-          args: expr.args.map((arg) => this.rewriteExpr(arg)),
-        };
+        return this.rewriteMethodCall(expr, locals);
       case "PostfixPointerExpr":
       case "NonNullAssertExpr":
-        return { ...expr, operand: this.rewriteExpr(expr.operand) };
+        return { ...expr, operand: this.rewriteExpr(expr.operand, locals) };
       case "FieldAccessExpr":
       case "OptionalFieldAccessExpr":
-        return { ...expr, operand: this.rewriteExpr(expr.operand) };
+        return { ...expr, operand: this.rewriteExpr(expr.operand, locals) };
       case "OptionalMethodCallExpr":
         return {
           ...expr,
-          receiver: this.rewriteExpr(expr.receiver),
-          args: expr.args.map((arg) => this.rewriteExpr(arg)),
+          receiver: this.rewriteExpr(expr.receiver, locals),
+          args: expr.args.map((arg) => this.rewriteExpr(arg, locals)),
         };
       case "OptionalIndexExpr":
         return {
           ...expr,
-          operand: this.rewriteExpr(expr.operand),
-          index: this.rewriteExpr(expr.index),
+          operand: this.rewriteExpr(expr.operand, locals),
+          index: this.rewriteExpr(expr.index, locals),
         };
       case "RecordLiteralExpr":
         return {
           ...expr,
           fields: expr.fields.map((field) => ({
             ...field,
-            expression: this.rewriteExpr(field.expression),
+            expression: this.rewriteExpr(field.expression, locals),
           })),
         };
       case "ArrayLiteralExpr":
-        return { ...expr, elements: expr.elements.map((element) => this.rewriteExpr(element)) };
+        return {
+          ...expr,
+          elements: expr.elements.map((element) => this.rewriteExpr(element, locals)),
+        };
       case "IndexExpr":
         return {
           ...expr,
-          operand: this.rewriteExpr(expr.operand),
-          index: this.rewriteExpr(expr.index),
+          operand: this.rewriteExpr(expr.operand, locals),
+          index: this.rewriteExpr(expr.index, locals),
         };
     }
   }
+}
+
+function typeAliasMap(aliases: Program["typeAliases"]): Map<Str, TypeRef> {
+  return new Map(aliases.map((alias) => [alias.name, alias.type]));
+}
+
+function localTypeMap(params: Param[]): Map<Str, TypeRef> {
+  return new Map(params.map((param) => [param.name, param.type]));
+}
+
+function localContextType(
+  expr: Expression,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  if (expr.kind === "IdentifierExpr") return functionTypeRef(functions.get(expr.name) ?? null);
+  if (expr.kind === "CallExpr") return functions.get(expr.callee)?.returnType ?? null;
+  if (expr.kind === "NewExpr") {
+    return { kind: "NamedTypeRef", name: expr.className, span: expr.span };
+  }
+  if (expr.kind === "RecordLiteralExpr") {
+    return localRecordContextType(expr, functions) ?? inferGenericLocalContextTypeRef(expr);
+  }
+  if (expr.kind === "ArrayLiteralExpr") {
+    return localArrayContextType(expr, functions) ?? inferGenericLocalContextTypeRef(expr);
+  }
+  return inferGenericLocalContextTypeRef(expr);
+}
+
+function localArrayContextType(
+  expr: Extract<Expression, { kind: "ArrayLiteralExpr" }>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  if (expr.elements.length === 0) return null;
+  const first = localContextType(expr.elements[0]!, functions);
+  if (first === null) return null;
+  for (const element of expr.elements.slice(1)) {
+    const type = localContextType(element, functions);
+    if (type === null || typeName(type) !== typeName(first)) return null;
+  }
+  return {
+    kind: "FixedArrayTypeRef",
+    element: first,
+    sizeText: `${expr.elements.length}`,
+    span: expr.span,
+  };
+}
+
+function localRecordContextType(
+  expr: Extract<Expression, { kind: "RecordLiteralExpr" }>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  const fields: RecordField[] = [];
+  for (const field of expr.fields) {
+    if (field.kind === "Spread") return null;
+    const type = localContextType(field.expression, functions);
+    if (type === null) return null;
+    fields.push({ name: field.name, type, span: field.span });
+  }
+  return { kind: "RecordTypeRef", fields, span: expr.span };
+}
+
+function namespaceMethodParamType(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  index: usize,
+  locals: Map<Str, TypeRef>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  if (expr.receiver.kind !== "IdentifierExpr") return null;
+  if (locals.has(expr.receiver.name)) return null;
+  return functions.get(`${expr.receiver.name}.${expr.method}`)?.params[index]?.type ?? null;
+}
+
+function nullishFallbackType(
+  left: Expression,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+): TypeRef | null {
+  const type = assignmentTargetType(left, locals, aliases);
+  return type === null ? null : optionalTypeElement(type);
+}
+
+function assignmentTargetType(
+  target: Expression,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+): TypeRef | null {
+  if (target.kind === "IdentifierExpr") return locals.get(target.name) ?? null;
+  if (target.kind === "FieldAccessExpr") return fieldTargetType(target, locals, aliases);
+  if (target.kind === "IndexExpr") return indexTargetType(target, locals, aliases);
+  return null;
+}
+
+function indexTargetType(
+  target: Extract<Expression, { kind: "IndexExpr" }>,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+): TypeRef | null {
+  const operand = assignmentTargetType(target.operand, locals, aliases);
+  return operand === null ? null : indexedElementType(operand, target.index);
+}
+
+function fieldTargetType(
+  target: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+): TypeRef | null {
+  const record = recordTargetType(target.operand, locals, aliases);
+  return record?.fields.find((field) => field.name === target.field)?.type ?? null;
+}
+
+function recordTargetType(
+  target: Expression,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+): Extract<TypeRef, { kind: "RecordTypeRef" }> | null {
+  const targetType = assignmentTargetType(target, locals, aliases);
+  if (targetType === null) return null;
+  return expectedRecordType(targetType, aliases);
+}
+
+function expectedRecordType(
+  type: TypeRef,
+  aliases: Map<Str, TypeRef>,
+): Extract<TypeRef, { kind: "RecordTypeRef" }> | null {
+  if (type.kind === "RecordTypeRef") return type;
+  if (type.kind !== "NamedTypeRef") return null;
+  const alias = aliases.get(type.name) ?? null;
+  return alias?.kind === "RecordTypeRef" ? alias : null;
+}
+
+function expectedElementType(type: TypeRef, index: usize): TypeRef | null {
+  if (type.kind === "TupleTypeRef") return type.elements[index] ?? null;
+  return expectedArrayElementType(type);
+}
+
+function indexedElementType(type: TypeRef, index: Expression): TypeRef | null {
+  if (type.kind !== "TupleTypeRef") return expectedArrayElementType(type);
+  if (index.kind !== "IntegerLiteral") return null;
+  if (index.value < 0n || index.value >= BigInt(type.elements.length)) return null;
+  return type.elements[Number(index.value)] ?? null;
+}
+
+function expectedArrayElementType(type: TypeRef): TypeRef | null {
+  switch (type.kind) {
+    case "FixedArrayTypeRef":
+    case "InferredArrayTypeRef":
+    case "SliceTypeRef":
+      return type.element;
+    default:
+      return null;
+  }
+}
+
+function argumentType(
+  expr: Expression,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  if (expr.kind === "IdentifierExpr") {
+    return locals.get(expr.name) ?? functionTypeRef(functions.get(expr.name) ?? null);
+  }
+  if (expr.kind === "FieldAccessExpr") return fieldTargetType(expr, locals, aliases);
+  if (expr.kind === "IndexExpr") return indexTargetType(expr, locals, aliases);
+  if (expr.kind === "CallExpr") return functions.get(expr.callee)?.returnType ?? null;
+  if (expr.kind === "NonNullAssertExpr") {
+    return nonNullAssertTargetType(expr, locals, aliases, functions);
+  }
+  if (expr.kind === "PostfixPointerExpr") {
+    return postfixPointerArgumentType(expr, locals, aliases, functions);
+  }
+  return null;
+}
+
+function nonNullAssertTargetType(
+  expr: Extract<Expression, { kind: "NonNullAssertExpr" }>,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  const operand = argumentOperandType(expr.operand, locals, aliases, functions);
+  return operand === null ? null : optionalTypeElement(operand);
+}
+
+function postfixPointerArgumentType(
+  expr: Extract<Expression, { kind: "PostfixPointerExpr" }>,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  const operand = argumentOperandType(expr.operand, locals, aliases, functions);
+  if (operand === null) return null;
+  if (expr.operator === ".&") {
+    return { kind: "ReferenceTypeRef", element: operand, span: expr.span };
+  }
+  return pointerLikeElementType(operand);
+}
+
+function argumentOperandType(
+  expr: Expression,
+  locals: Map<Str, TypeRef>,
+  aliases: Map<Str, TypeRef>,
+  functions: Map<Str, FunctionDecl>,
+): TypeRef | null {
+  return assignmentTargetType(expr, locals, aliases) ??
+    argumentType(expr, locals, aliases, functions);
+}
+
+function pointerLikeElementType(type: TypeRef): TypeRef | null {
+  switch (type.kind) {
+    case "PointerTypeRef":
+    case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
+      return type.element;
+    default:
+      return null;
+  }
+}
+
+function functionTypeRef(fn: FunctionDecl | null): TypeRef | null {
+  if (fn === null) return null;
+  return {
+    kind: "FunctionTypeRef",
+    params: fn.params,
+    returnType: fn.returnType,
+    span: fn.span,
+  };
+}
+
+function callTypeArgs(
+  expr: Extract<Expression, { kind: "CallExpr" }>,
+  inferredTypeArgs: TypeRef[] | null,
+): TypeRef[] {
+  const explicit = expr.typeArgs ?? [];
+  if (explicit.length > 0) return explicit;
+  return inferredTypeArgs ?? [];
 }
 
 function genericSubstitutions(template: FunctionDecl, typeArgs: TypeRef[]): TypeSubstitutions {
@@ -499,11 +986,18 @@ function substituteStatement(statement: Statement, substitutions: TypeSubstituti
     case "DeferStmt":
     case "ExpressionStmt":
     case "BreakStmt":
+    case "ContinueStmt":
     case "AssignmentStmt":
     case "IncDecStmt":
       return statement;
     case "VarDeclStmt":
-      return { ...statement, type: substituteTypeRef(statement.type, substitutions) };
+      return {
+        ...statement,
+        type: statement.type ? substituteTypeRef(statement.type, substitutions) : null,
+      };
+    case "RecordRestStmt":
+    case "ArrayDestructureStmt":
+      return statement;
     case "SwitchStmt":
       return {
         ...statement,
@@ -540,6 +1034,9 @@ function substituteStatement(statement: Statement, substitutions: TypeSubstituti
           : null,
         body: substituteBlock(statement.body, substitutions),
       };
+    case "ForOfStmt":
+    case "ForInStmt":
+      return { ...statement, body: substituteBlock(statement.body, substitutions) };
     case "IfStmt":
       return {
         ...statement,
@@ -570,6 +1067,37 @@ function substituteTypeRef(type: TypeRef, substitutions: TypeSubstitutions): Typ
         ...type,
         params: type.params.map((param) => substituteParam(param, substitutions)),
         returnType: substituteTypeRef(type.returnType, substitutions),
+      };
+    case "TupleTypeRef":
+      return {
+        ...type,
+        elements: type.elements.map((element) => substituteTypeRef(element, substitutions)),
+      };
+    case "UnionTypeRef":
+      return {
+        ...type,
+        members: type.members.map((member) => substituteTypeRef(member, substitutions)),
+      };
+    case "IntersectionTypeRef":
+      return {
+        ...type,
+        members: type.members.map((member) => substituteTypeRef(member, substitutions)),
+      };
+    case "ConditionalTypeRef":
+      return {
+        ...type,
+        checkType: substituteTypeRef(type.checkType, substitutions),
+        extendsType: substituteTypeRef(type.extendsType, substitutions),
+        trueType: substituteTypeRef(type.trueType, substitutions),
+        falseType: substituteTypeRef(type.falseType, substitutions),
+      };
+    case "IndexedAccessTypeRef":
+      return { ...type, objectType: substituteTypeRef(type.objectType, substitutions) };
+    case "MappedTypeRef":
+      return {
+        ...type,
+        sourceType: substituteTypeRef(type.sourceType, substitutions),
+        valueType: substituteTypeRef(type.valueType, substitutions),
       };
     case "RecordTypeRef":
       return {

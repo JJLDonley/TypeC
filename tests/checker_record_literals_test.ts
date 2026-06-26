@@ -21,7 +21,7 @@ Deno.test("checks record literal target and fields", () => {
   const seen = new Set<Str>();
 
   assertLen(checkRecordLiteralTarget(shape, "Vec2", literal).length, 0);
-  assertLen(checkRecordLiteralFieldName(literal.fields[0]!, shape, "Vec2", seen).length, 0);
+  assertLen(checkRecordLiteralFieldName(literal.fields[0]! as ReturnType<typeof literalField>, shape, "Vec2", seen).length, 0);
   assertLen(checkRecordLiteralMissingFields(literal, shape, "Vec2", seen).length, 0);
   assertText(findRecordField(shape, "x")?.name ?? "", "x");
 });
@@ -32,7 +32,7 @@ Deno.test("reports invalid record literal fields", () => {
   const seen = new Set<Str>(["y"]);
 
   const targetDiagnostics = checkRecordLiteralTarget(null, "i32", literal);
-  const fieldDiagnostics = checkRecordLiteralFieldName(literal.fields[0]!, shape, "Vec2", seen);
+  const fieldDiagnostics = checkRecordLiteralFieldName(literal.fields[0]! as ReturnType<typeof literalField>, shape, "Vec2", seen);
   const missingDiagnostics = checkRecordLiteralMissingFields(literal, shape, "Vec2", seen);
 
   assertText(
@@ -64,7 +64,7 @@ function literalWith(
 
 function literalField(
   name: Str,
-): Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize] {
+): Extract<Extract<Expression, { kind: "RecordLiteralExpr" }>["fields"][usize], { kind?: "Field" }> {
   return { name, expression: { kind: "IntegerLiteral", value: 1n, text: "1", span }, span };
 }
 

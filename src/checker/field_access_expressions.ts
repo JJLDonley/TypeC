@@ -3,7 +3,12 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { checkFieldAccess } from "checker/field_access.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
-import { parseArrayTypeName, parseSliceTypeName } from "checker/type_name_shapes.ts";
+import {
+  isPointerLikeTypeName,
+  parseArrayTypeName,
+  parseSliceTypeName,
+  pointeeTypeName,
+} from "checker/type_name_shapes.ts";
 
 type Str = string;
 type IntLiteralValue = bigint;
@@ -24,9 +29,27 @@ export function checkFieldAccessExpression(
   if (arrayField) return arrayField;
   const sliceField = checkSliceFieldAccess(expr, operandType);
   if (sliceField) return sliceField;
+  const thisField = checkThisPointerFieldAccess(expr, operandType, aliases);
+  if (thisField) return thisField;
   return checkFieldAccess(
     lookupRecordAlias(operandType, aliases),
     operandType,
+    expr.field,
+    expr.span,
+  );
+}
+
+function checkThisPointerFieldAccess(
+  expr: FieldAccessExpr,
+  operandType: TypeName,
+  aliases: Map<Str, TypeRef>,
+): FieldAccessExpressionCheck | null {
+  if (expr.operand.kind !== "IdentifierExpr" || expr.operand.name !== "this") return null;
+  if (!isPointerLikeTypeName(operandType)) return null;
+  const recordType = pointeeTypeName(operandType);
+  return checkFieldAccess(
+    lookupRecordAlias(recordType, aliases),
+    recordType,
     expr.field,
     expr.span,
   );

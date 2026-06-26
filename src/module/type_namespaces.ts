@@ -116,6 +116,37 @@ function namespaceTypeRef(type: TypeRef, namespace: Str, aliases: Set<Str>): Typ
         })),
         returnType: namespaceTypeRef(type.returnType, namespace, aliases),
       };
+    case "TupleTypeRef":
+      return {
+        ...type,
+        elements: type.elements.map((element) => namespaceTypeRef(element, namespace, aliases)),
+      };
+    case "UnionTypeRef":
+      return {
+        ...type,
+        members: type.members.map((member) => namespaceTypeRef(member, namespace, aliases)),
+      };
+    case "IntersectionTypeRef":
+      return {
+        ...type,
+        members: type.members.map((member) => namespaceTypeRef(member, namespace, aliases)),
+      };
+    case "ConditionalTypeRef":
+      return {
+        ...type,
+        checkType: namespaceTypeRef(type.checkType, namespace, aliases),
+        extendsType: namespaceTypeRef(type.extendsType, namespace, aliases),
+        trueType: namespaceTypeRef(type.trueType, namespace, aliases),
+        falseType: namespaceTypeRef(type.falseType, namespace, aliases),
+      };
+    case "IndexedAccessTypeRef":
+      return { ...type, objectType: namespaceTypeRef(type.objectType, namespace, aliases) };
+    case "MappedTypeRef":
+      return {
+        ...type,
+        sourceType: namespaceTypeRef(type.sourceType, namespace, aliases),
+        valueType: namespaceTypeRef(type.valueType, namespace, aliases),
+      };
     case "RecordTypeRef":
       return {
         ...type,

@@ -32,9 +32,13 @@ export function parsePrimaryWith(parser: PrimaryExpressionParser): CastExpressio
   }
   if (parser.check("string")) return parseStringLiteral(parser.advance());
   if (parser.checkText("new")) return parseNewExpression(parser);
+  if (isSingleParamArrowExpression(parser)) return parseSingleParamArrowExpression(parser);
   if (parser.check("identifier")) return parseIdentifierExpression(parser);
   if (parser.checkText("{")) return parser.parseRecordLiteral();
   if (parser.checkText("[")) return parser.parseArrayLiteral();
+  if (parser.checkText("(") && isParenthesizedArrowExpression(parser)) {
+    return parseParenthesizedArrowExpression(parser);
+  }
   if (parser.matchText("(")) return parseParenthesizedExpression(parser);
   return failExpectedExpression(parser);
 }
@@ -65,6 +69,60 @@ function parseBoolLiteral(token: Token): CastExpression {
 
 function parseStringLiteral(token: Token): CastExpression {
   return { kind: "StringLiteral", text: token.text, span: token.span };
+}
+
+function parseSingleParamArrowExpression(parser: PrimaryExpressionParser): CastExpression {
+  const param = parser.expectKind("identifier", "Expected arrow parameter name");
+  parser.expectText("=>");
+  const body = parser.parseExpression();
+  return {
+    kind: "ArrowFunctionExpr",
+    params: [param.text],
+    body,
+    span: span(param.span.start, body.span.end),
+  };
+}
+
+function isSingleParamArrowExpression(parser: PrimaryExpressionParser): b8 {
+  return parser.check("identifier") && parser.peek(1).text === "=>";
+}
+
+function parseParenthesizedArrowExpression(parser: PrimaryExpressionParser): CastExpression {
+  const open = parser.expectText("(");
+  const params = parseArrowParams(parser);
+  parser.expectText(")");
+  parser.expectText("=>");
+  const body = parser.parseExpression();
+  return { kind: "ArrowFunctionExpr", params, body, span: span(open.span.start, body.span.end) };
+}
+
+function parseArrowParams(parser: PrimaryExpressionParser): Str[] {
+  const params: Str[] = [];
+  if (parser.checkText(")")) return params;
+  do {
+    params.push(parser.expectKind("identifier", "Expected arrow parameter name").text);
+  } while (parser.matchText(","));
+  return params;
+}
+
+function isParenthesizedArrowExpression(parser: PrimaryExpressionParser): b8 {
+  const close = parenthesizedArrowCloseOffset(parser);
+  return close !== null && parser.peek(close + 1).text === "=>";
+}
+
+function parenthesizedArrowCloseOffset(parser: PrimaryExpressionParser): i32 | null {
+  let depth: i32 = 0;
+  let offset: i32 = 0;
+  while (true) {
+    const token = parser.peek(offset);
+    if (token.kind === "eof") return null;
+    if (token.text === "(") depth += 1;
+    if (token.text === ")") {
+      depth -= 1;
+      if (depth === 0) return offset;
+    }
+    offset += 1;
+  }
 }
 
 function parseParenthesizedExpression(parser: PrimaryExpressionParser): CastExpression {

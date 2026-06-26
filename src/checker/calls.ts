@@ -6,6 +6,7 @@ import {
   checkCallArity,
   checkVariadicArgumentType,
 } from "checker/call_args.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { typeName } from "core/type_ref.ts";
 
 type usize = number;
@@ -26,6 +27,7 @@ export function checkCallArguments(
     fn.variadic === true,
     fn.name,
     span,
+    minArgumentCount(fn),
   );
   for (let index: usize = 0; index < args.length && index < fn.params.length; index++) {
     diagnostics.push(
@@ -45,8 +47,30 @@ function checkCallArgument(
   index: usize,
 ): Diagnostic[] {
   const expected = typeName(param.type);
+  if (param.optional === true) {
+    return checkOptionalCallArgument(arg, param, resolveExpectedType, index);
+  }
   const actual = resolveExpectedType(arg, expected);
   return checkCallArgumentType(actual, expected, index, arg.span);
+}
+
+function checkOptionalCallArgument(
+  arg: Expression,
+  param: FunctionDecl["params"][usize],
+  resolveExpectedType: ExpectedTypeResolver,
+  index: usize,
+): Diagnostic[] {
+  const element = optionalTypeElement(param.type);
+  if (element === null) {
+    return checkCallArgumentType("<error>", typeName(param.type), index, arg.span);
+  }
+  const actual = resolveExpectedType(arg, typeName(element));
+  return checkCallArgumentType(actual, typeName(element), index, arg.span);
+}
+
+function minArgumentCount(fn: FunctionDecl): usize {
+  const index = fn.params.findIndex((param) => param.optional === true || param.defaultValue);
+  return index < 0 ? fn.params.length : index;
 }
 
 function checkVariadicArguments(

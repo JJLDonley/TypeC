@@ -63,8 +63,9 @@ Deno.test("parses class declarations", () => {
     lex(`class Vec2 { x: f64; y: f64; lengthSquared(): f64 { return this.x; } }
 function main(): i32 { const v: Vec2 = { x: 1.0, y: 2.0 }; return 0; }`),
   );
-  if (program.typeAliases.length !== 1) throw new Error("Expected class type alias");
+  if (program.typeAliases.length !== 2) throw new Error("Expected class and vtable type aliases");
   if (program.typeAliases[0].name !== "Vec2") throw new Error("Expected class type name");
+  if (program.typeAliases[1].name !== "Vec2VTable") throw new Error("Expected vtable type name");
   if (program.functions.length !== 2) throw new Error("Expected method and main functions");
   const method = program.functions.find((fn) => fn.name === "Vec2.lengthSquared");
   if (!method) throw new Error("Expected method");
@@ -107,7 +108,7 @@ Deno.test("parses generic class declarations and type refs", () => {
   if (!classDecl) throw new Error("Expected instantiated class type alias");
   const main = program.functions[0];
   const statement = main.body?.statements[0];
-  if (statement?.kind !== "VarDeclStmt" || statement.type.kind !== "NamedTypeRef") {
+  if (statement?.kind !== "VarDeclStmt" || statement.type?.kind !== "NamedTypeRef") {
     throw new Error("Expected generic class local type");
   }
   if (statement.type.name !== "Box_i32") throw new Error("Expected instantiated class type");

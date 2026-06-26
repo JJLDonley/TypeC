@@ -18,6 +18,10 @@ export interface SafePointerTypeNameShape {
   element: TypeName;
 }
 
+export interface TupleTypeNameShape {
+  elements: TypeName[];
+}
+
 export interface FunctionParamTypeNameShape {
   name: Str;
   type: TypeName;
@@ -52,6 +56,13 @@ export function parseSafePointerTypeName(type: TypeName): SafePointerTypeNameSha
   return { element: match[1] };
 }
 
+export function parseTupleTypeName(type: TypeName): TupleTypeNameShape | null {
+  if (!type.startsWith("[") || !type.endsWith("]")) return null;
+  const body = type.slice(1, -1).trim();
+  if (body.length === 0) return { elements: [] };
+  return { elements: splitTopLevel(body, ",") };
+}
+
 export function parseFunctionTypeName(type: TypeName): FunctionTypeNameShape | null {
   const arrow = findTopLevelArrow(type);
   if (arrow === null || !type.startsWith("(")) return null;
@@ -83,7 +94,7 @@ function findTopLevelArrow(type: Str): i32 | null {
   return null;
 }
 
-function splitTopLevel(text: Str, separator: Str): Str[] {
+export function splitTopLevel(text: Str, separator: Str): Str[] {
   const parts: Str[] = [];
   let start = 0;
   let depth = 0;
