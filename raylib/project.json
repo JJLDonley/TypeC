@@ -1,0 +1,19 @@
+   {
+     "dependencies": {
+       "raylib": "/media/tangjiehao/Projects/Lib/Linux/Raylib/include/raylib.h"
+     },
+     "compiler": {
+       "flags": [
+         "-I/media/tangjiehao/Projects/Lib/Linux/Raylib/include",
+         "-L/media/tangjiehao/Projects/Lib/Linux/Raylib/lib",
+         "-Wl,-rpath,/media/tangjiehao/Projects/Lib/Linux/Raylib/lib",
+         "-lraylib",
+         "-lm",
+         "-ldl",
+         "-lpthread",
+         "-lGL",
+         "-lrt",
+         "-lX11"
+       ]
+     }
+   }

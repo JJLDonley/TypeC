@@ -323,7 +323,7 @@ function emitMethodCallExpression(
   if (arraySliceCall !== null) return arraySliceCall;
   const borrowedCall = emitBorrowedInterfaceMethodCall(expr, receiverType, context);
   if (borrowedCall !== null) return borrowedCall;
-  const methodName = classMethodName(receiverType, expr.method);
+  const methodName = classMethodName(classMethodReceiverType(receiverType), expr.method);
   const fn = context.functions.get(methodName);
   if (!fn) return `${methodName}()`;
   const args = [
@@ -419,6 +419,8 @@ function emitBorrowedInterfaceMethodCall(
 }
 
 function emitAddressOfReceiver(expr: Expression, context: EmitContext): Str {
+  const receiverType = context.expressionTypes?.get(spanKey(expr.span))?.type ?? "<error>";
+  if (receiverType.endsWith("*")) return emitMemberOperand(expr, context);
   return `&${emitMemberOperand(expr, context)}`;
 }
 
@@ -859,4 +861,9 @@ function emitMemberOperand(expr: Expression, context: EmitContext): Str {
   const operand = emitExpression(expr, context);
   if (expr.kind === "PostfixPointerExpr" && expr.operator === ".*") return `(${operand})`;
   return operand;
+}
+
+function classMethodReceiverType(receiverType: Str): Str {
+  if (receiverType.endsWith("*")) return receiverType.slice(0, -1);
+  return receiverType;
 }

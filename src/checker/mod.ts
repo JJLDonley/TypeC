@@ -1080,9 +1080,10 @@ class Checker {
     }
     const borrowedInterfaceCall = this.borrowedInterfaceMethodCallType(expr, receiverType, locals);
     if (borrowedInterfaceCall !== null) return borrowedInterfaceCall;
-    const methodName = classMethodName(receiverType, expr.method);
+    const classReceiverType = classMethodReceiverType(receiverType);
+    const methodName = classMethodName(classReceiverType, expr.method);
     const fn = this.functions.get(methodName);
-    this.diagnostics.push(...this.methodAccessDiagnostics(fn, receiverType, expr));
+    this.diagnostics.push(...this.methodAccessDiagnostics(fn, classReceiverType, expr));
     if (fn?.classStatic) {
       this.diagnostics.push({
         message: `Static method '${expr.method}' requires class access`,
@@ -1306,4 +1307,9 @@ class Checker {
     this.diagnostics.push(...result.diagnostics);
     return result.type;
   }
+}
+
+function classMethodReceiverType(receiverType: TypeName): TypeName {
+  if (receiverType.endsWith("*")) return receiverType.slice(0, -1);
+  return receiverType;
 }

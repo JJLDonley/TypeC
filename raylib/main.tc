@@ -1,0 +1,1236 @@
+import * as RL from "raylib";
+
+const SCREEN_W: i32 = 720;
+const SCREEN_H: i32 = 720;
+const WORLD_W: f32 = 1440.0;
+const WORLD_H: f32 = 1440.0;
+const HALF_SCREEN: f32 = 360.0;
+const MAX_BULLETS: usize = 96;
+const MAX_ASTEROIDS: usize = 128;
+const MAX_PARTICLES: usize = 192;
+const MAX_UNLOCKED: usize = 96;
+const PI: f32 = 3.1415927;
+const TAU: f32 = 6.2831853;
+const SHIP_RADIUS: f32 = 19.0;
+const ASTEROID_VERTS: i32 = 13;
+const BLACK: RL.Color = { r: 2, g: 4, b: 12, a: 255 };
+const GRID: RL.Color = { r: 8, g: 32, b: 56, a: 130 };
+const GRID_BRIGHT: RL.Color = { r: 10, g: 70, b: 105, a: 170 };
+const NEON: RL.Color = { r: 55, g: 220, b: 255, a: 255 };
+const NEON_DIM: RL.Color = { r: 20, g: 96, b: 132, a: 220 };
+const NEON_DARK: RL.Color = { r: 8, g: 44, b: 68, a: 210 };
+const WHITE: RL.Color = { r: 225, g: 246, b: 255, a: 255 };
+const GOLD: RL.Color = { r: 255, g: 210, b: 90, a: 255 };
+const RED: RL.Color = { r: 255, g: 70, b: 80, a: 255 };
+const ORANGE: RL.Color = { r: 255, g: 150, b: 48, a: 255 };
+const PURPLE: RL.Color = { r: 170, g: 100, b: 255, a: 255 };
+
+extern function sinf(value: f32): f32;
+extern function cosf(value: f32): f32;
+extern function sqrtf(value: f32): f32;
+extern function fabsf(value: f32): f32;
+
+
+interface Drawable {
+  draw(camera: RL.Vector2): void;
+}
+
+class Player implements Drawable {
+  pos: RL.Vector2;
+  vel: RL.Vector2;
+  angle: f32;
+  turnVel: f32;
+  invuln: i32;
+  fireDelay: i32;
+  alive: bool;
+
+  point(local: RL.Vector2): RL.Vector2 {
+    return rot(this.pos, local, this.angle);
+  }
+
+  draw(camera: RL.Vector2): void {
+    if (this.invuln > 0 && this.invuln % 12 < 6) {
+      return;
+    }
+    const nose: RL.Vector2 = this.point(v2(25.0, 0.0));
+    const left: RL.Vector2 = this.point(v2(negf(17.0), 14.0));
+    const right: RL.Vector2 = this.point(v2(negf(17.0), negf(14.0)));
+    const notch: RL.Vector2 = this.point(v2(negf(5.0), 0.0));
+    drawWrappedLine(nose, left, camera, WHITE);
+    drawWrappedLine(left, notch, camera, NEON);
+    drawWrappedLine(notch, right, camera, NEON);
+    drawWrappedLine(right, nose, camera, WHITE);
+    if (RL.IsKeyDown(RL.KEY_W) || RL.IsKeyDown(RL.KEY_UP)) {
+      const tail: RL.Vector2 = this.point(v2(negf(46.0), 0.0));
+      RL.DrawTriangle(
+        screenPos(left, camera),
+        screenPosNear(left, tail, camera),
+        screenPosNear(left, right, camera),
+        ORANGE,
+      );
+    }
+  }
+}
+
+class Bullet implements Drawable {
+  pos: RL.Vector2;
+  vel: RL.Vector2;
+  ttl: i32;
+  active: bool;
+
+  draw(camera: RL.Vector2): void {
+    const p: RL.Vector2 = screenPos(this.pos, camera);
+    if (!isOnScreen(p, 12.0)) {
+      return;
+    }
+    RL.DrawCircleV(p, 3.5, GOLD);
+    RL.DrawCircleLines(@i32(p.x), @i32(p.y), 7.0, NEON);
+  }
+}
+
+class Asteroid implements Drawable {
+  pos: RL.Vector2;
+  vel: RL.Vector2;
+  angle: f32;
+  spin: f32;
+  radius: f32;
+  seed: f32;
+  active: bool;
+
+  point(index: i32): RL.Vector2 {
+    const step: f32 = TAU / @f32(ASTEROID_VERTS);
+    const t: f32 = this.angle + @f32(index) * step;
+    const wobble: f32 = 0.75 + 0.25 * sinf(this.seed + @f32(index) * 1.713);
+    return add(this.pos, v2(cosf(t) * this.radius * wobble, sinf(t) * this.radius * wobble));
+  }
+
+  draw(camera: RL.Vector2): void {
+    let i: i32 = 0;
+    while (i < ASTEROID_VERTS) {
+      drawWrappedLine(this.point(i), this.point((i + 1) % ASTEROID_VERTS), camera, WHITE);
+      i++;
+    }
+    const center: RL.Vector2 = screenPos(this.pos, camera);
+    if (isOnScreen(center, this.radius)) {
+      RL.DrawCircleLines(@i32(center.x), @i32(center.y), this.radius * 0.18, NEON_DIM);
+    }
+  }
+}
+
+class Particle implements Drawable {
+  pos: RL.Vector2;
+  vel: RL.Vector2;
+  radius: f32;
+  ttl: i32;
+  maxTtl: i32;
+  color: RL.Color;
+  active: bool;
+
+  draw(camera: RL.Vector2): void {
+    const p: RL.Vector2 = screenPos(this.pos, camera);
+    if (!isOnScreen(p, this.radius + 6.0)) {
+      return;
+    }
+    let c: RL.Color = this.color;
+    c.a = particleAlpha({
+      pos: this.pos,
+      vel: this.vel,
+      radius: this.radius,
+      ttl: this.ttl,
+      maxTtl: this.maxTtl,
+      color: this.color,
+      active: this.active,
+    });
+    RL.DrawCircleV(p, this.radius, c);
+  }
+}
+
+class BulletManager {
+  items: Bullet[96];
+  len: usize;
+  cap: usize;
+}
+
+class AsteroidManager {
+  items: Asteroid[128];
+  len: usize;
+  cap: usize;
+}
+
+class ParticleManager {
+  items: Particle[192];
+  len: usize;
+  cap: usize;
+}
+
+type GridNode = {
+  x: i32,
+  y: i32,
+  kind: i32,
+};
+
+class SkillGrid {
+  items: GridNode[96];
+  len: usize;
+  cap: usize;
+}
+
+type PlayerStats = {
+  thrust: f32,
+  maxSpeed: f32,
+  fireDelay: i32,
+  bulletSpeed: f32,
+  livesMax: i32,
+};
+
+class World {
+  player: Player;
+  bullets: BulletManager;
+  asteroids: AsteroidManager;
+  particles: ParticleManager;
+  unlocked: SkillGrid;
+  stats: PlayerStats;
+  score: i32;
+  lives: i32;
+  wave: i32;
+  xp: i32;
+  skillPoints: i32;
+  mode: i32;
+  cursorX: i32;
+  cursorY: i32;
+}
+
+class UI {
+  draw(world: World): void {
+    drawWorld(world);
+  }
+}
+
+function negf(value: f32): f32 {
+  return 0.0 - value;
+}
+
+function absI(value: i32): i32 {
+  if (value < 0) {
+    return 0 - value;
+  }
+  return value;
+}
+
+function minf(a: f32, b: f32): f32 {
+  if (a < b) {
+    return a;
+  }
+  return b;
+}
+
+function maxf(a: f32, b: f32): f32 {
+  if (a > b) {
+    return a;
+  }
+  return b;
+}
+
+function v2(x: f32, y: f32): RL.Vector2 {
+  return { x, y };
+}
+
+function add(a: RL.Vector2, b: RL.Vector2): RL.Vector2 {
+  return v2(a.x + b.x, a.y + b.y);
+}
+
+function sub(a: RL.Vector2, b: RL.Vector2): RL.Vector2 {
+  return v2(a.x - b.x, a.y - b.y);
+}
+
+function mul(v: RL.Vector2, s: f32): RL.Vector2 {
+  return v2(v.x * s, v.y * s);
+}
+
+function dot(a: RL.Vector2, b: RL.Vector2): f32 {
+  return a.x * b.x + a.y * b.y;
+}
+
+function len(v: RL.Vector2): f32 {
+  return sqrtf(dot(v, v));
+}
+
+function norm(v: RL.Vector2): RL.Vector2 {
+  const l: f32 = len(v);
+  if (l <= 0.0001) {
+    return v2(0.0, 0.0);
+  }
+  return mul(v, 1.0 / l);
+}
+
+function forward(angle: f32): RL.Vector2 {
+  return v2(cosf(angle), sinf(angle));
+}
+
+function rightOf(angle: f32): RL.Vector2 {
+  return v2(negf(sinf(angle)), cosf(angle));
+}
+
+function limit(v: RL.Vector2, max: f32): RL.Vector2 {
+  const speed: f32 = len(v);
+  if (speed > max) {
+    return mul(v, max / speed);
+  }
+  return v;
+}
+
+function wrapWorld(p: RL.Vector2): RL.Vector2 {
+  let r: RL.Vector2 = p;
+  if (r.x < 0.0) {
+    r.x += WORLD_W;
+  }
+  if (r.x >= WORLD_W) {
+    r.x -= WORLD_W;
+  }
+  if (r.y < 0.0) {
+    r.y += WORLD_H;
+  }
+  if (r.y >= WORLD_H) {
+    r.y -= WORLD_H;
+  }
+  return r;
+}
+
+function wrapDelta(value: f32, size: f32): f32 {
+  let r = value;
+  if (r > size * 0.5) {
+    r -= size;
+  }
+  if (r < negf(size * 0.5)) {
+    r += size;
+  }
+  return r;
+}
+
+function screenPos(world: RL.Vector2, camera: RL.Vector2): RL.Vector2 {
+  return v2(
+    HALF_SCREEN + wrapDelta(world.x - camera.x, WORLD_W),
+    HALF_SCREEN + wrapDelta(world.y - camera.y, WORLD_H),
+  );
+}
+
+function screenPosNear(anchor: RL.Vector2, world: RL.Vector2, camera: RL.Vector2): RL.Vector2 {
+  const base: RL.Vector2 = screenPos(anchor, camera);
+  return v2(
+    base.x + wrapDelta(world.x - anchor.x, WORLD_W),
+    base.y + wrapDelta(world.y - anchor.y, WORLD_H),
+  );
+}
+
+function isOnScreen(p: RL.Vector2, pad: f32): bool {
+  if (p.x < negf(pad)) {
+    return false;
+  }
+  if (p.x > @f32(SCREEN_W) + pad) {
+    return false;
+  }
+  if (p.y < negf(pad)) {
+    return false;
+  }
+  if (p.y > @f32(SCREEN_H) + pad) {
+    return false;
+  }
+  return true;
+}
+
+function rot(origin: RL.Vector2, local: RL.Vector2, angle: f32): RL.Vector2 {
+  const c = cosf(angle);
+  const s: f32 = sinf(angle);
+  return v2(origin.x + local.x * c - local.y * s, origin.y + local.x * s + local.y * c);
+}
+
+function seedWave(value: f32): f32 {
+  return sinf(value * 12.9898) * 43758.547;
+}
+
+function deadBullet(): Bullet {
+  return { pos: v2(0.0, 0.0), vel: v2(0.0, 0.0), ttl: 0, active: false };
+}
+
+function deadAsteroid(): Asteroid {
+  return {
+    pos: v2(0.0, 0.0),
+    vel: v2(0.0, 0.0),
+    angle: 0.0,
+    spin: 0.0,
+    radius: 0.0,
+    seed: 0.0,
+    active: false,
+  };
+}
+
+function deadParticle(): Particle {
+  return {
+    pos: v2(0.0, 0.0),
+    vel: v2(0.0, 0.0),
+    radius: 0.0,
+    ttl: 0,
+    maxTtl: 1,
+    color: NEON,
+    active: false,
+  };
+}
+
+function emptyBullets(): BulletManager {
+  return { items: Array.fill(deadBullet()), len: 0, cap: MAX_BULLETS };
+}
+
+function emptyAsteroids(): AsteroidManager {
+  return { items: Array.fill(deadAsteroid()), len: 0, cap: MAX_ASTEROIDS };
+}
+
+function emptyParticles(): ParticleManager {
+  return { items: Array.fill(deadParticle()), len: 0, cap: MAX_PARTICLES };
+}
+
+function emptyNodes(): SkillGrid {
+  return { items: { 0 }, len: 0, cap: MAX_UNLOCKED };
+}
+
+function defaultStats(): PlayerStats {
+  return { thrust: 0.20, maxSpeed: 7.2, fireDelay: 10, bulletSpeed: 12.5, livesMax: 3 };
+}
+
+function makePlayer(): Player {
+  return {
+    pos: v2(WORLD_W * 0.5, WORLD_H * 0.5),
+    vel: v2(0.0, 0.0),
+    angle: negf(PI * 0.5),
+    turnVel: 0.0,
+    invuln: 120,
+    fireDelay: 0,
+    alive: true,
+  };
+}
+
+function compactBullets(vec: BulletManager): BulletManager {
+  let out: BulletManager = emptyBullets();
+  let i: usize = 0;
+  while (i < vec.cap) {
+    if (vec.items[i].active && out.len < out.cap) {
+      out.items[out.len] = vec.items[i];
+      out.len++;
+    }
+    i++;
+  }
+  return out;
+}
+
+function compactAsteroids(vec: AsteroidManager): AsteroidManager {
+  let out: AsteroidManager = emptyAsteroids();
+  let i: usize = 0;
+  while (i < vec.cap) {
+    if (vec.items[i].active && out.len < out.cap) {
+      out.items[out.len] = vec.items[i];
+      out.len++;
+    }
+    i++;
+  }
+  return out;
+}
+
+function compactParticles(vec: ParticleManager): ParticleManager {
+  let out: ParticleManager = emptyParticles();
+  let i: usize = 0;
+  while (i < vec.cap) {
+    if (vec.items[i].active && out.len < out.cap) {
+      out.items[out.len] = vec.items[i];
+      out.len++;
+    }
+    i++;
+  }
+  return out;
+}
+
+function pushBullet(vec: BulletManager, item: Bullet): BulletManager {
+  let out: BulletManager = compactBullets(vec);
+  if (out.len < out.cap) {
+    out.items[out.len] = item;
+    out.len++;
+  }
+  return out;
+}
+
+function pushAsteroid(vec: AsteroidManager, item: Asteroid): AsteroidManager {
+  let out: AsteroidManager = compactAsteroids(vec);
+  if (out.len < out.cap) {
+    out.items[out.len] = item;
+    out.len++;
+  }
+  return out;
+}
+
+function pushParticle(vec: ParticleManager, item: Particle): ParticleManager {
+  let out: ParticleManager = compactParticles(vec);
+  if (out.len < out.cap) {
+    out.items[out.len] = item;
+    out.len++;
+  }
+  return out;
+}
+
+function nodeKind(x: i32, y: i32): i32 {
+  const n: i32 = absI(x * 31 + y * 47 + x * y * 7);
+  return n % 4;
+}
+
+function nodeCost(x: i32, y: i32): i32 {
+  return 1 + (absI(x) + absI(y)) / 2;
+}
+
+function hasNode(nodes: SkillGrid, x: i32, y: i32): bool {
+  let i: usize = 0;
+  while (i < nodes.len) {
+    if (nodes.items[i].x == x && nodes.items[i].y == y) {
+      return true;
+    }
+    i++;
+  }
+  return false;
+}
+
+function isAdjacentUnlocked(nodes: SkillGrid, x: i32, y: i32): bool {
+  if (x == 0 && y == 0) {
+    return true;
+  }
+  if (hasNode(nodes, x + 1, y)) {
+    return true;
+  }
+  if (hasNode(nodes, x - 1, y)) {
+    return true;
+  }
+  if (hasNode(nodes, x, y + 1)) {
+    return true;
+  }
+  if (hasNode(nodes, x, y - 1)) {
+    return true;
+  }
+  return false;
+}
+
+function applyNode(stats: PlayerStats, kind: i32): PlayerStats {
+  let s: PlayerStats = stats;
+  if (kind == 0) {
+    s.thrust += 0.035;
+  }
+  if (kind == 1) {
+    s.maxSpeed += 0.55;
+  }
+  if (kind == 2 && s.fireDelay > 4) {
+    s.fireDelay--;
+  }
+  if (kind == 3) {
+    s.bulletSpeed += 1.0;
+  }
+  return s;
+}
+
+function unlockNode(game: World): World {
+  let g: World = game;
+  if (hasNode(g.unlocked, g.cursorX, g.cursorY)) {
+    return g;
+  }
+  if (!isAdjacentUnlocked(g.unlocked, g.cursorX, g.cursorY)) {
+    return g;
+  }
+  const cost: i32 = nodeCost(g.cursorX, g.cursorY);
+  if (g.skillPoints < cost) {
+    return g;
+  }
+  if (g.unlocked.len >= g.unlocked.cap) {
+    return g;
+  }
+  const kind: i32 = nodeKind(g.cursorX, g.cursorY);
+  g.unlocked.items[g.unlocked.len] = { x: g.cursorX, y: g.cursorY, kind };
+  g.unlocked.len++;
+  g.skillPoints -= cost;
+  g.stats = applyNode(g.stats, kind);
+  return g;
+}
+
+function addXp(game: World, amount: i32): World {
+  let g: World = game;
+  g.xp += amount;
+  while (g.xp >= 500) {
+    g.xp -= 500;
+    g.skillPoints++;
+  }
+  return g;
+}
+
+function spawnAsteroidOnEdge(game: World, index: i32, radius: f32): World {
+  let g: World = game;
+  const edge: i32 = (index + g.wave) % 4;
+  const lane: f32 = 90.0 + fabsf(sinf(@f32(index + g.wave * 11) * 1.37)) * 1260.0;
+  let pos: RL.Vector2 = v2(0.0, lane);
+  if (edge == 1) {
+    pos = v2(WORLD_W - 1.0, lane);
+  }
+  if (edge == 2) {
+    pos = v2(lane, 0.0);
+  }
+  if (edge == 3) {
+    pos = v2(lane, WORLD_H - 1.0);
+  }
+  const toCenter: RL.Vector2 = norm(sub(v2(WORLD_W * 0.5, WORLD_H * 0.5), pos));
+  const side: RL.Vector2 = v2(negf(toCenter.y), toCenter.x);
+  const drift: f32 = sinf(@f32(index) * 2.17 + @f32(g.wave)) * 0.85;
+  const speed: f32 = 1.0 + @f32(g.wave) * 0.10 + fabsf(sinf(@f32(index) * 1.73)) * 0.7;
+  const vel: RL.Vector2 = add(mul(toCenter, speed), mul(side, drift));
+  const seed: f32 = @f32(index * 19 + g.wave * 41);
+  g.asteroids = pushAsteroid(g.asteroids, {
+    pos,
+    vel,
+    angle: seed * 0.17,
+    spin: 0.006 + sinf(seed) * 0.01,
+    radius,
+    seed,
+    active: true,
+  });
+  return g;
+}
+
+function seedWaveAsteroids(game: World): World {
+  let g: World = game;
+  g.asteroids = emptyAsteroids();
+  let i: i32 = 0;
+  const count: i32 = 5 + g.wave * 2;
+  while (i < count) {
+    let radius: f32 = 58.0;
+    if (i % 3 == 1) {
+      radius = 48.0;
+    }
+    if (i % 3 == 2) {
+      radius = 38.0;
+    }
+    g = spawnAsteroidOnEdge(g, i, radius);
+    i++;
+  }
+  return g;
+}
+
+function newWorld(): World {
+  let g: World = {
+    player: makePlayer(),
+    bullets: emptyBullets(),
+    asteroids: emptyAsteroids(),
+    particles: emptyParticles(),
+    unlocked: emptyNodes(),
+    stats: defaultStats(),
+    score: 0,
+    lives: 3,
+    wave: 1,
+    xp: 0,
+    skillPoints: 0,
+    mode: 0,
+    cursorX: 0,
+    cursorY: 0,
+  };
+  g.unlocked.items[0] = { x: 0, y: 0, kind: 0 };
+  g.unlocked.len = 1;
+  return seedWaveAsteroids(g);
+}
+
+function shoot(game: World): World {
+  let g: World = game;
+  if (g.player.fireDelay > 0) {
+    return g;
+  }
+  const dir: RL.Vector2 = forward(g.player.angle);
+  g.bullets = pushBullet(g.bullets, {
+    pos: wrapWorld(add(g.player.pos, mul(dir, SHIP_RADIUS + 8.0))),
+    vel: add(g.player.vel, mul(dir, g.stats.bulletSpeed)),
+    ttl: 62,
+    active: true,
+  });
+  g.player.fireDelay = g.stats.fireDelay;
+  return g;
+}
+
+function updatePlayer(game: World): World {
+  let g: World = game;
+  if (!g.player.alive) {
+    return g;
+  }
+  if (RL.IsKeyDown(RL.KEY_A) || RL.IsKeyDown(RL.KEY_LEFT)) {
+    g.player.turnVel -= 0.010;
+  }
+  if (RL.IsKeyDown(RL.KEY_D) || RL.IsKeyDown(RL.KEY_RIGHT)) {
+    g.player.turnVel += 0.010;
+  }
+  g.player.turnVel = g.player.turnVel * 0.86;
+  g.player.angle += g.player.turnVel;
+  if (RL.IsKeyDown(RL.KEY_W) || RL.IsKeyDown(RL.KEY_UP)) {
+    g.player.vel = add(g.player.vel, mul(forward(g.player.angle), g.stats.thrust));
+  }
+  if (RL.IsKeyDown(RL.KEY_S) || RL.IsKeyDown(RL.KEY_DOWN)) {
+    g.player.vel = add(g.player.vel, mul(forward(g.player.angle), negf(g.stats.thrust * 0.42)));
+  }
+  if (RL.IsKeyDown(RL.KEY_SPACE)) {
+    g = shoot(g);
+  }
+  if (g.player.fireDelay > 0) {
+    g.player.fireDelay--;
+  }
+  if (g.player.invuln > 0) {
+    g.player.invuln--;
+  }
+  g.player.vel = limit(mul(g.player.vel, 0.993), g.stats.maxSpeed);
+  g.player.pos = wrapWorld(add(g.player.pos, g.player.vel));
+  return g;
+}
+
+function updateBullets(game: World): World {
+  let g: World = game;
+  let i: usize = 0;
+  while (i < g.bullets.len) {
+    if (g.bullets.items[i].active) {
+      g.bullets.items[i].pos = wrapWorld(add(g.bullets.items[i].pos, g.bullets.items[i].vel));
+      g.bullets.items[i].ttl--;
+      if (g.bullets.items[i].ttl <= 0) {
+        g.bullets.items[i].active = false;
+      }
+    }
+    i++;
+  }
+  g.bullets = compactBullets(g.bullets);
+  return g;
+}
+
+function updateAsteroids(game: World): World {
+  let g: World = game;
+  let i: usize = 0;
+  while (i < g.asteroids.len) {
+    if (g.asteroids.items[i].active) {
+      g.asteroids.items[i].pos = wrapWorld(add(g.asteroids.items[i].pos, g.asteroids.items[i].vel));
+      g.asteroids.items[i].angle += g.asteroids.items[i].spin;
+      g.asteroids.items[i].seed += 0.006;
+    }
+    i++;
+  }
+  return g;
+}
+
+function updateParticles(game: World): World {
+  let g: World = game;
+  let i: usize = 0;
+  while (i < g.particles.len) {
+    if (g.particles.items[i].active) {
+      g.particles.items[i].pos = wrapWorld(add(g.particles.items[i].pos, g.particles.items[i].vel));
+      g.particles.items[i].vel = mul(g.particles.items[i].vel, 0.965);
+      g.particles.items[i].ttl--;
+      if (g.particles.items[i].ttl <= 0) {
+        g.particles.items[i].active = false;
+      }
+    }
+    i++;
+  }
+  g.particles = compactParticles(g.particles);
+  return g;
+}
+
+function emitParticle(game: World, pos: RL.Vector2, vel: RL.Vector2, radius: f32, ttl: i32, color: RL.Color): World {
+  let g: World = game;
+  g.particles = pushParticle(g.particles, { pos, vel, radius, ttl, maxTtl: ttl, color, active: true });
+  return g;
+}
+
+function explode(game: World, pos: RL.Vector2, radius: f32, seed: f32): World {
+  let g: World = game;
+  let i: i32 = 0;
+  while (i < 22) {
+    const t: f32 = seed + @f32(i) / 22.0 * TAU;
+    const speed: f32 = 1.4 + fabsf(sinf(seed + @f32(i) * 1.91)) * 5.2;
+    let color: RL.Color = ORANGE;
+    if (i % 3 == 0) {
+      color = NEON;
+    }
+    if (i % 5 == 0) {
+      color = GOLD;
+    }
+    g = emitParticle(g, pos, v2(cosf(t) * speed, sinf(t) * speed), radius * 0.08, 26 + i % 18, color);
+    i++;
+  }
+  return g;
+}
+
+function asteroidPoint(a: Asteroid, index: i32): RL.Vector2 {
+  const step: f32 = TAU / @f32(ASTEROID_VERTS);
+  const t: f32 = a.angle + @f32(index) * step;
+  const wobble: f32 = 0.75 + 0.25 * sinf(a.seed + @f32(index) * 1.713);
+  return add(a.pos, v2(cosf(t) * a.radius * wobble, sinf(t) * a.radius * wobble));
+}
+
+function torusDist2(a: RL.Vector2, b: RL.Vector2): f32 {
+  const dx: f32 = wrapDelta(a.x - b.x, WORLD_W);
+  const dy: f32 = wrapDelta(a.y - b.y, WORLD_H);
+  return dx * dx + dy * dy;
+}
+
+function bulletHitsAsteroid(b: Bullet, a: Asteroid): bool {
+  return torusDist2(b.pos, a.pos) <= (a.radius + 7.0) * (a.radius + 7.0);
+}
+
+function playerHitsAsteroid(s: Player, a: Asteroid): bool {
+  return torusDist2(s.pos, a.pos) <= (a.radius + SHIP_RADIUS) * (a.radius + SHIP_RADIUS);
+}
+
+function splitAsteroid(game: World, a: Asteroid): World {
+  let g: World = game;
+  if (a.radius <= 24.0) {
+    return g;
+  }
+  const side: RL.Vector2 = norm(v2(negf(a.vel.y), a.vel.x));
+  const r: f32 = a.radius * 0.56;
+  g.asteroids = pushAsteroid(g.asteroids, {
+    pos: a.pos,
+    vel: add(a.vel, mul(side, 1.65)),
+    angle: a.angle,
+    spin: negf(a.spin * 1.25),
+    radius: r,
+    seed: a.seed + 17.0,
+    active: true,
+  });
+  g.asteroids = pushAsteroid(g.asteroids, {
+    pos: a.pos,
+    vel: sub(a.vel, mul(side, 1.65)),
+    angle: a.angle + 0.4,
+    spin: a.spin * 1.35,
+    radius: r,
+    seed: a.seed + 29.0,
+    active: true,
+  });
+  return g;
+}
+
+function killPlayer(game: World): World {
+  let g: World = explode(game, game.player.pos, 58.0, 77.0);
+  g.lives--;
+  g.bullets = emptyBullets();
+  if (g.lives <= 0) {
+    g.player.alive = false;
+    g.mode = 4;
+    return g;
+  }
+  g.player = makePlayer();
+  return g;
+}
+
+function nextWave(game: World): World {
+  let g: World = game;
+  g.wave++;
+  g.skillPoints++;
+  g.player = makePlayer();
+  g.bullets = emptyBullets();
+  return seedWaveAsteroids(g);
+}
+
+function collide(game: World): World {
+  let g: World = game;
+  let ai: usize = 0;
+  while (ai < g.asteroids.len) {
+    if (g.asteroids.items[ai].active) {
+      let bi: usize = 0;
+      while (bi < g.bullets.len) {
+        if (g.bullets.items[bi].active && g.asteroids.items[ai].active && bulletHitsAsteroid(g.bullets.items[bi], g.asteroids.items[ai])) {
+          const dead: Asteroid = g.asteroids.items[ai];
+          g.bullets.items[bi].active = false;
+          g.asteroids.items[ai].active = false;
+          g.score += 100;
+          g = addXp(g, 120);
+          g = explode(g, dead.pos, dead.radius, dead.seed);
+          g = splitAsteroid(g, dead);
+        }
+        bi++;
+      }
+      if (g.player.alive && g.player.invuln <= 0 && g.asteroids.items[ai].active && playerHitsAsteroid(g.player, g.asteroids.items[ai])) {
+        g = killPlayer(g);
+      }
+    }
+    ai++;
+  }
+  g.bullets = compactBullets(g.bullets);
+  g.asteroids = compactAsteroids(g.asteroids);
+  if (g.asteroids.len == 0 && g.mode == 1) {
+    g = nextWave(g);
+  }
+  return g;
+}
+
+function drawWrappedLine(a: RL.Vector2, b: RL.Vector2, camera: RL.Vector2, color: RL.Color): void {
+  const start: RL.Vector2 = screenPos(a, camera);
+  const end: RL.Vector2 = screenPosNear(a, b, camera);
+  if (isOnScreen(start, 140.0) || isOnScreen(end, 140.0)) {
+    RL.DrawLineV(start, end, color);
+  }
+}
+
+function drawWorldGrid(camera: RL.Vector2): void {
+  let x: f32 = 0.0;
+  while (x < WORLD_W) {
+    const p: RL.Vector2 = screenPos(v2(x, camera.y), camera);
+    if (p.x >= 0.0 && p.x <= @f32(SCREEN_W)) {
+      RL.DrawLineV(v2(p.x, 0.0), v2(p.x, @f32(SCREEN_H)), GRID);
+    }
+    x += 90.0;
+  }
+  let y: f32 = 0.0;
+  while (y < WORLD_H) {
+    const p: RL.Vector2 = screenPos(v2(camera.x, y), camera);
+    if (p.y >= 0.0 && p.y <= @f32(SCREEN_H)) {
+      RL.DrawLineV(v2(0.0, p.y), v2(@f32(SCREEN_W), p.y), GRID);
+    }
+    y += 90.0;
+  }
+  RL.DrawRectangleLines(1, 1, SCREEN_W - 2, SCREEN_H - 2, GRID_BRIGHT);
+}
+
+function drawAsteroid(a: Asteroid, camera: RL.Vector2): void {
+  let i: i32 = 0;
+  while (i < ASTEROID_VERTS) {
+    drawWrappedLine(asteroidPoint(a, i), asteroidPoint(a, (i + 1) % ASTEROID_VERTS), camera, WHITE);
+    i++;
+  }
+  const center: RL.Vector2 = screenPos(a.pos, camera);
+  if (isOnScreen(center, a.radius)) {
+    RL.DrawCircleLines(@i32(center.x), @i32(center.y), a.radius * 0.18, NEON_DIM);
+  }
+}
+
+function playerPoint(s: Player, local: RL.Vector2): RL.Vector2 {
+  return rot(s.pos, local, s.angle);
+}
+
+function drawPlayer(s: Player, camera: RL.Vector2): void {
+  if (s.invuln > 0 && s.invuln % 12 < 6) {
+    return;
+  }
+  const nose: RL.Vector2 = playerPoint(s, v2(25.0, 0.0));
+  const left: RL.Vector2 = playerPoint(s, v2(negf(17.0), 14.0));
+  const right: RL.Vector2 = playerPoint(s, v2(negf(17.0), negf(14.0)));
+  const notch: RL.Vector2 = playerPoint(s, v2(negf(5.0), 0.0));
+  drawWrappedLine(nose, left, camera, WHITE);
+  drawWrappedLine(left, notch, camera, NEON);
+  drawWrappedLine(notch, right, camera, NEON);
+  drawWrappedLine(right, nose, camera, WHITE);
+  if (RL.IsKeyDown(RL.KEY_W) || RL.IsKeyDown(RL.KEY_UP)) {
+    const tail: RL.Vector2 = playerPoint(s, v2(negf(46.0), 0.0));
+    RL.DrawTriangle(screenPos(left, camera), screenPosNear(left, tail, camera), screenPosNear(left, right, camera), ORANGE);
+  }
+}
+
+function drawBullet(bullet: Bullet, camera: RL.Vector2): void {
+  const p: RL.Vector2 = screenPos(bullet.pos, camera);
+  if (!isOnScreen(p, 12.0)) {
+    return;
+  }
+  RL.DrawCircleV(p, 3.5, GOLD);
+  RL.DrawCircleLines(@i32(p.x), @i32(p.y), 7.0, NEON);
+}
+
+function drawBullets(bullets: BulletManager, camera: RL.Vector2): void {
+  let i: usize = 0;
+  while (i < bullets.len) {
+    bullets.items[i].draw(camera);
+    i++;
+  }
+}
+
+function particleAlpha(p: Particle): u8 {
+  const scaled: i32 = p.ttl * 255 / p.maxTtl;
+  if (scaled > 230) {
+    return 255;
+  }
+  if (scaled > 160) {
+    return 210;
+  }
+  if (scaled > 90) {
+    return 145;
+  }
+  return 70;
+}
+
+function drawParticle(particle: Particle, camera: RL.Vector2): void {
+  const p: RL.Vector2 = screenPos(particle.pos, camera);
+  if (!isOnScreen(p, particle.radius + 6.0)) {
+    return;
+  }
+  let c: RL.Color = particle.color;
+  c.a = particleAlpha(particle);
+  RL.DrawCircleV(p, particle.radius, c);
+}
+
+function drawParticles(particles: ParticleManager, camera: RL.Vector2): void {
+  let i: usize = 0;
+  while (i < particles.len) {
+    particles.items[i].draw(camera);
+    i++;
+  }
+}
+
+function seg(p: RL.Vector2, a: f32, b: f32, c: f32, d: f32, color: RL.Color): void {
+  RL.DrawLineV(v2(p.x + a, p.y + b), v2(p.x + c, p.y + d), color);
+}
+
+function drawDigit(value: i32, p: RL.Vector2, color: RL.Color): void {
+  const top: bool = value != 1 && value != 4;
+  const upperLeft: bool = value == 0 || value == 4 || value == 5 || value == 6 || value == 8 || value == 9;
+  const upperRight: bool = value != 5 && value != 6;
+  const mid: bool = value != 0 && value != 1 && value != 7;
+  const lowerLeft: bool = value == 0 || value == 2 || value == 6 || value == 8;
+  const lowerRight: bool = value != 2;
+  const bottom: bool = value != 1 && value != 4 && value != 7;
+  if (top) {
+    seg(p, 2.0, 0.0, 14.0, 0.0, color);
+  }
+  if (upperLeft) {
+    seg(p, 0.0, 2.0, 0.0, 14.0, color);
+  }
+  if (upperRight) {
+    seg(p, 16.0, 2.0, 16.0, 14.0, color);
+  }
+  if (mid) {
+    seg(p, 2.0, 16.0, 14.0, 16.0, color);
+  }
+  if (lowerLeft) {
+    seg(p, 0.0, 18.0, 0.0, 30.0, color);
+  }
+  if (lowerRight) {
+    seg(p, 16.0, 18.0, 16.0, 30.0, color);
+  }
+  if (bottom) {
+    seg(p, 2.0, 32.0, 14.0, 32.0, color);
+  }
+}
+
+function drawNumber(value: i32, x: f32, y: f32, color: RL.Color): void {
+  let div: i32 = 100000;
+  let started: bool = false;
+  let px: f32 = x;
+  while (div > 0) {
+    const d: i32 = value / div % 10;
+    if (d != 0 || started || div == 1) {
+      drawDigit(d, v2(px, y), color);
+      px += 22.0;
+      started = true;
+    }
+    div = div / 10;
+  }
+}
+
+function drawHudPanel(x: i32, y: i32, w: i32, h: i32): void {
+  RL.DrawRectangle(x, y, w, h, NEON_DARK);
+  RL.DrawRectangleLines(x, y, w, h, NEON);
+}
+
+function drawHud(game: World): void {
+  drawHudPanel(12, 12, 288, 86);
+  RL.DrawText("TYPEC ASTEROIDS", 26, 24, 22, NEON);
+  RL.DrawText("SCORE", 26, 54, 16, WHITE);
+  drawNumber(game.score, 92.0, 50.0, NEON);
+  drawHudPanel(420, 12, 288, 86);
+  RL.DrawText("WAVE", 438, 24, 16, WHITE);
+  drawNumber(game.wave, 498.0, 20.0, NEON);
+  RL.DrawText("LIVES", 438, 62, 16, WHITE);
+  let i: i32 = 0;
+  let x: f32 = 512.0;
+  while (i < game.lives) {
+    RL.DrawTriangle(v2(x, 58.0), v2(x + 10.0, 80.0), v2(x - 10.0, 80.0), NEON);
+    x += 26.0;
+    i++;
+  }
+  drawHudPanel(12, 622, 696, 84);
+  RL.DrawText("P PAUSE   TAB GRID   SPACE FIRE   WASD/ARROWS THRUST", 28, 638, 18, NEON);
+  RL.DrawText("XP", 28, 672, 16, WHITE);
+  RL.DrawRectangle(64, 675, game.xp * 240 / 500, 12, GOLD);
+  RL.DrawRectangleLines(64, 675, 240, 12, NEON);
+  RL.DrawText("SKILL", 330, 672, 16, WHITE);
+  drawNumber(game.skillPoints, 400.0, 662.0, GOLD);
+}
+
+function drawNode(x: i32, y: i32, px: f32, py: f32, game: World): void {
+  let color: RL.Color = NEON_DIM;
+  const kind: i32 = nodeKind(x, y);
+  if (kind == 1) {
+    color = GOLD;
+  }
+  if (kind == 2) {
+    color = PURPLE;
+  }
+  if (kind == 3) {
+    color = WHITE;
+  }
+  if (hasNode(game.unlocked, x, y)) {
+    RL.DrawCircleV(v2(px, py), 13.0, color);
+  } else {
+    RL.DrawCircleLines(@i32(px), @i32(py), 13.0, color);
+  }
+  if (game.cursorX == x && game.cursorY == y) {
+    RL.DrawCircleLines(@i32(px), @i32(py), 20.0, NEON);
+  }
+}
+
+function drawLevelGrid(game: World): void {
+  RL.DrawRectangle(0, 0, SCREEN_W, SCREEN_H, BLACK);
+  RL.DrawText("INFINITE PLAYER GRID", 132, 42, 32, NEON);
+  RL.DrawText("ARROWS MOVE   ENTER UNLOCK   TAB RETURN", 118, 84, 20, WHITE);
+  RL.DrawText("NODE TYPES: THRUST SPEED FIRE BULLET", 154, 112, 18, NEON_DIM);
+  let gy: i32 = -4;
+  while (gy <= 4) {
+    let gx: i32 = -4;
+    while (gx <= 4) {
+      const nx: i32 = game.cursorX + gx;
+      const ny: i32 = game.cursorY + gy;
+      const px: f32 = 360.0 + @f32(gx) * 62.0;
+      const py: f32 = 380.0 + @f32(gy) * 50.0;
+      RL.DrawLineV(v2(px - 24.0, py), v2(px + 24.0, py), GRID_BRIGHT);
+      RL.DrawLineV(v2(px, py - 20.0), v2(px, py + 20.0), GRID_BRIGHT);
+      drawNode(nx, ny, px, py, game);
+      gx++;
+    }
+    gy++;
+  }
+  RL.DrawText("COST", 48, 642, 18, WHITE);
+  drawNumber(nodeCost(game.cursorX, game.cursorY), 112.0, 632.0, GOLD);
+  RL.DrawText("POINTS", 242, 642, 18, WHITE);
+  drawNumber(game.skillPoints, 334.0, 632.0, GOLD);
+}
+
+function drawCenteredTitle(title: u8 *, subtitle: u8 *): void {
+  RL.DrawRectangle(0, 0, SCREEN_W, SCREEN_H, BLACK);
+  RL.DrawRectangleLines(60, 70, 600, 520, NEON);
+  RL.DrawText(title, 132, 210, 42, NEON);
+  RL.DrawText(subtitle, 168, 282, 22, WHITE);
+  RL.DrawText("ENTER START   TAB GRID   ESC QUIT", 154, 356, 20, NEON_DIM);
+}
+
+function drawPause(): void {
+  RL.DrawRectangle(90, 160, 540, 310, NEON_DARK);
+  RL.DrawRectangleLines(90, 160, 540, 310, NEON);
+  RL.DrawText("PAUSED", 268, 218, 42, NEON);
+  RL.DrawText("P RESUME   TAB LEVEL GRID   ESC MENU", 128, 306, 22, WHITE);
+}
+
+function drawPlay(game: World): void {
+  const camera: RL.Vector2 = game.player.pos;
+  RL.ClearBackground(BLACK);
+  drawWorldGrid(camera);
+  let ai: usize = 0;
+  while (ai < game.asteroids.len) {
+    game.asteroids.items[ai].draw(camera);
+    ai++;
+  }
+  drawBullets(game.bullets, camera);
+  drawParticles(game.particles, camera);
+  if (game.player.alive) {
+    game.player.draw(camera);
+  }
+  drawHud(game);
+  if (game.mode == 2) {
+    drawPause();
+  }
+}
+
+function updateMenus(game: World): World {
+  let g: World = game;
+  if (g.mode == 0 && RL.IsKeyPressed(RL.KEY_ENTER)) {
+    g.mode = 1;
+  }
+  if (g.mode == 4 && RL.IsKeyPressed(RL.KEY_ENTER)) {
+    g = newWorld();
+  }
+  if (g.mode == 4 && RL.IsKeyPressed(RL.KEY_ENTER)) {
+    g.mode = 1;
+  }
+  return g;
+}
+
+function updateLevelGrid(game: World): World {
+  let g: World = game;
+  if (RL.IsKeyPressed(RL.KEY_TAB)) {
+    g.mode = 1;
+  }
+  if (RL.IsKeyPressed(RL.KEY_LEFT) || RL.IsKeyPressed(RL.KEY_A)) {
+    g.cursorX--;
+  }
+  if (RL.IsKeyPressed(RL.KEY_RIGHT) || RL.IsKeyPressed(RL.KEY_D)) {
+    g.cursorX++;
+  }
+  if (RL.IsKeyPressed(RL.KEY_UP) || RL.IsKeyPressed(RL.KEY_W)) {
+    g.cursorY--;
+  }
+  if (RL.IsKeyPressed(RL.KEY_DOWN) || RL.IsKeyPressed(RL.KEY_S)) {
+    g.cursorY++;
+  }
+  if (RL.IsKeyPressed(RL.KEY_ENTER)) {
+    g = unlockNode(g);
+  }
+  return g;
+}
+
+function updateWorld(game: World): World {
+  let g: World = game;
+  if (g.mode == 1 && RL.IsKeyPressed(RL.KEY_P)) {
+    g.mode = 2;
+  }
+  if (g.mode == 1 && RL.IsKeyPressed(RL.KEY_TAB)) {
+    g.mode = 3;
+  }
+  if (g.mode == 2 && RL.IsKeyPressed(RL.KEY_P)) {
+    g.mode = 1;
+  }
+  if (g.mode == 2 && RL.IsKeyPressed(RL.KEY_ESCAPE)) {
+    g.mode = 0;
+  }
+  if (g.mode == 2 && RL.IsKeyPressed(RL.KEY_TAB)) {
+    g.mode = 3;
+  }
+  if (g.mode == 3) {
+    return updateLevelGrid(g);
+  }
+  if (g.mode != 1) {
+    return updateMenus(g);
+  }
+  g = updatePlayer(g);
+  g = updateBullets(g);
+  g = updateAsteroids(g);
+  g = collide(g);
+  g = updateParticles(g);
+  return g;
+}
+
+function drawWorld(game: World): void {
+  if (game.mode == 0) {
+    drawCenteredTitle("TYPEC ASTEROIDS", "720P NEON TORUS SURVIVAL");
+    return;
+  }
+  if (game.mode == 3) {
+    drawLevelGrid(game);
+    return;
+  }
+  if (game.mode == 4) {
+    drawCenteredTitle("GAME OVER", "ENTER TO RESTART");
+    return;
+  }
+  drawPlay(game);
+}
+
+function main(): i32 {
+  RL.InitWindow(SCREEN_W, SCREEN_H, "TypeC Raylib Asteroids");
+  defer RL.CloseWindow();
+  RL.SetTargetFPS(60);
+  let game: World = newWorld();
+  const ui: UI = {};
+  while (!RL.WindowShouldClose()) {
+    game = updateWorld(game);
+    RL.BeginDrawing();
+    ui.draw(game);
+    RL.EndDrawing();
+  }
+  return 0;
+}

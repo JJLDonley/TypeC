@@ -11,6 +11,59 @@ import { resolve } from "core/resolver.ts";
 type Str = string;
 type usize = number;
 
+Deno.test("allows class methods to call methods through this", () => {
+  const source = `
+    class Vec {
+      x: i32;
+
+      get(): i32 {
+        return this.x;
+      }
+
+      twice(): i32 {
+        return this.get() + this.get();
+      }
+    }
+
+    function main(): i32 {
+      const value: Vec = { x: 21 };
+      return value.twice() - 42;
+    }
+  `;
+  const program = check(resolve(instantiateGenerics(parse(lex(source)))));
+  const cSource = emitC(program);
+  if (!cSource.includes("Vec_twice")) throw new Error("Expected emitted class method");
+  if (!cSource.includes("Vec_get(this)")) {
+    throw new Error("Expected this method call to pass receiver pointer");
+  }
+});
+
+Deno.test("allows drawable class methods to call helper methods through this", () => {
+  const source = `
+    class Asteroid {
+      radius: f32;
+
+      point(index: i32): f32 {
+        return this.radius + @f32(index);
+      }
+
+      draw(): f32 {
+        return this.point(1) + this.point(2);
+      }
+    }
+
+    function main(): i32 {
+      const asteroid: Asteroid = { radius: 39.0 };
+      return @i32(asteroid.draw()) - 81;
+    }
+  `;
+  const program = check(resolve(instantiateGenerics(parse(lex(source)))));
+  const cSource = emitC(program);
+  if (!cSource.includes("Asteroid_point(this, 1)")) {
+    throw new Error("Expected this helper method call to pass receiver pointer");
+  }
+});
+
 Deno.test("tracks whether compiled source has main", async () => {
   const dir = await Deno.makeTempDir();
   await Deno.writeTextFile(
