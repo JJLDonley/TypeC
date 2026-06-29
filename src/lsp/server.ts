@@ -365,7 +365,7 @@ export class LspServer {
     const uri = stringField(document, "uri");
     const text = this.documents.get(uri);
     if (text === null) return this.withResponse(message, []);
-    return this.withResponse(message, inlayHints(text));
+    return this.withResponse(message, inlayHints(text, uri));
   }
 
   private semanticTokens(message: IncomingMessage): JsonRpcResponse[] {

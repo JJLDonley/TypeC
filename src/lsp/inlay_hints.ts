@@ -15,11 +15,11 @@ interface CallArguments {
   arguments: Token[];
 }
 
-export function inlayHints(text: Str): JsonValue {
+export function inlayHints(text: Str, uri: Str = "file:///main.tc"): JsonValue {
   const tokens = lex(text);
   return [
     ...callInlayHints(tokens, functionParameters(tokens)),
-    ...compilerInlayHints(text, tokens),
+    ...compilerInlayHints(text, tokens, uri),
   ] as unknown as JsonValue;
 }
 

@@ -924,6 +924,38 @@ Deno.test("LSP server returns inferred type inlay hints", () => {
   }
 });
 
+Deno.test("LSP server returns project-aware inferred type inlay hints", async () => {
+  const dir = await Deno.makeTempDir();
+  const mainPath = `${dir}/main.tc`;
+  const uri = `file://${mainPath}`;
+  await Deno.writeTextFile(`${dir}/math.tc`, `export extern function cosf(angle: f32): f32;`);
+  await Deno.writeTextFile(
+    `${dir}/project.json`,
+    JSON.stringify({ dependencies: { math: "math.tc" } }),
+  );
+  await Deno.writeTextFile(mainPath, "");
+
+  const server = new LspServer();
+  openDocumentUri(
+    server,
+    uri,
+    `import * as M from "math"; function main(): i32 { const angle: f32 = 1.0; const c = M.cosf(angle); return 0; }\n`,
+  );
+  const output = server.handle({
+    jsonrpc: "2.0",
+    id: 28,
+    method: "textDocument/inlayHint",
+    params: {
+      textDocument: { uri },
+      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 120 } },
+    },
+  });
+  const hints = asArray(responseResult(output[0]!));
+  if (!hints.some((hint) => stringField(asRecord(hint), "label") === ": f32")) {
+    throw new Error("Expected project-aware inferred local type hint");
+  }
+});
+
 Deno.test("LSP server returns inferred generic argument inlay hints", () => {
   const server = new LspServer();
   openDocument(

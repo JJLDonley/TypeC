@@ -1,6 +1,8 @@
 import type { Expression, FunctionDecl, Program, Statement } from "core/ast.ts";
 import { spanKey } from "checker/exprs.ts";
 import { check } from "checker/mod.ts";
+import { loadProgramWithEntryTextSync } from "module/loader_sync.ts";
+import { loadProjectConfigSync } from "project/config.ts";
 import { instantiateGenerics } from "core/generics.ts";
 import { lex } from "core/lexer.ts";
 import { parse } from "parser/mod.ts";
@@ -8,20 +10,49 @@ import { resolve } from "core/resolver.ts";
 import type { Token } from "core/token.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { TypedProgram } from "core/tast.ts";
-import type { JsonRecord, JsonValue, LspPosition, Str } from "lsp/types.ts";
+import type { b8, JsonRecord, JsonValue, LspPosition, Str } from "lsp/types.ts";
 
 const TYPE_HINT_KIND = 1;
 
-export function compilerInlayHints(text: Str, tokens: Token[]): JsonRecord[] {
+export function compilerInlayHints(
+  text: Str,
+  tokens: Token[],
+  uri: Str = "file:///main.tc",
+): JsonRecord[] {
   try {
-    const program = parse(lex(text));
+    const parsed = parse(lex(text));
+    const program = programForInlayHints(text, uri, parsed);
     const checked = check(resolve(instantiateGenerics(program)));
     return [
       ...inferredLocalTypeHints(checked, tokens),
-      ...genericTypeArgumentHints(checked, inferredGenericCalls(program)),
+      ...genericTypeArgumentHints(checked, inferredGenericCalls(parsed)),
     ];
   } catch (_) {
     return [];
+  }
+}
+
+function programForInlayHints(text: Str, uri: Str, parsed: Program): Program {
+  const path = fileUriPath(uri);
+  if (path === null || !fileExists(path)) return parsed;
+  return loadProgramWithEntryTextSync(path, text, loadProjectConfigSync(path));
+}
+
+function fileExists(path: Str): b8 {
+  try {
+    return Deno.statSync(path).isFile;
+  } catch {
+    return false;
+  }
+}
+
+function fileUriPath(uri: Str): Str | null {
+  try {
+    const url = new URL(uri);
+    if (url.protocol !== "file:") return null;
+    return decodeURIComponent(url.pathname);
+  } catch {
+    return null;
   }
 }
 
