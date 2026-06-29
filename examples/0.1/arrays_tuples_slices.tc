@@ -1,0 +1,10 @@
+function main(): i32 {
+  const values: i32[3] = [10, 20, 12];
+  const pair: [i32, i32] = [values[0], values[2]];
+  const view: Slice<i32> = values.slice(0, 2);
+  const total: i32 = pair[0] + pair[1] + (view.length() as i32);
+  if (total == 24) {
+    return 0;
+  }
+  return 1;
+}

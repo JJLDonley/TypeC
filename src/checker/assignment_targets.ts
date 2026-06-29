@@ -27,6 +27,8 @@ export function assignmentTargetInfo(
       return nestedTargetInfo(target.operand, lookupLocal, resolveType, resolveType(target));
     case "IndexExpr":
       return nestedTargetInfo(target.operand, lookupLocal, resolveType, resolveType(target));
+    case "PostfixPointerExpr":
+      return dereferenceTargetInfo(target, lookupLocal, resolveType);
   }
 }
 
@@ -69,7 +71,20 @@ function assignmentRootInfo(
         resolveType,
         resolveType(expression),
       );
+    case "PostfixPointerExpr":
+      return dereferenceTargetInfo(expression, lookupLocal, resolveType);
     default:
       return null;
   }
+}
+
+function dereferenceTargetInfo(
+  expression: Extract<Expression, { kind: "PostfixPointerExpr" }>,
+  lookupLocal: LocalLookup,
+  resolveType: TypeResolver,
+): AssignmentTargetInfo | null {
+  if (expression.operator !== ".*") return null;
+  const root = assignmentRootInfo(expression.operand, lookupLocal, resolveType);
+  if (!root) return null;
+  return { ...root, type: resolveType(expression), wholeLocal: false };
 }

@@ -1,0 +1,23 @@
+export type OptionI32 = {
+  present: bool;
+  value: i32;
+};
+
+export function option_some_i32(value: i32): OptionI32 {
+  return { present: true, value };
+}
+
+export function option_none_i32(): OptionI32 {
+  return { present: false, value: 0 };
+}
+
+export function option_is_some_i32(value: OptionI32): bool {
+  return value.present;
+}
+
+export function option_unwrap_or_i32(value: OptionI32, fallback: i32): i32 {
+  if (value.present) {
+    return value.value;
+  }
+  return fallback;
+}

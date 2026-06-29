@@ -1,3 +1,8 @@
+import {
+  C_DUPLICATE_CONSTANT_SYMBOL,
+  C_DUPLICATE_FUNCTION_SYMBOL,
+  C_DUPLICATE_TYPE_SYMBOL,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { ConstDecl, FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import {
@@ -51,6 +56,7 @@ function checkCFunctionGroup(
   if (isCompatibleExternGroup(functions, aliases)) return [];
   return functions.slice(1).map((fn) => ({
     message: `Duplicate C function symbol '${name}'`,
+    code: C_DUPLICATE_FUNCTION_SYMBOL,
     span: fn.span,
   }));
 }
@@ -96,6 +102,7 @@ function checkCConstantGroup([name, constants]: [Str, ConstDecl[]]): Diagnostic[
   if (constants.length < 2) return [];
   return constants.slice(1).map((constant) => ({
     message: `Duplicate C constant symbol '${name}'`,
+    code: C_DUPLICATE_CONSTANT_SYMBOL,
     span: constant.span,
   }));
 }
@@ -121,6 +128,7 @@ function checkCTypeAliasGroup(
   }
   return typeAliases.slice(1).map((typeAlias) => ({
     message: `Duplicate C type symbol '${name}'`,
+    code: C_DUPLICATE_TYPE_SYMBOL,
     span: typeAlias.span,
   }));
 }

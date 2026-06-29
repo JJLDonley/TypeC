@@ -1,0 +1,289 @@
+{
+  "name": "typec-vscode",
+  "displayName": "TypeC",
+  "description": "VSCode language client wrapper for the TypeC compiler LSP.",
+  "version": "0.1.0",
+  "publisher": "typec",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "package": "^1.0.1",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.5.2"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "typec",
+        "aliases": [
+          "TypeC",
+          "typec"
+        ],
+        "extensions": [
+          ".tc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "typec",
+        "scopeName": "source.typec",
+        "path": "./syntaxes/typec.tmLanguage.json"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "typec",
+        "owner": "typec",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "typec.checkCurrentFile",
+        "title": "TypeC: Check Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.buildCurrentFile",
+        "title": "TypeC: Build Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.runCurrentFile",
+        "title": "TypeC: Run Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.cleanCurrentFile",
+        "title": "TypeC: Clean Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.watchCurrentFile",
+        "title": "TypeC: Watch Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.formatCurrentFile",
+        "title": "TypeC: Format Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.formatCheckCurrentFile",
+        "title": "TypeC: Check Current File Formatting",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.parseCurrentFile",
+        "title": "TypeC: Parse Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.emitCCurrentFile",
+        "title": "TypeC: Emit C for Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.emitAstCurrentFile",
+        "title": "TypeC: Emit AST for Current File",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.restartLanguageServer",
+        "title": "TypeC: Restart Language Server",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.showLanguageServerOutput",
+        "title": "TypeC: Show Language Server Output",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.showCompilerVersion",
+        "title": "TypeC: Show Compiler Version",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.showCompilerHelp",
+        "title": "TypeC: Show Compiler Help",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.configureCompilerPath",
+        "title": "TypeC: Configure Compiler Path",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.configureBuildDir",
+        "title": "TypeC: Configure Build Directory",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.configureLanguageServerTrace",
+        "title": "TypeC: Configure Language Server Trace",
+        "category": "TypeC"
+      },
+      {
+        "command": "typec.configureSettings",
+        "title": "TypeC: Configure Settings",
+        "category": "TypeC"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "typec.checkCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@1"
+        },
+        {
+          "command": "typec.buildCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@2"
+        },
+        {
+          "command": "typec.runCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@3"
+        },
+        {
+          "command": "typec.cleanCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@4"
+        },
+        {
+          "command": "typec.watchCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@5"
+        },
+        {
+          "command": "typec.formatCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@6"
+        },
+        {
+          "command": "typec.formatCheckCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@7"
+        },
+        {
+          "command": "typec.parseCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@8"
+        },
+        {
+          "command": "typec.emitCCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@9"
+        },
+        {
+          "command": "typec.emitAstCurrentFile",
+          "when": "resourceLangId == typec",
+          "group": "typec@10"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "typec.checkCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@1"
+        },
+        {
+          "command": "typec.buildCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@2"
+        },
+        {
+          "command": "typec.runCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@3"
+        },
+        {
+          "command": "typec.cleanCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@4"
+        },
+        {
+          "command": "typec.watchCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@5"
+        },
+        {
+          "command": "typec.formatCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@6"
+        },
+        {
+          "command": "typec.formatCheckCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@7"
+        },
+        {
+          "command": "typec.parseCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@8"
+        },
+        {
+          "command": "typec.emitCCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@9"
+        },
+        {
+          "command": "typec.emitAstCurrentFile",
+          "when": "resourceExtname == .tc",
+          "group": "typec@10"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "TypeC",
+      "properties": {
+        "typec.compilerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the TypeC compiler executable. Empty uses ../bin/STC from this repository when present, otherwise STC from PATH."
+        },
+        "typec.buildDir": {
+          "type": "string",
+          "default": "",
+          "description": "Build output directory passed to build, run, clean, and watch current-file commands. Empty uses the compiler default."
+        },
+        "typec.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace communication with the TypeC language server."
+        }
+      }
+    }
+  }
+}

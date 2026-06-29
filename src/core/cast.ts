@@ -8,7 +8,10 @@ type b8 = boolean;
 export interface CastProgram {
   kind: "Program";
   imports: CastImportDecl[];
+  exports?: CastExportDecl[];
+  defaultExport?: Str | null;
   typeAliases: CastTypeAliasDecl[];
+  namespaces?: CastNamespaceDecl[];
   classes?: CastClassDecl[];
   structs?: CastStructDecl[];
   interfaces?: CastInterfaceDecl[];
@@ -23,6 +26,8 @@ export interface CastImportDecl {
   kind: "ImportDecl";
   names: CastImportSpecifier[];
   namespace?: Str | null;
+  typeOnly?: b8;
+  reExport?: b8;
   path: Str;
   span: SourceSpan;
 }
@@ -30,14 +35,50 @@ export interface CastImportDecl {
 export interface CastImportSpecifier {
   imported: Str;
   local: Str;
+  typeOnly?: b8;
+  reExport?: b8;
   span: SourceSpan;
 }
+
+export interface CastDefaultExportDecl {
+  kind: "DefaultExportDecl";
+  name: Str;
+  span: SourceSpan;
+}
+
+export interface CastExportDecl {
+  kind: "ExportDecl";
+  names: CastImportSpecifier[];
+  typeOnly?: b8;
+  path: Str | null;
+  span: SourceSpan;
+}
+
+export interface CastNamespaceDecl {
+  kind: "NamespaceDecl";
+  exported: b8;
+  name: Str;
+  declarations: CastNamespaceMemberDecl[];
+  span: SourceSpan;
+}
+
+export type CastNamespaceMemberDecl =
+  | CastTypeAliasDecl
+  | CastClassDecl
+  | CastStructDecl
+  | CastInterfaceDecl
+  | CastTaggedUnionDecl
+  | CastEnumDecl
+  | CastConstDecl
+  | CastFunctionDecl;
 
 export interface CastTypeAliasDecl {
   kind: "TypeAliasDecl";
   exported: b8;
   name: Str;
   cName?: Str | null;
+  generated?: b8;
+  genericParams?: CastGenericParam[];
   type: CastTypeRef;
   span: SourceSpan;
 }
@@ -55,9 +96,15 @@ export interface CastClassDecl {
   span: SourceSpan;
 }
 
+export type CastAccessModifier = "public" | "private" | "protected";
+
 export interface CastClassField {
   name: Str;
   type: CastTypeRef;
+  access: CastAccessModifier;
+  readonly: b8;
+  static: b8;
+  initializer: CastExpression | null;
   span: SourceSpan;
 }
 
@@ -72,6 +119,8 @@ export interface CastClassMethod {
   name: Str;
   params: CastParam[];
   returnType: CastTypeRef;
+  access: CastAccessModifier;
+  static: b8;
   body: CastBlockStmt;
   span: SourceSpan;
 }
@@ -120,6 +169,7 @@ export interface CastEnumDecl {
   exported: b8;
   name: Str;
   cName?: Str | null;
+  backingType?: CastTypeRef | null;
   members: CastEnumMember[];
   span: SourceSpan;
 }
@@ -165,6 +215,7 @@ export interface CastGenericParam {
 export interface CastParam {
   name: Str;
   optional?: b8;
+  rest?: b8;
   type: CastTypeRef;
   defaultValue?: CastExpression | null;
   span: SourceSpan;
@@ -184,7 +235,10 @@ export type CastTypeRef =
   | CastConditionalTypeRef
   | CastIndexedAccessTypeRef
   | CastMappedTypeRef
+  | CastKeyofTypeRef
+  | CastTypeofTypeRef
   | CastFunctionTypeRef
+  | CastLiteralTypeRef
   | CastRecordTypeRef;
 
 export interface CastNamedTypeRef {
@@ -273,6 +327,18 @@ export interface CastMappedTypeRef {
   span: SourceSpan;
 }
 
+export interface CastKeyofTypeRef {
+  kind: "KeyofTypeRef";
+  target: CastTypeRef;
+  span: SourceSpan;
+}
+
+export interface CastTypeofTypeRef {
+  kind: "TypeofTypeRef";
+  name: Str;
+  span: SourceSpan;
+}
+
 export interface CastFunctionTypeRef {
   kind: "FunctionTypeRef";
   params: CastParam[];
@@ -286,9 +352,20 @@ export interface CastRecordTypeRef {
   span: SourceSpan;
 }
 
+export type CastLiteralTypeValue = Str | IntLiteralValue | b8;
+
+export interface CastLiteralTypeRef {
+  kind: "LiteralTypeRef";
+  value: CastLiteralTypeValue;
+  text: Str;
+  span: SourceSpan;
+}
+
 export interface CastRecordField {
   name: Str;
   type: CastTypeRef;
+  readonly?: b8;
+  optional?: b8;
   span: SourceSpan;
 }
 
@@ -402,7 +479,8 @@ export interface CastAssignmentStmt {
 export type CastAssignmentTarget =
   | Extract<CastExpression, { kind: "IdentifierExpr" }>
   | Extract<CastExpression, { kind: "FieldAccessExpr" }>
-  | Extract<CastExpression, { kind: "IndexExpr" }>;
+  | Extract<CastExpression, { kind: "IndexExpr" }>
+  | Extract<CastExpression, { kind: "PostfixPointerExpr" }>;
 
 export type CastIncDecOperator = "++" | "--";
 
@@ -499,6 +577,7 @@ export type CastExpression =
   | CastConditionalExpr
   | CastNullishCoalesceExpr
   | CastCastExpr
+  | CastSatisfiesExpr
   | CastCallExpr
   | CastNewExpr
   | CastMethodCallExpr
@@ -590,6 +669,13 @@ export interface CastNullishCoalesceExpr {
 
 export interface CastCastExpr {
   kind: "CastExpr";
+  type: CastTypeRef;
+  expression: CastExpression;
+  span: SourceSpan;
+}
+
+export interface CastSatisfiesExpr {
+  kind: "SatisfiesExpr";
   type: CastTypeRef;
   expression: CastExpression;
   span: SourceSpan;

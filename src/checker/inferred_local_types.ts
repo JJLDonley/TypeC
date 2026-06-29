@@ -1,3 +1,4 @@
+import { LOCAL_TYPE_INFERENCE } from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { optionalTypeNameElement, parseFunctionTypeName } from "checker/type_name_shapes.ts";
@@ -31,6 +32,7 @@ export function checkInferredLocalType(type: TypeName, span: SourceSpan): Inferr
   return {
     diagnostics: [{
       message: `Cannot infer local variable type '${type}' without an annotation`,
+      code: LOCAL_TYPE_INFERENCE,
       span,
     }],
     inferable: false,

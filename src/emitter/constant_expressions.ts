@@ -34,6 +34,8 @@ export function emitConstantExpressionExpected(
       return `((${emitCTypeName(expr.type, context.typeAliases)})${
         emitConstantExpressionExpected(expr.expression, expectedType, context)
       })`;
+    case "SatisfiesExpr":
+      return emitConstantExpressionExpected(expr.expression, expectedType, context);
     case "RecordLiteralExpr":
       return emitConstantRecordLiteral(expr, expectedType, context);
     case "ArrayLiteralExpr":

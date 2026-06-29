@@ -45,7 +45,8 @@ Deno.test("rejects unsupported C header types", () => {
     if (
       error instanceof TypeCError &&
       error.diagnostics.some((diagnostic) =>
-        diagnostic.message === "Unsupported C type '__unsupported_t'"
+        diagnostic.message === "Unsupported C type '__unsupported_t'" &&
+        diagnostic.code === "E2800"
       )
     ) return;
   }

@@ -1,0 +1,18 @@
+import { OptionI32, option_none_i32, option_some_i32, option_unwrap_or_i32 } from "std/option.tc";
+import { ResultI32, result_ok_i32, result_unwrap_or_i32 } from "std/result.tc";
+import { slice_first_i32, slice_len_identity } from "std/slice.tc";
+
+function main(): i32 {
+  const result: ResultI32 = result_ok_i32(30, 0);
+  const present: OptionI32 = option_some_i32(10);
+  const empty: OptionI32 = option_none_i32();
+  const values: i32[2] = [2, 9];
+  const view: Slice<i32> = values.slice(0, 2);
+  const total: i32 = result_unwrap_or_i32(result, 0) + option_unwrap_or_i32(present, 0) +
+    option_unwrap_or_i32(empty, 0) + slice_first_i32(view.data) +
+    (slice_len_identity(view.length()) as i32);
+  if (total == 44) {
+    return 0;
+  }
+  return 1;
+}

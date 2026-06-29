@@ -1,3 +1,4 @@
+import { OPTIONAL_CHAIN_METHOD, OPTIONAL_CHAIN_OPERAND } from "core/diagnostic_codes.ts";
 import type { Expression, FunctionDecl, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -74,6 +75,7 @@ function optionalChainElementType(
     diagnostics: [
       {
         message: `Optional chaining requires optional operand, got '${operandType}'`,
+        code: OPTIONAL_CHAIN_OPERAND,
         span: expr.span,
       },
     ],
@@ -103,6 +105,7 @@ function unknownOptionalMethod(
   return {
     diagnostics: [{
       message: `Unknown method '${expr.method}' on optional type '${receiverType}?'`,
+      code: OPTIONAL_CHAIN_METHOD,
       span: expr.span,
     }],
     type: "<error>",

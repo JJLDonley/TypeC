@@ -1,3 +1,4 @@
+import { ARRAY_INDEX_BOUNDS, INDEX_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -18,7 +19,11 @@ export function checkArrayIndex(
 
 function checkArrayIndexType(index: Expression, indexType: TypeName): Diagnostic[] {
   if (isIntegerType(indexType)) return [];
-  return [{ message: `Array index type '${indexType}' is not an integer`, span: index.span }];
+  return [{
+    message: `Array index type '${indexType}' is not an integer`,
+    code: INDEX_TYPE,
+    span: index.span,
+  }];
 }
 
 function checkArrayIndexBounds(index: Expression, length: IntLiteralValue | null): Diagnostic[] {
@@ -27,6 +32,7 @@ function checkArrayIndexBounds(index: Expression, length: IntLiteralValue | null
   if (index.value < length) return [];
   return [{
     message: `Array index ${index.text} is out of bounds for length ${length}`,
+    code: ARRAY_INDEX_BOUNDS,
     span: index.span,
   }];
 }

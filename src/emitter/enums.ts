@@ -1,12 +1,21 @@
 import { checkEnums } from "checker/enums.ts";
-import type { ConstDecl, EnumDecl } from "core/ast.ts";
+import type { ConstDecl, EnumDecl, TypeRef } from "core/ast.ts";
+import { enumBackingType } from "core/enums.ts";
 import { emitConstantDefinition } from "emitter/constants.ts";
 import type { EmitContext } from "emitter/context.ts";
 
 type Str = string;
 
 export function emitEnumTypeDefinition(enumDecl: EnumDecl): Str {
-  return `typedef i32 ${enumDecl.cName ?? enumDecl.name};`;
+  return `typedef ${enumBackingCTypeName(enumDecl)} ${enumDecl.cName ?? enumDecl.name};`;
+}
+
+export function enumBackingCTypeName(enumDecl: EnumDecl): Str {
+  return enumBackingTypeName(enumBackingType(enumDecl));
+}
+
+function enumBackingTypeName(type: TypeRef): Str {
+  return type.kind === "NamedTypeRef" ? type.name : "<error>";
 }
 
 export function collectEnumConstants(

@@ -1,4 +1,5 @@
 import type { ConstDecl, FunctionDecl } from "core/ast.ts";
+import { UNKNOWN_IDENTIFIER } from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import type { LocalInfo } from "checker/locals.ts";
@@ -22,5 +23,8 @@ export function checkIdentifierType(
   if (local) return { diagnostics: [], type: local.type };
   if (constant) return { diagnostics: [], type: typeName(constant.type) };
   if (fn) return { diagnostics: [], type: functionTypeName(fn) };
-  return { diagnostics: [{ message: `Unknown identifier '${name}'`, span }], type: "<error>" };
+  return {
+    diagnostics: [{ message: `Unknown identifier '${name}'`, code: UNKNOWN_IDENTIFIER, span }],
+    type: "<error>",
+  };
 }

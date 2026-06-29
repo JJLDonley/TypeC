@@ -1,13 +1,11 @@
-import type { RecordTypeRef, TypeAliasDecl } from "core/ast.ts";
+import type { RecordTypeRef, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { emitCDeclarator } from "c/type.ts";
 import type { EmitContext } from "emitter/context.ts";
 
 type Str = string;
 
 export function emitTypeAlias(typeAlias: TypeAliasDecl, context: EmitContext): Str {
-  if (typeAlias.type.kind !== "RecordTypeRef") {
-    throw new Error("Only record type aliases can be emitted");
-  }
+  if (typeAlias.type.kind !== "RecordTypeRef") return emitScalarTypeAlias(typeAlias, context);
   return emitRecordTypeAlias(
     typeAliasName(typeAlias),
     typeAliasTag(typeAlias),
@@ -22,6 +20,14 @@ function typeAliasName(typeAlias: TypeAliasDecl): Str {
 
 function typeAliasTag(typeAlias: TypeAliasDecl): Str | null {
   return typeAlias.cName ?? null;
+}
+
+function emitScalarTypeAlias(typeAlias: TypeAliasDecl, context: EmitContext): Str {
+  return `typedef ${emitAliasDeclarator(typeAlias.type, typeAliasName(typeAlias), context)};`;
+}
+
+function emitAliasDeclarator(type: TypeRef, name: Str, context: EmitContext): Str {
+  return emitCDeclarator(type, name, context.typeAliases);
 }
 
 function emitRecordTypeAlias(

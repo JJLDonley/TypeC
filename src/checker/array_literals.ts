@@ -1,3 +1,9 @@
+import {
+  ARRAY_LITERAL_ELEMENT_TYPE,
+  ARRAY_LITERAL_INFERENCE,
+  ARRAY_LITERAL_LENGTH,
+  ARRAY_LITERAL_TARGET,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -31,6 +37,7 @@ export function checkArrayLiteralTarget(
     array: null,
     diagnostics: [{
       message: `Array literal is not assignable to non-array type '${expected}'`,
+      code: ARRAY_LITERAL_TARGET,
       span: expr.span,
     }],
   };
@@ -42,7 +49,11 @@ export function checkInferredArrayLiteral(
 ): Diagnostic[] {
   if (array.length !== null) return [];
   if (expr.elements.length > 0) return [];
-  return [{ message: "Cannot infer empty array type", span: expr.span }];
+  return [{
+    message: "Cannot infer empty array type",
+    code: ARRAY_LITERAL_INFERENCE,
+    span: expr.span,
+  }];
 }
 
 export function checkArrayLiteralElementType(
@@ -53,6 +64,7 @@ export function checkArrayLiteralElementType(
   if (isAssignable(actual, expectedElement)) return [];
   return [{
     message: `Array element type '${actual}' is not assignable to '${expectedElement}'`,
+    code: ARRAY_LITERAL_ELEMENT_TYPE,
     span: element.span,
   }];
 }
@@ -67,6 +79,7 @@ export function checkArrayLiteralLength(
   if (array.length === BigInt(elementCount)) return [];
   return [{
     message: `Array length ${elementCount} is not assignable to '${expected}'`,
+    code: ARRAY_LITERAL_LENGTH,
     span: expr.span,
   }];
 }

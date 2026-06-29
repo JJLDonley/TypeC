@@ -3,7 +3,10 @@ import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { checkRecordLiteralEntries } from "checker/record_literal_entries.ts";
-import { checkRecordLiteralMissingFields, checkRecordLiteralTarget } from "checker/record_literals.ts";
+import {
+  checkRecordLiteralMissingFields,
+  checkRecordLiteralTarget,
+} from "checker/record_literals.ts";
 
 type Str = string;
 

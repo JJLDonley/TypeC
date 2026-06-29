@@ -54,6 +54,46 @@ Deno.test("parses comma-separated record type refs", () => {
   assertText(typeName(type), "{x:i32,y:i32}");
 });
 
+Deno.test("parses readonly record type fields", () => {
+  const type = parseTypeRefWith(
+    parserFor([
+      punct("{"),
+      keyword("readonly"),
+      identifier("x"),
+      punct(":"),
+      identifier("i32"),
+      punct("}"),
+      eof(),
+    ]),
+  );
+
+  if (type.kind !== "RecordTypeRef") throw new Error("Expected record type");
+  assertText(type.fields[0]?.readonly === true ? "readonly" : "mutable", "readonly");
+});
+
+Deno.test("parses keyof and typeof type refs", () => {
+  const keyofType = parseTypeRefWith(parserFor([keyword("keyof"), identifier("Point"), eof()]));
+  const typeofType = parseTypeRefWith(parserFor([keyword("typeof"), identifier("value"), eof()]));
+
+  assertText(typeName(keyofType), "keyof Point");
+  assertText(typeName(typeofType), "typeof value");
+});
+
+Deno.test("parses literal union type refs", () => {
+  const type = parseTypeRefWith(
+    parserFor([
+      str("read"),
+      punct("|"),
+      str("write"),
+      punct("|"),
+      integer("42"),
+      eof(),
+    ]),
+  );
+
+  assertText(typeName(type), "read | write | 42");
+});
+
 Deno.test("parses tuple type refs", () => {
   const type = parseTypeRefWith(
     parserFor([
@@ -304,10 +344,16 @@ function typeName(type: CastTypeRef): Str {
       return `{[${type.keyName} in keyof ${typeName(type.sourceType)}]:${
         typeName(type.valueType)
       }}`;
+    case "KeyofTypeRef":
+      return `keyof ${typeName(type.target)}`;
+    case "TypeofTypeRef":
+      return `typeof ${type.name}`;
     case "FunctionTypeRef":
       return `(${
         type.params.map((param) => `${param.name}: ${typeName(param.type)}`).join(", ")
       }) => ${typeName(type.returnType)}`;
+    case "LiteralTypeRef":
+      return type.text;
     case "RecordTypeRef":
       return `{${type.fields.map((field) => `${field.name}:${typeName(field.type)}`).join(",")}}`;
   }
@@ -315,6 +361,10 @@ function typeName(type: CastTypeRef): Str {
 
 function identifier(text: Str): Token {
   return token("identifier", text);
+}
+
+function keyword(text: Str): Token {
+  return token("keyword", text);
 }
 
 function punct(text: Str): Token {
@@ -327,6 +377,10 @@ function operator(text: Str): Token {
 
 function integer(text: Str): Token {
   return token("integer", text);
+}
+
+function str(text: Str): Token {
+  return token("string", text);
 }
 
 function eof(): Token {

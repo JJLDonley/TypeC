@@ -68,6 +68,8 @@ function inferArgumentTypeRef(expr: Expression): TypeRef | null {
       return inferConditionalTypeRef(expr);
     case "NullishCoalesceExpr":
       return inferNullishCoalesceTypeRef(expr);
+    case "SatisfiesExpr":
+      return inferArgumentTypeRef(expr.expression);
     case "CallExpr":
       return inferConstructorCallTypeRef(expr);
     case "ArrayLiteralExpr":
@@ -134,7 +136,7 @@ function inferBinaryTypeRef(expr: Extract<Expression, { kind: "BinaryExpr" }>): 
   if (isComparisonBinaryOperator(expr.operator)) {
     return inferComparisonBinaryTypeRef(expr, left, right);
   }
-  if (isNumericBinaryOperator(expr.operator)) return inferNumericBinaryTypeRef(expr, left, right);
+  if (isNumericBinaryOperator(expr.operator)) return inferNumericBinaryTypeRef(left, right);
   return null;
 }
 
@@ -156,11 +158,7 @@ function inferComparisonBinaryTypeRef(
   return namedTypeRef("bool", expr);
 }
 
-function inferNumericBinaryTypeRef(
-  expr: Extract<Expression, { kind: "BinaryExpr" }>,
-  left: TypeRef,
-  right: TypeRef,
-): TypeRef | null {
+function inferNumericBinaryTypeRef(left: TypeRef, right: TypeRef): TypeRef | null {
   if (typeName(left) !== typeName(right)) return null;
   if (isNamedType(left, "i32") || isNamedType(left, "f64")) return left;
   return null;
@@ -288,7 +286,8 @@ function bindMatchingType(
 ): b8 {
   switch (pattern.kind) {
     case "NamedTypeRef":
-      return actual.kind === "NamedTypeRef" && pattern.name === actual.name;
+      return actual.kind === "NamedTypeRef" && pattern.name === actual.name &&
+        bindNamedTypeArgs(pattern, actual, params, bindings);
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":
@@ -316,6 +315,9 @@ function bindMatchingType(
     case "ConditionalTypeRef":
     case "IndexedAccessTypeRef":
     case "MappedTypeRef":
+    case "LiteralTypeRef":
+    case "KeyofTypeRef":
+    case "TypeofTypeRef":
       return typeName(pattern) === typeName(actual);
   }
 }
@@ -324,6 +326,17 @@ function isArrayType(
   type: TypeRef,
 ): type is Extract<TypeRef, { kind: "InferredArrayTypeRef" | "FixedArrayTypeRef" }> {
   return type.kind === "InferredArrayTypeRef" || type.kind === "FixedArrayTypeRef";
+}
+
+function bindNamedTypeArgs(
+  pattern: Extract<TypeRef, { kind: "NamedTypeRef" }>,
+  actual: Extract<TypeRef, { kind: "NamedTypeRef" }>,
+  params: Set<Str>,
+  bindings: TypeBindings,
+): b8 {
+  const patternArgs = pattern.typeArgs ?? [];
+  const actualArgs = actual.typeArgs ?? [];
+  return bindTypeList(patternArgs, actualArgs, params, bindings);
 }
 
 function bindFunctionType(

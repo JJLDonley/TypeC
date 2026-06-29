@@ -1,3 +1,4 @@
+import { FOR_IN_ITERABLE } from "core/diagnostic_codes.ts";
 import type { Expression, Program, TypeAliasDecl } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -21,7 +22,11 @@ export function checkForInIterable(
   }
   return {
     keyType: "<error>",
-    diagnostics: [{ message: "For-in iterable must be a record, class, or enum", span: iterable.span }],
+    diagnostics: [{
+      message: "For-in iterable must be a record, class, or enum",
+      code: FOR_IN_ITERABLE,
+      span: iterable.span,
+    }],
   };
 }
 

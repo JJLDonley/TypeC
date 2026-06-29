@@ -144,7 +144,11 @@ function collectHeaderEnumsInto(
   mainSourceFile: Str | null,
 ): void {
   if (!isJsonRecord(value)) return;
-  if (value.kind === "EnumDecl" && hasName(value) && isHeaderDeclaration(value)) {
+  if (value.kind === "TypedefDecl" && hasName(value) && isHeaderDeclaration(value)) {
+    const enumDecl = readHeaderTypedefEnum(value, mainSourceFile);
+    if (enumDecl) enums.push(enumDecl);
+  }
+  if (value.kind === "EnumDecl" && isHeaderDeclaration(value)) {
     const enumDecl = readHeaderEnum(value, mainSourceFile);
     if (enumDecl) enums.push(enumDecl);
   }
@@ -230,11 +234,25 @@ function isSimpleStringLiteralText(value: Str): b8 {
   return /^"[^"\\\r\n]*"$/.test(value);
 }
 
+function readHeaderTypedefEnum(
+  value: JsonRecord,
+  mainSourceFile: Str | null,
+): CHeaderEnum | null {
+  if (!isJsonText(value.name) || !isJsonArray(value.inner)) return null;
+  for (const child of value.inner) {
+    if (!isJsonRecord(child) || child.kind !== "EnumDecl") continue;
+    const members = readHeaderEnumMembers(child.inner);
+    if (members === null) return null;
+    return { name: value.name, members, sourceFile: readSourceFile(value, mainSourceFile) };
+  }
+  return null;
+}
+
 function readHeaderEnum(value: JsonRecord, mainSourceFile: Str | null): CHeaderEnum | null {
-  if (!isJsonText(value.name)) return null;
+  const name = isJsonText(value.name) ? value.name : "";
   const members = readHeaderEnumMembers(value.inner);
   if (members === null) return null;
-  return { name: value.name, members, sourceFile: readSourceFile(value, mainSourceFile) };
+  return { name, members, sourceFile: readSourceFile(value, mainSourceFile) };
 }
 
 function readHeaderEnumMembers(inner: unknown): CHeaderEnumMember[] | null {

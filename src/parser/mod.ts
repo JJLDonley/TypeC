@@ -1,3 +1,4 @@
+import { PARSE_SYNTAX } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { Program } from "core/ast.ts";
@@ -67,6 +68,8 @@ class Parser {
       diagnostics: () => this.diagnostics,
       peek: () => this.peek(),
       checkEof: () => this.check("eof"),
+      checkText: (text) => this.checkText(text),
+      advance: () => this.advance(),
       declarationParser: () => this.declarationParser(),
     };
   }
@@ -79,7 +82,7 @@ class Parser {
       previous: () => this.previous(),
       expectKind: (kind, message) => this.expectKind(kind, message),
       expectText: (text) => this.expectText(text),
-      peek: () => this.peek(),
+      peek: (offset = 0) => this.peek(offset),
       error: (token, message) => this.error(token, message),
       parseTypeRef: () => this.parseTypeRef(),
       parseExpression: () => this.parseExpression(),
@@ -102,9 +105,29 @@ class Parser {
   private parseBlock(): CastBlockStmt {
     const open = this.expectText("{");
     const statements: CastStatement[] = [];
-    while (!this.checkText("}") && !this.check("eof")) statements.push(this.parseStatement());
+    while (!this.checkText("}") && !this.check("eof")) {
+      const statement = this.parseRecoverableStatement();
+      if (statement !== null) statements.push(statement);
+    }
     const close = this.expectText("}");
     return { kind: "BlockStmt", statements, span: span(open.span.start, close.span.end) };
+  }
+
+  private parseRecoverableStatement(): CastStatement | null {
+    try {
+      return this.parseStatement();
+    } catch (error) {
+      if (!(error instanceof TypeCError)) throw error;
+      this.synchronizeStatement();
+      return null;
+    }
+  }
+
+  private synchronizeStatement(): void {
+    if (this.checkText("}") || this.check("eof")) return;
+    this.advance();
+    while (!this.checkText(";") && !this.checkText("}") && !this.check("eof")) this.advance();
+    if (this.checkText(";")) this.advance();
   }
 
   private parseStatement(): CastStatement {
@@ -249,6 +272,6 @@ class Parser {
   }
 
   private error(token: Token, message: Str): void {
-    this.diagnostics.push({ message, span: token.span });
+    this.diagnostics.push({ message, code: PARSE_SYNTAX, span: token.span });
   }
 }

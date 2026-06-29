@@ -19,6 +19,24 @@ Deno.test("emits complete translation units", () => {
   assertIncludes(c, "i32 main(void) {\n  return 42;\n}");
 });
 
+Deno.test("emits only required headers without arena runtime", () => {
+  const c = emitTranslationUnit(program([], [fn("main", false, false, named("i32"))]));
+
+  assertIncludes(c, "#include <stdint.h>");
+  assertIncludes(c, "#include <stdbool.h>");
+  assertIncludes(c, "#include <stddef.h>");
+  assertNotIncludes(c, "#include <stdlib.h>");
+});
+
+Deno.test("emits fixed-width C ABI aliases", () => {
+  const c = emitTranslationUnit(program([], [fn("main", false, false, named("i32"))]));
+
+  assertIncludes(c, "typedef i32 c_int;");
+  assertIncludes(c, "typedef i64 c_long;");
+  assertNotIncludes(c, "typedef int c_int;");
+  assertNotIncludes(c, "typedef long c_long;");
+});
+
 Deno.test("emits type aliases before prototypes", () => {
   const c = emitTranslationUnit(
     program([alias("Point")], [fn("main", false, false, named("i32"))]),
@@ -77,6 +95,10 @@ function named(name: Str): TypeRef {
 
 function assertIncludes(haystack: Str, needle: Str): void {
   if (!haystack.includes(needle)) throw new Error(`Expected output to include ${needle}`);
+}
+
+function assertNotIncludes(haystack: Str, needle: Str): void {
+  if (haystack.includes(needle)) throw new Error(`Expected output not to include ${needle}`);
 }
 
 function assertOrdered(haystack: Str, first: Str, second: Str): void {

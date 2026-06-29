@@ -1,0 +1,24 @@
+interface Readable {
+  get(): i32;
+}
+
+class Box implements Readable {
+  value: i32;
+
+  get(): i32 {
+    return this.value;
+  }
+}
+
+function read(value: Readable&): i32 {
+  return value.get();
+}
+
+function main(): i32 {
+  const box: Box = { value: 42 };
+  const readable: Readable& = box.&;
+  if (read(readable) == 42) {
+    return 0;
+  }
+  return 1;
+}

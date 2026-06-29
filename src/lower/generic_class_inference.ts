@@ -68,6 +68,8 @@ export function inferGenericClassArgumentTypeRef(expression: CastExpression): Ca
       return inferConditionalTypeRef(expression);
     case "NullishCoalesceExpr":
       return inferNullishCoalesceTypeRef(expression);
+    case "SatisfiesExpr":
+      return inferGenericClassArgumentTypeRef(expression.expression);
     case "ArrayLiteralExpr":
       return inferArrayLiteralTypeRef(expression);
     case "RecordLiteralExpr":
@@ -257,7 +259,8 @@ function bindMatchingType(
 ): b8 {
   switch (pattern.kind) {
     case "NamedTypeRef":
-      return actual.kind === "NamedTypeRef" && pattern.name === actual.name;
+      return actual.kind === "NamedTypeRef" && pattern.name === actual.name &&
+        bindNamedTypeArgs(pattern, actual, params, bindings);
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":
@@ -285,8 +288,22 @@ function bindMatchingType(
     case "ConditionalTypeRef":
     case "IndexedAccessTypeRef":
     case "MappedTypeRef":
+    case "LiteralTypeRef":
+    case "KeyofTypeRef":
+    case "TypeofTypeRef":
       return castTypeName(pattern) === castTypeName(actual);
   }
+}
+
+function bindNamedTypeArgs(
+  pattern: Extract<CastTypeRef, { kind: "NamedTypeRef" }>,
+  actual: Extract<CastTypeRef, { kind: "NamedTypeRef" }>,
+  params: Set<Str>,
+  bindings: TypeBindings,
+): b8 {
+  const patternArgs = pattern.typeArgs ?? [];
+  const actualArgs = actual.typeArgs ?? [];
+  return bindTypeList(patternArgs, actualArgs, params, bindings);
 }
 
 function bindFunctionType(

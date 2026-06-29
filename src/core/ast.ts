@@ -8,9 +8,10 @@ type b8 = boolean;
 export interface Program {
   kind: "Program";
   imports: ImportDecl[];
+  exports?: ExportDecl[];
+  defaultExport?: Str | null;
   typeAliases: TypeAliasDecl[];
   interfaces?: InterfaceDecl[];
-  classVTables?: ClassVTableDecl[];
   taggedUnions?: TaggedUnionDecl[];
   enums?: EnumDecl[];
   constants?: ConstDecl[];
@@ -22,6 +23,8 @@ export interface ImportDecl {
   kind: "ImportDecl";
   names: ImportSpecifier[];
   namespace?: Str | null;
+  typeOnly?: b8;
+  reExport?: b8;
   path: Str;
   span: SourceSpan;
 }
@@ -29,6 +32,16 @@ export interface ImportDecl {
 export interface ImportSpecifier {
   imported: Str;
   local: Str;
+  typeOnly?: b8;
+  reExport?: b8;
+  span: SourceSpan;
+}
+
+export interface ExportDecl {
+  kind: "ExportDecl";
+  names: ImportSpecifier[];
+  typeOnly?: b8;
+  path: Str | null;
   span: SourceSpan;
 }
 
@@ -37,6 +50,7 @@ export interface TypeAliasDecl {
   exported: b8;
   name: Str;
   cName?: Str | null;
+  generated?: b8;
   type: TypeRef;
   span: SourceSpan;
 }
@@ -46,21 +60,6 @@ export interface InterfaceDecl {
   exported: b8;
   name: Str;
   methods: InterfaceMethod[];
-  span: SourceSpan;
-}
-
-export interface ClassVTableDecl {
-  kind: "ClassVTableDecl";
-  className: Str;
-  typeName: Str;
-  cName: Str;
-  methods: ClassVTableMethod[];
-  span: SourceSpan;
-}
-
-export interface ClassVTableMethod {
-  name: Str;
-  functionCName: Str;
   span: SourceSpan;
 }
 
@@ -92,6 +91,7 @@ export interface EnumDecl {
   exported: b8;
   name: Str;
   cName?: Str | null;
+  backingType?: TypeRef | null;
   members: EnumMember[];
   span: SourceSpan;
 }
@@ -118,6 +118,8 @@ export interface FunctionDecl {
   exported: b8;
   external: b8;
   overload?: b8;
+  access?: AccessModifier;
+  classStatic?: b8;
   name: Str;
   cName?: Str | null;
   genericParams?: GenericParam[];
@@ -137,6 +139,7 @@ export interface GenericParam {
 export interface Param {
   name: Str;
   optional?: b8;
+  rest?: b8;
   type: TypeRef;
   defaultValue?: Expression | null;
   span: SourceSpan;
@@ -156,7 +159,10 @@ export type TypeRef =
   | ConditionalTypeRef
   | IndexedAccessTypeRef
   | MappedTypeRef
+  | KeyofTypeRef
+  | TypeofTypeRef
   | FunctionTypeRef
+  | LiteralTypeRef
   | RecordTypeRef;
 
 export interface NamedTypeRef {
@@ -245,6 +251,18 @@ export interface MappedTypeRef {
   span: SourceSpan;
 }
 
+export interface KeyofTypeRef {
+  kind: "KeyofTypeRef";
+  target: TypeRef;
+  span: SourceSpan;
+}
+
+export interface TypeofTypeRef {
+  kind: "TypeofTypeRef";
+  name: Str;
+  span: SourceSpan;
+}
+
 export interface FunctionTypeRef {
   kind: "FunctionTypeRef";
   params: Param[];
@@ -258,9 +276,23 @@ export interface RecordTypeRef {
   span: SourceSpan;
 }
 
+export type AccessModifier = "public" | "private" | "protected";
+
+export type LiteralTypeValue = Str | IntLiteralValue | b8;
+
+export interface LiteralTypeRef {
+  kind: "LiteralTypeRef";
+  value: LiteralTypeValue;
+  text: Str;
+  span: SourceSpan;
+}
+
 export interface RecordField {
   name: Str;
   type: TypeRef;
+  access?: AccessModifier;
+  readonly?: b8;
+  optional?: b8;
   span: SourceSpan;
 }
 
@@ -371,7 +403,7 @@ export interface AssignmentStmt {
   span: SourceSpan;
 }
 
-export type AssignmentTarget = IdentifierExpr | FieldAccessExpr | IndexExpr;
+export type AssignmentTarget = IdentifierExpr | FieldAccessExpr | IndexExpr | PostfixPointerExpr;
 
 export type IncDecOperator = "++" | "--";
 
@@ -464,6 +496,7 @@ export type Expression =
   | ConditionalExpr
   | NullishCoalesceExpr
   | CastExpr
+  | SatisfiesExpr
   | CallExpr
   | NewExpr
   | MethodCallExpr
@@ -555,6 +588,13 @@ export interface NullishCoalesceExpr {
 
 export interface CastExpr {
   kind: "CastExpr";
+  type: TypeRef;
+  expression: Expression;
+  span: SourceSpan;
+}
+
+export interface SatisfiesExpr {
+  kind: "SatisfiesExpr";
   type: TypeRef;
   expression: Expression;
   span: SourceSpan;

@@ -62,12 +62,18 @@ function parseIntersectionTypeRef(parser: TypeRefParser, stopQuestion: b8 = fals
 }
 
 function parsePostfixTypeRef(parser: TypeRefParser, stopQuestion: b8 = false): CastTypeRef {
-  let type: CastTypeRef = parser.checkText("{")
+  let type: CastTypeRef = parser.checkText("keyof")
+    ? parseKeyofTypeRef(parser)
+    : parser.checkText("typeof")
+    ? parseTypeofTypeRef(parser)
+    : parser.checkText("{")
     ? parseRecordTypeRef(parser)
     : parser.checkText("[")
     ? parseTupleTypeRef(parser)
     : parser.checkText("(")
     ? parseParenthesizedOrFunctionTypeRef(parser)
+    : isLiteralTypeStart(parser)
+    ? parseLiteralTypeRef(parser)
     : parseNamedTypeRef(parser);
 
   while (isTypePostfixStart(parser, stopQuestion)) {
@@ -103,6 +109,66 @@ function castOptionalTypeRefWithEnd(element: CastTypeRef, end: SourcePos): CastT
     name: "Optional",
     typeArgs: [element],
     span: { start: element.span.start, end },
+  };
+}
+
+function parseKeyofTypeRef(parser: TypeRefParser): CastTypeRef {
+  const start = parser.expectText("keyof");
+  const target = parsePostfixTypeRef(parser);
+  return { kind: "KeyofTypeRef", target, span: span(start.span.start, target.span.end) };
+}
+
+function parseTypeofTypeRef(parser: TypeRefParser): CastTypeRef {
+  const start = parser.expectText("typeof");
+  const name = parseQualifiedTypeofName(parser);
+  return { kind: "TypeofTypeRef", name: name.text, span: span(start.span.start, name.span.end) };
+}
+
+function parseQualifiedTypeofName(parser: TypeRefParser): { text: Str; span: CastTypeRef["span"] } {
+  const first = parser.expectKind("identifier", "Expected value name");
+  let text = first.text;
+  let end = first.span.end;
+  while (parser.matchText(".")) {
+    const part = parser.expectKind("identifier", "Expected qualified value name");
+    text = `${text}.${part.text}`;
+    end = part.span.end;
+  }
+  return { text, span: span(first.span.start, end) };
+}
+
+function isLiteralTypeStart(parser: TypeRefParser): b8 {
+  return parser.check("string") || parser.check("integer") || parser.checkText("true") ||
+    parser.checkText("false");
+}
+
+function parseLiteralTypeRef(parser: TypeRefParser): CastTypeRef {
+  if (parser.check("string")) return parseStringLiteralTypeRef(parser);
+  if (parser.check("integer")) return parseIntegerLiteralTypeRef(parser);
+  return parseBoolLiteralTypeRef(parser);
+}
+
+function parseStringLiteralTypeRef(parser: TypeRefParser): CastTypeRef {
+  const token = parser.expectKind("string", "Expected string literal type");
+  return { kind: "LiteralTypeRef", value: token.text, text: token.text, span: token.span };
+}
+
+function parseIntegerLiteralTypeRef(parser: TypeRefParser): CastTypeRef {
+  const token = parser.expectKind("integer", "Expected integer literal type");
+  return {
+    kind: "LiteralTypeRef",
+    value: BigInt(token.text.replaceAll("_", "")),
+    text: token.text,
+    span: token.span,
+  };
+}
+
+function parseBoolLiteralTypeRef(parser: TypeRefParser): CastTypeRef {
+  const token = parser.matchText("true") ? parser.previous() : parser.expectText("false");
+  return {
+    kind: "LiteralTypeRef",
+    value: token.text === "true",
+    text: token.text,
+    span: token.span,
   };
 }
 
@@ -334,10 +400,13 @@ function parseMappedTypeRef(parser: TypeRefParser, open: Token): CastTypeRef {
 }
 
 function parseRecordField(parser: TypeRefParser): CastRecordField {
+  const readonly = parser.matchText("readonly");
+  const start = readonly ? parser.previous().span.start : parser.peek().span.start;
   const name = parser.expectKind("identifier", "Expected field name");
+  const optional = parser.matchText("?");
   parser.expectText(":");
   const type = parseTypeRefWith(parser);
-  return { name: name.text, type, span: span(name.span.start, type.span.end) };
+  return { name: name.text, type, readonly, optional, span: span(start, type.span.end) };
 }
 
 function parseRecordFieldSeparator(parser: TypeRefParser): b8 {

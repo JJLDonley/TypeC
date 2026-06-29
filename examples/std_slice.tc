@@ -1,0 +1,10 @@
+import { slice_first_i32, slice_is_empty_length, slice_len_identity } from "std/slice.tc";
+
+function main(): i32 {
+  const values: i32[3] = [3, 4, 5];
+  const view: Slice<i32> = values.slice(0, 3);
+  if (slice_is_empty_length(view.length())) {
+    return 1;
+  }
+  return slice_first_i32(view.data) + (slice_len_identity(view.length()) as i32);
+}

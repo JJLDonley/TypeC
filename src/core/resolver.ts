@@ -1,4 +1,6 @@
+import { DUPLICATE_FUNCTION, DUPLICATE_SYMBOL, UNKNOWN_IDENTIFIER } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
+import { taggedUnionTagConstants } from "core/tagged_union_constants.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { Expression, FunctionDecl, Program, Statement } from "core/ast.ts";
 import { enumMemberSymbolName } from "core/enums.ts";
@@ -59,6 +61,9 @@ class Resolver {
   }
 
   private declareConstants(): void {
+    for (const constant of taggedUnionTagConstants(this.program.taggedUnions ?? [])) {
+      this.declare(this.globalScope, constant.name, "constant", constant.span);
+    }
     for (const enumDecl of this.program.enums ?? []) {
       const members = new Set<Str>();
       for (const member of enumDecl.members) {
@@ -94,7 +99,11 @@ class Resolver {
       const group = groups.get(fn.name) ?? { declared: false, implemented: false };
       if (!group.declared) this.declare(this.globalScope, fn.name, "function", fn.span);
       if (fn.overload !== true && group.implemented) {
-        this.diagnostics.push({ message: `Duplicate function '${fn.name}'`, span: fn.span });
+        this.diagnostics.push({
+          message: `Duplicate function '${fn.name}'`,
+          code: DUPLICATE_FUNCTION,
+          span: fn.span,
+        });
       }
       groups.set(fn.name, {
         declared: true,
@@ -233,6 +242,9 @@ class Resolver {
         this.resolveAssignmentTargetOperand(target.operand, scope);
         this.resolveExpression(target.index, scope);
         return;
+      case "PostfixPointerExpr":
+        this.resolveExpression(target.operand, scope);
+        return;
     }
   }
 
@@ -278,11 +290,12 @@ class Resolver {
         this.resolveExpression(expression.fallback, scope);
         return;
       case "CastExpr":
+      case "SatisfiesExpr":
         this.resolveExpression(expression.expression, scope);
         return;
       case "CallExpr":
         if (!builtinFunctions.has(expression.callee)) {
-          this.requireSymbol(this.globalScope, expression.callee, expression.span);
+          this.requireSymbol(scope, expression.callee, expression.span);
         }
         for (const arg of expression.args) this.resolveExpression(arg, scope);
         return;
@@ -367,11 +380,15 @@ class Resolver {
 
   private declare(scope: Scope, name: Str, kind: SymbolKind, span: Diagnostic["span"]): void {
     if (this.scopeTable.declare(scope, name, kind)) return;
-    this.diagnostics.push({ message: `Duplicate ${kind} '${name}'`, span });
+    this.diagnostics.push({ message: `Duplicate ${kind} '${name}'`, code: DUPLICATE_SYMBOL, span });
   }
 
   private requireSymbol(scope: Scope, name: Str, span: Diagnostic["span"]): void {
     if (this.scopeTable.lookup(scope, name)) return;
-    this.diagnostics.push({ message: `Unknown identifier '${name}'`, span });
+    this.diagnostics.push({
+      message: `Unknown identifier '${name}'`,
+      code: UNKNOWN_IDENTIFIER,
+      span,
+    });
   }
 }

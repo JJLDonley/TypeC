@@ -1,3 +1,4 @@
+import { NULLISH_FALLBACK_TYPE, NULLISH_LEFT_OPTIONAL } from "core/diagnostic_codes.ts";
 import type { Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -32,6 +33,7 @@ function nonOptionalLeft(expr: NullishCoalesceExpr, type: TypeName): NullishCoal
     diagnostics: [
       {
         message: `Nullish coalescing requires optional left operand, got '${type}'`,
+        code: NULLISH_LEFT_OPTIONAL,
         span: expr.left.span,
       },
     ],
@@ -48,6 +50,7 @@ function incompatibleFallback(
     diagnostics: [
       {
         message: `Nullish coalescing fallback type '${actual}' is not assignable to '${expected}'`,
+        code: NULLISH_FALLBACK_TYPE,
         span: expr.fallback.span,
       },
     ],

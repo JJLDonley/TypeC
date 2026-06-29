@@ -1,0 +1,8 @@
+import { sum } from "./module/index.tc";
+
+function main(): i32 {
+  if (sum(20, 22) == 42) {
+    return 0;
+  }
+  return 1;
+}

@@ -22,6 +22,7 @@ export function parseExpressionWith(
 ): CastExpression {
   let expr = parseBinaryPrecedenceExpression(parser, minPrecedence);
   if (minPrecedence <= 0) expr = parseAsCastExpressions(parser, expr);
+  if (minPrecedence <= 0) expr = parseSatisfiesExpressions(parser, expr);
   if (minPrecedence <= 0 && isElvisExpression(parser)) expr = parseElvisExpression(parser, expr);
   if (minPrecedence <= 0 && parser.checkText("?")) expr = parseConditionalExpression(parser, expr);
   return expr;
@@ -69,6 +70,24 @@ function parseAsCastExpressions(parser: ExpressionParser, left: CastExpression):
     parser.advance();
     const type = parser.parseTypeRef();
     expr = { kind: "CastExpr", type, expression: expr, span: span(expr.span.start, type.span.end) };
+  }
+  return expr;
+}
+
+function parseSatisfiesExpressions(
+  parser: ExpressionParser,
+  left: CastExpression,
+): CastExpression {
+  let expr = left;
+  while (parser.checkText("satisfies")) {
+    parser.advance();
+    const type = parser.parseTypeRef();
+    expr = {
+      kind: "SatisfiesExpr",
+      type,
+      expression: expr,
+      span: span(expr.span.start, type.span.end),
+    };
   }
   return expr;
 }

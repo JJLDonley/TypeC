@@ -1,0 +1,9 @@
+extern function puts(text: u8*): i32;
+
+function main(): i32 {
+  const code: i32 = puts("TypeC 0.1 C extern");
+  if (code >= 0) {
+    return 0;
+  }
+  return 1;
+}

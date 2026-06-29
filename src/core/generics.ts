@@ -8,17 +8,27 @@ import type {
   Statement,
   TypeRef,
 } from "core/ast.ts";
+import {
+  DUPLICATE_GENERIC_PARAMETER,
+  GENERIC_CONSTRAINT_INTERFACE,
+  GENERIC_CONSTRAINT_NAMED_INTERFACE,
+  GENERIC_INSTANTIATION_CYCLE,
+  GENERIC_INTERFACE_VALUE_TYPE,
+  GENERIC_TYPE_ARGUMENT_ARITY,
+  GENERIC_UNKNOWN_TYPE,
+  UNKNOWN_GENERIC_FUNCTION,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { classMethodName } from "core/classes.ts";
 import { checkGenericConstraints, type ConstraintContext } from "core/generic_constraints.ts";
 import {
-  inferGenericCallTypeArgsFromArgs,
   inferGenericCallTypeArgsFromResult,
   inferGenericCallTypeArgsFromTypedArgs,
   inferGenericLocalContextTypeRef,
 } from "core/generic_inference.ts";
 import { optionalTypeElement } from "core/optional_types.ts";
+import { primitiveTypes } from "core/token.ts";
 import { typeName } from "core/type_ref.ts";
 
 export type Str = string;
@@ -29,9 +39,24 @@ const genericBuiltinCalls = new Set<Str>(["Some", "None"]);
 
 type TypeSubstitutions = Map<Str, TypeRef>;
 
+interface KnownConstraintDeclarations {
+  typeAliases: Map<Str, TypeRef>;
+  enums: NonNullable<Program["enums"]>;
+  taggedUnions: NonNullable<Program["taggedUnions"]>;
+}
+
 export function instantiateGenerics(program: Program): Program {
   const templates = genericTemplates(program.functions);
-  const diagnostics = genericDiagnostics(program.functions, templates);
+  const diagnostics = genericDiagnostics(
+    program.functions,
+    templates,
+    program.interfaces ?? [],
+    {
+      typeAliases: typeAliasMap(program.typeAliases),
+      enums: program.enums ?? [],
+      taggedUnions: program.taggedUnions ?? [],
+    },
+  );
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   const ordinary = program.functions.filter((fn) => !isGenericFunction(fn));
   const instantiator = new GenericInstantiator(
@@ -39,6 +64,7 @@ export function instantiateGenerics(program: Program): Program {
     {
       interfaces: program.interfaces ?? [],
       functions: program.functions,
+      typeAliases: typeAliasMap(program.typeAliases),
     },
     typeAliasMap(program.typeAliases),
   );
@@ -49,118 +75,182 @@ export function instantiateGenerics(program: Program): Program {
 function genericDiagnostics(
   functions: FunctionDecl[],
   templates: Map<Str, FunctionDecl>,
+  interfaces: Program["interfaces"],
+  declarations: KnownConstraintDeclarations,
 ): Diagnostic[] {
   return [
-    ...functions.flatMap(genericParamDiagnostics),
-    ...functions.flatMap((fn) => genericCallDiagnostics(fn, templates)),
+    ...functions.flatMap((fn) => genericParamDiagnostics(fn, interfaces ?? [], declarations)),
+    ...functions.flatMap((fn) =>
+      genericCallDiagnostics(fn, templates, interfaces ?? [], declarations)
+    ),
   ];
 }
 
-function genericParamDiagnostics(fn: FunctionDecl): Diagnostic[] {
+function genericParamDiagnostics(
+  fn: FunctionDecl,
+  interfaces: NonNullable<Program["interfaces"]>,
+  declarations: KnownConstraintDeclarations,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const names = new Set<Str>();
   for (const param of fn.genericParams ?? []) {
     if (names.has(param.name)) {
       diagnostics.push({
         message: `Duplicate generic parameter '${param.name}'`,
+        code: DUPLICATE_GENERIC_PARAMETER,
         span: param.span,
       });
     }
     names.add(param.name);
+    diagnostics.push(...genericConstraintDeclarationDiagnostics(param, interfaces, declarations));
   }
   return diagnostics;
+}
+
+function genericConstraintDeclarationDiagnostics(
+  param: NonNullable<FunctionDecl["genericParams"]>[usize],
+  interfaces: NonNullable<Program["interfaces"]>,
+  declarations: KnownConstraintDeclarations,
+): Diagnostic[] {
+  const constraint = param.constraint;
+  if (constraint === null || constraint === undefined) return [];
+  if (constraint.kind === "LiteralTypeRef" || constraint.kind === "RecordTypeRef") return [];
+  if (constraint.kind !== "NamedTypeRef") {
+    return [{
+      message: `Generic constraint for '${param.name}' must be an interface`,
+      code: GENERIC_CONSTRAINT_INTERFACE,
+      span: constraint.span,
+    }];
+  }
+  if (interfaces.some((interfaceDecl) => interfaceDecl.name === constraint.name)) return [];
+  if (primitiveTypes.has(constraint.name)) return [];
+  if (isKnownConstraintName(constraint.name, declarations)) {
+    return [{
+      message: `Generic constraint '${constraint.name}' must be an interface`,
+      code: GENERIC_CONSTRAINT_NAMED_INTERFACE,
+      span: constraint.span,
+    }];
+  }
+  return [{
+    message: `Unknown type '${constraint.name}'`,
+    code: GENERIC_UNKNOWN_TYPE,
+    span: constraint.span,
+  }];
+}
+
+function isKnownConstraintName(name: Str, declarations: KnownConstraintDeclarations): b8 {
+  return primitiveTypes.has(name) || declarations.typeAliases.has(name) ||
+    hasEnumName(name, declarations.enums) || hasTaggedUnionName(name, declarations.taggedUnions);
+}
+
+function hasEnumName(name: Str, enums: NonNullable<Program["enums"]>): b8 {
+  return enums.some((enumDecl) => enumDecl.name === name);
+}
+
+function hasTaggedUnionName(name: Str, taggedUnions: NonNullable<Program["taggedUnions"]>): b8 {
+  return taggedUnions.some((unionDecl) => unionDecl.name === name);
+}
+
+interface GenericDiagnosticContext {
+  templates: Map<Str, FunctionDecl>;
+  interfaces: NonNullable<Program["interfaces"]>;
+  declarations: KnownConstraintDeclarations;
 }
 
 function genericCallDiagnostics(
   fn: FunctionDecl,
   templates: Map<Str, FunctionDecl>,
+  interfaces: NonNullable<Program["interfaces"]>,
+  declarations: KnownConstraintDeclarations,
 ): Diagnostic[] {
   if (!fn.body) return [];
-  return statementListGenericCallDiagnostics(fn.body.statements, templates);
+  return statementListGenericCallDiagnostics(fn.body.statements, {
+    templates,
+    interfaces,
+    declarations,
+  });
 }
 
 function statementListGenericCallDiagnostics(
   statements: Statement[],
-  templates: Map<Str, FunctionDecl>,
+  context: GenericDiagnosticContext,
 ): Diagnostic[] {
-  return statements.flatMap((statement) => statementGenericCallDiagnostics(statement, templates));
+  return statements.flatMap((statement) => statementGenericCallDiagnostics(statement, context));
 }
 
 function statementGenericCallDiagnostics(
   statement: Statement,
-  templates: Map<Str, FunctionDecl>,
+  context: GenericDiagnosticContext,
 ): Diagnostic[] {
   switch (statement.kind) {
     case "EmptyStmt":
       return [];
     case "ReturnStmt":
       return statement.expression
-        ? expressionGenericCallDiagnostics(statement.expression, templates)
+        ? expressionGenericCallDiagnostics(statement.expression, context)
         : [];
     case "DeferStmt":
-      return expressionGenericCallDiagnostics(statement.expression, templates);
+      return expressionGenericCallDiagnostics(statement.expression, context);
     case "ExpressionStmt":
-      return expressionGenericCallDiagnostics(statement.expression, templates);
+      return expressionGenericCallDiagnostics(statement.expression, context);
     case "BreakStmt":
     case "ContinueStmt":
       return [];
     case "VarDeclStmt":
-      return expressionGenericCallDiagnostics(statement.initializer, templates);
+      return expressionGenericCallDiagnostics(statement.initializer, context);
     case "RecordRestStmt":
-      return expressionGenericCallDiagnostics(statement.source, templates);
+      return expressionGenericCallDiagnostics(statement.source, context);
     case "ArrayDestructureStmt":
-      return expressionGenericCallDiagnostics(statement.source, templates);
+      return expressionGenericCallDiagnostics(statement.source, context);
     case "AssignmentStmt":
       return [
-        ...expressionGenericCallDiagnostics(statement.target, templates),
-        ...expressionGenericCallDiagnostics(statement.expression, templates),
+        ...expressionGenericCallDiagnostics(statement.target, context),
+        ...expressionGenericCallDiagnostics(statement.expression, context),
       ];
     case "IncDecStmt":
-      return expressionGenericCallDiagnostics(statement.target, templates);
+      return expressionGenericCallDiagnostics(statement.target, context);
     case "SwitchStmt":
       return [
-        ...expressionGenericCallDiagnostics(statement.expression, templates),
+        ...expressionGenericCallDiagnostics(statement.expression, context),
         ...statement.cases.flatMap((switchCase) => [
-          ...switchCase.labels.flatMap((label) =>
-            expressionGenericCallDiagnostics(label, templates)
-          ),
-          ...statementListGenericCallDiagnostics(switchCase.statements, templates),
+          ...switchCase.labels.flatMap((label) => expressionGenericCallDiagnostics(label, context)),
+          ...statementListGenericCallDiagnostics(switchCase.statements, context),
         ]),
         ...(statement.defaultCase
-          ? statementListGenericCallDiagnostics(statement.defaultCase.statements, templates)
+          ? statementListGenericCallDiagnostics(statement.defaultCase.statements, context)
           : []),
       ];
     case "WhileStmt":
       return [
-        ...expressionGenericCallDiagnostics(statement.condition, templates),
-        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
+        ...expressionGenericCallDiagnostics(statement.condition, context),
+        ...statementListGenericCallDiagnostics(statement.body.statements, context),
       ];
     case "DoWhileStmt":
       return [
-        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
-        ...expressionGenericCallDiagnostics(statement.condition, templates),
+        ...statementListGenericCallDiagnostics(statement.body.statements, context),
+        ...expressionGenericCallDiagnostics(statement.condition, context),
       ];
     case "ForStmt":
       return [
         ...(statement.initializer
-          ? statementGenericCallDiagnostics(statement.initializer, templates)
+          ? statementGenericCallDiagnostics(statement.initializer, context)
           : []),
-        ...expressionGenericCallDiagnostics(statement.condition, templates),
-        ...(statement.update ? statementGenericCallDiagnostics(statement.update, templates) : []),
-        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
+        ...expressionGenericCallDiagnostics(statement.condition, context),
+        ...(statement.update ? statementGenericCallDiagnostics(statement.update, context) : []),
+        ...statementListGenericCallDiagnostics(statement.body.statements, context),
       ];
     case "ForOfStmt":
     case "ForInStmt":
       return [
-        ...expressionGenericCallDiagnostics(statement.iterable, templates),
-        ...statementListGenericCallDiagnostics(statement.body.statements, templates),
+        ...expressionGenericCallDiagnostics(statement.iterable, context),
+        ...statementListGenericCallDiagnostics(statement.body.statements, context),
       ];
     case "IfStmt":
       return [
-        ...expressionGenericCallDiagnostics(statement.condition, templates),
-        ...statementListGenericCallDiagnostics(statement.thenBody.statements, templates),
+        ...expressionGenericCallDiagnostics(statement.condition, context),
+        ...statementListGenericCallDiagnostics(statement.thenBody.statements, context),
         ...(statement.elseBody
-          ? statementListGenericCallDiagnostics(statement.elseBody.statements, templates)
+          ? statementListGenericCallDiagnostics(statement.elseBody.statements, context)
           : []),
       ];
   }
@@ -168,7 +258,7 @@ function statementGenericCallDiagnostics(
 
 function expressionGenericCallDiagnostics(
   expr: Expression,
-  templates: Map<Str, FunctionDecl>,
+  context: GenericDiagnosticContext,
 ): Diagnostic[] {
   switch (expr.kind) {
     case "IntegerLiteral":
@@ -179,69 +269,105 @@ function expressionGenericCallDiagnostics(
     case "IdentifierExpr":
       return [];
     case "ArrowFunctionExpr":
-      return expressionGenericCallDiagnostics(expr.body, templates);
+      return expressionGenericCallDiagnostics(expr.body, context);
     case "UnaryExpr":
-      return expressionGenericCallDiagnostics(expr.operand, templates);
+      return expressionGenericCallDiagnostics(expr.operand, context);
     case "BinaryExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.left, templates),
-        ...expressionGenericCallDiagnostics(expr.right, templates),
+        ...expressionGenericCallDiagnostics(expr.left, context),
+        ...expressionGenericCallDiagnostics(expr.right, context),
       ];
     case "ConditionalExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.condition, templates),
-        ...expressionGenericCallDiagnostics(expr.whenTrue, templates),
-        ...expressionGenericCallDiagnostics(expr.whenFalse, templates),
+        ...expressionGenericCallDiagnostics(expr.condition, context),
+        ...expressionGenericCallDiagnostics(expr.whenTrue, context),
+        ...expressionGenericCallDiagnostics(expr.whenFalse, context),
       ];
     case "NullishCoalesceExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.left, templates),
-        ...expressionGenericCallDiagnostics(expr.fallback, templates),
+        ...expressionGenericCallDiagnostics(expr.left, context),
+        ...expressionGenericCallDiagnostics(expr.fallback, context),
       ];
     case "CastExpr":
-      return expressionGenericCallDiagnostics(expr.expression, templates);
+    case "SatisfiesExpr":
+      return expressionGenericCallDiagnostics(expr.expression, context);
     case "CallExpr":
       return [
-        ...genericCallArityDiagnostics(expr, templates),
-        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
+        ...genericCallArityDiagnostics(expr, context.templates),
+        ...explicitGenericCallTypeArgDiagnostics(expr, context),
+        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, context)),
       ];
     case "NewExpr":
-      return expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates));
+      return expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, context));
     case "MethodCallExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.receiver, templates),
-        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
+        ...expressionGenericCallDiagnostics(expr.receiver, context),
+        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, context)),
       ];
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
-      return expressionGenericCallDiagnostics(expr.operand, templates);
+      return expressionGenericCallDiagnostics(expr.operand, context);
     case "FieldAccessExpr":
     case "OptionalFieldAccessExpr":
-      return expressionGenericCallDiagnostics(expr.operand, templates);
+      return expressionGenericCallDiagnostics(expr.operand, context);
     case "OptionalMethodCallExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.receiver, templates),
-        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, templates)),
+        ...expressionGenericCallDiagnostics(expr.receiver, context),
+        ...expr.args.flatMap((arg) => expressionGenericCallDiagnostics(arg, context)),
       ];
     case "OptionalIndexExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.operand, templates),
-        ...expressionGenericCallDiagnostics(expr.index, templates),
+        ...expressionGenericCallDiagnostics(expr.operand, context),
+        ...expressionGenericCallDiagnostics(expr.index, context),
       ];
     case "RecordLiteralExpr":
       return expr.fields.flatMap((field) =>
-        expressionGenericCallDiagnostics(field.expression, templates)
+        expressionGenericCallDiagnostics(field.expression, context)
       );
     case "ArrayLiteralExpr":
-      return expr.elements.flatMap((element) =>
-        expressionGenericCallDiagnostics(element, templates)
-      );
+      return expr.elements.flatMap((element) => expressionGenericCallDiagnostics(element, context));
     case "IndexExpr":
       return [
-        ...expressionGenericCallDiagnostics(expr.operand, templates),
-        ...expressionGenericCallDiagnostics(expr.index, templates),
+        ...expressionGenericCallDiagnostics(expr.operand, context),
+        ...expressionGenericCallDiagnostics(expr.index, context),
       ];
   }
+}
+
+function explicitGenericCallTypeArgDiagnostics(
+  expr: Extract<Expression, { kind: "CallExpr" }>,
+  context: GenericDiagnosticContext,
+): Diagnostic[] {
+  if ((expr.typeArgs ?? []).length === 0 || genericBuiltinCalls.has(expr.callee)) return [];
+  if (!context.templates.has(expr.callee)) return [];
+  return (expr.typeArgs ?? []).flatMap((typeArg) =>
+    explicitGenericTypeArgDiagnostics(typeArg, context)
+  );
+}
+
+function explicitGenericTypeArgDiagnostics(
+  typeArg: TypeRef,
+  context: GenericDiagnosticContext,
+): Diagnostic[] {
+  if (typeArg.kind !== "NamedTypeRef") return [];
+  if (context.interfaces.some((interfaceDecl) => interfaceDecl.name === typeArg.name)) {
+    return [{
+      message: `Interface value type '${typeArg.name}' is not implemented`,
+      code: GENERIC_INTERFACE_VALUE_TYPE,
+      span: typeArg.span,
+    }];
+  }
+  if (isKnownExplicitGenericTypeArg(typeArg.name, context.declarations)) return [];
+  return [{
+    message: `Unknown type '${typeArg.name}'`,
+    code: GENERIC_UNKNOWN_TYPE,
+    span: typeArg.span,
+  }];
+}
+
+function isKnownExplicitGenericTypeArg(name: Str, declarations: KnownConstraintDeclarations): b8 {
+  return primitiveTypes.has(name) || declarations.typeAliases.has(name) ||
+    hasEnumName(name, declarations.enums) || hasTaggedUnionName(name, declarations.taggedUnions);
 }
 
 function genericCallArityDiagnostics(
@@ -251,11 +377,18 @@ function genericCallArityDiagnostics(
   const typeArgs = expr.typeArgs ?? [];
   if (typeArgs.length === 0 || genericBuiltinCalls.has(expr.callee)) return [];
   const template = templates.get(expr.callee);
-  if (!template) return [{ message: `Unknown generic function '${expr.callee}'`, span: expr.span }];
+  if (!template) {
+    return [{
+      message: `Unknown generic function '${expr.callee}'`,
+      code: UNKNOWN_GENERIC_FUNCTION,
+      span: expr.span,
+    }];
+  }
   const expected = template.genericParams?.length ?? 0;
   if (typeArgs.length === expected) return [];
   return [{
     message: `Generic function '${expr.callee}' expects ${expected} type argument(s)`,
+    code: GENERIC_TYPE_ARGUMENT_ARITY,
     span: expr.span,
   }];
 }
@@ -272,6 +405,7 @@ function isGenericFunction(fn: FunctionDecl): b8 {
 
 class GenericInstantiator {
   private emitted = new Map<Str, FunctionDecl>();
+  private active = new Set<Str>();
   private functions: Map<Str, FunctionDecl>;
 
   constructor(
@@ -308,9 +442,15 @@ class GenericInstantiator {
     this.checkConstraints(template, typeArgs, expr.span);
     const name = instantiationName(template.name, typeArgs);
     if (!this.emitted.has(name)) {
-      const instantiation = this.createInstantiation(template, typeArgs, name);
-      this.emitted.set(name, instantiation);
-      this.functions.set(name, instantiation);
+      this.checkInstantiationCycle(template.name, name, expr.span);
+      this.active.add(name);
+      try {
+        const instantiation = this.createInstantiation(template, typeArgs, name);
+        this.emitted.set(name, instantiation);
+        this.functions.set(name, instantiation);
+      } finally {
+        this.active.delete(name);
+      }
     }
     return {
       ...expr,
@@ -318,6 +458,19 @@ class GenericInstantiator {
       typeArgs: [],
       args: this.rewriteCallArgs(name, expr.args, locals),
     };
+  }
+
+  private checkInstantiationCycle(
+    templateName: Str,
+    name: Str,
+    span: Expression["span"],
+  ): void {
+    if (!this.active.has(name)) return;
+    throw new TypeCError([{
+      message: `Recursive generic instantiation cycle involving function '${templateName}'`,
+      code: GENERIC_INSTANTIATION_CYCLE,
+      span,
+    }]);
   }
 
   private checkConstraints(
@@ -330,6 +483,7 @@ class GenericInstantiator {
       typeArgs,
       this.constraints,
       span,
+      { kind: "function", name: template.name },
     );
     if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   }
@@ -677,6 +831,7 @@ class GenericInstantiator {
       case "NullishCoalesceExpr":
         return this.rewriteNullishCoalesce(expr, locals);
       case "CastExpr":
+      case "SatisfiesExpr":
         return { ...expr, expression: this.rewriteExpr(expr.expression, locals) };
       case "CallExpr":
         return this.instantiateCall(expr, null, locals);
@@ -1052,8 +1207,12 @@ function substituteParam(param: Param, substitutions: TypeSubstitutions): Param 
 
 function substituteTypeRef(type: TypeRef, substitutions: TypeSubstitutions): TypeRef {
   switch (type.kind) {
-    case "NamedTypeRef":
-      return substitutions.get(type.name) ?? type;
+    case "NamedTypeRef": {
+      const substituted = substitutions.get(type.name) ?? null;
+      if (substituted !== null) return substituted;
+      const typeArgs = type.typeArgs?.map((typeArg) => substituteTypeRef(typeArg, substitutions));
+      return typeArgs === undefined ? type : { ...type, typeArgs };
+    }
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":
@@ -1099,6 +1258,11 @@ function substituteTypeRef(type: TypeRef, substitutions: TypeSubstitutions): Typ
         sourceType: substituteTypeRef(type.sourceType, substitutions),
         valueType: substituteTypeRef(type.valueType, substitutions),
       };
+    case "LiteralTypeRef":
+    case "TypeofTypeRef":
+      return type;
+    case "KeyofTypeRef":
+      return { ...type, target: substituteTypeRef(type.target, substitutions) };
     case "RecordTypeRef":
       return {
         ...type,

@@ -1,0 +1,5 @@
+import { assert_eq_i32, assert_false, assert_true } from "std/test.tc";
+
+function main(): i32 {
+  return assert_true(true) + assert_false(false) + assert_eq_i32(4, 4);
+}

@@ -27,6 +27,9 @@ export function isVoidValueType(type: TypeRef): b8 {
   }
   if (type.kind === "IndexedAccessTypeRef") return isVoidValueType(type.objectType);
   if (type.kind === "MappedTypeRef") return isVoidValueType(type.valueType);
+  if (type.kind === "KeyofTypeRef") return false;
+  if (type.kind === "TypeofTypeRef") return false;
+  if (type.kind === "LiteralTypeRef") return false;
   return false;
 }
 
@@ -81,6 +84,12 @@ function collectTypeAliasRefsInto(type: TypeRef, refs: Set<Str>): void {
       return;
     case "RecordTypeRef":
       for (const field of type.fields) collectTypeAliasRefsInto(field.type, refs);
+      return;
+    case "LiteralTypeRef":
+    case "TypeofTypeRef":
+      return;
+    case "KeyofTypeRef":
+      collectTypeAliasRefsInto(type.target, refs);
       return;
   }
 }

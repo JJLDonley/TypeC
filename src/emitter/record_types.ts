@@ -1,11 +1,17 @@
-import type { Program, RecordTypeRef, Statement, TypeRef } from "core/ast.ts";
+import type { Program, RecordTypeRef, Statement, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { spanKey } from "checker/exprs.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { recordCTypeName } from "c/records.ts";
 import { emitCDeclarator } from "c/type.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import type { EmitContext } from "emitter/context.ts";
 
 type Str = string;
+type b8 = boolean;
+type RecordDependencyMode =
+  | "pre-generated-alias"
+  | "post-generated-alias"
+  | "post-generated-optional";
 
 export function expectedRecordType(typeName: Str, context: EmitContext): RecordTypeRef | null {
   const alias = context.typeAliases.get(typeName) ??
@@ -14,19 +20,59 @@ export function expectedRecordType(typeName: Str, context: EmitContext): RecordT
 }
 
 export function collectRecordTypeDefinitions(program: Program, context: EmitContext): Str[] {
-  return collectRecordTypes(program, context).map((record) =>
-    emitRecordTypeDefinition(record, context)
-  );
+  return collectRecordDefinitionsForMode(program, context, "pre-generated-alias");
+}
+
+export function collectPostGeneratedAliasRecordTypeDefinitions(
+  program: Program,
+  context: EmitContext,
+): Str[] {
+  return collectRecordDefinitionsForMode(program, context, "post-generated-alias");
+}
+
+export function collectPostGeneratedOptionalRecordTypeDefinitions(
+  program: Program,
+  context: EmitContext,
+): Str[] {
+  return collectRecordDefinitionsForMode(program, context, "post-generated-optional");
+}
+
+function collectRecordDefinitionsForMode(
+  program: Program,
+  context: EmitContext,
+  mode: RecordDependencyMode,
+): Str[] {
+  const generatedAliases = generatedAliasNames(program.typeAliases);
+  return collectRecordTypes(program, context)
+    .filter((record) => recordMatchesMode(record, generatedAliases, mode))
+    .map((record) => emitRecordTypeDefinition(record, context));
 }
 
 function collectRecordTypes(program: Program, context: EmitContext): RecordTypeRef[] {
   const records = new Map<Str, RecordTypeRef>();
+  for (const alias of program.typeAliases) collectGeneratedAliasRecordDependencies(alias, records);
   for (const fn of program.functions) {
     for (const statement of fn.body?.statements ?? []) {
       collectStatementRecordTypes(statement, records, context);
     }
   }
   return [...records.values()];
+}
+
+function collectGeneratedAliasRecordDependencies(
+  alias: TypeAliasDecl,
+  records: Map<Str, RecordTypeRef>,
+): void {
+  if (alias.generated !== true) return;
+  collectTypeRefChildRecordTypes(alias.type, records);
+}
+
+function collectTypeRefChildRecordTypes(type: TypeRef, records: Map<Str, RecordTypeRef>): void {
+  if (type.kind !== "RecordTypeRef") {
+    collectTypeRefRecordTypes(type, records);
+    return;
+  }
+  for (const field of type.fields) collectTypeRefRecordTypes(field.type, records);
 }
 
 function collectStatementRecordTypes(
@@ -148,6 +194,82 @@ function collectRecordType(type: RecordTypeRef, records: Map<Str, RecordTypeRef>
   for (const field of type.fields) collectTypeRefRecordTypes(field.type, records);
   const name = recordCTypeName(type);
   if (!records.has(name)) records.set(name, type);
+}
+
+function recordMatchesMode(
+  record: RecordTypeRef,
+  generatedAliases: Set<Str>,
+  mode: RecordDependencyMode,
+): b8 {
+  const dependsOnGeneratedOptional = recordDependsOnGeneratedOptional(record, generatedAliases);
+  const dependsOnGeneratedAlias = recordDependsOnGeneratedAlias(record, generatedAliases);
+  if (mode === "post-generated-optional") return dependsOnGeneratedOptional;
+  if (mode === "post-generated-alias") {
+    return dependsOnGeneratedAlias && !dependsOnGeneratedOptional;
+  }
+  return !dependsOnGeneratedAlias && !dependsOnGeneratedOptional;
+}
+
+function recordDependsOnGeneratedAlias(record: RecordTypeRef, generatedAliases: Set<Str>): b8 {
+  return record.fields.some((field) => typeContainsGeneratedAlias(field.type, generatedAliases));
+}
+
+function recordDependsOnGeneratedOptional(record: RecordTypeRef, generatedAliases: Set<Str>): b8 {
+  return record.fields.some((field) =>
+    typeDependsOnGeneratedOptional(field.type, generatedAliases)
+  );
+}
+
+function typeDependsOnGeneratedOptional(type: TypeRef, generatedAliases: Set<Str>): b8 {
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) {
+    return typeContainsGeneratedAlias(optionalElement, generatedAliases);
+  }
+  return childTypeRefs(type).some((child) =>
+    typeDependsOnGeneratedOptional(child, generatedAliases)
+  );
+}
+
+function typeContainsGeneratedAlias(type: TypeRef, generatedAliases: Set<Str>): b8 {
+  if (type.kind === "NamedTypeRef" && generatedAliases.has(type.name)) return true;
+  return childTypeRefs(type).some((child) => typeContainsGeneratedAlias(child, generatedAliases));
+}
+
+function childTypeRefs(type: TypeRef): TypeRef[] {
+  switch (type.kind) {
+    case "PointerTypeRef":
+    case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
+    case "SliceTypeRef":
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+      return [type.element];
+    case "FunctionTypeRef":
+      return [...type.params.map((param) => param.type), type.returnType];
+    case "TupleTypeRef":
+      return type.elements;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      return type.members;
+    case "ConditionalTypeRef":
+      return [type.checkType, type.extendsType, type.trueType, type.falseType];
+    case "RecordTypeRef":
+      return type.fields.map((field) => field.type);
+    case "NamedTypeRef":
+      return type.typeArgs ?? [];
+    default:
+      return [];
+  }
+}
+
+function generatedAliasNames(typeAliases: TypeAliasDecl[]): Set<Str> {
+  const names = new Set<Str>();
+  for (const alias of typeAliases) {
+    if (alias.generated !== true) continue;
+    names.add(alias.name);
+    names.add(alias.cName ?? alias.name);
+  }
+  return names;
 }
 
 function emitRecordTypeDefinition(type: RecordTypeRef, context: EmitContext): Str {

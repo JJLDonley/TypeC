@@ -1,3 +1,4 @@
+import { TYPE_ALIAS_ORDER } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeAliasDecl } from "core/ast.ts";
 import { collectTypeAliasRefs } from "checker/type_refs.ts";
@@ -33,6 +34,7 @@ function checkTypeAliasDeps(
     if (refIndex === undefined || refIndex < index) continue;
     diagnostics.push({
       message: `Type alias '${typeAlias.name}' cannot depend on '${name}' before it is declared`,
+      code: TYPE_ALIAS_ORDER,
       span: typeAlias.span,
     });
   }

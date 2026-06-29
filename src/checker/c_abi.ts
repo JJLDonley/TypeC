@@ -32,6 +32,9 @@ function isCAbiTypeSeen(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set
     case "ConditionalTypeRef":
     case "IndexedAccessTypeRef":
     case "MappedTypeRef":
+    case "LiteralTypeRef":
+    case "KeyofTypeRef":
+    case "TypeofTypeRef":
       return false;
   }
 }
@@ -41,7 +44,9 @@ function isCAbiNamedType(name: Str, typeAliases: Map<Str, TypeRef>, seen: Set<St
   if (!alias) return primitiveTypes.has(name);
   if (seen.has(name)) return false;
   seen.add(name);
-  return isCAbiTypeSeen(alias, typeAliases, seen);
+  const compatible = isCAbiTypeSeen(alias, typeAliases, seen);
+  seen.delete(name);
+  return compatible;
 }
 
 function isCAbiRecordFieldType(type: TypeRef, typeAliases: Map<Str, TypeRef>, seen: Set<Str>): b8 {

@@ -1,4 +1,5 @@
 import type { BlockStmt, Expression, FunctionDecl, Statement, TypeRef } from "core/ast.ts";
+import { INFERRED_RETURN_BARE_MIX, INFERRED_RETURN_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { normalizeInferredLocalType } from "checker/inferred_local_types.ts";
@@ -63,6 +64,7 @@ function inferReturnDiagnostics(
     if (entry.expression === null) {
       diagnostics.push({
         message: `Cannot mix bare returns with inferred return type '${expected}'`,
+        code: INFERRED_RETURN_BARE_MIX,
         span: entry.span,
       });
       continue;
@@ -71,6 +73,7 @@ function inferReturnDiagnostics(
     if (isAssignable(actual, expected)) continue;
     diagnostics.push({
       message: `Return type '${actual}' is not assignable to inferred return type '${expected}'`,
+      code: INFERRED_RETURN_TYPE,
       span: entry.expression.span,
     });
   }

@@ -1,4 +1,5 @@
 import { checkConstantIntegerDivision } from "checker/constant_division.ts";
+import { CONSTANT_EXPRESSION } from "core/diagnostic_codes.ts";
 import { checkConstantRanges } from "checker/constant_ranges.ts";
 import type { ConstDecl, Expression, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
@@ -39,7 +40,11 @@ export function checkConstantExpression(
   availableConstants: Map<Str, ConstDecl>,
 ): Diagnostic[] {
   if (isConstantExpression(expr, availableConstants)) return [];
-  return [{ message: `Expression is not valid in a compile-time constant`, span: expr.span }];
+  return [{
+    message: `Expression is not valid in a compile-time constant`,
+    code: CONSTANT_EXPRESSION,
+    span: expr.span,
+  }];
 }
 
 export function isConstantExpression(
@@ -71,6 +76,7 @@ export function isConstantExpression(
     case "ArrayLiteralExpr":
       return expr.elements.every((element) => isConstantExpression(element, availableConstants));
     case "CastExpr":
+    case "SatisfiesExpr":
       return isConstantExpression(expr.expression, availableConstants);
     case "ZeroValueExpr":
     case "ArrowFunctionExpr":

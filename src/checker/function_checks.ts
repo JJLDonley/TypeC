@@ -1,3 +1,4 @@
+import { VARIADIC_FUNCTION_EXTERN, VARIADIC_FUNCTION_FIXED_PARAM } from "core/diagnostic_codes.ts";
 import type { FunctionDecl, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -25,12 +26,14 @@ function checkFunctionVariadic(fn: FunctionDecl): Diagnostic[] {
   if (!fn.external) {
     return [{
       message: `Function '${fn.name}' cannot be variadic unless it is extern`,
+      code: VARIADIC_FUNCTION_EXTERN,
       span: fn.span,
     }];
   }
   if (fn.params.length === 0) {
     return [{
       message: `Variadic extern function '${fn.name}' requires at least one fixed parameter`,
+      code: VARIADIC_FUNCTION_FIXED_PARAM,
       span: fn.span,
     }];
   }

@@ -1,3 +1,4 @@
+import { RECORD_FIELD_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression, RecordTypeRef } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -8,6 +9,7 @@ import {
   findRecordField,
 } from "checker/record_literals.ts";
 import { isAssignable } from "checker/types.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
@@ -42,14 +44,21 @@ function checkRecordLiteralField(
   const diagnostics: Diagnostic[] = checkRecordLiteralFieldName(field, record, expected, seen);
   const expectedField = findRecordField(record, field.name);
   if (!expectedField) return diagnostics;
-  const expectedType = typeName(expectedField.type);
+  const expectedType = recordFieldInitializerType(expectedField);
   diagnostics.push(...checkArrayInitializer(field.expression, expectedType, field.span));
   const actual = resolveType(field.expression, expectedType);
   if (!isAssignable(actual, expectedType)) {
     diagnostics.push({
       message: `Field '${field.name}' type '${actual}' is not assignable to '${expectedType}'`,
+      code: RECORD_FIELD_TYPE,
       span: field.span,
     });
   }
   return diagnostics;
+}
+
+function recordFieldInitializerType(field: RecordTypeRef["fields"][usize]): TypeName {
+  if (field.optional !== true) return typeName(field.type);
+  const element = optionalTypeElement(field.type);
+  return element === null ? typeName(field.type) : typeName(element);
 }

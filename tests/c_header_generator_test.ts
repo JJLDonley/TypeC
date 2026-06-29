@@ -89,8 +89,8 @@ Deno.test("generates externs from clang AST", () => {
 
   assertIncludes(output, "export type Color = { r: u8; g: u8; b: u8; a: u8; };");
   assertIncludes(output, "export type Matrix = { cells: Array<Array<i32, 3>, 2>; };");
-  assertIncludes(output, "extern function draw(tint: Color): void;");
-  assertIncludes(output, "extern function add_i32(left: i32, right: i32): i32;");
+  assertIncludes(output, "export extern function draw(tint: Color): void;");
+  assertIncludes(output, "export extern function add_i32(left: i32, right: i32): i32;");
   assertSame(countOccurrences(output, "extern function add_i32"), 1);
   assertExcludes(output, "extern function conflict");
   assertIncludes(output, "extern function set_name(name: u8*): void;");
@@ -119,6 +119,7 @@ Deno.test("generates externs from clang AST", () => {
   assertIncludes(output, "KEY_NULL = 0,");
   assertIncludes(output, "KEY_SPACE = 32,");
   assertIncludes(output, "KEY_ESCAPE = 33,");
+  assertIncludes(output, "export const KEY_SPACE: i32 = 32;");
   assertSame(countOccurrences(output, "export const DUPLICATE"), 1);
   assertExcludes(output, "CONFLICT_CONST");
   assertExcludes(output, "BAD_TYPE");
@@ -162,6 +163,16 @@ Deno.test("skips functions using records with unsupported dependencies", () => {
   assertExcludes(output, "export type Bad");
   assertExcludes(output, "export type Paint");
   assertExcludes(output, "use_paint");
+});
+
+Deno.test("generates constants for anonymous C enum members", () => {
+  const output = generateExternsFromClangAst({
+    kind: "TranslationUnitDecl",
+    inner: [enumDecl("", [enumConstant("KEY_A", "65")])],
+  });
+
+  assertIncludes(output, "export const KEY_A: i32 = 65;");
+  assertExcludes(output, "export enum");
 });
 
 Deno.test("skips unsupported C enum and value declarations", () => {

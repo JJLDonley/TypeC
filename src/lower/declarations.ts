@@ -1,14 +1,9 @@
-import {
-  classConstructorFunction,
-  classMethodFunction,
-  classTypeAlias,
-  classVTableDecl,
-  classVTableTypeName,
-} from "core/classes.ts";
+import { cSymbolName } from "core/c_names.ts";
+import { classConstructorFunction, classMethodFunction, classTypeAlias } from "core/classes.ts";
 import type {
-  ClassVTableDecl,
   ConstDecl,
   EnumDecl,
+  ExportDecl,
   FunctionDecl,
   ImportDecl,
   InterfaceDecl,
@@ -22,6 +17,7 @@ import type {
   CastClassDecl,
   CastConstDecl,
   CastEnumDecl,
+  CastExportDecl,
   CastFunctionDecl,
   CastImportDecl,
   CastInterfaceDecl,
@@ -43,8 +39,20 @@ export function lowerImportDecl(importDecl: CastImportDecl): ImportDecl {
     kind: "ImportDecl",
     names: importDecl.names,
     namespace: importDecl.namespace,
+    typeOnly: importDecl.typeOnly,
+    reExport: importDecl.reExport,
     path: importDecl.path,
     span: importDecl.span,
+  };
+}
+
+export function lowerExportDecl(exportDecl: CastExportDecl): ExportDecl {
+  return {
+    kind: "ExportDecl",
+    names: exportDecl.names,
+    typeOnly: exportDecl.typeOnly,
+    path: exportDecl.path,
+    span: exportDecl.span,
   };
 }
 
@@ -54,6 +62,7 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
     exported: typeAlias.exported,
     name: typeAlias.name,
     cName: typeAlias.cName,
+    generated: typeAlias.generated,
     type: lowerTypeRef(typeAlias.type),
     span: typeAlias.span,
   };
@@ -62,53 +71,29 @@ export function lowerTypeAliasDecl(typeAlias: CastTypeAliasDecl): TypeAliasDecl 
 export function lowerClassTypeAlias(classDecl: CastClassDecl): TypeAliasDecl {
   return classTypeAlias(classDecl, {
     kind: "RecordTypeRef",
-    fields: classDecl.fields.map((field) => ({
+    fields: classDecl.fields.filter((field) => !field.static).map((field) => ({
       name: field.name,
       type: lowerTypeRef(field.type),
+      access: field.access,
+      readonly: field.readonly,
       span: field.span,
     })),
     span: classDecl.span,
   });
 }
 
-export function lowerClassVTableTypeAlias(classDecl: CastClassDecl): TypeAliasDecl {
-  return {
-    kind: "TypeAliasDecl",
-    exported: false,
-    name: classVTableTypeName(classDecl.name),
-    cName: classVTableTypeName(classDecl.name),
-    type: {
-      kind: "RecordTypeRef",
-      fields: classDecl.methods.map((method) => ({
-        name: method.name,
-        type: {
-          kind: "FunctionTypeRef",
-          params: [receiverParam(classDecl.name, method.span), ...method.params.map(lowerParam)],
-          returnType: lowerTypeRef(method.returnType),
-          span: method.span,
-        },
-        span: method.span,
-      })),
-      span: classDecl.span,
-    },
-    span: classDecl.span,
-  };
-}
-
-export function lowerClassVTableDecl(classDecl: CastClassDecl): ClassVTableDecl {
-  return classVTableDecl(classDecl);
-}
-
-function receiverParam(className: Str, span: CastClassDecl["span"]): Param {
-  return {
-    name: "this",
-    type: {
-      kind: "PointerTypeRef",
-      element: { kind: "NamedTypeRef", name: className, span },
-      span,
-    },
-    span,
-  };
+export function lowerClassConstants(classDecl: CastClassDecl): ConstDecl[] {
+  return classDecl.fields.filter((field) => field.static && field.initializer !== null).map((
+    field,
+  ) => ({
+    kind: "ConstDecl",
+    exported: classDecl.exported,
+    name: `${classDecl.name}.${field.name}`,
+    cName: cSymbolName(`${classDecl.name}_${field.name}`),
+    type: lowerTypeRef(field.type),
+    initializer: lowerExpression(field.initializer!),
+    span: field.span,
+  }));
 }
 
 export function lowerStructTypeAlias(structDecl: CastStructDecl): TypeAliasDecl {
@@ -116,7 +101,7 @@ export function lowerStructTypeAlias(structDecl: CastStructDecl): TypeAliasDecl 
     kind: "TypeAliasDecl",
     exported: structDecl.exported,
     name: structDecl.name,
-    cName: structDecl.name,
+    cName: cSymbolName(structDecl.name),
     type: {
       kind: "RecordTypeRef",
       fields: structDecl.fields.map(lowerRecordField),
@@ -127,7 +112,14 @@ export function lowerStructTypeAlias(structDecl: CastStructDecl): TypeAliasDecl 
 }
 
 function lowerRecordField(field: CastRecordField): RecordField {
-  return { name: field.name, type: lowerTypeRef(field.type), span: field.span };
+  const type = lowerTypeRef(field.type);
+  return {
+    name: field.name,
+    type: field.optional === true ? optionalTypeRef(type) : type,
+    readonly: field.readonly,
+    optional: field.optional,
+    span: field.span,
+  };
 }
 
 export function lowerClassMethods(classDecl: CastClassDecl): FunctionDecl[] {
@@ -213,6 +205,7 @@ export function lowerEnumDecl(enumDecl: CastEnumDecl): EnumDecl {
     exported: enumDecl.exported,
     name: enumDecl.name,
     cName: enumDecl.cName,
+    backingType: enumDecl.backingType ? lowerTypeRef(enumDecl.backingType) : null,
     members: enumDecl.members.map((member) => ({
       name: member.name,
       cName: member.cName,
@@ -260,8 +253,17 @@ function lowerParam(param: CastParam): Param {
   return {
     name: param.name,
     optional: param.optional,
-    type: param.optional === true ? optionalTypeRef(type) : type,
+    rest: param.rest,
+    type: lowerParamType(param, type),
     defaultValue: param.defaultValue ? lowerExpression(param.defaultValue) : null,
     span: param.span,
   };
+}
+
+function lowerParamType(param: CastParam, type: Param["type"]): Param["type"] {
+  if (param.optional === true) return optionalTypeRef(type);
+  if (param.rest === true && type.kind === "InferredArrayTypeRef") {
+    return { kind: "SliceTypeRef", element: type.element, span: type.span };
+  }
+  return type;
 }

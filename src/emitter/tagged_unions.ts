@@ -1,6 +1,7 @@
 import type { Expression, TaggedUnionDecl, TaggedUnionVariant } from "core/ast.ts";
 import {
   taggedUnionCName,
+  taggedUnionTagConstantName,
   taggedUnionVariant,
   taggedUnionVariantCName,
   taggedUnionVariantTag,
@@ -33,7 +34,7 @@ export function emitTaggedUnionTypeDefinition(
 export function emitTaggedUnionConstants(unionDecl: TaggedUnionDecl): Str[] {
   return unionDecl.variants.map((variant) => {
     const tag = taggedUnionVariantTag(unionDecl, variant.name) ?? 0;
-    return `static const i32 ${tagConstantName(unionDecl, variant)} = ${tag};`;
+    return `static const i32 ${taggedUnionTagConstantName(unionDecl, variant)} = ${tag};`;
   });
 }
 
@@ -53,7 +54,7 @@ export function emitTaggedUnionConstructor(
     (context.program?.taggedUnions ?? []).find((candidate) => candidate.name === unionName) ?? null;
   if (variant === null || unionDecl === null) return null;
   const name = taggedUnionCName(unionDecl);
-  const tag = tagConstantName(unionDecl, variant);
+  const tag = taggedUnionTagConstantName(unionDecl, variant);
   if (variant.payload === null) return `(${name}){ .tag = ${tag} }`;
   const value = emitExpected(
     expr.args[0]!,
@@ -88,8 +89,4 @@ function emitPayloadField(variant: TaggedUnionVariant, context: EmitContext): St
   return `    ${emitCType(variant.payload!, context.typeAliases)} ${
     taggedUnionVariantCName(variant)
   };`;
-}
-
-function tagConstantName(unionDecl: TaggedUnionDecl, variant: TaggedUnionVariant): Str {
-  return `${taggedUnionCName(unionDecl)}_${taggedUnionVariantCName(variant)}_TAG`;
 }

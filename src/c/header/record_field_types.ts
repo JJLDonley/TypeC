@@ -8,6 +8,7 @@ import {
 } from "c/header/array_types.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
 import { mapCHeaderType } from "c/header/types.ts";
+import { C_HEADER_UNSUPPORTED_RECORD_ARRAY } from "core/diagnostic_codes.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -31,5 +32,8 @@ function mapNestedRecordArrayType(normalized: Str, original: Str, recordNames: S
 }
 
 function unsupportedRecordArrayType(type: Str): TypeCError {
-  return new TypeCError([{ message: `Unsupported C record array type '${type}'` }]);
+  return new TypeCError([{
+    message: `Unsupported C record array type '${type}'`,
+    code: C_HEADER_UNSUPPORTED_RECORD_ARRAY,
+  }]);
 }

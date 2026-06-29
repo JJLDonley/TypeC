@@ -1,3 +1,4 @@
+import { FUNCTION_ARRAY_RETURN } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { FunctionDecl } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -7,6 +8,7 @@ export function checkFunctionReturnType(fn: FunctionDecl, returnType: TypeName):
   if (!parseArrayTypeName(returnType)) return [];
   return [{
     message: `Function '${fn.name}' cannot return array type '${returnType}'`,
+    code: FUNCTION_ARRAY_RETURN,
     span: fn.returnType.span,
   }];
 }

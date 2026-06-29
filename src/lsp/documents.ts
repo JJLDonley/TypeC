@@ -18,4 +18,8 @@ export class TextDocuments {
   get(uri: Str): Str | null {
     return this.texts.get(uri) ?? null;
   }
+
+  entries(): [Str, Str][] {
+    return [...this.texts.entries()];
+  }
 }

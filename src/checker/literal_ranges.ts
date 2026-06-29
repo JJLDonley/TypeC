@@ -1,3 +1,4 @@
+import { FLOAT_LITERAL_RANGE, INTEGER_LITERAL_RANGE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -12,6 +13,7 @@ export function checkIntegerLiteralRange(expr: IntegerLiteral, type: TypeName): 
   if (expr.value >= range.min && expr.value <= range.max) return [];
   return [{
     message: `Integer literal '${expr.text}' is out of range for '${type}'`,
+    code: INTEGER_LITERAL_RANGE,
     span: expr.span,
   }];
 }
@@ -19,5 +21,9 @@ export function checkIntegerLiteralRange(expr: IntegerLiteral, type: TypeName): 
 export function checkFloatLiteralRange(expr: FloatLiteral, type: TypeName): Diagnostic[] {
   if (type !== "f32") return [];
   if (Math.abs(expr.value) <= maxF32) return [];
-  return [{ message: `Float literal '${expr.text}' is out of range for 'f32'`, span: expr.span }];
+  return [{
+    message: `Float literal '${expr.text}' is out of range for 'f32'`,
+    code: FLOAT_LITERAL_RANGE,
+    span: expr.span,
+  }];
 }

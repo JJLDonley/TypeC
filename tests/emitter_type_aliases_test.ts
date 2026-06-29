@@ -3,8 +3,6 @@ import type { FunctionDecl, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { emitTypeAlias } from "emitter/type_aliases.ts";
 
 type Str = string;
-type b8 = boolean;
-
 const span: SourceSpan = {
   start: { offset: 0, line: 1, column: 1 },
   end: { offset: 0, line: 1, column: 1 },
@@ -52,12 +50,13 @@ Deno.test("emits record aliases with C names", () => {
   );
 });
 
-Deno.test("rejects non-record aliases", () => {
-  assertThrows(() =>
+Deno.test("emits scalar type aliases", () => {
+  assertText(
     emitTypeAlias(
-      { kind: "TypeAliasDecl", exported: false, name: "Bad", type: named("i32"), span },
+      { kind: "TypeAliasDecl", exported: false, name: "Count", type: named("i32"), span },
       context(),
-    )
+    ),
+    "typedef i32 Count;",
   );
 });
 
@@ -76,14 +75,4 @@ function context(
 
 function assertText(actual: Str, expected: Str): void {
   if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
-}
-
-function assertThrows(run: () => void): void {
-  let threw: b8 = false;
-  try {
-    run();
-  } catch {
-    threw = true;
-  }
-  if (!threw) throw new Error("Expected throw");
 }

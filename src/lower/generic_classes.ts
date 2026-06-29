@@ -8,6 +8,7 @@ import type {
   CastConditionalExpr,
   CastConstDecl,
   CastDoWhileStmt,
+  CastEnumDecl,
   CastExpression,
   CastForInStmt,
   CastForOfStmt,
@@ -15,7 +16,6 @@ import type {
   CastFunctionDecl,
   CastFunctionTypeRef,
   CastIfStmt,
-  CastImportDecl,
   CastIndexExpr,
   CastInterfaceDecl,
   CastMethodCallExpr,
@@ -32,6 +32,7 @@ import type {
   CastRecordTypeRef,
   CastReturnStmt,
   CastStatement,
+  CastStructDecl,
   CastSwitchStmt,
   CastTaggedUnionDecl,
   CastTypeAliasDecl,
@@ -40,8 +41,26 @@ import type {
   CastVarDeclStmt,
   CastWhileStmt,
 } from "core/cast.ts";
+import {
+  CLASS_CONSTRAINT_UNSATISFIED,
+  CLASS_DUPLICATE_GENERIC_PARAMETER,
+  CLASS_EXTENDS_TARGET,
+  CLASS_GENERIC_CONSTRAINT_INTERFACE,
+  CLASS_GENERIC_CONSTRAINT_UNKNOWN_TYPE,
+  CLASS_IMPLEMENTS_TARGET,
+  CLASS_INHERITANCE_CYCLE,
+  CLASS_INHERITED_FIELD_CONFLICT,
+  CLASS_INTERFACE_METHOD_MISSING,
+  CLASS_INTERFACE_VALUE_TYPE,
+  CLASS_TYPE_ARGUMENT_ARITY,
+  CLASS_UNKNOWN_BASE,
+  CLASS_UNKNOWN_INTERFACE,
+  CLASS_UNKNOWN_TYPE_ARGUMENT,
+  GENERIC_INSTANTIATION_CYCLE,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
+import { primitiveTypes } from "core/token.ts";
 import { typeName } from "core/type_ref.ts";
 import {
   inferGenericClassArgumentTypeRef,
@@ -57,6 +76,14 @@ type usize = number;
 type CastTypeSubstitutions = Map<Str, CastTypeRef>;
 type LocalTypes = Map<Str, CastTypeRef>;
 
+interface KnownClassConstraintDeclarations {
+  typeAliases: Map<Str, CastTypeRef>;
+  classes: CastClassDecl[];
+  structs: CastStructDecl[];
+  enums: CastEnumDecl[];
+  taggedUnions: CastTaggedUnionDecl[];
+}
+
 interface FieldEntry {
   name: Str;
   type: CastTypeRef;
@@ -66,12 +93,36 @@ interface FieldSource {
   fields: FieldEntry[];
 }
 
+interface ClassConstraintSubject {
+  className: Str;
+  paramName: Str;
+}
+
 export function instantiateGenericClasses(program: CastProgram): CastProgram {
   const templates = genericClassTemplates(program.classes ?? []);
-  const diagnostics = genericClassParamDiagnostics(program.classes ?? []);
+  const typeAliases = castTypeAliasMap(program.typeAliases);
+  const diagnostics = genericClassParamDiagnostics(
+    program.classes ?? [],
+    program.interfaces ?? [],
+    {
+      typeAliases,
+      classes: program.classes ?? [],
+      structs: program.structs ?? [],
+      enums: program.enums ?? [],
+      taggedUnions: program.taggedUnions ?? [],
+    },
+  );
   if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   const concrete = concreteClassTemplates(program.classes ?? []);
-  const instantiator = new GenericClassInstantiator(templates, concrete, program.interfaces ?? []);
+  const instantiator = new GenericClassInstantiator(
+    templates,
+    concrete,
+    program.interfaces ?? [],
+    typeAliases,
+    program.structs ?? [],
+    program.enums ?? [],
+    program.taggedUnions ?? [],
+  );
   const rewritten = templates.size === 0 ? program : instantiator.rewriteProgram(program);
   const inheritance = resolveClassInheritance(rewritten.classes ?? []);
   if (inheritance.diagnostics.length > 0) throw new TypeCError(inheritance.diagnostics);
@@ -104,8 +155,85 @@ function isGenericClass(classDecl: CastClassDecl): b8 {
   return (classDecl.genericParams ?? []).length > 0;
 }
 
-function genericClassParamDiagnostics(classes: CastClassDecl[]): Diagnostic[] {
-  return classes.flatMap(genericClassDuplicateParamDiagnostics);
+function genericClassParamDiagnostics(
+  classes: CastClassDecl[],
+  interfaces: CastInterfaceDecl[],
+  declarations: KnownClassConstraintDeclarations,
+): Diagnostic[] {
+  return classes.flatMap((classDecl) =>
+    genericClassDeclarationDiagnostics(classDecl, interfaces, declarations)
+  );
+}
+
+function genericClassDeclarationDiagnostics(
+  classDecl: CastClassDecl,
+  interfaces: CastInterfaceDecl[],
+  declarations: KnownClassConstraintDeclarations,
+): Diagnostic[] {
+  return [
+    ...genericClassDuplicateParamDiagnostics(classDecl),
+    ...genericClassConstraintDiagnostics(classDecl, interfaces, declarations),
+  ];
+}
+
+function genericClassConstraintDiagnostics(
+  classDecl: CastClassDecl,
+  interfaces: CastInterfaceDecl[],
+  declarations: KnownClassConstraintDeclarations,
+): Diagnostic[] {
+  return (classDecl.genericParams ?? []).flatMap((param) =>
+    genericClassConstraintDiagnostic(param, interfaces, declarations)
+  );
+}
+
+function genericClassConstraintDiagnostic(
+  param: NonNullable<CastClassDecl["genericParams"]>[usize],
+  interfaces: CastInterfaceDecl[],
+  declarations: KnownClassConstraintDeclarations,
+): Diagnostic[] {
+  const constraint = param.constraint;
+  if (constraint === null || constraint === undefined) return [];
+  if (constraint.kind === "LiteralTypeRef" || constraint.kind === "RecordTypeRef") return [];
+  if (constraint.kind !== "NamedTypeRef") {
+    return [{
+      message: `Generic constraint for '${param.name}' must be an interface`,
+      code: CLASS_GENERIC_CONSTRAINT_INTERFACE,
+      span: constraint.span,
+    }];
+  }
+  if (interfaces.some((interfaceDecl) => interfaceDecl.name === constraint.name)) return [];
+  if (isKnownClassConstraintName(constraint.name, declarations)) return [];
+  return [{
+    message: `Unknown type '${constraint.name}'`,
+    code: CLASS_GENERIC_CONSTRAINT_UNKNOWN_TYPE,
+    span: constraint.span,
+  }];
+}
+
+function isKnownClassConstraintName(
+  name: Str,
+  declarations: KnownClassConstraintDeclarations,
+): b8 {
+  return primitiveTypes.has(name) || declarations.typeAliases.has(name) ||
+    hasClassName(name, declarations.classes) || hasStructName(name, declarations.structs) ||
+    hasCastEnumName(name, declarations.enums) ||
+    hasCastTaggedUnionName(name, declarations.taggedUnions);
+}
+
+function hasClassName(name: Str, classes: CastClassDecl[]): b8 {
+  return classes.some((classDecl) => classDecl.name === name);
+}
+
+function hasStructName(name: Str, structs: CastStructDecl[]): b8 {
+  return structs.some((structDecl) => structDecl.name === name);
+}
+
+function hasCastEnumName(name: Str, enums: CastEnumDecl[]): b8 {
+  return enums.some((enumDecl) => enumDecl.name === name);
+}
+
+function hasCastTaggedUnionName(name: Str, taggedUnions: CastTaggedUnionDecl[]): b8 {
+  return taggedUnions.some((unionDecl) => unionDecl.name === name);
 }
 
 function functionMap(functions: CastFunctionDecl[]): Map<Str, CastFunctionDecl> {
@@ -124,7 +252,20 @@ function assignmentTargetType(
   if (target.kind === "IdentifierExpr") return locals.get(target.name) ?? null;
   if (target.kind === "FieldAccessExpr") return fieldAssignmentTargetType(target, locals, classes);
   if (target.kind === "IndexExpr") return indexAssignmentTargetType(target, locals, classes);
+  if (target.kind === "PostfixPointerExpr") {
+    return dereferenceAssignmentTargetType(target, locals, classes);
+  }
   return null;
+}
+
+function dereferenceAssignmentTargetType(
+  target: Extract<CastExpression, { kind: "PostfixPointerExpr" }>,
+  locals: LocalTypes,
+  classes: Map<Str, CastClassDecl>,
+): CastTypeRef | null {
+  if (target.operator !== ".*") return null;
+  const operand = assignmentTargetType(target.operand, locals, classes);
+  return operand === null ? null : pointerLikeElementType(operand);
 }
 
 function indexAssignmentTargetType(
@@ -274,6 +415,12 @@ function pointerLikeElementType(type: CastTypeRef): CastTypeRef | null {
   }
 }
 
+function castTypeAliasMap(typeAliases: CastTypeAliasDecl[]): Map<Str, CastTypeRef> {
+  return new Map(
+    typeAliases.map((typeAlias): [Str, CastTypeRef] => [typeAlias.name, typeAlias.type]),
+  );
+}
+
 function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const names = new Set<Str>();
@@ -281,6 +428,7 @@ function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagno
     if (names.has(param.name)) {
       diagnostics.push({
         message: `Duplicate generic parameter '${param.name}'`,
+        code: CLASS_DUPLICATE_GENERIC_PARAMETER,
         span: param.span,
       });
     }
@@ -291,12 +439,17 @@ function genericClassDuplicateParamDiagnostics(classDecl: CastClassDecl): Diagno
 
 class GenericClassInstantiator {
   private emitted = new Map<Str, CastClassDecl>();
+  private active = new Set<Str>();
   private functions = new Map<Str, CastFunctionDecl>();
 
   constructor(
     private templates: Map<Str, CastClassDecl>,
     private concrete: Map<Str, CastClassDecl>,
     private interfaces: CastInterfaceDecl[],
+    private typeAliases: Map<Str, CastTypeRef>,
+    private structs: CastStructDecl[],
+    private enums: CastEnumDecl[],
+    private taggedUnions: CastTaggedUnionDecl[],
   ) {}
 
   rewriteProgram(program: CastProgram): CastProgram {
@@ -323,7 +476,14 @@ class GenericClassInstantiator {
   }
 
   private rewriteTypeAlias(typeAlias: CastTypeAliasDecl): CastTypeAliasDecl {
-    return { ...typeAlias, type: this.rewriteTypeRef(typeAlias.type) };
+    return {
+      ...typeAlias,
+      genericParams: typeAlias.genericParams?.map((param) => ({
+        ...param,
+        constraint: param.constraint ? this.rewriteTypeRef(param.constraint) : null,
+      })),
+      type: this.rewriteTypeRef(typeAlias.type),
+    };
   }
 
   private rewriteTaggedUnion(unionDecl: CastTaggedUnionDecl): CastTaggedUnionDecl {
@@ -345,6 +505,9 @@ class GenericClassInstantiator {
       fields: classDecl.fields.map((field) => ({
         ...field,
         type: this.rewriteTypeRef(field.type),
+        initializer: field.initializer
+          ? this.rewriteExpressionWithExpectedType(field.initializer, field.type, new Map())
+          : null,
       })),
       constructorDecl: classDecl.constructorDecl
         ? {
@@ -727,6 +890,7 @@ class GenericClassInstantiator {
       case "NullishCoalesceExpr":
         return this.rewriteNullish(expression, locals);
       case "CastExpr":
+      case "SatisfiesExpr":
         return { ...expression, expression: this.rewriteExpression(expression.expression, locals) };
       case "CallExpr":
         return this.rewriteCall(expression, locals);
@@ -923,12 +1087,30 @@ class GenericClassInstantiator {
     const template = this.templates.get(type.name);
     if (!template || typeArgs.length === 0) return { ...type, typeArgs };
     this.checkClassTypeArgCount(template, typeArgs, type.span);
+    this.checkClassTypeArgs(typeArgs);
     this.checkClassConstraints(template, typeArgs, type.span);
     const name = classInstantiationName(template.name, typeArgs);
+    this.checkInstantiationCycle(template.name, name, type.span);
     if (!this.emitted.has(name)) {
-      this.emitted.set(name, this.createInstantiation(template, typeArgs, name));
+      this.active.add(name);
+      try {
+        this.emitted.set(name, this.createInstantiation(template, typeArgs, name));
+      } finally {
+        this.active.delete(name);
+      }
     }
     return { kind: "NamedTypeRef", name, span: type.span };
+  }
+
+  private checkClassTypeArgs(typeArgs: CastTypeRef[]): void {
+    const diagnostics = typeArgs.flatMap((typeArg) => this.classTypeArgDiagnostics(typeArg));
+    if (diagnostics.length > 0) throw new TypeCError(diagnostics);
+  }
+
+  private classTypeArgDiagnostics(typeArg: CastTypeRef): Diagnostic[] {
+    if (typeArg.kind !== "NamedTypeRef") return [];
+    const diagnostic = this.classTypeArgDiagnostic(typeArg, typeArg.span);
+    return diagnostic === null ? [] : [diagnostic];
   }
 
   private checkClassTypeArgCount(
@@ -940,6 +1122,7 @@ class GenericClassInstantiator {
     if (typeArgs.length === expected) return;
     throw new TypeCError([{
       message: `Generic class '${template.name}' expects ${expected} type argument(s)`,
+      code: CLASS_TYPE_ARGUMENT_ARITY,
       span,
     }]);
   }
@@ -961,6 +1144,7 @@ class GenericClassInstantiator {
       fields: template.fields.map((field) => ({
         ...field,
         type: substituteTypeRef(field.type, substitutions),
+        initializer: field.initializer,
       })),
       constructorDecl: template.constructorDecl
         ? {
@@ -982,6 +1166,15 @@ class GenericClassInstantiator {
     return classDecl;
   }
 
+  private checkInstantiationCycle(templateName: Str, name: Str, span: CastTypeRef["span"]): void {
+    if (!this.active.has(name)) return;
+    throw new TypeCError([{
+      message: `Recursive generic instantiation cycle involving class '${templateName}'`,
+      code: GENERIC_INSTANTIATION_CYCLE,
+      span,
+    }]);
+  }
+
   private checkClassConstraints(
     template: CastClassDecl,
     typeArgs: CastTypeRef[],
@@ -990,10 +1183,16 @@ class GenericClassInstantiator {
     const diagnostics: Diagnostic[] = [];
     const params = template.genericParams ?? [];
     for (let index: usize = 0; index < params.length; index += 1) {
-      const constraint = params[index].constraint;
+      const param = params[index];
+      const constraint = param.constraint;
       const typeArg = typeArgs[index];
       if (!constraint || !typeArg) continue;
-      diagnostics.push(...this.checkClassConstraint(typeArg, constraint, span));
+      diagnostics.push(
+        ...this.checkClassConstraint(typeArg, constraint, span, {
+          className: template.name,
+          paramName: param.name,
+        }),
+      );
     }
     if (diagnostics.length > 0) throw new TypeCError(diagnostics);
   }
@@ -1002,19 +1201,82 @@ class GenericClassInstantiator {
     typeArg: CastTypeRef,
     constraint: CastTypeRef,
     span: CastTypeRef["span"],
+    subject: ClassConstraintSubject,
   ): Diagnostic[] {
+    if (constraint.kind === "LiteralTypeRef") {
+      return exactLiteralClassConstraintDiagnostic(typeArg, constraint, span, subject);
+    }
+    if (constraint.kind === "RecordTypeRef") {
+      return recordClassConstraintDiagnostics(
+        typeArg,
+        constraint,
+        span,
+        subject,
+        this.recordContext(),
+      );
+    }
     if (constraint.kind !== "NamedTypeRef" || typeArg.kind !== "NamedTypeRef") {
       return [{
-        message: `Type '${typeName(lowerTypeRef(typeArg))}' does not satisfy constraint`,
+        message: classConstraintMessage(subject, typeName(lowerTypeRef(typeArg)), "constraint"),
+        code: CLASS_CONSTRAINT_UNSATISFIED,
         span,
       }];
     }
     const interfaceDecl = this.interfaces.find((candidate) => candidate.name === constraint.name);
-    const classDecl = this.concrete.get(typeArg.name);
-    if (!interfaceDecl || !classDecl) {
-      return [{ message: `Type '${typeArg.name}' does not satisfy '${constraint.name}'`, span }];
+    if (interfaceDecl === null || interfaceDecl === undefined) {
+      const typeArgName = typeName(lowerTypeRef(typeArg));
+      const constraintName = typeName(lowerTypeRef(constraint));
+      if (typeArgName === constraintName) return [];
+      return [{
+        message: exactNamedClassConstraintMessage(subject, typeArgName, constraintName),
+        code: CLASS_CONSTRAINT_UNSATISFIED,
+        span,
+      }];
     }
-    return missingCastInterfaceMethods(classDecl, interfaceDecl, span);
+    const typeArgDiagnostic = this.classTypeArgDiagnostic(typeArg, span);
+    if (typeArgDiagnostic !== null) return [typeArgDiagnostic];
+    const classDecl = this.concrete.get(typeArg.name);
+    if (!classDecl) {
+      return [{
+        message: classConstraintMessage(subject, typeArg.name, constraint.name),
+        code: CLASS_CONSTRAINT_UNSATISFIED,
+        span,
+      }];
+    }
+    return missingCastInterfaceMethods(classDecl, interfaceDecl, span, subject);
+  }
+
+  private classTypeArgDiagnostic(
+    typeArg: Extract<CastTypeRef, { kind: "NamedTypeRef" }>,
+    span: CastTypeRef["span"],
+  ): Diagnostic | null {
+    if (this.interfaces.some((interfaceDecl) => interfaceDecl.name === typeArg.name)) {
+      return {
+        message: `Interface value type '${typeArg.name}' is not implemented`,
+        code: CLASS_INTERFACE_VALUE_TYPE,
+        span,
+      };
+    }
+    return this.isKnownTypeArg(typeArg.name)
+      ? null
+      : { message: `Unknown type '${typeArg.name}'`, code: CLASS_UNKNOWN_TYPE_ARGUMENT, span };
+  }
+
+  private isKnownTypeArg(typeNameText: Str): b8 {
+    return primitiveTypes.has(typeNameText) ||
+      this.typeAliases.has(typeNameText) ||
+      this.concrete.has(typeNameText) ||
+      hasStructName(typeNameText, this.structs) ||
+      hasCastEnumName(typeNameText, this.enums) ||
+      hasCastTaggedUnionName(typeNameText, this.taggedUnions);
+  }
+
+  private recordContext(): ClassRecordConstraintContext {
+    return {
+      typeAliases: this.typeAliases,
+      classes: this.concrete,
+      structs: this.structs,
+    };
   }
 }
 
@@ -1024,7 +1286,7 @@ function rewriteTypeChildren(
 ): CastTypeRef {
   switch (type.kind) {
     case "NamedTypeRef":
-      return type;
+      return type.typeArgs === undefined ? type : { ...type, typeArgs: type.typeArgs.map(rewrite) };
     case "PointerTypeRef":
     case "ReferenceTypeRef":
     case "SafePointerTypeRef":
@@ -1053,6 +1315,11 @@ function rewriteTypeChildren(
       return { ...type, objectType: rewrite(type.objectType) };
     case "MappedTypeRef":
       return { ...type, sourceType: rewrite(type.sourceType), valueType: rewrite(type.valueType) };
+    case "LiteralTypeRef":
+    case "TypeofTypeRef":
+      return type;
+    case "KeyofTypeRef":
+      return { ...type, target: rewrite(type.target) };
     case "RecordTypeRef":
       return rewriteRecordType(type, rewrite);
   }
@@ -1178,7 +1445,10 @@ function substituteParam(param: CastParam, substitutions: CastTypeSubstitutions)
 }
 
 function substituteTypeRef(type: CastTypeRef, substitutions: CastTypeSubstitutions): CastTypeRef {
-  if (type.kind === "NamedTypeRef") return substitutions.get(type.name) ?? type;
+  if (type.kind === "NamedTypeRef") {
+    const substituted = substitutions.get(type.name) ?? null;
+    if (substituted !== null) return substituted;
+  }
   return rewriteTypeChildren(type, (child) => substituteTypeRef(child, substitutions));
 }
 
@@ -1212,6 +1482,7 @@ class ClassInheritanceResolver {
     if (stack.includes(classDecl.name)) {
       this.diagnostics.push({
         message: `Inheritance cycle involving '${classDecl.name}'`,
+        code: CLASS_INHERITANCE_CYCLE,
         span: classDecl.span,
       });
       return classDecl;
@@ -1224,6 +1495,7 @@ class ClassInheritanceResolver {
     if (baseRef.kind !== "NamedTypeRef" || (baseRef.typeArgs ?? []).length > 0) {
       this.diagnostics.push({
         message: "Class extends entries must be concrete class names",
+        code: CLASS_EXTENDS_TARGET,
         span: baseRef.span,
       });
       this.resolved.set(classDecl.name, classDecl);
@@ -1233,6 +1505,7 @@ class ClassInheritanceResolver {
     if (base === null) {
       this.diagnostics.push({
         message: `Unknown base class '${baseRef.name}'`,
+        code: CLASS_UNKNOWN_BASE,
         span: baseRef.span,
       });
       this.resolved.set(classDecl.name, classDecl);
@@ -1251,6 +1524,7 @@ class ClassInheritanceResolver {
       this.diagnostics.push({
         message:
           `Class '${classDecl.name}' field '${conflictingField.name}' conflicts with inherited field`,
+        code: CLASS_INHERITED_FIELD_CONFLICT,
         span: conflictingField.span,
       });
     }
@@ -1275,12 +1549,17 @@ function classImplementationDiagnostics(
       if (implemented.kind !== "NamedTypeRef") {
         return [{
           message: "Class implements entries must be interface names",
+          code: CLASS_IMPLEMENTS_TARGET,
           span: implemented.span,
         }];
       }
       const interfaceDecl = interfaces.find((candidate) => candidate.name === implemented.name);
       if (!interfaceDecl) {
-        return [{ message: `Unknown interface '${implemented.name}'`, span: implemented.span }];
+        return [{
+          message: `Unknown interface '${implemented.name}'`,
+          code: CLASS_UNKNOWN_INTERFACE,
+          span: implemented.span,
+        }];
       }
       return missingCastInterfaceMethods(classDecl, interfaceDecl, implemented.span);
     })
@@ -1291,16 +1570,341 @@ function missingCastInterfaceMethods(
   classDecl: CastClassDecl,
   interfaceDecl: CastInterfaceDecl,
   span: CastTypeRef["span"],
+  subject?: ClassConstraintSubject,
 ): Diagnostic[] {
   return interfaceDecl.methods.flatMap((method) => {
     const classMethod = classDecl.methods.find((candidate) => candidate.name === method.name);
-    if (classMethod && castMethodSignatureMatches(classMethod, method)) return [];
-    return [{
-      message:
-        `Type '${classDecl.name}' does not satisfy '${interfaceDecl.name}': missing method '${method.name}'`,
+    if (classMethod === undefined) {
+      return [castInterfaceMethodDiagnostic(classDecl, interfaceDecl, method.name, span, subject)];
+    }
+    if (castMethodSignatureMatches(classMethod, method)) return [];
+    return [castInterfaceMethodDiagnostic(
+      classDecl,
+      interfaceDecl,
+      method.name,
       span,
-    }];
+      subject,
+      true,
+    )];
   });
+}
+
+function castInterfaceMethodDiagnostic(
+  classDecl: CastClassDecl,
+  interfaceDecl: CastInterfaceDecl,
+  methodName: Str,
+  span: CastTypeRef["span"],
+  subject?: ClassConstraintSubject,
+  mismatched: b8 = false,
+): Diagnostic {
+  return {
+    message: castInterfaceMethodMessage(
+      classDecl.name,
+      interfaceDecl.name,
+      methodName,
+      subject,
+      mismatched,
+    ),
+    code: CLASS_INTERFACE_METHOD_MISSING,
+    span,
+  };
+}
+
+function castInterfaceMethodMessage(
+  className: Str,
+  interfaceName: Str,
+  methodName: Str,
+  subject?: ClassConstraintSubject,
+  mismatched: b8 = false,
+): Str {
+  const prefix = classConstraintMessage(subject, className, interfaceName);
+  if (!mismatched) return `${prefix}: missing method '${methodName}'`;
+  return `${prefix}: method '${methodName}' signature does not match`;
+}
+
+function exactLiteralClassConstraintDiagnostic(
+  typeArg: CastTypeRef,
+  constraint: CastTypeRef,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic[] {
+  const typeArgName = typeName(lowerTypeRef(typeArg));
+  const constraintName = typeName(lowerTypeRef(constraint));
+  return typeArgName === constraintName ? [] : [{
+    message: literalClassConstraintMessage(subject, typeArgName, constraintName),
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  }];
+}
+
+interface ClassRecordConstraintContext {
+  typeAliases: Map<Str, CastTypeRef>;
+  classes: Map<Str, CastClassDecl>;
+  structs: CastStructDecl[];
+}
+
+type ClassRecordConstraintField = CastRecordTypeRef["fields"][usize];
+type ClassRecordShapeMismatch =
+  | { kind: "MissingField"; path: Str; expected: ClassRecordConstraintField }
+  | {
+    kind: "RequiredFieldOptional";
+    path: Str;
+    expected: ClassRecordConstraintField;
+    actual: ClassRecordConstraintField;
+  }
+  | {
+    kind: "ReadonlyFieldMutable";
+    path: Str;
+    expected: ClassRecordConstraintField;
+    actual: ClassRecordConstraintField;
+  }
+  | {
+    kind: "FieldTypeMismatch";
+    path: Str;
+    expected: ClassRecordConstraintField;
+    actual: ClassRecordConstraintField;
+  };
+
+function recordClassConstraintDiagnostics(
+  typeArg: CastTypeRef,
+  constraint: CastRecordTypeRef,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+  context: ClassRecordConstraintContext,
+): Diagnostic[] {
+  const actual = recordClassConstraintSubject(typeArg, context);
+  if (actual === null) return [unsatisfiedRecordClassConstraint(typeArg, span, subject)];
+  return recordClassConstraintFieldDiagnostics(typeArg, constraint, actual, context, span, subject);
+}
+
+function recordClassConstraintSubject(
+  typeArg: CastTypeRef,
+  context: ClassRecordConstraintContext,
+): CastRecordTypeRef | null {
+  if (typeArg.kind === "RecordTypeRef") return typeArg;
+  if (typeArg.kind !== "NamedTypeRef") return null;
+  const alias = context.typeAliases.get(typeArg.name) ?? null;
+  if (alias?.kind === "RecordTypeRef") return alias;
+  const classDecl = context.classes.get(typeArg.name) ?? null;
+  if (classDecl !== null) return classRecordConstraintType(classDecl);
+  const structDecl = context.structs.find((candidate) => candidate.name === typeArg.name) ?? null;
+  return structDecl === null ? null : structRecordConstraintType(structDecl);
+}
+
+function classRecordConstraintType(classDecl: CastClassDecl): CastRecordTypeRef {
+  return {
+    kind: "RecordTypeRef",
+    fields: classDecl.fields.map((field) => ({
+      name: field.name,
+      type: field.type,
+      readonly: field.readonly,
+      optional: false,
+      span: field.span,
+    })),
+    span: classDecl.span,
+  };
+}
+
+function structRecordConstraintType(structDecl: CastStructDecl): CastRecordTypeRef {
+  return { kind: "RecordTypeRef", fields: structDecl.fields, span: structDecl.span };
+}
+
+function recordClassConstraintFieldDiagnostics(
+  typeArg: CastTypeRef,
+  constraint: CastRecordTypeRef,
+  actual: CastRecordTypeRef,
+  context: ClassRecordConstraintContext,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic[] {
+  return recordClassShapeMismatches(constraint, actual, context).map((mismatch) =>
+    recordClassConstraintMismatch(typeArg, mismatch, span, subject)
+  );
+}
+
+function recordClassShapeMismatches(
+  expected: CastRecordTypeRef,
+  actual: CastRecordTypeRef,
+  context: ClassRecordConstraintContext,
+  prefix: Str = "",
+): ClassRecordShapeMismatch[] {
+  return expected.fields.flatMap((field) =>
+    recordClassFieldMismatches(field, actual, context, prefix)
+  );
+}
+
+function recordClassFieldMismatches(
+  expected: ClassRecordConstraintField,
+  actual: CastRecordTypeRef,
+  context: ClassRecordConstraintContext,
+  prefix: Str,
+): ClassRecordShapeMismatch[] {
+  const path = recordClassFieldPath(prefix, expected.name);
+  const actualField = actual.fields.find((field) => field.name === expected.name) ?? null;
+  if (actualField === null) {
+    return expected.optional === true ? [] : [{ kind: "MissingField", path, expected }];
+  }
+  if (expected.optional !== true && actualField.optional === true) {
+    return [{ kind: "RequiredFieldOptional", path, expected, actual: actualField }];
+  }
+  if (expected.readonly !== true && actualField.readonly === true) {
+    return [{ kind: "ReadonlyFieldMutable", path, expected, actual: actualField }];
+  }
+  return recordClassFieldTypeMismatches(expected, actualField, context, path);
+}
+
+function recordClassFieldPath(prefix: Str, name: Str): Str {
+  return prefix.length === 0 ? name : `${prefix}.${name}`;
+}
+
+function recordClassFieldTypeMismatches(
+  expected: ClassRecordConstraintField,
+  actual: ClassRecordConstraintField,
+  context: ClassRecordConstraintContext,
+  path: Str,
+): ClassRecordShapeMismatch[] {
+  if (expected.type.kind !== "RecordTypeRef") {
+    return typeName(lowerTypeRef(actual.type)) === typeName(lowerTypeRef(expected.type))
+      ? []
+      : [{ kind: "FieldTypeMismatch", path, expected, actual }];
+  }
+  const actualRecord = recordClassConstraintSubject(actual.type, context);
+  if (actualRecord === null) return [{ kind: "FieldTypeMismatch", path, expected, actual }];
+  return recordClassShapeMismatches(expected.type, actualRecord, context, path);
+}
+
+function recordClassConstraintMismatch(
+  typeArg: CastTypeRef,
+  mismatch: ClassRecordShapeMismatch,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  if (mismatch.kind === "MissingField") {
+    return missingRecordClassField(typeArg, mismatch.path, span, subject);
+  }
+  if (mismatch.kind === "RequiredFieldOptional") {
+    return optionalRecordClassField(typeArg, mismatch.path, span, subject);
+  }
+  if (mismatch.kind === "ReadonlyFieldMutable") {
+    return readonlyRecordClassField(typeArg, mismatch.path, span, subject);
+  }
+  return mismatchedRecordClassField(
+    typeArg,
+    mismatch.path,
+    mismatch.expected,
+    mismatch.actual,
+    span,
+    subject,
+  );
+}
+
+function unsatisfiedRecordClassConstraint(
+  typeArg: CastTypeRef,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  return {
+    message: `${recordClassConstraintPrefix(typeArg, subject)} does not satisfy record shape`,
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  };
+}
+
+function missingRecordClassField(
+  typeArg: CastTypeRef,
+  fieldName: Str,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  return {
+    message: `${
+      recordClassConstraintPrefix(typeArg, subject)
+    } is missing required field '${fieldName}' for record constraint`,
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  };
+}
+
+function optionalRecordClassField(
+  typeArg: CastTypeRef,
+  fieldName: Str,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  return {
+    message: `${
+      recordClassConstraintPrefix(typeArg, subject)
+    } has optional field '${fieldName}' but record constraint requires it`,
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  };
+}
+
+function readonlyRecordClassField(
+  typeArg: CastTypeRef,
+  fieldName: Str,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  return {
+    message: `${
+      recordClassConstraintPrefix(typeArg, subject)
+    } has readonly field '${fieldName}' but record constraint requires a mutable field`,
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  };
+}
+
+function mismatchedRecordClassField(
+  typeArg: CastTypeRef,
+  fieldPath: Str,
+  expected: ClassRecordConstraintField,
+  actual: ClassRecordConstraintField,
+  span: CastTypeRef["span"],
+  subject: ClassConstraintSubject,
+): Diagnostic {
+  return {
+    message: `${recordClassConstraintPrefix(typeArg, subject)} has field '${fieldPath}' of type '${
+      typeName(lowerTypeRef(actual.type))
+    }' but record constraint requires '${typeName(lowerTypeRef(expected.type))}'`,
+    code: CLASS_CONSTRAINT_UNSATISFIED,
+    span,
+  };
+}
+
+function recordClassConstraintPrefix(
+  typeArg: CastTypeRef,
+  subject: ClassConstraintSubject,
+): Str {
+  return `Generic class '${subject.className}' type parameter '${subject.paramName}' with type '${
+    typeName(lowerTypeRef(typeArg))
+  }'`;
+}
+
+function classConstraintMessage(
+  subject: ClassConstraintSubject | undefined,
+  typeArgName: Str,
+  interfaceName: Str,
+): Str {
+  if (!subject) return `Type '${typeArgName}' does not satisfy '${interfaceName}'`;
+  return `Generic class '${subject.className}' type parameter '${subject.paramName}' with type '${typeArgName}' does not satisfy interface '${interfaceName}'`;
+}
+
+function exactNamedClassConstraintMessage(
+  subject: ClassConstraintSubject | undefined,
+  typeArgName: Str,
+  constraintName: Str,
+): Str {
+  if (!subject) return `Type '${typeArgName}' does not satisfy '${constraintName}'`;
+  return `Generic class '${subject.className}' type parameter '${subject.paramName}' with type '${typeArgName}' does not satisfy ${constraintName}`;
+}
+
+function literalClassConstraintMessage(
+  subject: ClassConstraintSubject,
+  typeArgName: Str,
+  constraintName: Str,
+): Str {
+  return `Generic class '${subject.className}' type parameter '${subject.paramName}' with type '${typeArgName}' does not satisfy ${constraintName}`;
 }
 
 function castMethodSignatureMatches(

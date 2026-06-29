@@ -1,6 +1,8 @@
-import { check } from "checker";
-import { formatDiagnostic, TypeCError } from "core/diagnostics.ts";
+import { check, type CheckedProgram } from "checker";
+import { TypeCError } from "core/diagnostics.ts";
 import { emitC } from "emitter";
+import { exitWithTypeCDiagnostics } from "driver/diagnostics.ts";
+import { readSourceText } from "driver/source_files.ts";
 import { hasMain } from "core/entrypoint.ts";
 import { instantiateGenerics } from "core/generics.ts";
 import { loadProgram } from "module/loader.ts";
@@ -19,12 +21,37 @@ export interface CompileResult {
   compilerFlags: Str[];
 }
 
+interface CheckedSource {
+  program: CheckedProgram;
+  compilerFlags: Str[];
+}
+
 export async function compileFile(inputPath: Str, buildDir: Str = "build"): Promise<CompileResult> {
-  const source = await Deno.readTextFile(inputPath);
+  const source = await readSourceText(inputPath);
   try {
     return await compileSourceFile(inputPath, buildDir);
   } catch (err) {
-    if (err instanceof TypeCError) exitWithDiagnostics(inputPath, source, err);
+    if (err instanceof TypeCError) exitWithTypeCDiagnostics(inputPath, source, err);
+    throw err;
+  }
+}
+
+export async function checkFile(inputPath: Str): Promise<void> {
+  const source = await readSourceText(inputPath);
+  try {
+    await checkSourceFile(inputPath);
+  } catch (err) {
+    if (err instanceof TypeCError) exitWithTypeCDiagnostics(inputPath, source, err);
+    throw err;
+  }
+}
+
+export async function emitCFile(inputPath: Str): Promise<Str> {
+  const source = await readSourceText(inputPath);
+  try {
+    return (await compileSource(inputPath)).cSource;
+  } catch (err) {
+    if (err instanceof TypeCError) exitWithTypeCDiagnostics(inputPath, source, err);
     throw err;
   }
 }
@@ -37,23 +64,23 @@ async function compileSourceFile(inputPath: Str, buildDir: Str): Promise<Compile
   return { ...paths, ...compiled };
 }
 
+async function checkSourceFile(inputPath: Str): Promise<void> {
+  await checkedSource(inputPath);
+}
+
 async function compileSource(
   inputPath: Str,
 ): Promise<{ cSource: Str; hasMain: b8; compilerFlags: Str[] }> {
-  const config = await loadProjectConfig(inputPath);
-  const ast = instantiateGenerics(await loadProgram(inputPath, config));
-  const resolved = resolve(ast);
-  const checked = check(resolved);
+  const checked = await checkedSource(inputPath);
   return {
-    cSource: emitC(checked),
-    hasMain: hasMain(checked),
-    compilerFlags: config.compilerFlags,
+    cSource: emitC(checked.program),
+    hasMain: hasMain(checked.program),
+    compilerFlags: checked.compilerFlags,
   };
 }
 
-function exitWithDiagnostics(inputPath: Str, source: Str, err: TypeCError): never {
-  console.error(
-    err.diagnostics.map((diagnostic) => formatDiagnostic(inputPath, source, diagnostic)).join("\n"),
-  );
-  Deno.exit(1);
+async function checkedSource(inputPath: Str): Promise<CheckedSource> {
+  const config = await loadProjectConfig(inputPath);
+  const ast = instantiateGenerics(await loadProgram(inputPath, config));
+  return { program: check(resolve(ast)), compilerFlags: config.compilerFlags };
 }

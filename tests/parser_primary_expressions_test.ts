@@ -1,5 +1,5 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { CastExpression, CastTypeRef } from "core/cast.ts";
+import type { CastTypeRef } from "core/cast.ts";
 import type { Token, TokenKind } from "core/token.ts";
 import { parsePrimaryWith, type PrimaryExpressionParser } from "parser/primary_expressions.ts";
 

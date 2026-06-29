@@ -5,6 +5,7 @@ import { parse, parseCast } from "parser";
 import { typeName } from "core/type_ref.ts";
 
 type Str = string;
+type i32 = number;
 
 Deno.test("parses extern functions", () => {
   const program = parse(
@@ -18,10 +19,13 @@ Deno.test("parses extern functions", () => {
 Deno.test("rejects invalid declaration modifiers", () => {
   assertParseError(`export import { add } from "./math.tc";`, "Imports cannot be exported");
   assertParseError(`extern type Vec2 = { x: f32; };`, "Type aliases cannot be extern");
-  assertParseError(
-    `export extern function add(a: i32, b: i32): i32;`,
-    "Extern functions cannot be exported",
-  );
+});
+
+Deno.test("parses exported extern functions", () => {
+  const program = parse(lex(`export extern function add(a: i32, b: i32): i32;`));
+  const fn = program.functions[0];
+  if (!fn?.exported) throw new Error("Expected exported extern function");
+  if (!fn.external) throw new Error("Expected extern function");
 });
 
 Deno.test("parses imports", () => {
@@ -63,9 +67,8 @@ Deno.test("parses class declarations", () => {
     lex(`class Vec2 { x: f64; y: f64; lengthSquared(): f64 { return this.x; } }
 function main(): i32 { const v: Vec2 = { x: 1.0, y: 2.0 }; return 0; }`),
   );
-  if (program.typeAliases.length !== 2) throw new Error("Expected class and vtable type aliases");
+  if (program.typeAliases.length !== 1) throw new Error("Expected class type alias");
   if (program.typeAliases[0].name !== "Vec2") throw new Error("Expected class type name");
-  if (program.typeAliases[1].name !== "Vec2VTable") throw new Error("Expected vtable type name");
   if (program.functions.length !== 2) throw new Error("Expected method and main functions");
   const method = program.functions.find((fn) => fn.name === "Vec2.lengthSquared");
   if (!method) throw new Error("Expected method");
@@ -316,6 +319,20 @@ Deno.test("parses if else statements", () => {
   if (!statement.elseBody) throw new Error("Expected else body");
 });
 
+Deno.test("recovers after malformed declarations", () => {
+  assertParseErrorCount(
+    `function bad(: i32 { return 1; } function alsoBad(: i32 { return 2; }`,
+    2,
+  );
+});
+
+Deno.test("recovers after malformed block statements", () => {
+  assertParseErrorCount(
+    `function main(): i32 { const x: = 1; let y: i32 = ; return 0; }`,
+    2,
+  );
+});
+
 function assertParseError(source: Str, message: Str): void {
   try {
     parse(lex(source));
@@ -326,6 +343,18 @@ function assertParseError(source: Str, message: Str): void {
     ) return;
   }
   throw new Error(`Expected parser error: ${message}`);
+}
+
+function assertParseErrorCount(source: Str, expected: i32): void {
+  try {
+    parse(lex(source));
+  } catch (error) {
+    if (error instanceof TypeCError && error.diagnostics.length === expected) return;
+    if (error instanceof TypeCError) {
+      throw new Error(`Expected ${expected} parser diagnostics, got ${error.diagnostics.length}`);
+    }
+  }
+  throw new Error(`Expected ${expected} parser diagnostics`);
 }
 
 function requireBody(body: BlockStmt | null): BlockStmt {

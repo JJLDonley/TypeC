@@ -43,6 +43,14 @@ export const keywords = new Set([
   "implements",
   "import",
   "export",
+  "public",
+  "private",
+  "protected",
+  "readonly",
+  "static",
+  "satisfies",
+  "namespace",
+  "default",
 ]);
 
 export const primitiveTypes = new Set([

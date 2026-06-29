@@ -10,6 +10,7 @@ import {
 import { checkDeclarations } from "checker/declarations.ts";
 import { checkEnums } from "checker/enums.ts";
 import { checkInterfaces } from "checker/interfaces.ts";
+import { taggedUnionTagConstants } from "core/tagged_union_constants.ts";
 import { runtimeFunctions } from "checker/overloads.ts";
 
 type Str = string;
@@ -26,6 +27,9 @@ export function collectProgramDeclarations(program: ResolvedProgram): CheckedDec
   const enums = checkEnums(program.enums ?? [], declarations.constants);
   const constants = new Map<Str, ConstDecl>(declarations.constants);
   for (const constant of enums.constants) constants.set(constant.name, constant);
+  for (const constant of taggedUnionTagConstants(program.taggedUnions ?? [])) {
+    constants.set(constant.name, constant);
+  }
   return {
     functions: declarations.functions,
     constants,

@@ -1,4 +1,5 @@
 import type { Expression } from "core/ast.ts";
+import { CONDITIONAL_BRANCH_TYPE, CONDITIONAL_CONDITION_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { isAssignable } from "checker/types.ts";
@@ -34,7 +35,11 @@ export function checkConditionalExpression(
 
 function conditionDiagnostics(expr: ConditionalExpr, type: TypeName): Diagnostic[] {
   if (type === "bool") return [];
-  return [{ message: "Conditional expression condition must be bool", span: expr.condition.span }];
+  return [{
+    message: "Conditional expression condition must be bool",
+    code: CONDITIONAL_CONDITION_TYPE,
+    span: expr.condition.span,
+  }];
 }
 
 function branchDiagnostic(
@@ -44,6 +49,7 @@ function branchDiagnostic(
 ): Diagnostic {
   return {
     message: `Conditional branches have incompatible types '${trueType}' and '${falseType}'`,
+    code: CONDITIONAL_BRANCH_TYPE,
     span: expr.span,
   };
 }

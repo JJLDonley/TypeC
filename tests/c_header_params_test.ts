@@ -41,7 +41,10 @@ function assertParamError(value: unknown, message: Str): void {
   try {
     readHeaderParams(value);
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics[0]?.message === message) return;
+    if (
+      error instanceof TypeCError && error.diagnostics[0]?.message === message &&
+      error.diagnostics[0]?.code === "E2805"
+    ) return;
     throw error;
   }
   throw new Error(`Expected ${message}`);

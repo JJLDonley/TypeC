@@ -1,0 +1,11 @@
+export function slice_len_identity(length: usize): usize {
+  return length;
+}
+
+export function slice_is_empty_length(length: usize): bool {
+  return length == 0;
+}
+
+export function slice_first_i32(data: i32*): i32 {
+  return data.*;
+}

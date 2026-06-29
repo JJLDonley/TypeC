@@ -1,3 +1,15 @@
+import {
+  BINARY_OPERAND_MISMATCH,
+  BITWISE_OPERANDS,
+  DIVIDE_BY_ZERO,
+  LOGICAL_OPERANDS,
+  NUMERIC_OPERANDS,
+  REMAINDER_OPERANDS,
+  SHIFT_COUNT_BOUNDS,
+  SHIFT_COUNT_UNSIGNED,
+  SHIFT_LEFT_INTEGER,
+  UNSIGNED_SHIFT_LEFT,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -43,6 +55,7 @@ export function checkBinaryOperation(
   if (operands.left !== operands.right) {
     diagnostics.push({
       message: `Cannot apply '${expr.operator}' to '${operands.left}' and '${operands.right}'`,
+      code: BINARY_OPERAND_MISMATCH,
       span: expr.span,
     });
     return { type: "<error>", diagnostics };
@@ -72,6 +85,7 @@ function checkLogicalOperation(
     type: "<error>",
     diagnostics: [{
       message: `Operator '${expr.operator}' requires bool operands`,
+      code: LOGICAL_OPERANDS,
       span: expr.span,
     }],
   };
@@ -85,18 +99,21 @@ function checkShiftOperation(
   if (!isIntegerType(operands.left)) {
     diagnostics.push({
       message: `Operator '${expr.operator}' requires an integer left operand`,
+      code: SHIFT_LEFT_INTEGER,
       span: expr.span,
     });
   }
   if (!isUnsignedIntegerType(operands.right)) {
     diagnostics.push({
       message: `Operator '${expr.operator}' requires an unsigned integer shift count`,
+      code: SHIFT_COUNT_UNSIGNED,
       span: expr.span,
     });
   }
   if (expr.operator === ">>>" && !isUnsignedIntegerType(operands.left)) {
     diagnostics.push({
       message: "Operator '>>>' requires an unsigned integer left operand",
+      code: UNSIGNED_SHIFT_LEFT,
       span: expr.span,
     });
   }
@@ -109,7 +126,11 @@ function shiftCountDiagnostics(expr: BinaryExpr, leftType: TypeName): Diagnostic
   const width = integerBitWidth(leftType);
   if (width === null) return [];
   if (expr.right.value < BigInt(width)) return [];
-  return [{ message: `Shift count must be less than ${width}`, span: expr.right.span }];
+  return [{
+    message: `Shift count must be less than ${width}`,
+    code: SHIFT_COUNT_BOUNDS,
+    span: expr.right.span,
+  }];
 }
 
 function binaryOperandDiagnostics(expr: BinaryExpr, type: TypeName): Diagnostic[] {
@@ -119,7 +140,11 @@ function binaryOperandDiagnostics(expr: BinaryExpr, type: TypeName): Diagnostic[
 
 function bitwiseOperandDiagnostics(expr: BinaryExpr, type: TypeName): Diagnostic[] {
   if (isIntegerType(type)) return [];
-  return [{ message: `Operator '${expr.operator}' requires integer operands`, span: expr.span }];
+  return [{
+    message: `Operator '${expr.operator}' requires integer operands`,
+    code: BITWISE_OPERANDS,
+    span: expr.span,
+  }];
 }
 
 function numericOperandDiagnostics(expr: BinaryExpr, type: TypeName): Diagnostic[] {
@@ -127,15 +152,21 @@ function numericOperandDiagnostics(expr: BinaryExpr, type: TypeName): Diagnostic
   if (!isNumericType(type)) {
     diagnostics.push({
       message: `Operator '${expr.operator}' requires numeric operands`,
+      code: NUMERIC_OPERANDS,
       span: expr.span,
     });
   }
   if (expr.operator === "%" && !isIntegerType(type)) {
-    diagnostics.push({ message: "Operator '%' requires integer operands", span: expr.span });
+    diagnostics.push({
+      message: "Operator '%' requires integer operands",
+      code: REMAINDER_OPERANDS,
+      span: expr.span,
+    });
   }
   if (isIntegerDivideByZero(expr, type)) {
     diagnostics.push({
       message: `Operator '${expr.operator}' cannot divide by zero`,
+      code: DIVIDE_BY_ZERO,
       span: expr.span,
     });
   }

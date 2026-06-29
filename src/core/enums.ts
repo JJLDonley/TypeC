@@ -12,6 +12,10 @@ export function enumMemberCName(enumName: Str, memberName: Str): Str {
   return `${enumName}_${memberName}`;
 }
 
+export function enumBackingType(enumDecl: EnumDecl): TypeRef {
+  return enumDecl.backingType ?? { kind: "NamedTypeRef", name: "i32", span: enumDecl.span };
+}
+
 export function enumMemberType(enumName: Str, span: TypeRef["span"]): TypeRef {
   return { kind: "NamedTypeRef", name: enumName, span };
 }

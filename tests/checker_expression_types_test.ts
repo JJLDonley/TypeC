@@ -47,6 +47,7 @@ function handlers(): ExpressionTypeHandlers {
     conditional: resolveI64,
     nullish: resolveI64,
     cast: resolveI64,
+    satisfies: resolveI64,
     call: resolveI64,
     newExpr: resolveI64,
     methodCall: resolveI64,

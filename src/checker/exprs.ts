@@ -45,6 +45,7 @@ export function isAddressable(expr: Expression): b8 {
     case "ConditionalExpr":
     case "NullishCoalesceExpr":
     case "CastExpr":
+    case "SatisfiesExpr":
     case "NonNullAssertExpr":
     case "CallExpr":
     case "NewExpr":

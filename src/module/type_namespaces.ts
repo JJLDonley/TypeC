@@ -147,6 +147,11 @@ function namespaceTypeRef(type: TypeRef, namespace: Str, aliases: Set<Str>): Typ
         sourceType: namespaceTypeRef(type.sourceType, namespace, aliases),
         valueType: namespaceTypeRef(type.valueType, namespace, aliases),
       };
+    case "LiteralTypeRef":
+    case "TypeofTypeRef":
+      return type;
+    case "KeyofTypeRef":
+      return { ...type, target: namespaceTypeRef(type.target, namespace, aliases) };
     case "RecordTypeRef":
       return {
         ...type,

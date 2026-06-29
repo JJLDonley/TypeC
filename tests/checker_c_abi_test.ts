@@ -30,6 +30,23 @@ Deno.test("classifies record alias C ABI types", () => {
   assertSame(isCAbiType(record([["inner", named("Pair")]]), aliases), true);
 });
 
+Deno.test("accepts repeated record alias fields as C ABI types", () => {
+  const aliases = new Map<Str, TypeRef>([
+    ["Vector2", record([["x", named("f32")], ["y", named("f32")]])],
+    [
+      "Camera2D",
+      record([
+        ["offset", named("Vector2")],
+        ["target", named("Vector2")],
+        ["rotation", named("f32")],
+        ["zoom", named("f32")],
+      ]),
+    ],
+  ]);
+
+  assertSame(isCAbiType(named("Camera2D"), aliases), true);
+});
+
 Deno.test("rejects recursive C ABI aliases", () => {
   const aliases = new Map<Str, TypeRef>([
     ["Node", record([["next", named("Node")]])],

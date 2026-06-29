@@ -1,3 +1,4 @@
+import { IMPORT_CYCLE } from "core/diagnostic_codes.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { generateExternsFromHeader } from "c/header/generator.ts";
 import type { Program } from "core/ast.ts";
@@ -41,7 +42,10 @@ async function loadModule(path: Str, state: LoadState): Promise<Program> {
   const loaded = state.loaded.get(canonicalPath);
   if (loaded) return loaded;
   if (state.loading.has(canonicalPath)) {
-    throw new TypeCError([{ message: `Import cycle involving '${canonicalPath}'` }]);
+    throw new TypeCError([{
+      message: `Import cycle involving '${canonicalPath}'`,
+      code: IMPORT_CYCLE,
+    }]);
   }
 
   state.loading.add(canonicalPath);

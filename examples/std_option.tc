@@ -1,0 +1,10 @@
+import { OptionI32, option_is_some_i32, option_none_i32, option_some_i32, option_unwrap_or_i32 } from "std/option.tc";
+
+function main(): i32 {
+  const present: OptionI32 = option_some_i32(4);
+  const empty: OptionI32 = option_none_i32();
+  if (!option_is_some_i32(present)) {
+    return 1;
+  }
+  return option_unwrap_or_i32(present, 0) + option_unwrap_or_i32(empty, 6);
+}

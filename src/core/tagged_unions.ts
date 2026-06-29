@@ -29,3 +29,10 @@ export function taggedUnionCName(unionDecl: TaggedUnionDecl): Str {
 export function taggedUnionVariantCName(variant: TaggedUnionVariant): Str {
   return variant.cName ?? variant.name;
 }
+
+export function taggedUnionTagConstantName(
+  unionDecl: TaggedUnionDecl,
+  variant: TaggedUnionVariant,
+): Str {
+  return `${taggedUnionCName(unionDecl)}_${taggedUnionVariantCName(variant)}_TAG`;
+}

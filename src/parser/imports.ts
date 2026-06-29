@@ -13,14 +13,18 @@ export interface ImportNameParser {
   error(token: Token, message: Str): void;
 }
 
-export function parseImportNamesWith(parser: ImportNameParser): CastImportSpecifier[] {
+export function parseImportNamesWith(
+  parser: ImportNameParser,
+  typeOnly: b8 = false,
+  reExport: b8 = false,
+): CastImportSpecifier[] {
   const names: CastImportSpecifier[] = [];
   const seen = new Set<Str>();
   if (parser.checkText("}")) {
     parser.error(parser.peek(), "Import must name at least one symbol");
     return names;
   }
-  do parseImportName(parser, names, seen); while (parser.matchText(","));
+  do parseImportName(parser, names, seen, typeOnly, reExport); while (parser.matchText(","));
   return names;
 }
 
@@ -28,6 +32,8 @@ function parseImportName(
   parser: ImportNameParser,
   names: CastImportSpecifier[],
   seen: Set<Str>,
+  typeOnly: b8,
+  reExport: b8,
 ): void {
   const imported = parser.expectKind("identifier", "Expected imported name");
   const local = parser.matchText("as")
@@ -38,6 +44,8 @@ function parseImportName(
   names.push({
     imported: imported.text,
     local: local.text,
+    typeOnly,
+    reExport,
     span: span(imported.span.start, local.span.end),
   });
 }

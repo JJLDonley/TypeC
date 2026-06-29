@@ -1,3 +1,4 @@
+import { UNKNOWN_FUNCTION } from "core/diagnostic_codes.ts";
 import type { Expression, FunctionDecl } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -29,5 +30,8 @@ export function checkCallExpression(
 }
 
 function unknownFunction(name: Str, span: Diagnostic["span"]): CallExpressionCheck {
-  return { diagnostics: [{ message: `Unknown function '${name}'`, span }], type: "<error>" };
+  return {
+    diagnostics: [{ message: `Unknown function '${name}'`, code: UNKNOWN_FUNCTION, span }],
+    type: "<error>",
+  };
 }

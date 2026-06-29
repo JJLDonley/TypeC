@@ -1,25 +1,46 @@
+import {
+  ARRAY_DESTRUCTURE_ARITY,
+  ARRAY_DESTRUCTURE_SOURCE,
+  ARROW_FUNCTION_ARITY,
+  ARROW_FUNCTION_CONTEXT,
+  BORROWED_INTERFACE_UNKNOWN_METHOD,
+  BREAK_OUTSIDE_SWITCH,
+  CAST_NUMERIC_TYPES,
+  CONTINUE_OUTSIDE_LOOP,
+  DEFER_CALL_REQUIRED,
+  METHOD_ACCESS_RESTRICTED,
+  OVERLOAD_AMBIGUOUS,
+  OVERLOAD_NO_MATCH,
+  RECORD_REST_SOURCE,
+  RECORD_REST_UNKNOWN_FIELD,
+  SATISFIES_TYPE,
+  STATIC_METHOD_INSTANCE_CALL,
+  UNION_NARROWING_MISMATCH,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type { ConstDecl, Expression, FunctionDecl, Param, Statement, TypeRef } from "core/ast.ts";
 import { arrowFunctionName } from "core/arrow_functions.ts";
-import { classConstructorName, classMethodName } from "core/classes.ts";
+import { classConstructorName, classMethodName, methodParts } from "core/classes.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import type { TypedProgram, TypeName } from "core/tast.ts";
 import { checkArenaCall, checkExpectedArenaCall } from "checker/arenas.ts";
 import { checkArrowFunctionCaptures } from "checker/arrow_function_captures.ts";
+import { checkArraySliceHelper } from "checker/array_slice_helpers.ts";
 import { assignmentTargetInfo } from "checker/assignment_targets.ts";
 import { checkAssignment as collectAssignmentDiagnostics } from "checker/assignments.ts";
 import { checkBinaryExpression } from "checker/binary_expressions.ts";
+import {
+  borrowedInterfaceName,
+  checkBorrowedInterfaceConversion,
+} from "checker/borrowed_interfaces.ts";
 import { checkExpectedCallbackExpression } from "checker/callback_expressions.ts";
 import { checkCallExpression } from "checker/call_expressions.ts";
+import { checkFunctionValueCall } from "checker/function_value_calls.ts";
 import { checkConditionalExpression } from "checker/conditional_expressions.ts";
-import {
-  checkDoWhileStatement,
-  checkIfStatement,
-  checkWhileStatement,
-} from "checker/control_flow.ts";
-import { checkWhileCondition } from "checker/conditions.ts";
+import { checkDoWhileStatement, checkWhileStatement } from "checker/control_flow.ts";
+import { checkIfCondition, checkWhileCondition } from "checker/conditions.ts";
 import { checkConstantValue } from "checker/constants.ts";
 import { spanKey } from "checker/exprs.ts";
 import { isEnumTypeName } from "checker/enums.ts";
@@ -40,6 +61,7 @@ import { checkIndexExpression } from "checker/index_expressions.ts";
 import { checkIncDec as collectIncDecDiagnostics } from "checker/inc_dec.ts";
 import { checkLocalDeclaration } from "checker/local_declarations.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
+import { readonlyAssignmentDiagnostics } from "checker/readonly_diagnostics.ts";
 import { createFunctionLocals, type LocalInfo } from "checker/locals.ts";
 import { checkNonNullAssertExpression } from "checker/non_null_assertions.ts";
 import { checkNullishCoalesceExpression } from "checker/nullish_coalescing.ts";
@@ -56,6 +78,7 @@ import { collectProgramDeclarations } from "checker/program_declarations.ts";
 import { checkReturnStatement as collectReturnStatementDiagnostics } from "checker/return_statements.ts";
 import { checkUnaryExpression } from "checker/unary_expressions.ts";
 import { checkMissingFunctionReturn as collectMissingFunctionReturnDiagnostics } from "checker/returns.ts";
+import { unreachableStatementDiagnostics } from "checker/unreachable.ts";
 import { checkStatementDispatch } from "checker/statements.ts";
 import {
   checkTaggedUnionConstructor,
@@ -68,7 +91,7 @@ import {
   parseFunctionTypeName,
   parseTupleTypeName,
 } from "checker/type_name_shapes.ts";
-import { isNumericType } from "checker/types.ts";
+import { isAssignable, isNumericType } from "checker/types.ts";
 import { checkTypeRef } from "checker/type_validation.ts";
 import { typeName } from "core/type_ref.ts";
 import { typeRefFromTypeName } from "checker/type_name_type_refs.ts";
@@ -89,6 +112,7 @@ export * from "checker/assignments.ts";
 export * from "checker/basic_expressions.ts";
 export * from "checker/binary_expressions.ts";
 export * from "checker/binary_operations.ts";
+export * from "checker/borrowed_interfaces.ts";
 export * from "checker/c_abi.ts";
 export * from "checker/c_abi_diagnostics.ts";
 export * from "checker/c_abi_shapes.ts";
@@ -156,6 +180,14 @@ export function check(program: ResolvedProgram): CheckedProgram {
   return checker.check();
 }
 
+function functionClassName(name: Str): Str | null {
+  const method = methodParts(name);
+  if (method) return method.className;
+  const constructorSuffix = ".constructor";
+  if (!name.endsWith(constructorSuffix)) return null;
+  return name.slice(0, name.length - constructorSuffix.length);
+}
+
 class Checker {
   private diagnostics: Diagnostic[] = [];
   private functions = new Map<Str, FunctionDecl>();
@@ -164,6 +196,8 @@ class Checker {
   private typeAliases = new Map<Str, TypeRef>();
   private expressionTypes = new Map<Str, { type: TypeName }>();
   private arrowFunctions: FunctionDecl[] = [];
+  private currentClass: Str | null = null;
+  private taggedUnionNarrowings = new Map<Str, Str>();
 
   constructor(private program: ResolvedProgram) {}
 
@@ -224,9 +258,10 @@ class Checker {
       ),
     );
     if (!fn.body) return;
-    for (const stmt of fn.body.statements) {
-      this.checkStatement(stmt, locals, returnType, false, false);
-    }
+    const previousClass = this.currentClass;
+    this.currentClass = functionClassName(fn.name);
+    this.diagnostics.push(...this.checkBlock(fn.body.statements, locals, returnType, false, false));
+    this.currentClass = previousClass;
     this.diagnostics.push(...collectMissingFunctionReturnDiagnostics(fn, returnType));
   }
 
@@ -269,7 +304,11 @@ class Checker {
 
   private checkDefer(expr: Expression, locals: Map<Str, LocalInfo>, span: SourceSpan): void {
     if (expr.kind !== "CallExpr" && expr.kind !== "MethodCallExpr") {
-      this.diagnostics.push({ message: "Defer statement requires a call expression", span });
+      this.diagnostics.push({
+        message: "Defer statement requires a call expression",
+        code: DEFER_CALL_REQUIRED,
+        span,
+      });
       return;
     }
     this.typeOf(expr, locals);
@@ -298,12 +337,20 @@ class Checker {
 
   private checkBreak(span: SourceSpan, inSwitch: b8): void {
     if (inSwitch) return;
-    this.diagnostics.push({ message: "Break statement is only valid inside a switch", span });
+    this.diagnostics.push({
+      message: "Break statement is only valid inside a switch",
+      code: BREAK_OUTSIDE_SWITCH,
+      span,
+    });
   }
 
   private checkContinue(span: SourceSpan, inLoop: b8): void {
     if (inLoop) return;
-    this.diagnostics.push({ message: "Continue statement is only valid inside a loop", span });
+    this.diagnostics.push({
+      message: "Continue statement is only valid inside a loop",
+      code: CONTINUE_OUTSIDE_LOOP,
+      span,
+    });
   }
 
   private checkVarDecl(
@@ -314,6 +361,7 @@ class Checker {
       stmt,
       this.typeAliases,
       (expr, expected) => this.typeOfExpected(expr, locals, expected),
+      new Set((this.program.interfaces ?? []).map((interfaceDecl) => interfaceDecl.name)),
     );
     this.diagnostics.push(...result.diagnostics);
     if (stmt.type === null) {
@@ -336,6 +384,11 @@ class Checker {
         ),
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
       ),
+      ...readonlyAssignmentDiagnostics(
+        stmt.target,
+        this.typeAliases,
+        (expr) => this.typeOf(expr, locals),
+      ),
     );
   }
 
@@ -352,6 +405,11 @@ class Checker {
           (expr) => this.typeOf(expr, locals),
         ),
       ),
+      ...readonlyAssignmentDiagnostics(
+        stmt.target,
+        this.typeAliases,
+        (expr) => this.typeOf(expr, locals),
+      ),
     );
   }
 
@@ -367,8 +425,11 @@ class Checker {
         this.constants,
         (expr) => this.typeOf(expr, locals),
         (expr, expected) => this.typeOfExpected(expr, locals, expected),
-        (children) => this.checkBlock(children, locals, returnType, true, inLoop),
+        (children, narrowing) =>
+          this.checkNarrowedBlock(children, locals, returnType, true, inLoop, narrowing),
         (type) => isEnumTypeName(type, this.program.enums ?? []),
+        this.program.enums ?? [],
+        this.program.taggedUnions ?? [],
       ),
     );
   }
@@ -442,6 +503,7 @@ class Checker {
     if (record === null) {
       this.diagnostics.push({
         message: `Record rest source must be a record type, got '${sourceType}'`,
+        code: RECORD_REST_SOURCE,
         span: stmt.span,
       });
       return;
@@ -451,6 +513,7 @@ class Checker {
       if (field === null) {
         this.diagnostics.push({
           message: `Unknown field '${name}' on type '${sourceType}'`,
+          code: RECORD_REST_UNKNOWN_FIELD,
           span: stmt.span,
         });
         continue;
@@ -482,6 +545,7 @@ class Checker {
     this.diagnostics.push({
       message:
         `Array destructuring source must be a tuple or fixed array type, got '${sourceType}'`,
+      code: ARRAY_DESTRUCTURE_SOURCE,
       span: stmt.span,
     });
   }
@@ -495,6 +559,7 @@ class Checker {
       this.diagnostics.push({
         message:
           `Array destructuring expects at most ${elements.length} binding(s), got ${stmt.names.length}`,
+        code: ARRAY_DESTRUCTURE_ARITY,
         span: stmt.span,
       });
     }
@@ -513,6 +578,7 @@ class Checker {
       this.diagnostics.push({
         message:
           `Array destructuring expects at most ${length} binding(s), got ${stmt.names.length}`,
+        code: ARRAY_DESTRUCTURE_ARITY,
         span: stmt.span,
       });
     }
@@ -553,14 +619,72 @@ class Checker {
     inSwitch: b8,
     inLoop: b8,
   ): void {
+    const condition = this.typeOf(stmt.condition, locals);
+    this.diagnostics.push(...checkIfCondition(condition, stmt.condition.span));
+    const narrowing = this.taggedUnionNarrowing(stmt.condition, locals);
     this.diagnostics.push(
-      ...checkIfStatement(
-        stmt,
+      ...this.checkNarrowedBlock(
+        stmt.thenBody.statements,
         locals,
-        (expr) => this.typeOf(expr, locals),
-        (children, parent) => this.checkBlock(children, parent, returnType, inSwitch, inLoop),
+        returnType,
+        inSwitch,
+        inLoop,
+        narrowing,
       ),
     );
+    if (stmt.elseBody) {
+      this.diagnostics.push(
+        ...this.checkBlock(stmt.elseBody.statements, locals, returnType, inSwitch, inLoop),
+      );
+    }
+  }
+
+  private taggedUnionNarrowing(
+    expr: Expression,
+    locals: Map<Str, LocalInfo>,
+  ): [Str, Str] | null {
+    if (expr.kind !== "BinaryExpr" || expr.operator !== "==") return null;
+    return this.taggedUnionNarrowingPair(expr.left, expr.right, locals) ??
+      this.taggedUnionNarrowingPair(expr.right, expr.left, locals);
+  }
+
+  private taggedUnionNarrowingPair(
+    tagExpr: Expression,
+    variantExpr: Expression,
+    locals: Map<Str, LocalInfo>,
+  ): [Str, Str] | null {
+    if (tagExpr.kind !== "FieldAccessExpr" || tagExpr.field !== "tag") return null;
+    if (tagExpr.operand.kind !== "IdentifierExpr") return null;
+    const localType = locals.get(tagExpr.operand.name)?.type ?? null;
+    const variantName = qualifiedExpressionName(variantExpr);
+    if (localType === null || variantName === null) return null;
+    const unionDecl =
+      this.program.taggedUnions?.find((candidate) => candidate.name === localType) ?? null;
+    if (unionDecl === null) return null;
+    const prefix = `${unionDecl.name}.`;
+    if (!variantName.startsWith(prefix)) return null;
+    const variant = variantName.slice(prefix.length);
+    if (!unionDecl.variants.some((candidate) => candidate.name === variant)) return null;
+    return [tagExpr.operand.name, variant];
+  }
+
+  private checkNarrowedBlock(
+    statements: Statement[],
+    locals: Map<Str, LocalInfo>,
+    returnType: TypeName,
+    inSwitch: b8,
+    inLoop: b8,
+    narrowing: [Str, Str] | null,
+  ): Diagnostic[] {
+    if (narrowing === null) {
+      return this.checkBlock(statements, locals, returnType, inSwitch, inLoop);
+    }
+    const previous = this.taggedUnionNarrowings.get(narrowing[0]) ?? null;
+    this.taggedUnionNarrowings.set(narrowing[0], narrowing[1]);
+    const diagnostics = this.checkBlock(statements, locals, returnType, inSwitch, inLoop);
+    if (previous === null) this.taggedUnionNarrowings.delete(narrowing[0]);
+    else this.taggedUnionNarrowings.set(narrowing[0], previous);
+    return diagnostics;
   }
 
   private checkBlock(
@@ -571,6 +695,7 @@ class Checker {
     inLoop: b8,
   ): Diagnostic[] {
     const before = this.diagnostics.length;
+    this.diagnostics.push(...unreachableStatementDiagnostics(statements));
     const locals = new Map<Str, LocalInfo>(parentLocals);
     for (const child of statements) {
       this.checkStatement(child, locals, returnType, inSwitch, inLoop);
@@ -625,10 +750,22 @@ class Checker {
       (value, target) => this.typeOfExpected(value, locals, target),
       (value) => this.typeOf(value, locals),
     );
-    if (!result.handled) return this.typeOf(expr, locals);
-    this.diagnostics.push(...result.diagnostics);
-    this.expressionTypes.set(spanKey(expr.span), { type: result.type });
-    return result.type;
+    if (result.handled) {
+      this.diagnostics.push(...result.diagnostics);
+      this.expressionTypes.set(spanKey(expr.span), { type: result.type });
+      return result.type;
+    }
+    const actual = this.typeOf(expr, locals);
+    const borrowed = checkBorrowedInterfaceConversion(
+      expr,
+      actual,
+      expected,
+      this.program.interfaces ?? [],
+      this.functions,
+    );
+    if (!borrowed.handled) return actual;
+    this.diagnostics.push(...borrowed.diagnostics);
+    return borrowed.type;
   }
 
   private arrowFunctionType(
@@ -641,6 +778,7 @@ class Checker {
     if (expectedFunction === null) {
       this.diagnostics.push({
         message: "Arrow functions require an expected function type",
+        code: ARROW_FUNCTION_CONTEXT,
         span: expr.span,
       });
       return "<error>";
@@ -649,6 +787,7 @@ class Checker {
       this.diagnostics.push({
         message:
           `Arrow function expects ${expectedFunction.params.length} parameter(s), got ${expr.params.length}`,
+        code: ARROW_FUNCTION_ARITY,
         span: expr.span,
       });
       return expected;
@@ -716,6 +855,7 @@ class Checker {
       conditional: (value) => this.conditionalType(value, locals),
       nullish: (value) => this.nullishType(value, locals),
       cast: (value) => this.castType(value, locals),
+      satisfies: (value) => this.satisfiesType(value, locals),
       call: (value) => this.callType(value, locals),
       newExpr: (value) => this.newType(value, locals),
       methodCall: (value) => this.methodCallType(value, locals),
@@ -736,6 +876,7 @@ class Checker {
   ): TypeName {
     this.diagnostics.push({
       message: "Arrow functions require an expected function type",
+      code: ARROW_FUNCTION_CONTEXT,
       span: expr.span,
     });
     return "<error>";
@@ -812,6 +953,7 @@ class Checker {
     if (!isNumericType(actual) || !isNumericType(target)) {
       this.diagnostics.push({
         message: `Cannot cast '${actual}' to '${target}'`,
+        code: CAST_NUMERIC_TYPES,
         span: expr.span,
       });
       return "<error>";
@@ -819,15 +961,28 @@ class Checker {
     return target;
   }
 
+  private satisfiesType(
+    expr: Extract<Expression, { kind: "SatisfiesExpr" }>,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName {
+    const expected = typeName(expr.type);
+    this.diagnostics.push(...checkTypeRef(expr.type, this.typeAliases));
+    const actual = this.typeOfExpected(expr.expression, locals, expected);
+    if (actual !== "<error>" && !isAssignable(actual, expected)) {
+      this.diagnostics.push({
+        message: `Type '${actual}' does not satisfy '${expected}'`,
+        code: SATISFIES_TYPE,
+        span: expr.span,
+      });
+    }
+    return actual;
+  }
+
   private callType(
     expr: Extract<Expression, { kind: "CallExpr" }>,
     locals: Map<Str, LocalInfo>,
   ): TypeName {
-    const arena = checkArenaCall(
-      expr,
-      (arg) => this.typeOf(arg, locals),
-      (arg, expected) => this.typeOfExpected(arg, locals, expected),
-    );
+    const arena = checkArenaCall(expr, (arg) => this.typeOf(arg, locals));
     if (arena.handled) {
       this.diagnostics.push(...arena.diagnostics);
       return arena.type;
@@ -840,6 +995,17 @@ class Checker {
     if (optional.handled) {
       this.diagnostics.push(...optional.diagnostics);
       return optional.type;
+    }
+    const localCall = checkFunctionValueCall(
+      expr.callee,
+      locals.get(expr.callee)?.type ?? null,
+      expr.args,
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      expr.span,
+    );
+    if (localCall.handled) {
+      this.diagnostics.push(...localCall.diagnostics);
+      return localCall.type;
     }
     const overloaded = this.overloadedCallType(expr, locals);
     if (overloaded !== null) return overloaded;
@@ -866,6 +1032,7 @@ class Checker {
       message: matches.length === 0
         ? `No overload of '${expr.callee}' matches argument types (${argTypes.join(", ")})`
         : `Call to overloaded function '${expr.callee}' is ambiguous`,
+      code: matches.length === 0 ? OVERLOAD_NO_MATCH : OVERLOAD_AMBIGUOUS,
       span: expr.span,
     });
     return "<error>";
@@ -902,8 +1069,28 @@ class Checker {
     const namespaceCall = this.namespaceCallType(expr, locals);
     if (namespaceCall !== null) return namespaceCall;
     const receiverType = this.typeOf(expr.receiver, locals);
+    const arraySliceHelper = checkArraySliceHelper(
+      expr,
+      receiverType,
+      (arg) => this.typeOf(arg, locals),
+    );
+    if (arraySliceHelper !== null) {
+      this.diagnostics.push(...arraySliceHelper.diagnostics);
+      return arraySliceHelper.type;
+    }
+    const borrowedInterfaceCall = this.borrowedInterfaceMethodCallType(expr, receiverType, locals);
+    if (borrowedInterfaceCall !== null) return borrowedInterfaceCall;
     const methodName = classMethodName(receiverType, expr.method);
     const fn = this.functions.get(methodName);
+    this.diagnostics.push(...this.methodAccessDiagnostics(fn, receiverType, expr));
+    if (fn?.classStatic) {
+      this.diagnostics.push({
+        message: `Static method '${expr.method}' requires class access`,
+        code: STATIC_METHOD_INSTANCE_CALL,
+        span: expr.span,
+      });
+      return "<error>";
+    }
     const callable = fn ? { ...fn, params: fn.params.slice(1) } : undefined;
     const result = checkCallExpression(
       {
@@ -918,6 +1105,64 @@ class Checker {
     );
     this.diagnostics.push(...result.diagnostics);
     return result.type;
+  }
+
+  private borrowedInterfaceMethodCallType(
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+    receiverType: TypeName,
+    locals: Map<Str, LocalInfo>,
+  ): TypeName | null {
+    const interfaceName = borrowedInterfaceName(receiverType, this.program.interfaces ?? []);
+    if (interfaceName === null) return null;
+    const interfaceDecl =
+      this.program.interfaces?.find((candidate) => candidate.name === interfaceName) ?? null;
+    const method = interfaceDecl?.methods.find((candidate) => candidate.name === expr.method) ??
+      null;
+    if (method === null) {
+      this.diagnostics.push({
+        message: `Interface '${interfaceName}' has no method '${expr.method}'`,
+        code: BORROWED_INTERFACE_UNKNOWN_METHOD,
+        span: expr.span,
+      });
+      return "<error>";
+    }
+    const result = checkCallExpression(
+      {
+        kind: "CallExpr",
+        callee: `${interfaceName}.${expr.method}`,
+        args: expr.args,
+        span: expr.span,
+      },
+      {
+        kind: "FunctionDecl",
+        exported: false,
+        external: false,
+        name: `${interfaceName}.${expr.method}`,
+        params: method.params,
+        returnType: method.returnType,
+        body: null,
+        span: method.span,
+      },
+      (arg, expected) => this.typeOfExpected(arg, locals, expected),
+      (arg) => this.typeOf(arg, locals),
+    );
+    this.diagnostics.push(...result.diagnostics);
+    return result.type;
+  }
+
+  private methodAccessDiagnostics(
+    fn: FunctionDecl | undefined,
+    receiverType: TypeName,
+    expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  ): Diagnostic[] {
+    if (!fn) return [];
+    if ((fn.access ?? "public") === "public") return [];
+    if (this.currentClass === receiverType) return [];
+    return [{
+      message: `Method '${expr.method}' is ${fn.access}`,
+      code: METHOD_ACCESS_RESTRICTED,
+      span: expr.span,
+    }];
   }
 
   private namespaceCallType(
@@ -948,11 +1193,40 @@ class Checker {
     const unionAccess = checkTaggedUnionFieldAccess(expr, operand, this.program.taggedUnions ?? []);
     if (unionAccess.handled) {
       this.diagnostics.push(...unionAccess.diagnostics);
+      this.diagnostics.push(...this.taggedUnionNarrowingDiagnostics(expr));
       return unionAccess.type;
     }
-    const result = checkFieldAccessExpression(expr, operand, this.typeAliases);
+    const result = checkFieldAccessExpression(expr, operand, this.typeAliases, this.currentClass);
     this.diagnostics.push(...result.diagnostics);
     return result.type;
+  }
+
+  private taggedUnionNarrowingDiagnostics(
+    expr: Extract<Expression, { kind: "FieldAccessExpr" }>,
+  ): Diagnostic[] {
+    if (expr.field === "tag") return [];
+    if (expr.operand.kind !== "IdentifierExpr") {
+      return [{
+        message: `Union payload access '${expr.field}' requires tag narrowing`,
+        code: UNION_NARROWING_MISMATCH,
+        span: expr.span,
+      }];
+    }
+    const narrowedVariant = this.taggedUnionNarrowings.get(expr.operand.name) ?? null;
+    if (narrowedVariant === expr.field) return [];
+    if (narrowedVariant === null) {
+      return [{
+        message:
+          `Union value '${expr.operand.name}' payload '${expr.field}' requires tag narrowing`,
+        code: UNION_NARROWING_MISMATCH,
+        span: expr.span,
+      }];
+    }
+    return [{
+      message: `Union value '${expr.operand.name}' is narrowed to '${narrowedVariant}'`,
+      code: UNION_NARROWING_MISMATCH,
+      span: expr.span,
+    }];
   }
 
   private qualifiedConstant(

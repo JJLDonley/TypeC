@@ -85,11 +85,8 @@ Deno.test("checks void pointer C interop arguments", () => {
   );
 });
 
-Deno.test("rejects non-record type aliases", () => {
-  assertCheckError(
-    `type Count = i32; function main(): i32 { return 0; }`,
-    "Type alias 'Count' must name a record type",
-  );
+Deno.test("accepts scalar type aliases", () => {
+  check(resolve(parse(lex(`type Count = i32; function main(): i32 { return 0; }`))));
 });
 
 Deno.test("rejects record aliases that depend on undeclared aliases", () => {

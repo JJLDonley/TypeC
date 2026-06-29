@@ -1,4 +1,5 @@
 import type { TaggedUnionDecl, TaggedUnionVariant, TypeAliasDecl, TypeRef } from "core/ast.ts";
+import { isLiteralOnlyTypeRef } from "core/literal_types.ts";
 
 type Str = string;
 
@@ -9,13 +10,15 @@ export interface LoweredUnionAliases {
 
 export function lowerUnionTypeAliases(typeAliases: TypeAliasDecl[]): LoweredUnionAliases {
   return {
-    typeAliases: typeAliases.filter((alias) => alias.type.kind !== "UnionTypeRef"),
+    typeAliases: typeAliases.filter((alias) =>
+      alias.type.kind !== "UnionTypeRef" || isLiteralOnlyTypeRef(alias.type)
+    ),
     taggedUnions: typeAliases.flatMap(unionAliasTaggedUnion),
   };
 }
 
 function unionAliasTaggedUnion(alias: TypeAliasDecl): TaggedUnionDecl[] {
-  if (alias.type.kind !== "UnionTypeRef") return [];
+  if (alias.type.kind !== "UnionTypeRef" || isLiteralOnlyTypeRef(alias.type)) return [];
   return [{
     kind: "TaggedUnionDecl",
     exported: alias.exported,
@@ -41,8 +44,12 @@ function unionMemberName(member: TypeRef): Str {
   if (member.kind === "SafePointerTypeRef") return `${unionMemberName(member.element)}SafePtr`;
   if (member.kind === "SliceTypeRef") return `${unionMemberName(member.element)}Slice`;
   if (member.kind === "InferredArrayTypeRef") return `${unionMemberName(member.element)}Array`;
-  if (member.kind === "FixedArrayTypeRef") return `${unionMemberName(member.element)}Array${member.sizeText}`;
-  if (member.kind === "TupleTypeRef") return `Tuple${member.elements.map(unionMemberName).join("_")}`;
+  if (member.kind === "FixedArrayTypeRef") {
+    return `${unionMemberName(member.element)}Array${member.sizeText}`;
+  }
+  if (member.kind === "TupleTypeRef") {
+    return `Tuple${member.elements.map(unionMemberName).join("_")}`;
+  }
   if (member.kind === "FunctionTypeRef") return "Function";
   if (member.kind === "RecordTypeRef") return "Record";
   return "Union";

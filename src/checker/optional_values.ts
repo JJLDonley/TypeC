@@ -1,3 +1,8 @@
+import {
+  OPTIONAL_CONSTRUCTOR_ARITY,
+  OPTIONAL_CONSTRUCTOR_CONTEXT,
+  OPTIONAL_CONSTRUCTOR_VALUE_TYPE,
+} from "core/diagnostic_codes.ts";
 import type { Expression, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -28,7 +33,9 @@ export function checkOptionalConstructorCall(
   const diagnostics: Diagnostic[] = [];
   if (typeArg === null) {
     diagnostics.push({
-      message: `${expr.callee} requires exactly one type argument`,
+      message:
+        `${expr.callee} requires an expected optional type or exactly one explicit type argument`,
+      code: OPTIONAL_CONSTRUCTOR_CONTEXT,
       span: expr.span,
     });
   } else {
@@ -45,6 +52,7 @@ export function checkOptionalConstructorCall(
       if (!isAssignable(actual, expected)) {
         diagnostics.push({
           message: `Type '${actual}' is not assignable to '${expected}'`,
+          code: OPTIONAL_CONSTRUCTOR_VALUE_TYPE,
           span: expr.args[0].span,
         });
       }
@@ -70,6 +78,7 @@ function checkArity(
 ): Diagnostic[] {
   return expr.args.length === expected ? [] : [{
     message: `${expr.callee} expects ${expected} arguments, got ${expr.args.length}`,
+    code: OPTIONAL_CONSTRUCTOR_ARITY,
     span: expr.span,
   }];
 }

@@ -5,13 +5,14 @@ import { missingMainMessage } from "core/entrypoint.ts";
 type Str = string;
 type b8 = boolean;
 
-export async function watchFile(inputPath: Str): Promise<void> {
+export async function watchFile(inputPath: Str, buildDir?: Str): Promise<void> {
+  const outputDir = watchedBuildDir(buildDir);
   console.log(`Watching ${inputPath}`);
   const state = createWatchState();
-  await rebuild(inputPath, state);
+  await rebuild(inputPath, outputDir, state);
   const watcher = Deno.watchFs(inputPath);
   for await (const event of watcher) {
-    if (shouldRebuild(event.kind)) await rebuild(inputPath, state);
+    if (shouldRebuild(event.kind)) await rebuild(inputPath, outputDir, state);
   }
 }
 
@@ -23,11 +24,11 @@ function createWatchState(): WatchState {
   return { building: false };
 }
 
-async function rebuild(inputPath: Str, state: WatchState): Promise<void> {
+async function rebuild(inputPath: Str, buildDir: Str, state: WatchState): Promise<void> {
   if (state.building) return;
   state.building = true;
   try {
-    const result = await compileFile(inputPath);
+    const result = await compileFile(inputPath, buildDir);
     if (!shouldBuildWatchedResult(result.hasMain)) {
       console.error(missingMainMessage());
       return;
@@ -45,4 +46,8 @@ export function shouldRebuild(kind: Deno.FsEvent["kind"]): b8 {
 
 export function shouldBuildWatchedResult(hasMain: b8): b8 {
   return hasMain;
+}
+
+export function watchedBuildDir(buildDir: Str | undefined): Str {
+  return buildDir ?? "build";
 }

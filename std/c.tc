@@ -1,0 +1,11 @@
+export function c_int_zero(): c_int {
+  return 0;
+}
+
+export function c_uint_zero(): c_uint {
+  return 0 as c_uint;
+}
+
+export function c_size_zero(): usize {
+  return 0;
+}

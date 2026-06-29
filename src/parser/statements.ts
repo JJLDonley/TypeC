@@ -404,13 +404,22 @@ function parsePostfixIncDec(
 function assignmentTarget(
   parser: StatementParser,
   expression: CastExpression,
-): Extract<CastExpression, { kind: "IdentifierExpr" | "FieldAccessExpr" | "IndexExpr" }> {
+): Extract<
+  CastExpression,
+  { kind: "IdentifierExpr" | "FieldAccessExpr" | "IndexExpr" | "PostfixPointerExpr" }
+> {
   if (
     expression.kind === "IdentifierExpr" || expression.kind === "FieldAccessExpr" ||
-    expression.kind === "IndexExpr"
+    expression.kind === "IndexExpr" || isDereferenceExpression(expression)
   ) return expression;
   parser.error({ kind: "eof", text: "", span: expression.span }, "Invalid assignment target");
   return { kind: "IdentifierExpr", name: "<error>", span: expression.span };
+}
+
+function isDereferenceExpression(
+  expression: CastExpression,
+): expression is Extract<CastExpression, { kind: "PostfixPointerExpr" }> {
+  return expression.kind === "PostfixPointerExpr" && expression.operator === ".*";
 }
 
 function parseIncDecOperator(token: Token): CastIncDecOperator {

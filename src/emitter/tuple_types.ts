@@ -1,13 +1,44 @@
-import type { Program, Statement, TypeRef } from "core/ast.ts";
+import type { Program, Statement, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import { tupleCTypeName } from "c/tuples.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCDeclarator } from "c/type.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 
 export type Str = string;
+type b8 = boolean;
 type TupleTypeRef = Extract<TypeRef, { kind: "TupleTypeRef" }>;
+type TupleDependencyMode =
+  | "pre-generated-alias"
+  | "post-generated-alias"
+  | "post-generated-optional";
 
 export function collectTupleTypeDefinitions(program: Program, context: EmitContext): Str[] {
-  return collectTupleTypes(program).map((tuple) => emitTupleTypeDefinition(tuple, context));
+  return collectTupleDefinitionsForMode(program, context, "pre-generated-alias");
+}
+
+export function collectPostGeneratedAliasTupleTypeDefinitions(
+  program: Program,
+  context: EmitContext,
+): Str[] {
+  return collectTupleDefinitionsForMode(program, context, "post-generated-alias");
+}
+
+export function collectPostGeneratedOptionalTupleTypeDefinitions(
+  program: Program,
+  context: EmitContext,
+): Str[] {
+  return collectTupleDefinitionsForMode(program, context, "post-generated-optional");
+}
+
+function collectTupleDefinitionsForMode(
+  program: Program,
+  context: EmitContext,
+  mode: TupleDependencyMode,
+): Str[] {
+  const generatedAliases = generatedAliasNames(program.typeAliases);
+  return collectTupleTypes(program)
+    .filter((tuple) => tupleMatchesMode(tuple, generatedAliases, mode))
+    .map((tuple) => emitTupleTypeDefinition(tuple, context));
 }
 
 function collectTupleTypes(program: Program): TupleTypeRef[] {
@@ -101,6 +132,82 @@ function collectTupleType(type: TupleTypeRef, tuples: Map<Str, TupleTypeRef>): v
   for (const element of type.elements) collectTypeRefTupleTypes(element, tuples);
   const name = tupleCTypeName(type.elements);
   if (!tuples.has(name)) tuples.set(name, type);
+}
+
+function tupleMatchesMode(
+  tuple: TupleTypeRef,
+  generatedAliases: Set<Str>,
+  mode: TupleDependencyMode,
+): b8 {
+  const dependsOnGeneratedOptional = tupleDependsOnGeneratedOptional(tuple, generatedAliases);
+  const dependsOnGeneratedAlias = tupleDependsOnGeneratedAlias(tuple, generatedAliases);
+  if (mode === "post-generated-optional") return dependsOnGeneratedOptional;
+  if (mode === "post-generated-alias") {
+    return dependsOnGeneratedAlias && !dependsOnGeneratedOptional;
+  }
+  return !dependsOnGeneratedAlias && !dependsOnGeneratedOptional;
+}
+
+function tupleDependsOnGeneratedAlias(tuple: TupleTypeRef, generatedAliases: Set<Str>): b8 {
+  return tuple.elements.some((element) => typeContainsGeneratedAlias(element, generatedAliases));
+}
+
+function tupleDependsOnGeneratedOptional(tuple: TupleTypeRef, generatedAliases: Set<Str>): b8 {
+  return tuple.elements.some((element) =>
+    typeDependsOnGeneratedOptional(element, generatedAliases)
+  );
+}
+
+function typeDependsOnGeneratedOptional(type: TypeRef, generatedAliases: Set<Str>): b8 {
+  const optionalElement = optionalTypeElement(type);
+  if (optionalElement !== null) {
+    return typeContainsGeneratedAlias(optionalElement, generatedAliases);
+  }
+  return childTypeRefs(type).some((child) =>
+    typeDependsOnGeneratedOptional(child, generatedAliases)
+  );
+}
+
+function typeContainsGeneratedAlias(type: TypeRef, generatedAliases: Set<Str>): b8 {
+  if (type.kind === "NamedTypeRef" && generatedAliases.has(type.name)) return true;
+  return childTypeRefs(type).some((child) => typeContainsGeneratedAlias(child, generatedAliases));
+}
+
+function childTypeRefs(type: TypeRef): TypeRef[] {
+  switch (type.kind) {
+    case "PointerTypeRef":
+    case "ReferenceTypeRef":
+    case "SafePointerTypeRef":
+    case "SliceTypeRef":
+    case "InferredArrayTypeRef":
+    case "FixedArrayTypeRef":
+      return [type.element];
+    case "FunctionTypeRef":
+      return [...type.params.map((param) => param.type), type.returnType];
+    case "TupleTypeRef":
+      return type.elements;
+    case "UnionTypeRef":
+    case "IntersectionTypeRef":
+      return type.members;
+    case "ConditionalTypeRef":
+      return [type.checkType, type.extendsType, type.trueType, type.falseType];
+    case "RecordTypeRef":
+      return type.fields.map((field) => field.type);
+    case "NamedTypeRef":
+      return type.typeArgs ?? [];
+    default:
+      return [];
+  }
+}
+
+function generatedAliasNames(typeAliases: TypeAliasDecl[]): Set<Str> {
+  const names = new Set<Str>();
+  for (const alias of typeAliases) {
+    if (alias.generated !== true) continue;
+    names.add(alias.name);
+    names.add(alias.cName ?? alias.name);
+  }
+  return names;
 }
 
 function emitTupleTypeDefinition(type: TupleTypeRef, context: EmitContext): Str {

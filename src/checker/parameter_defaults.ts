@@ -1,3 +1,4 @@
+import { PARAMETER_DEFAULT_TYPE, PARAMETER_REQUIRED_ORDER } from "core/diagnostic_codes.ts";
 import type { Expression, FunctionDecl } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -28,6 +29,7 @@ function checkRequiredOrder(fn: FunctionDecl, index: usize): Diagnostic[] {
   if (!previousFlexible) return [];
   return [{
     message: `Required parameter '${param.name}' cannot follow optional/default parameter`,
+    code: PARAMETER_REQUIRED_ORDER,
     span: param.span,
   }];
 }
@@ -43,6 +45,7 @@ function checkParameterDefault(
   return [{
     message:
       `Default value type '${actual}' is not assignable to parameter '${param.name}' type '${expected}'`,
+    code: PARAMETER_DEFAULT_TYPE,
     span: param.defaultValue.span,
   }];
 }

@@ -11,22 +11,34 @@ Deno.test("parses JSON records", () => {
 });
 
 Deno.test("rejects invalid JSON records", () => {
-  assertConfigError(() => parseJsonRecord(`{`, "invalid json", "not object"), "invalid json");
-  assertConfigError(() => parseJsonRecord(`[]`, "invalid json", "not object"), "not object");
+  assertConfigError(
+    () => parseJsonRecord(`{`, "invalid json", "not object"),
+    "invalid json",
+    "E2900",
+  );
+  assertConfigError(
+    () => parseJsonRecord(`[]`, "invalid json", "not object"),
+    "not object",
+    "E2901",
+  );
 });
 
 Deno.test("rejects unknown JSON keys", () => {
   assertConfigError(
     () => rejectUnknownJsonKeys("project.json", { extra: true }, ["dependencies"]),
     "project.json has unknown key 'extra'",
+    "E2902",
   );
 });
 
-function assertConfigError(run: () => void, message: Str): void {
+function assertConfigError(run: () => void, message: Str, code: Str): void {
   try {
     run();
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics[0]?.message === message) return;
+    if (
+      error instanceof TypeCError && error.diagnostics[0]?.message === message &&
+      error.diagnostics[0]?.code === code
+    ) return;
     throw error;
   }
   throw new Error(`Expected ${message}`);

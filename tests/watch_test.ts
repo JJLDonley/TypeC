@@ -1,4 +1,4 @@
-import { shouldBuildWatchedResult, shouldRebuild } from "driver/watch.ts";
+import { shouldBuildWatchedResult, shouldRebuild, watchedBuildDir } from "driver/watch.ts";
 
 Deno.test("detects rebuild file events", () => {
   if (!shouldRebuild("modify")) throw new Error("Expected modify to rebuild");
@@ -10,5 +10,14 @@ Deno.test("requires main before watched native builds", () => {
   if (!shouldBuildWatchedResult(true)) throw new Error("Expected executable program to build");
   if (shouldBuildWatchedResult(false)) {
     throw new Error("Expected library program to skip native build");
+  }
+});
+
+Deno.test("selects watched build directory", () => {
+  if (watchedBuildDir(undefined) !== "build") {
+    throw new Error("Expected default watched build directory");
+  }
+  if (watchedBuildDir("out") !== "out") {
+    throw new Error("Expected selected watched build directory");
   }
 });

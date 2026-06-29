@@ -1,3 +1,4 @@
+import { C_DUPLICATE_ORDINARY_SYMBOL } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { ConstDecl, FunctionDecl, TypeAliasDecl } from "core/ast.ts";
 import { constantCName, functionCName, typeAliasCName } from "checker/c_symbol_names.ts";
@@ -26,6 +27,7 @@ function checkFunctionOrdinarySymbols(
   ]);
   return functions.filter((fn) => names.has(functionCName(fn))).map((fn) => ({
     message: `Duplicate C ordinary symbol '${functionCName(fn)}'`,
+    code: C_DUPLICATE_ORDINARY_SYMBOL,
     span: fn.span,
   }));
 }
@@ -41,6 +43,7 @@ function checkConstantOrdinarySymbols(
   ]);
   return constants.filter((constant) => names.has(constantCName(constant))).map((constant) => ({
     message: `Duplicate C ordinary symbol '${constantCName(constant)}'`,
+    code: C_DUPLICATE_ORDINARY_SYMBOL,
     span: constant.span,
   }));
 }

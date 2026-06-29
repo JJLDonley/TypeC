@@ -1,0 +1,9 @@
+function main(): i32 {
+  const base: i32 = 6 * 7;
+  const mask: u32 = (3 as u32) << 2;
+  const ok: bool = base == 42 && mask == (12 as u32);
+  if (ok) {
+    return 0;
+  }
+  return 1;
+}

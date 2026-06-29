@@ -36,7 +36,8 @@ function mergeFields(target: RecordField[], source: RecordField[]): void {
 }
 
 function mergeField(target: RecordField[], field: RecordField): void {
-  const existing: RecordField | null = target.find((candidate) => candidate.name === field.name) ?? null;
+  const existing: RecordField | null = target.find((candidate) => candidate.name === field.name) ??
+    null;
   if (existing !== null && typeName(existing.type) === typeName(field.type)) return;
   target.push(field);
 }

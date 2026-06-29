@@ -1,0 +1,35 @@
+export type ResultI32 = {
+  ok: bool;
+  value: i32;
+  error: i32;
+};
+
+export function result_ok_i32(value: i32, zero_error: i32): ResultI32 {
+  return { ok: true, value, error: zero_error };
+}
+
+export function result_err_i32(zero_value: i32, error: i32): ResultI32 {
+  return { ok: false, value: zero_value, error };
+}
+
+export function result_is_ok_i32(result: ResultI32): bool {
+  return result.ok;
+}
+
+export function result_is_err_i32(result: ResultI32): bool {
+  return !result.ok;
+}
+
+export function result_unwrap_or_i32(result: ResultI32, fallback: i32): i32 {
+  if (result.ok) {
+    return result.value;
+  }
+  return fallback;
+}
+
+export function result_error_or_i32(result: ResultI32, fallback: i32): i32 {
+  if (result.ok) {
+    return fallback;
+  }
+  return result.error;
+}

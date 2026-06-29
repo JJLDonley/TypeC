@@ -1,11 +1,5 @@
-import type {
-  BlockStmt,
-  ClassVTableDecl,
-  FunctionDecl,
-  Param,
-  TypeAliasDecl,
-  TypeRef,
-} from "core/ast.ts";
+import { cSymbolName } from "core/c_names.ts";
+import type { BlockStmt, FunctionDecl, Param, TypeAliasDecl, TypeRef } from "core/ast.ts";
 import type { CastClassConstructor, CastClassDecl, CastClassMethod } from "core/cast.ts";
 
 export type Str = string;
@@ -20,7 +14,7 @@ export function classMethodName(className: Str, methodName: Str): Str {
 }
 
 export function classMethodCName(className: Str, methodName: Str): Str {
-  return `${className}_${methodName}`;
+  return cSymbolName(`${className}_${methodName}`);
 }
 
 export function classConstructorName(className: Str): Str {
@@ -28,15 +22,7 @@ export function classConstructorName(className: Str): Str {
 }
 
 export function classConstructorCName(className: Str): Str {
-  return `${className}_new`;
-}
-
-export function classVTableTypeName(className: Str): Str {
-  return `${className}VTable`;
-}
-
-export function classVTableValueName(className: Str): Str {
-  return `v${className}`;
+  return cSymbolName(`${className}_new`);
 }
 
 export function classTypeRef(className: Str, typeSpan: TypeRef["span"]): TypeRef {
@@ -51,7 +37,7 @@ export function classTypeAlias(
     kind: "TypeAliasDecl",
     exported: classDecl.exported,
     name: classDecl.name,
-    cName: null,
+    cName: classDecl.name.includes(".") ? cSymbolName(classDecl.name) : null,
     type: fields,
     span: classDecl.span,
   };
@@ -76,21 +62,6 @@ export function classConstructorFunction(
   };
 }
 
-export function classVTableDecl(classDecl: CastClassDecl): ClassVTableDecl {
-  return {
-    kind: "ClassVTableDecl",
-    className: classDecl.name,
-    typeName: classVTableTypeName(classDecl.name),
-    cName: classVTableValueName(classDecl.name),
-    methods: classDecl.methods.map((method) => ({
-      name: method.name,
-      functionCName: classMethodCName(classDecl.name, method.name),
-      span: method.span,
-    })),
-    span: classDecl.span,
-  };
-}
-
 export function classMethodFunction(
   classDecl: CastClassDecl,
   method: CastClassMethod,
@@ -104,8 +75,10 @@ export function classMethodFunction(
     external: false,
     name: classMethodName(classDecl.name, method.name),
     cName: classMethodCName(classDecl.name, method.name),
-    params: [receiverParam(classDecl.name, method), ...params],
+    params: method.static ? params : [receiverParam(classDecl.name, method), ...params],
     returnType,
+    access: method.access,
+    classStatic: method.static,
     body,
     span: method.span,
   };

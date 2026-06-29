@@ -1,5 +1,9 @@
+import { renderDiagnostic } from "core/diagnostic_rendering.ts";
+
 type Str = string;
 type usize = number;
+
+export type DiagnosticCode = Str;
 
 export interface SourcePos {
   offset: usize;
@@ -12,9 +16,19 @@ export interface SourceSpan {
   end: SourcePos;
 }
 
+export interface RelatedDiagnostic {
+  message: Str;
+  span: SourceSpan;
+}
+
 export interface Diagnostic {
   message: Str;
+  code?: DiagnosticCode;
   span?: SourceSpan;
+  severity?: "error" | "warning" | "note" | "help";
+  related?: RelatedDiagnostic[];
+  notes?: Str[];
+  help?: Str;
 }
 
 export class TypeCError extends Error {
@@ -24,10 +38,5 @@ export class TypeCError extends Error {
 }
 
 export function formatDiagnostic(fileName: Str, source: Str, diagnostic: Diagnostic): Str {
-  if (!diagnostic.span) return `${fileName}: ${diagnostic.message}`;
-
-  const { line, column } = diagnostic.span.start;
-  const lineText = source.split(/\r?\n/)[line - 1] ?? "";
-  const pointer = `${" ".repeat(Math.max(0, column - 1))}^`;
-  return `${fileName}:${line}:${column}: ${diagnostic.message}\n${lineText}\n${pointer}`;
+  return renderDiagnostic(fileName, source, diagnostic);
 }

@@ -1,4 +1,5 @@
 import type { Expression, RecordField, RecordTypeRef, TypeRef } from "core/ast.ts";
+import { RECORD_INFERENCE_SPREAD } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { typeName } from "core/type_ref.ts";
@@ -27,7 +28,11 @@ export function checkInferredRecordLocalType(
   const fields = expr.fields.filter(isFieldEntry);
   if (fields.length !== expr.fields.length) {
     return {
-      diagnostics: [{ message: "Cannot infer record type from spread fields", span: expr.span }],
+      diagnostics: [{
+        message: "Cannot infer record type from spread fields",
+        code: RECORD_INFERENCE_SPREAD,
+        span: expr.span,
+      }],
       type: "<error>",
     };
   }

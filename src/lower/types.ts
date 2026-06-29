@@ -5,6 +5,8 @@ import type {
   IndexedAccessTypeRef,
   InferredArrayTypeRef,
   IntersectionTypeRef,
+  KeyofTypeRef,
+  LiteralTypeRef,
   MappedTypeRef,
   PointerTypeRef,
   RecordField,
@@ -13,6 +15,7 @@ import type {
   SafePointerTypeRef,
   SliceTypeRef,
   TupleTypeRef,
+  TypeofTypeRef,
   TypeRef,
   UnionTypeRef,
 } from "core/ast.ts";
@@ -23,6 +26,8 @@ import type {
   CastIndexedAccessTypeRef,
   CastInferredArrayTypeRef,
   CastIntersectionTypeRef,
+  CastKeyofTypeRef,
+  CastLiteralTypeRef,
   CastMappedTypeRef,
   CastPointerTypeRef,
   CastRecordField,
@@ -31,9 +36,11 @@ import type {
   CastSafePointerTypeRef,
   CastSliceTypeRef,
   CastTupleTypeRef,
+  CastTypeofTypeRef,
   CastTypeRef,
   CastUnionTypeRef,
 } from "core/cast.ts";
+import { optionalTypeRef } from "core/optional_types.ts";
 
 export function lowerTypeRef(type: CastTypeRef): TypeRef {
   switch (type.kind) {
@@ -68,8 +75,14 @@ export function lowerTypeRef(type: CastTypeRef): TypeRef {
       return lowerIndexedAccessTypeRef(type);
     case "MappedTypeRef":
       return lowerMappedTypeRef(type);
+    case "KeyofTypeRef":
+      return lowerKeyofTypeRef(type);
+    case "TypeofTypeRef":
+      return lowerTypeofTypeRef(type);
     case "FunctionTypeRef":
       return lowerFunctionTypeRef(type);
+    case "LiteralTypeRef":
+      return lowerLiteralTypeRef(type);
     case "RecordTypeRef":
       return lowerRecordTypeRef(type);
   }
@@ -146,6 +159,14 @@ function lowerMappedTypeRef(type: CastMappedTypeRef): MappedTypeRef {
   };
 }
 
+function lowerKeyofTypeRef(type: CastKeyofTypeRef): KeyofTypeRef {
+  return { kind: "KeyofTypeRef", target: lowerTypeRef(type.target), span: type.span };
+}
+
+function lowerTypeofTypeRef(type: CastTypeofTypeRef): TypeofTypeRef {
+  return { kind: "TypeofTypeRef", name: type.name, span: type.span };
+}
+
 function lowerFunctionTypeRef(type: CastFunctionTypeRef): FunctionTypeRef {
   return {
     kind: "FunctionTypeRef",
@@ -159,10 +180,21 @@ function lowerFunctionTypeRef(type: CastFunctionTypeRef): FunctionTypeRef {
   };
 }
 
+function lowerLiteralTypeRef(type: CastLiteralTypeRef): LiteralTypeRef {
+  return { kind: "LiteralTypeRef", value: type.value, text: type.text, span: type.span };
+}
+
 function lowerRecordTypeRef(type: CastRecordTypeRef): RecordTypeRef {
   return { kind: "RecordTypeRef", fields: type.fields.map(lowerRecordField), span: type.span };
 }
 
 function lowerRecordField(field: CastRecordField): RecordField {
-  return { name: field.name, type: lowerTypeRef(field.type), span: field.span };
+  const type = lowerTypeRef(field.type);
+  return {
+    name: field.name,
+    type: field.optional === true ? optionalTypeRef(type) : type,
+    readonly: field.readonly,
+    optional: field.optional,
+    span: field.span,
+  };
 }

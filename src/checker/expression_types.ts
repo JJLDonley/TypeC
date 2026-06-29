@@ -1,4 +1,5 @@
 import type { Expression } from "core/ast.ts";
+import { ARRAY_LITERAL_CONTEXT } from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { checkBasicExpression } from "checker/basic_expressions.ts";
@@ -19,6 +20,7 @@ export interface ExpressionTypeHandlers {
   conditional(expr: Extract<Expression, { kind: "ConditionalExpr" }>): TypeName;
   nullish(expr: Extract<Expression, { kind: "NullishCoalesceExpr" }>): TypeName;
   cast(expr: Extract<Expression, { kind: "CastExpr" }>): TypeName;
+  satisfies(expr: Extract<Expression, { kind: "SatisfiesExpr" }>): TypeName;
   call(expr: Extract<Expression, { kind: "CallExpr" }>): TypeName;
   newExpr(expr: Extract<Expression, { kind: "NewExpr" }>): TypeName;
   methodCall(expr: Extract<Expression, { kind: "MethodCallExpr" }>): TypeName;
@@ -65,6 +67,8 @@ function computeNonBasicExpressionType(
       return ok(handlers.nullish(expr));
     case "CastExpr":
       return ok(handlers.cast(expr));
+    case "SatisfiesExpr":
+      return ok(handlers.satisfies(expr));
     case "CallExpr":
       return ok(handlers.call(expr));
     case "NewExpr":
@@ -88,7 +92,11 @@ function computeNonBasicExpressionType(
     case "RecordLiteralExpr":
       return error("Record literals require an expected record type", expr.span);
     case "ArrayLiteralExpr":
-      return error("Array literals require an expected array type", expr.span);
+      return error(
+        "Array literals require an expected array type",
+        expr.span,
+        ARRAY_LITERAL_CONTEXT,
+      );
     case "ZeroValueExpr":
       return error("Zero values require an expected type", expr.span);
   }
@@ -98,7 +106,8 @@ function isNonBasicExpression(expr: Expression): expr is NonBasicExpr {
   return expr.kind === "ArrowFunctionExpr" || expr.kind === "IdentifierExpr" ||
     expr.kind === "UnaryExpr" || expr.kind === "BinaryExpr" ||
     expr.kind === "ConditionalExpr" ||
-    expr.kind === "NullishCoalesceExpr" || expr.kind === "CastExpr" || expr.kind === "CallExpr" ||
+    expr.kind === "NullishCoalesceExpr" || expr.kind === "CastExpr" ||
+    expr.kind === "SatisfiesExpr" || expr.kind === "CallExpr" ||
     expr.kind === "NewExpr" || expr.kind === "MethodCallExpr" ||
     expr.kind === "PostfixPointerExpr" || expr.kind === "NonNullAssertExpr" ||
     expr.kind === "FieldAccessExpr" || expr.kind === "OptionalFieldAccessExpr" ||
@@ -111,6 +120,6 @@ function ok(type: TypeName): ExpressionTypeCheck {
   return { diagnostics: [], type };
 }
 
-function error(message: Str, span: SourceSpan): ExpressionTypeCheck {
-  return { diagnostics: [{ message, span }], type: "<error>" };
+function error(message: Str, span: SourceSpan, code?: Str): ExpressionTypeCheck {
+  return { diagnostics: [{ message, code, span }], type: "<error>" };
 }

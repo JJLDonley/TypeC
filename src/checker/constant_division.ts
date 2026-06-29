@@ -1,5 +1,6 @@
 import { evaluateIntegerConstant } from "checker/constant_values.ts";
 import type { ConstDecl, Expression } from "core/ast.ts";
+import { DIVIDE_BY_ZERO } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 
 type Str = string;
@@ -78,7 +79,11 @@ function constantIntegerDivideByZeroDiagnostic(
   const left = evaluateIntegerConstant(expr.left, constants);
   const right = evaluateIntegerConstant(expr.right, constants);
   if (left === null || right !== 0n) return [];
-  return [{ message: `Operator '${expr.operator}' cannot divide by zero`, span: expr.span }];
+  return [{
+    message: `Operator '${expr.operator}' cannot divide by zero`,
+    code: DIVIDE_BY_ZERO,
+    span: expr.span,
+  }];
 }
 
 function isIntegerDivisionOperator(operator: Str): b8 {

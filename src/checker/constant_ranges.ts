@@ -1,3 +1,4 @@
+import { FLOAT_CONSTANT_RANGE, INTEGER_CONSTANT_RANGE } from "core/diagnostic_codes.ts";
 import { evaluateFloatConstant, evaluateIntegerConstant } from "checker/constant_values.ts";
 import { lookupRecordAlias } from "checker/record_aliases.ts";
 import { parseArrayTypeName } from "checker/type_name_shapes.ts";
@@ -33,6 +34,7 @@ function checkConstantIntegerRange(
   if (value === null || (value >= range.min && value <= range.max)) return [];
   return [{
     message: `Integer constant '${value}' is out of range for '${expectedType}'`,
+    code: INTEGER_CONSTANT_RANGE,
     span: expr.span,
   }];
 }
@@ -47,6 +49,7 @@ function checkConstantFloatRange(
   if (value === null || Math.abs(value) <= maxF32) return [];
   return [{
     message: `Float constant '${value}' is out of range for 'f32'`,
+    code: FLOAT_CONSTANT_RANGE,
     span: expr.span,
   }];
 }

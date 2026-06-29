@@ -40,10 +40,16 @@ export function typeName(type: TypeRef): Str {
       return `{[${type.keyName} in keyof ${typeName(type.sourceType)}]:${
         typeName(type.valueType)
       }}`;
+    case "KeyofTypeRef":
+      return `keyof ${typeName(type.target)}`;
+    case "TypeofTypeRef":
+      return `typeof ${type.name}`;
     case "FunctionTypeRef":
       return `(${
         type.params.map((param) => `${param.name}: ${typeName(param.type)}`).join(", ")
       }) => ${typeName(type.returnType)}`;
+    case "LiteralTypeRef":
+      return type.text;
     case "RecordTypeRef":
       return `{${type.fields.map((field) => `${field.name}:${typeName(field.type)}`).join(";")}}`;
   }

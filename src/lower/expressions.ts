@@ -21,6 +21,7 @@ import type {
   OptionalMethodCallExpr,
   PostfixPointerExpr,
   RecordLiteralExpr,
+  SatisfiesExpr,
   StringLiteral,
   UnaryExpr,
   ZeroValueExpr,
@@ -48,6 +49,7 @@ import type {
   CastOptionalMethodCallExpr,
   CastPostfixPointerExpr,
   CastRecordLiteralExpr,
+  CastSatisfiesExpr,
   CastStringLiteral,
   CastUnaryExpr,
   CastZeroValueExpr,
@@ -82,6 +84,8 @@ export function lowerExpression(expression: CastExpression): Expression {
       return lowerNullishCoalesceExpr(expression);
     case "CastExpr":
       return lowerCastExpr(expression);
+    case "SatisfiesExpr":
+      return lowerSatisfiesExpr(expression);
     case "CallExpr":
       return lowerCallExpr(expression);
     case "NewExpr":
@@ -199,6 +203,15 @@ function lowerNullishCoalesceExpr(expression: CastNullishCoalesceExpr): NullishC
 function lowerCastExpr(expression: CastCastExpr): CastExpr {
   return {
     kind: "CastExpr",
+    type: lowerTypeRef(expression.type),
+    expression: lowerExpression(expression.expression),
+    span: expression.span,
+  };
+}
+
+function lowerSatisfiesExpr(expression: CastSatisfiesExpr): SatisfiesExpr {
+  return {
+    kind: "SatisfiesExpr",
     type: lowerTypeRef(expression.type),
     expression: lowerExpression(expression.expression),
     span: expression.span,

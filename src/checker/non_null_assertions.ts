@@ -1,3 +1,4 @@
+import { NON_NULL_ASSERT_OPTIONAL } from "core/diagnostic_codes.ts";
 import type { Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -22,6 +23,7 @@ export function checkNonNullAssertExpression(
   return {
     diagnostics: [{
       message: `Non-null assertion requires optional type, got '${operandType}'`,
+      code: NON_NULL_ASSERT_OPTIONAL,
       span: expr.span,
     }],
     type: "<error>",

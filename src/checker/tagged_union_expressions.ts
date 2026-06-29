@@ -1,3 +1,9 @@
+import {
+  UNION_VARIANT_ARITY,
+  UNION_VARIANT_PAYLOAD,
+  UNION_VARIANT_PAYLOAD_TYPE,
+  UNKNOWN_UNION_VARIANT,
+} from "core/diagnostic_codes.ts";
 import type { Expression, TaggedUnionDecl, TaggedUnionVariant } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -31,6 +37,7 @@ export function checkTaggedUnionConstructor(
   if (variant === null) {
     return handled(unionDecl.name, [{
       message: `Unknown union variant '${expr.method}'`,
+      code: UNKNOWN_UNION_VARIANT,
       span: expr.span,
     }]);
   }
@@ -49,12 +56,14 @@ export function checkTaggedUnionFieldAccess(
   if (variant === null) {
     return handled("<error>", [{
       message: `Unknown union variant '${expr.field}'`,
+      code: UNKNOWN_UNION_VARIANT,
       span: expr.span,
     }]);
   }
   if (variant.payload === null) {
     return handled("<error>", [{
       message: `Union variant '${expr.field}' has no payload`,
+      code: UNION_VARIANT_PAYLOAD,
       span: expr.span,
     }]);
   }
@@ -70,6 +79,7 @@ function checkVariantArgs(
   if (expr.args.length !== expectedCount) {
     return [{
       message: `Union variant '${variant.name}' expects ${expectedCount} argument(s)`,
+      code: UNION_VARIANT_ARITY,
       span: expr.span,
     }];
   }
@@ -79,6 +89,7 @@ function checkVariantArgs(
   if (isAssignable(actual, expected)) return [];
   return [{
     message: `Type mismatch: expected ${expected}, got ${actual}`,
+    code: UNION_VARIANT_PAYLOAD_TYPE,
     span: expr.args[0].span,
   }];
 }

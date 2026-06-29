@@ -1,3 +1,7 @@
+import {
+  OPTIONAL_CONSTRUCTOR_ARITY,
+  OPTIONAL_CONSTRUCTOR_VALUE_TYPE,
+} from "core/diagnostic_codes.ts";
 import type { Expression } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -47,6 +51,7 @@ function checkExpectedSome(
   if (isAssignable(actual, expected)) return diagnostics;
   diagnostics.push({
     message: `Type '${actual}' is not assignable to '${expected}'`,
+    code: OPTIONAL_CONSTRUCTOR_VALUE_TYPE,
     span: value.span,
   });
   return diagnostics;
@@ -62,6 +67,7 @@ function checkArity(
 ): Diagnostic[] {
   return expr.args.length === expected ? [] : [{
     message: `${expr.callee} expects ${expected} arguments, got ${expr.args.length}`,
+    code: OPTIONAL_CONSTRUCTOR_ARITY,
     span: expr.span,
   }];
 }

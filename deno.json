@@ -1,7 +1,9 @@
 {
   "tasks": {
     "check": "deno check src/driver/main.ts",
+    "lint": "deno lint",
     "test": "deno test -A",
+    "build": "deno fmt && deno task check && deno task lint && deno task test && deno eval \"await Deno.mkdir('bin', { recursive: true })\" && deno compile -A --output ./bin/STC src/driver/main.ts",
     "typec": "deno run -A src/driver/main.ts"
   },
   "fmt": {
@@ -38,6 +40,8 @@
     "json/": "./src/json/",
     "driver": "./src/driver/mod.ts",
     "driver/": "./src/driver/",
+    "formatter": "./src/formatter/mod.ts",
+    "formatter/": "./src/formatter/",
     "lsp": "./src/lsp/mod.ts",
     "lsp/": "./src/lsp/",
     "paths": "./src/path/mod.ts",

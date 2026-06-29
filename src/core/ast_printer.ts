@@ -269,6 +269,10 @@ class AstPrinter {
           this.expression(expression.fallback);
         });
         return;
+      case "SatisfiesExpr":
+        this.line(`SatisfiesExpr ${this.type(expression.type)}`);
+        this.indented(() => this.expression(expression.expression));
+        return;
       case "CallExpr": {
         const typeArgs = expression.typeArgs?.map((typeArg) => this.type(typeArg)).join(", ") ?? "";
         const typeArgText = typeArgs.length > 0 ? `<${typeArgs}>` : "";

@@ -1,0 +1,13 @@
+import { ResultI32, result_error_or_i32, result_err_i32, result_is_err_i32, result_is_ok_i32, result_ok_i32, result_unwrap_or_i32 } from "std/result.tc";
+
+function main(): i32 {
+  const ok: ResultI32 = result_ok_i32(7, 0);
+  const err: ResultI32 = result_err_i32(0, 9);
+  if (!result_is_ok_i32(ok)) {
+    return 1;
+  }
+  if (!result_is_err_i32(err)) {
+    return 2;
+  }
+  return result_unwrap_or_i32(ok, 1) + result_error_or_i32(err, 0);
+}

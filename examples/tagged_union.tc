@@ -5,7 +5,7 @@ union MaybeI32 {
 
 function read(value: MaybeI32): i32 {
   switch (value.tag) {
-    case 0:
+    case MaybeI32.Some:
       return value.Some;
     default:
       return 0;

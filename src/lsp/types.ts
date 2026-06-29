@@ -50,9 +50,22 @@ export interface LspRange {
   end: LspPosition;
 }
 
+export interface LspLocation {
+  uri: Str;
+  range: LspRange;
+}
+
+export interface LspRelatedDiagnosticInformation {
+  location: LspLocation;
+  message: Str;
+}
+
 export interface LspDiagnostic {
   range: LspRange;
   severity: i32;
   source: Str;
   message: Str;
+  code?: Str;
+  relatedInformation?: LspRelatedDiagnosticInformation[];
+  codeDescription?: { href: Str };
 }

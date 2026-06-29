@@ -1,0 +1,11 @@
+function main(): i32 {
+  const arena: Arena = arenaCreate();
+  let value: SafePtr<i32> = arenaAlloc(arena, 1);
+  value.* = 42;
+  const result: i32 = value.*;
+  arenaDestroy(arena);
+  if (result == 42) {
+    return 0;
+  }
+  return 1;
+}

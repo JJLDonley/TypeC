@@ -1,4 +1,5 @@
 import type { Expression } from "core/ast.ts";
+import { ARROW_FUNCTION_CAPTURE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { LocalInfo } from "checker/locals.ts";
 
@@ -12,6 +13,7 @@ export function checkArrowFunctionCaptures(
   const params = new Set<Str>(expr.params);
   return capturedLocalNames(expr.body, params, locals).map((name) => ({
     message: `Arrow function cannot capture local '${name}'`,
+    code: ARROW_FUNCTION_CAPTURE,
     span: expr.span,
   }));
 }
@@ -58,6 +60,9 @@ function collectIdentifierNames(expr: Expression, names: Set<Str>): void {
     case "NullishCoalesceExpr":
       collectIdentifierNames(expr.left, names);
       collectIdentifierNames(expr.fallback, names);
+      return;
+    case "SatisfiesExpr":
+      collectIdentifierNames(expr.expression, names);
       return;
     case "CallExpr":
     case "NewExpr":

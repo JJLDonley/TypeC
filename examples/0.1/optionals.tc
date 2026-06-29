@@ -1,0 +1,13 @@
+function read(value: i32?): i32 {
+  return value ?? 7;
+}
+
+function main(): i32 {
+  const present: i32? = Some(35);
+  const empty: i32? = None();
+  const total: i32 = read(present) + read(empty);
+  if (total == 42) {
+    return 0;
+  }
+  return 1;
+}

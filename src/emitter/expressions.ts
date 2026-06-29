@@ -4,11 +4,14 @@ import {
   optionalUnwrapFunctionNameFromTypeName,
 } from "c/optional_names.ts";
 import { arrowFunctionName } from "core/arrow_functions.ts";
-import { classConstructorName, classMethodName, classVTableValueName } from "core/classes.ts";
+import { classConstructorName, classMethodName } from "core/classes.ts";
+import { optionalTypeElement } from "core/optional_types.ts";
 import { qualifiedExpressionName } from "core/qualified_names.ts";
+import { typeName } from "core/type_ref.ts";
 import type { EmitContext } from "emitter/context.ts";
 import { emitCallArguments } from "emitter/call_arguments.ts";
 import { emitCallExpression } from "emitter/calls.ts";
+import { borrowedInterfaceLiteral, borrowedSourceName } from "emitter/borrowed_interfaces.ts";
 import { expectedRecordType } from "emitter/record_types.ts";
 import { cArrayElementType, cPrecedence, emitIntegerLiteralExpression } from "emitter/helpers.ts";
 import { emitCStringLiteral, emitCStringPointer, emitCStringVoidPointer } from "emitter/strings.ts";
@@ -55,6 +58,8 @@ export function emitExpression(expr: Expression, context: EmitContext): Str {
       return emitNullishCoalesceExpression(expr, context);
     case "CastExpr":
       return emitCastExpression(expr, context);
+    case "SatisfiesExpr":
+      return emitExpression(expr.expression, context);
     case "CallExpr":
       return emitCallExpression(
         expr,
@@ -93,6 +98,8 @@ export function emitExpressionExpected(
   expectedType: Str,
   context: EmitContext,
 ): Str {
+  const borrowed = emitBorrowedInterfaceExpected(expr, expectedType, context);
+  if (borrowed !== null) return borrowed;
   if (expr.kind === "ZeroValueExpr") return `(${expectedType}){0}`;
   if (expr.kind === "IntegerLiteral") return emitIntegerLiteralExpression(expr, expectedType);
   if (expr.kind === "CallExpr") {
@@ -104,6 +111,9 @@ export function emitExpressionExpected(
   }
   if (isArrayFillExpression(expr)) {
     return emitArrayFillExpression(expr, expectedType, context);
+  }
+  if (expr.kind === "SatisfiesExpr") {
+    return emitExpressionExpected(expr.expression, expectedType, context);
   }
   if (expr.kind === "ArrayLiteralExpr") {
     const tuple = parseTupleTypeName(expectedType);
@@ -121,6 +131,25 @@ export function emitExpressionExpected(
     return emitSliceExpression(expr, expectedType, context);
   }
   return emitExpression(expr, context);
+}
+
+function emitBorrowedInterfaceExpected(
+  expr: Expression,
+  expectedType: Str,
+  context: EmitContext,
+): Str | null {
+  if (expr.kind !== "PostfixPointerExpr" || expr.operator !== ".&") return null;
+  const interfaceDecl =
+    context.program?.interfaces?.find((candidate) => candidate.name === expectedType) ?? null;
+  if (interfaceDecl === null) return null;
+  const sourceType = context.expressionTypes?.get(spanKey(expr.span))?.type ?? null;
+  if (sourceType === null || borrowedSourceName(sourceType) === null) return null;
+  return borrowedInterfaceLiteral(
+    expectedType,
+    sourceType,
+    emitPostfixPointerExpression(expr, context),
+    interfaceDecl,
+  );
 }
 
 function isArrayFillExpression(
@@ -194,6 +223,10 @@ function replaceIdentifierWithIndex(
         left: replaceIdentifierWithIndex(expr.left, name, index),
         fallback: replaceIdentifierWithIndex(expr.fallback, name, index),
       };
+    case "SatisfiesExpr":
+      return { ...expr, expression: replaceIdentifierWithIndex(expr.expression, name, index) };
+    case "CastExpr":
+      return { ...expr, expression: replaceIdentifierWithIndex(expr.expression, name, index) };
     case "CallExpr":
       return {
         ...expr,
@@ -286,6 +319,10 @@ function emitMethodCallExpression(
   const namespaceCall = emitNamespaceCallExpression(expr, context);
   if (namespaceCall !== null) return namespaceCall;
   const receiverType = context.expressionTypes?.get(spanKey(expr.receiver.span))?.type ?? "<error>";
+  const arraySliceCall = emitArraySliceHelperCall(expr, receiverType, context);
+  if (arraySliceCall !== null) return arraySliceCall;
+  const borrowedCall = emitBorrowedInterfaceMethodCall(expr, receiverType, context);
+  if (borrowedCall !== null) return borrowedCall;
   const methodName = classMethodName(receiverType, expr.method);
   const fn = context.functions.get(methodName);
   if (!fn) return `${methodName}()`;
@@ -299,7 +336,86 @@ function emitMethodCallExpression(
       emitExpressionExpected,
     ),
   ];
-  return `${classVTableValueName(receiverType)}.${expr.method}(${args.join(", ")})`;
+  return `${fn.cName ?? methodName}(${args.join(", ")})`;
+}
+
+function emitArraySliceHelperCall(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  receiverType: Str,
+  context: EmitContext,
+): Str | null {
+  if (expr.method !== "slice") return null;
+  const array = parseArrayTypeName(receiverType);
+  if (array !== null) return emitArraySliceCall(expr, array.element, context);
+  const slice = parseSliceTypeName(receiverType);
+  if (slice !== null) return emitSliceSliceCall(expr, slice.element, context);
+  return null;
+}
+
+function emitArraySliceCall(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  elementType: Str,
+  context: EmitContext,
+): Str {
+  const receiver = emitMemberOperand(expr.receiver, context);
+  return emitSliceLiteral(
+    elementType,
+    `${receiver} + ${emitExpression(expr.args[0]!, context)}`,
+    expr,
+    context,
+  );
+}
+
+function emitSliceSliceCall(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  elementType: Str,
+  context: EmitContext,
+): Str {
+  const receiver = emitMemberOperand(expr.receiver, context);
+  return emitSliceLiteral(
+    elementType,
+    `${receiver}.data + ${emitExpression(expr.args[0]!, context)}`,
+    expr,
+    context,
+  );
+}
+
+function emitSliceLiteral(
+  elementType: Str,
+  data: Str,
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  context: EmitContext,
+): Str {
+  const start = emitExpression(expr.args[0]!, context);
+  const end = emitExpression(expr.args[1]!, context);
+  return `(${sliceTypeName(elementType)}){ .data = ${data}, .length = ${end} - ${start} }`;
+}
+
+function sliceTypeName(elementType: Str): Str {
+  return `Slice_${elementType.replace(/[^A-Za-z0-9_]/g, "_")}`;
+}
+
+function emitBorrowedInterfaceMethodCall(
+  expr: Extract<Expression, { kind: "MethodCallExpr" }>,
+  receiverType: Str,
+  context: EmitContext,
+): Str | null {
+  const interfaceName = borrowedSourceName(receiverType);
+  if (interfaceName === null) return null;
+  const interfaceDecl =
+    context.program?.interfaces?.find((candidate) => candidate.name === interfaceName) ?? null;
+  if (interfaceDecl === null) return null;
+  const method = interfaceDecl.methods.find((candidate) => candidate.name === expr.method) ?? null;
+  if (method === null) return null;
+  const receiver = emitExpression(expr.receiver, context);
+  const args = emitCallArguments(
+    expr.args,
+    method.params,
+    context,
+    (arg, param) => emitMethodArgument(arg, param, context),
+    emitExpressionExpected,
+  );
+  return `${receiver}.${expr.method}(${[`${receiver}.self`, ...args].join(", ")})`;
 }
 
 function emitAddressOfReceiver(expr: Expression, context: EmitContext): Str {
@@ -396,15 +512,43 @@ function emitRecordLiteralFieldValue(
   context: EmitContext,
 ): Str {
   const entry = findRecordLiteralSource(expr, field.name, context);
-  if (entry === null) return "0";
+  if (entry === null) return emitMissingRecordLiteralField(field);
   if (entry.kind === "Spread") {
     return `${emitMemberOperand(entry.expression, context)}.${field.name}`;
+  }
+  if (field.optional === true) {
+    return emitOptionalRecordLiteralField(entry.expression, field, context);
   }
   const expected = emitCTypeName(field.type, context.typeAliases);
   if (field.type.kind === "FixedArrayTypeRef" && entry.expression.kind === "ZeroValueExpr") {
     return "{0}";
   }
   return emitExpressionExpected(entry.expression, expected, context);
+}
+
+function emitMissingRecordLiteralField(field: RecordTypeRef["fields"][usize]): Str {
+  if (field.optional !== true) return "0";
+  const element = optionalTypeElement(field.type);
+  if (element === null) return "0";
+  return `(${optionalCTypeNameFromTypeName(typeName(element))}){ .present = false }`;
+}
+
+function emitOptionalRecordLiteralField(
+  expr: Expression,
+  field: RecordTypeRef["fields"][usize],
+  context: EmitContext,
+): Str {
+  const element = optionalTypeElement(field.type);
+  if (element === null) return "0";
+  const optionalType = optionalCTypeNameFromTypeName(typeName(element));
+  if (isOptionalConstructor(expr)) return emitExpressionExpected(expr, optionalType, context);
+  const expected = emitCTypeName(element, context.typeAliases);
+  const value = emitExpressionExpected(expr, expected, context);
+  return `(${optionalType}){ .present = true, .value = ${value} }`;
+}
+
+function isOptionalConstructor(expr: Expression): b8 {
+  return expr.kind === "CallExpr" && (expr.callee === "Some" || expr.callee === "None");
 }
 
 function findRecordLiteralSource(

@@ -1,0 +1,27 @@
+enum Status: i32 {
+  Ready = 1,
+  Done = 2,
+}
+
+union MaybeI32 {
+  Some: i32;
+  None;
+}
+
+function read(value: MaybeI32): i32 {
+  switch (value.tag) {
+    case MaybeI32.Some:
+      return value.Some;
+    default:
+      return 0;
+  }
+}
+
+function main(): i32 {
+  const status: Status = Status.Done;
+  const value: MaybeI32 = MaybeI32.Some(40);
+  if (status == Status.Done && read(value) == 40) {
+    return 0;
+  }
+  return 1;
+}

@@ -36,6 +36,23 @@ Deno.test("checks variadic call arguments", () => {
   assertLen(diagnostics.length, 0);
 });
 
+Deno.test("reports variadic argument diagnostic codes", () => {
+  const variadic = { ...fn([param("format", pointer(named("u8")))]), variadic: true };
+  const diagnostics = checkCallArguments(
+    [stringLiteral(), integer()],
+    variadic,
+    resolveExpected,
+    recordTypeOf,
+    span,
+  );
+
+  assertText(
+    diagnostics[0]?.message ?? "",
+    "Variadic argument 2 type 'Point' is not C variadic ABI compatible",
+  );
+  assertText(diagnostics[0]?.code ?? "", "E3202");
+});
+
 Deno.test("reports call arity and type errors", () => {
   const diagnostics = checkCallArguments(
     [integer(), integer()],
@@ -59,6 +76,10 @@ function resolveActual(_expr: Expression, _expected: TypeName): TypeName {
 
 function typeOf(_expr: Expression): TypeName {
   return "i32";
+}
+
+function recordTypeOf(_expr: Expression): TypeName {
+  return "Point";
 }
 
 function fn(params: FunctionDecl["params"]): FunctionDecl {

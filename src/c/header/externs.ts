@@ -49,7 +49,9 @@ function formatSupportedFunction(fn: CHeaderFunction, recordNames: Set<Str>): St
 
 function formatFunction(fn: CHeaderFunction, recordNames: Set<Str>): Str {
   const params = formatParams(fn, recordNames);
-  return `extern function ${fn.name}(${params}): ${mapCHeaderType(fn.returnType, recordNames)};`;
+  return `export extern function ${fn.name}(${params}): ${
+    mapCHeaderType(fn.returnType, recordNames)
+  };`;
 }
 
 function formatParams(fn: CHeaderFunction, recordNames: Set<Str>): Str {

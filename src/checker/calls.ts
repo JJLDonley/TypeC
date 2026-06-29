@@ -21,17 +21,24 @@ export function checkCallArguments(
   resolveType: TypeResolver,
   span: SourceSpan,
 ): Diagnostic[] {
+  const restIndex = restParamIndex(fn);
   const diagnostics: Diagnostic[] = checkCallArity(
     args.length,
-    fn.params.length,
-    fn.variadic === true,
+    restIndex ?? fn.params.length,
+    fn.variadic === true || restIndex !== null,
     fn.name,
     span,
     minArgumentCount(fn),
   );
-  for (let index: usize = 0; index < args.length && index < fn.params.length; index++) {
+  const fixedLength = restIndex ?? fn.params.length;
+  for (let index: usize = 0; index < args.length && index < fixedLength; index++) {
     diagnostics.push(
       ...checkCallArgument(args[index]!, fn.params[index]!, resolveExpectedType, index),
+    );
+  }
+  if (restIndex !== null) {
+    diagnostics.push(
+      ...checkRestArguments(args, fn.params[restIndex]!, restIndex, resolveExpectedType),
     );
   }
   if (fn.variadic === true) {
@@ -69,8 +76,38 @@ function checkOptionalCallArgument(
 }
 
 function minArgumentCount(fn: FunctionDecl): usize {
-  const index = fn.params.findIndex((param) => param.optional === true || param.defaultValue);
-  return index < 0 ? fn.params.length : index;
+  const flexibleIndex = fn.params.findIndex((param) =>
+    param.optional === true || param.defaultValue || param.rest === true
+  );
+  return flexibleIndex < 0 ? fn.params.length : flexibleIndex;
+}
+
+function restParamIndex(fn: FunctionDecl): usize | null {
+  const index = fn.params.findIndex((param) => param.rest === true);
+  return index < 0 ? null : index;
+}
+
+function checkRestArguments(
+  args: Expression[],
+  param: FunctionDecl["params"][usize],
+  start: usize,
+  resolveExpectedType: ExpectedTypeResolver,
+): Diagnostic[] {
+  const element = restElementType(param);
+  const diagnostics: Diagnostic[] = [];
+  for (let index: usize = start; index < args.length; index++) {
+    const arg = args[index]!;
+    const actual = resolveExpectedType(arg, element);
+    diagnostics.push(...checkCallArgumentType(actual, element, index, arg.span));
+  }
+  return diagnostics;
+}
+
+function restElementType(param: FunctionDecl["params"][usize]): TypeName {
+  if (param.type.kind === "SliceTypeRef" || param.type.kind === "InferredArrayTypeRef") {
+    return typeName(param.type.element);
+  }
+  return typeName(param.type);
 }
 
 function checkVariadicArguments(

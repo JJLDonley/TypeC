@@ -1,4 +1,4 @@
-import type { FunctionDecl, Program, TypeRef } from "core/ast.ts";
+import type { FunctionDecl, InterfaceDecl, Program, TypeRef } from "core/ast.ts";
 import type { SourceSpan } from "core/diagnostics.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkDeclarations } from "checker/declarations.ts";
@@ -31,17 +31,46 @@ Deno.test("reports invalid declarations", () => {
     ]),
   );
 
-  assertText(result.diagnostics[0]?.message ?? "", "Type alias 'Count' must name a record type");
-  assertText(result.diagnostics[1]?.message ?? "", "Unknown type 'Missing'");
-  assertText(result.diagnostics[2]?.message ?? "", "Parameter 'value' cannot have type 'void'");
+  assertText(result.diagnostics[0]?.message ?? "", "Unknown type 'Missing'");
+  assertText(result.diagnostics[1]?.message ?? "", "Parameter 'value' cannot have type 'void'");
 });
 
-function program(typeAliases: Program["typeAliases"], functions: FunctionDecl[]): ResolvedProgram {
-  return { kind: "Program", imports: [], typeAliases, functions, span, symbols: [], scopes: [] };
+Deno.test("reports interface value type declarations", () => {
+  const result = checkDeclarations(
+    program([], [fn("render", named("void"), [param("value", named("Drawable"))])], [
+      interfaceDecl("Drawable"),
+    ]),
+  );
+
+  assertText(
+    result.diagnostics[0]?.message ?? "",
+    "Interface value type 'Drawable' is not implemented",
+  );
+});
+
+function program(
+  typeAliases: Program["typeAliases"],
+  functions: FunctionDecl[],
+  interfaces: Program["interfaces"] = [],
+): ResolvedProgram {
+  return {
+    kind: "Program",
+    imports: [],
+    typeAliases,
+    functions,
+    interfaces,
+    span,
+    symbols: [],
+    scopes: [],
+  };
 }
 
 function typeAlias(name: Str, type: TypeRef): Program["typeAliases"][usize] {
   return { kind: "TypeAliasDecl", exported: false, name, type, span };
+}
+
+function interfaceDecl(name: Str): InterfaceDecl {
+  return { kind: "InterfaceDecl", exported: false, name, methods: [], span };
 }
 
 function fn(name: Str, returnType: TypeRef, params: FunctionDecl["params"]): FunctionDecl {

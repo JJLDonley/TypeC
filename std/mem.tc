@@ -1,0 +1,11 @@
+export function align_up_usize(value: usize, alignment: usize): usize {
+  const remainder: usize = value % alignment;
+  if (remainder == 0) {
+    return value;
+  }
+  return value + alignment - remainder;
+}
+
+export function is_aligned_usize(value: usize, alignment: usize): bool {
+  return value % alignment == 0;
+}

@@ -1,4 +1,5 @@
 import type { Expression, FunctionDecl } from "core/ast.ts";
+import { CALLBACK_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { functionTypeName } from "checker/function_type_names.ts";
@@ -26,6 +27,7 @@ export function checkExpectedCallbackExpression(
   if (isAssignable(actual, expected)) return handled(actual, []);
   return handled(actual, [{
     message: `Callback '${expr.name}' type '${actual}' is not assignable to '${expected}'`,
+    code: CALLBACK_TYPE,
     span: expr.span,
   }]);
 }

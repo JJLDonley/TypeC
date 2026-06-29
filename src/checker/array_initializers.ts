@@ -1,3 +1,4 @@
+import { ARRAY_VARIABLE_INITIALIZER } from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -16,7 +17,11 @@ export function checkArrayInitializer(
   if (initializer.kind === "ZeroValueExpr") return [];
   if (isArrayFillInitializer(initializer)) return [];
   if (isStringLiteralArrayInitializer(initializer, expected)) return [];
-  return [{ message: "Array variable initializer must be an array literal", span }];
+  return [{
+    message: "Array variable initializer must be an array literal",
+    code: ARRAY_VARIABLE_INITIALIZER,
+    span,
+  }];
 }
 
 function isArrayFillInitializer(initializer: Expression): b8 {

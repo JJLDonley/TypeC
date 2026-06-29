@@ -36,11 +36,39 @@ Deno.test("accepts slice type refs", () => {
   assertLen(diagnostics.length, 0);
 });
 
+Deno.test("rejects literal value type refs", () => {
+  assertText(
+    checkTypeRef(literal("1"), new Map())[0]?.message ?? "",
+    "Literal type cannot be used as a value type",
+  );
+  assertText(
+    checkTypeRef(union([literal("1"), literal("2")]), new Map())[0]?.message ?? "",
+    "Literal type cannot be used as a value type",
+  );
+  assertText(
+    checkTypeRef(named("One"), new Map([["One", literal("1")]]))[0]?.message ?? "",
+    "Literal-only type alias 'One' cannot be used as a value type",
+  );
+  assertLen(checkTypeRef(literal("1"), new Map(), new Set(), "type-alias").length, 0);
+});
+
 Deno.test("checks optional type refs", () => {
   assertLen(checkTypeRef(optional(named("i32")), new Map()).length, 0);
   assertText(
     checkTypeRef(optional(named("void")), new Map())[0]?.message ?? "",
     "Optional type cannot contain 'void'",
+  );
+  assertText(
+    checkTypeRef(optional(fixedArray(named("i32"))), new Map())[0]?.message ?? "",
+    "Optional type cannot contain array type",
+  );
+  assertText(
+    checkTypeRef(optional(inferredArray(named("i32"))), new Map())[0]?.message ?? "",
+    "Optional type cannot contain array type",
+  );
+  assertText(
+    checkTypeRef(optional(functionType(named("i32"))), new Map())[0]?.message ?? "",
+    "Optional type cannot contain function type",
   );
 });
 
@@ -75,8 +103,25 @@ function slice(element: TypeRef): TypeRef {
   return { kind: "SliceTypeRef", element, span };
 }
 
+function literal(value: Str): TypeRef {
+  return { kind: "LiteralTypeRef", value, text: value, span };
+}
+
+function union(members: TypeRef[]): TypeRef {
+  return { kind: "UnionTypeRef", members, span };
+}
+
 function optional(element: TypeRef): TypeRef {
   return { kind: "NamedTypeRef", name: "Optional", typeArgs: [element], span };
+}
+
+function functionType(returnType: TypeRef): TypeRef {
+  return {
+    kind: "FunctionTypeRef",
+    params: [{ name: "value", type: named("i32"), span }],
+    returnType,
+    span,
+  };
 }
 
 function record(fields: [Str, TypeRef][]): TypeRef {

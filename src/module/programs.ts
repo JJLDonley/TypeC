@@ -1,3 +1,8 @@
+import {
+  DEFAULT_EXPORT_MISSING,
+  MODULE_EXPORT_AMBIGUOUS,
+  MODULE_EXPORT_MISSING,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import type {
@@ -16,15 +21,19 @@ import { namespaceProgramFunctions } from "module/function_namespaces.ts";
 import { namespaceProgramTypes } from "module/type_namespaces.ts";
 
 type Str = string;
+type b8 = boolean;
+type usize = number;
 
 export function exportAllFunctions(program: Program): Program {
   return { ...program, functions: program.functions.map((fn) => ({ ...fn, exported: true })) };
 }
 
 export function mergeProgram(local: Program, imports: Program[]): Program {
-  return {
+  return applyLocalExports({
     kind: "Program",
     imports: [],
+    exports: [],
+    defaultExport: local.defaultExport ?? null,
     typeAliases: uniqueRefs([
       ...imports.flatMap((program) => program.typeAliases),
       ...local.typeAliases,
@@ -47,7 +56,7 @@ export function mergeProgram(local: Program, imports: Program[]): Program {
     ]),
     functions: uniqueRefs([...imports.flatMap((program) => program.functions), ...local.functions]),
     span: local.span,
-  };
+  }, local.exports ?? []);
 }
 
 export function selectImports(
@@ -59,23 +68,45 @@ export function selectImports(
   return mergeProgram(emptyProgram(program), selected);
 }
 
+function applyLocalExports(program: Program, exports: NonNullable<Program["exports"]>): Program {
+  let exported = program;
+  for (const exportDecl of exports) {
+    if (exportDecl.path !== null) continue;
+    for (const specifier of exportDecl.names) {
+      exported = setImportRootExported(exported, specifier.local, true);
+    }
+  }
+  return exported;
+}
+
 function selectImport(
   program: Program,
   specifier: ImportSpecifier,
   span: Diagnostic["span"],
 ): Program {
-  const imported = specifier.imported;
+  const imported = importedName(program, specifier);
   const typeAliases = selectTypeAlias(program.typeAliases, imported);
   const interfaces = selectInterface(program.interfaces ?? [], imported);
   const taggedUnions = selectTaggedUnion(program.taggedUnions ?? [], imported);
   const enums = selectEnum(program.enums ?? [], imported);
-  const constants = selectConstant(program.constants ?? [], imported);
-  const functions = selectFunction(program.functions, imported);
+  const constants = specifier.typeOnly ? [] : selectConstant(program.constants ?? [], imported);
+  const functions = specifier.typeOnly ? [] : selectFunction(program.functions, imported);
+  rejectAmbiguousImport(imported, specifier.span, [
+    typeAliases.length,
+    interfaces.length,
+    taggedUnions.length,
+    enums.length,
+    constants.length,
+  ]);
   if (
     typeAliases.length + interfaces.length + taggedUnions.length + enums.length +
         constants.length + functions.length === 0
   ) {
-    throw new TypeCError([{ message: `Module does not export '${imported}'`, span }]);
+    throw new TypeCError([{
+      message: `Module does not export '${imported}'`,
+      code: MODULE_EXPORT_MISSING,
+      span,
+    }]);
   }
   const selected = selectDependencyClosure(
     program,
@@ -88,13 +119,38 @@ function selectImport(
     constants.map((constant) => constant.name),
     functions.map((fn) => fn.name),
   );
-  return aliasImportRoots(selected, specifier);
+  return aliasImportRoots(selected, { ...specifier, imported });
+}
+
+function rejectAmbiguousImport(
+  imported: Str,
+  span: Diagnostic["span"],
+  counts: usize[],
+): void {
+  if (counts.every((count) => count <= 1)) return;
+  throw new TypeCError([{
+    message: `Module export '${imported}' is ambiguous`,
+    code: MODULE_EXPORT_AMBIGUOUS,
+    span,
+  }]);
+}
+
+function importedName(program: Program, specifier: ImportSpecifier): Str {
+  if (specifier.imported !== "default") return specifier.imported;
+  if (program.defaultExport) return program.defaultExport;
+  throw new TypeCError([{
+    message: "Module does not export 'default'",
+    code: DEFAULT_EXPORT_MISSING,
+    span: specifier.span,
+  }]);
 }
 
 function emptyProgram(program: Program): Program {
   return {
     kind: "Program",
     imports: [],
+    exports: [],
+    defaultExport: null,
     typeAliases: [],
     interfaces: [],
     taggedUnions: [],
@@ -106,38 +162,104 @@ function emptyProgram(program: Program): Program {
 }
 
 function aliasImportRoots(program: Program, specifier: ImportSpecifier): Program {
-  if (specifier.imported === specifier.local) return program;
+  if (specifier.imported === specifier.local && specifier.reExport === true) {
+    return exportImportRoots(program, specifier);
+  }
+  if (specifier.imported === specifier.local) return unexportTypeOnlyImport(program, specifier);
   return {
     ...program,
     typeAliases: program.typeAliases.map((typeAlias) =>
       typeAlias.name === specifier.imported
-        ? { ...typeAlias, exported: false, name: specifier.local }
+        ? { ...typeAlias, exported: specifier.reExport === true, name: specifier.local }
         : typeAlias
     ),
     interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
       interfaceDecl.name === specifier.imported
-        ? { ...interfaceDecl, exported: false, name: specifier.local }
+        ? { ...interfaceDecl, exported: specifier.reExport === true, name: specifier.local }
         : interfaceDecl
     ),
     taggedUnions: (program.taggedUnions ?? []).map((unionDecl) =>
       unionDecl.name === specifier.imported
-        ? { ...unionDecl, exported: false, name: specifier.local }
+        ? { ...unionDecl, exported: specifier.reExport === true, name: specifier.local }
         : unionDecl
     ),
     enums: (program.enums ?? []).map((enumDecl) =>
       enumDecl.name === specifier.imported
-        ? { ...enumDecl, exported: false, name: specifier.local }
+        ? { ...enumDecl, exported: specifier.reExport === true, name: specifier.local }
         : enumDecl
     ),
     constants: (program.constants ?? []).map((constant) =>
       constant.name === specifier.imported
-        ? { ...constant, exported: false, name: specifier.local }
+        ? { ...constant, exported: specifier.reExport === true, name: specifier.local }
         : constant
     ),
     functions: program.functions.map((fn) =>
-      fn.name === specifier.imported ? aliasFunction(fn, specifier.local) : fn
+      fn.name === specifier.imported
+        ? aliasFunction(fn, specifier.local, specifier.reExport === true)
+        : fn
     ),
   };
+}
+
+function exportImportRoots(program: Program, specifier: ImportSpecifier): Program {
+  return setImportRootExported(program, specifier.imported, true);
+}
+
+function unexportTypeOnlyImport(program: Program, specifier: ImportSpecifier): Program {
+  if (specifier.typeOnly !== true) return program;
+  return setImportRootExported(program, specifier.imported, false);
+}
+
+function setImportRootExported(program: Program, name: Str, exported: b8): Program {
+  return {
+    ...program,
+    typeAliases: program.typeAliases.map((typeAlias) =>
+      setTypeAliasExported(typeAlias, name, exported)
+    ),
+    interfaces: (program.interfaces ?? []).map((interfaceDecl) =>
+      setInterfaceExported(interfaceDecl, name, exported)
+    ),
+    taggedUnions: (program.taggedUnions ?? []).map((unionDecl) =>
+      setTaggedUnionExported(unionDecl, name, exported)
+    ),
+    enums: (program.enums ?? []).map((enumDecl) => setEnumExported(enumDecl, name, exported)),
+    constants: (program.constants ?? []).map((constant) =>
+      setConstantExported(constant, name, exported)
+    ),
+    functions: program.functions.map((fn) => setFunctionExported(fn, name, exported)),
+  };
+}
+
+function setTypeAliasExported(typeAlias: TypeAliasDecl, name: Str, exported: b8): TypeAliasDecl {
+  return typeAlias.name === name ? { ...typeAlias, exported } : typeAlias;
+}
+
+function setInterfaceExported(
+  interfaceDecl: InterfaceDecl,
+  name: Str,
+  exported: b8,
+): InterfaceDecl {
+  return interfaceDecl.name === name ? { ...interfaceDecl, exported } : interfaceDecl;
+}
+
+function setTaggedUnionExported(
+  unionDecl: TaggedUnionDecl,
+  name: Str,
+  exported: b8,
+): TaggedUnionDecl {
+  return unionDecl.name === name ? { ...unionDecl, exported } : unionDecl;
+}
+
+function setEnumExported(enumDecl: EnumDecl, name: Str, exported: b8): EnumDecl {
+  return enumDecl.name === name ? { ...enumDecl, exported } : enumDecl;
+}
+
+function setConstantExported(constant: ConstDecl, name: Str, exported: b8): ConstDecl {
+  return constant.name === name ? { ...constant, exported } : constant;
+}
+
+function setFunctionExported(fn: FunctionDecl, name: Str, exported: b8): FunctionDecl {
+  return fn.name === name ? { ...fn, exported } : fn;
 }
 
 export function selectNamespaceImports(
@@ -179,6 +301,8 @@ export function selectNamespaceImports(
   return {
     kind: "Program",
     imports: [],
+    exports: [],
+    defaultExport: null,
     typeAliases,
     interfaces,
     taggedUnions,
@@ -199,8 +323,9 @@ function exportedNamespaceTypeNames(program: Program, members: Str[]): Str[] {
   ].filter((name) => memberSet.has(name));
 }
 
-function exportedNamespaceConstantNames(program: Program, _members: Str[]): Str[] {
-  return exportedConstantNames(program);
+function exportedNamespaceConstantNames(program: Program, members: Str[]): Str[] {
+  const memberSet = new Set(members);
+  return exportedConstantNames(program).filter((name) => memberSet.has(name));
 }
 
 function exportedNamespaceFunctionNames(program: Program, members: Str[]): Str[] {
@@ -294,10 +419,10 @@ function namespaceFunction(fn: FunctionDecl, namespace: Str): FunctionDecl {
   };
 }
 
-function aliasFunction(fn: FunctionDecl, local: Str): FunctionDecl {
+function aliasFunction(fn: FunctionDecl, local: Str, exported: b8): FunctionDecl {
   return {
     ...fn,
-    exported: false,
+    exported,
     name: local,
     cName: fn.external ? fn.cName ?? fn.name : fn.cName,
   };

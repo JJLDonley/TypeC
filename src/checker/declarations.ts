@@ -1,9 +1,12 @@
 import type { Diagnostic } from "core/diagnostics.ts";
-import type { ConstDecl, FunctionDecl, TypeRef } from "core/ast.ts";
+import type { ConstDecl, EnumDecl, FunctionDecl, TypeRef } from "core/ast.ts";
+import { enumBackingType } from "core/enums.ts";
 import type { ResolvedProgram } from "core/rast.ts";
 import { checkValueType } from "checker/value_types.ts";
 import { isInferredFunctionReturn } from "checker/function_return_inference.ts";
 import { checkTaggedUnions } from "checker/tagged_unions.ts";
+import { checkTypeAliasLiteralValueTypes } from "checker/literal_value_types.ts";
+import { checkTypeAliasCycles } from "checker/type_alias_cycles.ts";
 import { checkTypeAliasOrder } from "checker/type_alias_order.ts";
 import { runtimeFunctions } from "checker/overloads.ts";
 import { checkTypeRef } from "checker/type_validation.ts";
@@ -21,11 +24,13 @@ export function checkDeclarations(program: ResolvedProgram): CheckedDeclarations
   const typeAliases = collectTypeAliases(program);
   const functions = collectFunctions(program);
   const constants = collectConstants(program);
+  const interfaceNames = collectInterfaceNames(program);
   const diagnostics = [
-    ...checkTypeAliases(program, typeAliases),
-    ...checkTaggedUnions(program.taggedUnions ?? [], typeAliases),
-    ...checkConstants(program, typeAliases),
-    ...checkFunctions(program, typeAliases),
+    ...checkTypeAliases(program, typeAliases, interfaceNames),
+    ...checkTaggedUnions(program.taggedUnions ?? [], typeAliases, interfaceNames),
+    ...checkEnumBackings(program.enums ?? [], typeAliases, interfaceNames),
+    ...checkConstants(program, typeAliases, interfaceNames),
+    ...checkFunctions(program, typeAliases, interfaceNames),
   ];
   return { functions, constants, typeAliases, diagnostics };
 }
@@ -35,7 +40,7 @@ function collectTypeAliases(program: ResolvedProgram): Map<Str, TypeRef> {
     ...program.typeAliases.map((typeAlias): [Str, TypeRef] => [typeAlias.name, typeAlias.type]),
     ...(program.enums ?? []).map((enumDecl): [Str, TypeRef] => [
       enumDecl.name,
-      { kind: "NamedTypeRef", name: "i32", span: enumDecl.span },
+      enumBackingType(enumDecl),
     ]),
     ...(program.taggedUnions ?? []).map((unionDecl): [Str, TypeRef] => [
       unionDecl.name,
@@ -52,33 +57,52 @@ function collectConstants(program: ResolvedProgram): Map<Str, ConstDecl> {
   return new Map((program.constants ?? []).map((constant) => [constant.name, constant]));
 }
 
-function checkTypeAliases(program: ResolvedProgram, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function collectInterfaceNames(program: ResolvedProgram): Set<Str> {
+  return new Set((program.interfaces ?? []).map((interfaceDecl) => interfaceDecl.name));
+}
+
+function checkTypeAliases(
+  program: ResolvedProgram,
+  typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (const typeAlias of program.typeAliases) {
-    if (typeAlias.type.kind !== "RecordTypeRef") {
-      diagnostics.push({
-        message: `Type alias '${typeAlias.name}' must name a record type`,
-        span: typeAlias.span,
-      });
-    }
-    diagnostics.push(...checkTypeRef(typeAlias.type, typeAliases));
+    diagnostics.push(...checkTypeRef(typeAlias.type, typeAliases, interfaceNames, "type-alias"));
+    diagnostics.push(...checkTypeAliasLiteralValueTypes(typeAlias, typeAliases));
   }
+  diagnostics.push(...checkTypeAliasCycles(program.typeAliases));
   diagnostics.push(...checkTypeAliasOrder(program.typeAliases));
   return diagnostics;
 }
 
-function checkConstants(program: ResolvedProgram, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function checkEnumBackings(
+  enums: EnumDecl[],
+  typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
+): Diagnostic[] {
+  return enums.flatMap((enumDecl) =>
+    checkTypeRef(enumBackingType(enumDecl), typeAliases, interfaceNames)
+  );
+}
+
+function checkConstants(
+  program: ResolvedProgram,
+  typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
+): Diagnostic[] {
   return (program.constants ?? []).flatMap((constant) =>
-    checkConstantDeclaration(constant, typeAliases)
+    checkConstantDeclaration(constant, typeAliases, interfaceNames)
   );
 }
 
 function checkConstantDeclaration(
   constant: ConstDecl,
   typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
 ): Diagnostic[] {
   return [
-    ...checkTypeRef(constant.type, typeAliases),
+    ...checkTypeRef(constant.type, typeAliases, interfaceNames),
     ...checkValueType(
       constant.type,
       `Constant '${constant.name}' cannot have type 'void'`,
@@ -87,20 +111,28 @@ function checkConstantDeclaration(
   ];
 }
 
-function checkFunctions(program: ResolvedProgram, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function checkFunctions(
+  program: ResolvedProgram,
+  typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (const fn of program.functions) {
-    diagnostics.push(...checkFunctionDeclaration(fn, typeAliases));
+    diagnostics.push(...checkFunctionDeclaration(fn, typeAliases, interfaceNames));
   }
   return diagnostics;
 }
 
-function checkFunctionDeclaration(fn: FunctionDecl, typeAliases: Map<Str, TypeRef>): Diagnostic[] {
+function checkFunctionDeclaration(
+  fn: FunctionDecl,
+  typeAliases: Map<Str, TypeRef>,
+  interfaceNames: Set<Str>,
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = isInferredFunctionReturn(fn)
     ? []
-    : checkTypeRef(fn.returnType, typeAliases);
+    : checkTypeRef(fn.returnType, typeAliases, interfaceNames);
   for (const param of fn.params) {
-    diagnostics.push(...checkTypeRef(param.type, typeAliases));
+    diagnostics.push(...checkTypeRef(param.type, typeAliases, interfaceNames));
     diagnostics.push(
       ...checkValueType(
         param.type,

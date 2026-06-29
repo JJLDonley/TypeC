@@ -161,6 +161,7 @@ function expressionUsesArena(expr: Expression): b8 {
     case "NullishCoalesceExpr":
       return expressionUsesArena(expr.left) || expressionUsesArena(expr.fallback);
     case "CastExpr":
+    case "SatisfiesExpr":
       return expressionUsesArena(expr.expression);
     case "OptionalFieldAccessExpr":
       return expressionUsesArena(expr.operand);
@@ -211,6 +212,11 @@ function typeUsesArena(type: TypeRef): b8 {
       return typeUsesArena(type.objectType);
     case "MappedTypeRef":
       return typeUsesArena(type.sourceType) || typeUsesArena(type.valueType);
+    case "LiteralTypeRef":
+    case "TypeofTypeRef":
+      return false;
+    case "KeyofTypeRef":
+      return typeUsesArena(type.target);
     case "RecordTypeRef":
       return type.fields.some((field) => typeUsesArena(field.type));
   }

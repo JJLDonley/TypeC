@@ -1,0 +1,9 @@
+import { align_up_usize, is_aligned_usize } from "std/mem.tc";
+
+function main(): i32 {
+  const value: usize = align_up_usize(13, 8);
+  if (is_aligned_usize(value, 8)) {
+    return value as i32;
+  }
+  return 1;
+}

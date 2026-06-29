@@ -21,13 +21,16 @@ Deno.test("formats supported C header externs", () => {
     fn("log", "int32_t", [{ name: "format", type: "const char *" }], "int32_t (const char *, ...)"),
   ]);
 
-  assertIncludes(output, "extern function add(left: i32, right: i32): i32;");
-  assertIncludes(output, "extern function copy(dst: void*, src: void*): void*;");
-  assertIncludes(output, "extern function fill(items: i32[]): void;");
-  assertIncludes(output, "extern function nested(items: Array<Array<i32, 3>, 2>): void;");
-  assertIncludes(output, "extern function set_callback(callback: (arg0: i32) => i32): void;");
-  assertIncludes(output, "extern function platform(value: c_ulong): c_int;");
-  assertIncludes(output, "extern function log(format: u8*, ...args): i32;");
+  assertIncludes(output, "export extern function add(left: i32, right: i32): i32;");
+  assertIncludes(output, "export extern function copy(dst: void*, src: void*): void*;");
+  assertIncludes(output, "export extern function fill(items: i32[]): void;");
+  assertIncludes(output, "export extern function nested(items: Array<Array<i32, 3>, 2>): void;");
+  assertIncludes(
+    output,
+    "export extern function set_callback(callback: (arg0: i32) => i32): void;",
+  );
+  assertIncludes(output, "export extern function platform(value: c_ulong): c_int;");
+  assertIncludes(output, "export extern function log(format: u8*, ...args): i32;");
 });
 
 Deno.test("skips unsupported C header externs", () => {
@@ -61,8 +64,8 @@ Deno.test("keeps unlocated functions using known records", () => {
     new Set(["Color"]),
   );
 
-  assertIncludes(output, "extern function draw(tint: Color*): void;");
-  assertIncludes(output, "extern function fill(items: Color[]): void;");
+  assertIncludes(output, "export extern function draw(tint: Color*): void;");
+  assertIncludes(output, "export extern function fill(items: Color[]): void;");
   assertExcludes(output, "skip");
 });
 

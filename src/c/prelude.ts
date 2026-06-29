@@ -4,7 +4,6 @@ const cPreludeIncludes: Str[] = [
   "#include <stdint.h>",
   "#include <stdbool.h>",
   "#include <stddef.h>",
-  "#include <stdlib.h>",
 ];
 
 const fixedWidthAliases: Str[] = [
@@ -23,19 +22,19 @@ const fixedWidthAliases: Str[] = [
 ];
 
 const cAbiAliases: Str[] = [
-  "typedef char c_char;",
-  "typedef signed char c_schar;",
-  "typedef unsigned char c_uchar;",
-  "typedef short c_short;",
-  "typedef unsigned short c_ushort;",
-  "typedef int c_int;",
-  "typedef unsigned int c_uint;",
-  "typedef long c_long;",
-  "typedef unsigned long c_ulong;",
-  "typedef long long c_longlong;",
-  "typedef unsigned long long c_ulonglong;",
-  "typedef float c_float;",
-  "typedef double c_double;",
+  "typedef i8 c_char;",
+  "typedef i8 c_schar;",
+  "typedef u8 c_uchar;",
+  "typedef i16 c_short;",
+  "typedef u16 c_ushort;",
+  "typedef i32 c_int;",
+  "typedef u32 c_uint;",
+  "typedef i64 c_long;",
+  "typedef u64 c_ulong;",
+  "typedef i64 c_longlong;",
+  "typedef u64 c_ulonglong;",
+  "typedef f32 c_float;",
+  "typedef f64 c_double;",
 ];
 
 export function emitCPrelude(): Str[] {

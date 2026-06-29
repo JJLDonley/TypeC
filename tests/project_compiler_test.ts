@@ -17,20 +17,28 @@ Deno.test("reads absent project compiler flags", () => {
 });
 
 Deno.test("rejects invalid project compiler config", () => {
-  assertCompilerError([], "project.json compiler must be an object");
-  assertCompilerError({ unknown: [] }, "project.json compiler has unknown key 'unknown'");
-  assertCompilerError({ flags: ["-O2", 1] }, "project.json compiler.flags must be a string array");
+  assertCompilerError([], "project.json compiler must be an object", "E2906");
+  assertCompilerError({ unknown: [] }, "project.json compiler has unknown key 'unknown'", "E2902");
+  assertCompilerError(
+    { flags: ["-O2", 1] },
+    "project.json compiler.flags must be a string array",
+    "E2907",
+  );
   assertCompilerError(
     { flags: ["-std=c99"] },
     "project.json compiler.flags cannot override the C standard",
+    "E2908",
   );
 });
 
-function assertCompilerError(value: unknown, message: Str): void {
+function assertCompilerError(value: unknown, message: Str, code: Str): void {
   try {
     readProjectCompilerFlags(value);
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics[0]?.message === message) return;
+    if (
+      error instanceof TypeCError && error.diagnostics[0]?.message === message &&
+      error.diagnostics[0]?.code === code
+    ) return;
     throw error;
   }
   throw new Error(`Expected ${message}`);

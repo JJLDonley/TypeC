@@ -1,13 +1,17 @@
+import { cStringByteLength } from "core/c_strings.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type {
+  CastAccessModifier,
   CastBlockStmt,
   CastClassConstructor,
   CastClassDecl,
   CastClassField,
   CastClassMethod,
   CastConstDecl,
+  CastDefaultExportDecl,
   CastEnumDecl,
   CastEnumMember,
+  CastExportDecl,
   CastExpression,
   CastFunctionDecl,
   CastGenericParam,
@@ -15,6 +19,8 @@ import type {
   CastImportSpecifier,
   CastInterfaceDecl,
   CastInterfaceMethod,
+  CastNamespaceDecl,
+  CastNamespaceMemberDecl,
   CastParam,
   CastRecordField,
   CastStructDecl,
@@ -37,6 +43,7 @@ import { span } from "parser/helpers.ts";
 import { parseImportNamesWith } from "parser/imports.ts";
 type Str = string;
 type b8 = boolean;
+type i32 = number;
 
 interface FunctionParamsParse {
   params: CastParam[];
@@ -50,7 +57,7 @@ export interface DeclarationParser {
   previous(): Token;
   expectKind(kind: TokenKind, message: Str): Token;
   expectText(text: Str): Token;
-  peek(): Token;
+  peek(offset?: i32): Token;
   error(token: Token, message: Str): void;
   parseTypeRef(): CastTypeRef;
   parseExpression(): CastExpression;
@@ -66,7 +73,10 @@ export interface DeclarationModifiers {
 
 export type CastDeclaration =
   | CastImportDecl
+  | CastExportDecl
+  | CastDefaultExportDecl
   | CastTypeAliasDecl
+  | CastNamespaceDecl
   | CastClassDecl
   | CastStructDecl
   | CastInterfaceDecl
@@ -77,8 +87,15 @@ export type CastDeclaration =
 
 export function parseDeclarationWith(parser: DeclarationParser): CastDeclaration {
   const modifiers = parseDeclarationModifiers(parser);
+  if (modifiers.exported && parser.checkText("default")) {
+    return parseDefaultExportDeclaration(parser, modifiers);
+  }
+  if (modifiers.exported && isExportListStart(parser)) {
+    return parseExportDeclaration(parser, modifiers);
+  }
   if (parser.checkText("import")) return parseImportDeclaration(parser, modifiers);
   if (parser.checkText("type")) return parseTypeAliasDeclaration(parser, modifiers);
+  if (parser.checkText("namespace")) return parseNamespaceDeclaration(parser, modifiers);
   if (parser.checkText("class")) return parseClassDeclaration(parser, modifiers);
   if (parser.checkText("struct")) return parseStructDeclaration(parser, modifiers);
   if (parser.checkText("interface")) return parseInterfaceDeclaration(parser, modifiers);
@@ -96,6 +113,47 @@ function parseDeclarationModifiers(parser: DeclarationParser): DeclarationModifi
   return { exported, exportToken, external, externToken };
 }
 
+function isExportListStart(parser: DeclarationParser): b8 {
+  return parser.checkText("{") || (parser.checkText("type") && parser.peek(1).text === "{");
+}
+
+function parseDefaultExportDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastDefaultExportDecl {
+  if (modifiers.externToken) parser.error(modifiers.externToken, "Exports cannot be extern");
+  const start = modifiers.exportToken ?? parser.peek();
+  parser.expectText("default");
+  const name = parser.expectKind("identifier", "Expected default export name");
+  const semi = parser.expectText(";");
+  return {
+    kind: "DefaultExportDecl",
+    name: name.text,
+    span: span(start.span.start, semi.span.end),
+  };
+}
+
+function parseExportDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastExportDecl {
+  if (modifiers.externToken) parser.error(modifiers.externToken, "Exports cannot be extern");
+  const start = modifiers.exportToken ?? parser.peek();
+  const typeOnly = parser.matchText("type");
+  const names = parseNamedImport(parser, typeOnly, true);
+  const path = parser.matchText("from")
+    ? parser.expectKind("string", "Expected export path")
+    : null;
+  const semi = parser.expectText(";");
+  return {
+    kind: "ExportDecl",
+    names,
+    typeOnly,
+    path: path?.text ?? null,
+    span: span(start.span.start, semi.span.end),
+  };
+}
+
 function parseImportDeclaration(
   parser: DeclarationParser,
   modifiers: DeclarationModifiers,
@@ -104,8 +162,9 @@ function parseImportDeclaration(
     ...importModifierDiagnostics(modifiers.exportToken, modifiers.externToken),
   );
   const start = parser.expectText("import");
+  const typeOnly = parser.matchText("type");
   const namespace = parser.checkText("*") ? parseNamespaceImport(parser) : null;
-  const names = namespace ? [] : parseNamedImport(parser);
+  const names = namespace ? [] : parseImportSpecifiers(parser, typeOnly);
   parser.expectText("from");
   const path = parser.expectKind("string", "Expected import path");
   const semi = parser.expectText(";");
@@ -113,20 +172,47 @@ function parseImportDeclaration(
     kind: "ImportDecl",
     names,
     namespace,
+    typeOnly,
     path: path.text,
     span: span(start.span.start, semi.span.end),
   };
 }
 
-function parseNamedImport(parser: DeclarationParser): CastImportSpecifier[] {
+function parseImportSpecifiers(
+  parser: DeclarationParser,
+  typeOnly: b8,
+): CastImportSpecifier[] {
+  if (parser.checkText("{")) return parseNamedImport(parser, typeOnly, false);
+  return [parseDefaultImport(parser, typeOnly)];
+}
+
+function parseDefaultImport(parser: DeclarationParser, typeOnly: b8): CastImportSpecifier {
+  const local = parser.expectKind("identifier", "Expected default import name");
+  return {
+    imported: "default",
+    local: local.text,
+    typeOnly,
+    span: local.span,
+  };
+}
+
+function parseNamedImport(
+  parser: DeclarationParser,
+  typeOnly: b8 = false,
+  reExport: b8 = false,
+): CastImportSpecifier[] {
   parser.expectText("{");
-  const names = parseImportNamesWith({
-    checkText: (text) => parser.checkText(text),
-    matchText: (text) => parser.matchText(text),
-    expectKind: (kind, message) => parser.expectKind(kind, message),
-    peek: () => parser.peek(),
-    error: (token, message) => parser.error(token, message),
-  });
+  const names = parseImportNamesWith(
+    {
+      checkText: (text) => parser.checkText(text),
+      matchText: (text) => parser.matchText(text),
+      expectKind: (kind, message) => parser.expectKind(kind, message),
+      peek: () => parser.peek(),
+      error: (token, message) => parser.error(token, message),
+    },
+    typeOnly,
+    reExport,
+  );
   parser.expectText("}");
   return names;
 }
@@ -137,6 +223,56 @@ function parseNamespaceImport(parser: DeclarationParser): Str {
   return parser.expectKind("identifier", "Expected import namespace").text;
 }
 
+function parseNamespaceDeclaration(
+  parser: DeclarationParser,
+  modifiers: DeclarationModifiers,
+): CastNamespaceDecl {
+  if (modifiers.externToken) parser.error(modifiers.externToken, "Namespaces cannot be extern");
+  const start = parser.expectText("namespace");
+  const name = parser.expectKind("identifier", "Expected namespace name");
+  parser.expectText("{");
+  const declarations = parseNamespaceMembers(parser);
+  const close = parser.expectText("}");
+  return {
+    kind: "NamespaceDecl",
+    exported: modifiers.exported,
+    name: name.text,
+    declarations,
+    span: span(start.span.start, close.span.end),
+  };
+}
+
+function parseNamespaceMembers(parser: DeclarationParser): CastNamespaceMemberDecl[] {
+  const declarations: CastNamespaceMemberDecl[] = [];
+  while (!parser.checkText("}") && !parser.checkText("eof")) {
+    declarations.push(parseNamespaceMember(parser));
+  }
+  return declarations;
+}
+
+function parseNamespaceMember(parser: DeclarationParser): CastNamespaceMemberDecl {
+  const declaration = parseDeclarationWith(parser);
+  if (
+    declaration.kind === "ImportDecl" || declaration.kind === "NamespaceDecl" ||
+    declaration.kind === "ExportDecl" || declaration.kind === "DefaultExportDecl"
+  ) {
+    parser.error(parser.previous(), "Namespaces cannot contain imports, exports, or namespaces");
+    return parseInvalidNamespaceMember(declaration.span);
+  }
+  return declaration;
+}
+
+function parseInvalidNamespaceMember(memberSpan: CastNamespaceMemberDecl["span"]): CastConstDecl {
+  return {
+    kind: "ConstDecl",
+    exported: false,
+    name: "<invalid>",
+    type: { kind: "NamedTypeRef", name: "i32", span: memberSpan },
+    initializer: { kind: "IntegerLiteral", value: 0n, text: "0", span: memberSpan },
+    span: memberSpan,
+  };
+}
+
 function parseTypeAliasDeclaration(
   parser: DeclarationParser,
   modifiers: DeclarationModifiers,
@@ -144,6 +280,7 @@ function parseTypeAliasDeclaration(
   parser.diagnostics().push(...typeAliasModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("type");
   const name = parser.expectKind("identifier", "Expected type alias name");
+  const genericParams = parseGenericParams(parser);
   parser.expectText("=");
   const type = parser.parseTypeRef();
   const semi = parser.expectText(";");
@@ -151,6 +288,7 @@ function parseTypeAliasDeclaration(
     kind: "TypeAliasDecl",
     exported: modifiers.exported,
     name: name.text,
+    genericParams,
     type,
     span: span(start.span.start, semi.span.end),
   };
@@ -207,24 +345,74 @@ function parseClassMembers(
   const methods: CastClassMethod[] = [];
   let constructorDecl: CastClassConstructor | null = null;
   while (!parser.checkText("}") && !parser.checkText("eof")) {
+    const modifiers = parseClassMemberModifiers(parser);
     if (parser.checkText("constructor")) {
+      if (modifiers.readonly) parser.error(parser.peek(), "Constructors cannot be readonly");
+      if (modifiers.static) parser.error(parser.peek(), "Constructors cannot be static");
       const parsed = parseClassConstructor(parser);
       if (constructorDecl !== null) parser.error(parser.previous(), "Duplicate constructor");
       constructorDecl = constructorDecl ?? parsed;
       continue;
     }
     const name = parser.expectKind("identifier", "Expected class member name");
-    if (parser.checkText("(")) methods.push(parseClassMethod(parser, exported, name));
-    else fields.push(parseClassField(parser, name));
+    if (parser.checkText("(")) methods.push(parseClassMethod(parser, exported, name, modifiers));
+    else fields.push(parseClassField(parser, name, modifiers));
   }
   return { fields, constructorDecl, methods };
 }
 
-function parseClassField(parser: DeclarationParser, name: Token): CastClassField {
+interface ClassMemberModifiers {
+  access: CastAccessModifier;
+  readonly: b8;
+  static: b8;
+}
+
+function parseClassMemberModifiers(parser: DeclarationParser): ClassMemberModifiers {
+  let access: CastAccessModifier = "public";
+  let readonly = false;
+  let isStatic = false;
+  while (isClassMemberModifier(parser.peek().text)) {
+    const text = parser.peek().text;
+    parser.expectText(text);
+    if (text === "readonly") {
+      readonly = true;
+      continue;
+    }
+    if (text === "static") {
+      isStatic = true;
+      continue;
+    }
+    access = text as CastAccessModifier;
+  }
+  return { access, readonly, static: isStatic };
+}
+
+function isClassMemberModifier(text: Str): b8 {
+  return text === "public" || text === "private" || text === "protected" || text === "readonly" ||
+    text === "static";
+}
+
+function parseClassField(
+  parser: DeclarationParser,
+  name: Token,
+  modifiers: ClassMemberModifiers,
+): CastClassField {
   parser.expectText(":");
   const type = parser.parseTypeRef();
+  const initializer = modifiers.static && parser.matchText("=") ? parser.parseExpression() : null;
+  if (modifiers.static && initializer === null) {
+    parser.error(name, "Static fields require an initializer");
+  }
   const semi = parser.expectText(";");
-  return { name: name.text, type, span: span(name.span.start, semi.span.end) };
+  return {
+    name: name.text,
+    type,
+    access: modifiers.access,
+    readonly: modifiers.readonly,
+    static: modifiers.static,
+    initializer,
+    span: span(name.span.start, semi.span.end),
+  };
 }
 
 function parseClassConstructor(parser: DeclarationParser): CastClassConstructor {
@@ -240,6 +428,7 @@ function parseClassMethod(
   parser: DeclarationParser,
   exported: b8,
   name: Token,
+  modifiers: ClassMemberModifiers,
 ): CastClassMethod {
   parser.expectText("(");
   const params = parseFunctionParams(parser);
@@ -247,11 +436,14 @@ function parseClassMethod(
   parser.expectText(":");
   const returnType = parser.parseTypeRef();
   const body = parser.parseBlock();
+  if (modifiers.readonly) parser.error(name, "Methods cannot be readonly");
   return {
     exported,
     name: name.text,
     params: params.params,
     returnType,
+    access: modifiers.access,
+    static: modifiers.static,
     body,
     span: span(name.span.start, body.span.end),
   };
@@ -376,6 +568,7 @@ function parseEnumDeclaration(
   parser.diagnostics().push(...enumModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("enum");
   const name = parser.expectKind("identifier", "Expected enum name");
+  const backingType = parser.matchText(":") ? parser.parseTypeRef() : null;
   parser.expectText("{");
   const members = parseEnumMembers(parser);
   const close = parser.expectText("}");
@@ -384,6 +577,7 @@ function parseEnumDeclaration(
     exported: modifiers.exported,
     name: name.text,
     cName: null,
+    backingType,
     members,
     span: span(start.span.start, close.span.end),
   };
@@ -415,10 +609,10 @@ function parseConstDeclaration(
   parser.diagnostics().push(...constModifierDiagnostics(modifiers.externToken));
   const start = parser.expectText("const");
   const name = parser.expectKind("identifier", "Expected constant name");
-  parser.expectText(":");
-  const type = parser.parseTypeRef();
+  const explicitType = parser.matchText(":") ? parser.parseTypeRef() : null;
   parser.expectText("=");
   const initializer = parser.parseExpression();
+  const type = explicitType ?? inferConstType(initializer);
   const semi = parser.expectText(";");
   return {
     kind: "ConstDecl",
@@ -429,6 +623,26 @@ function parseConstDeclaration(
     initializer,
     span: span(start.span.start, semi.span.end),
   };
+}
+
+function inferConstType(initializer: CastExpression): CastTypeRef {
+  switch (initializer.kind) {
+    case "IntegerLiteral":
+      return { kind: "NamedTypeRef", name: "i32", span: initializer.span };
+    case "FloatLiteral":
+      return { kind: "NamedTypeRef", name: "f64", span: initializer.span };
+    case "BoolLiteral":
+      return { kind: "NamedTypeRef", name: "bool", span: initializer.span };
+    case "StringLiteral":
+      return {
+        kind: "FixedArrayTypeRef",
+        element: { kind: "NamedTypeRef", name: "u8", span: initializer.span },
+        sizeText: `${cStringByteLength(initializer.text)}`,
+        span: initializer.span,
+      };
+    default:
+      return { kind: "NamedTypeRef", name: "i32", span: initializer.span };
+  }
 }
 
 function parseFunctionDeclaration(
@@ -517,12 +731,27 @@ function parseFunctionParams(parser: DeclarationParser): FunctionParamsParse {
   do {
     if (parser.checkText(")")) break;
     if (parser.matchText("...")) {
-      parser.expectKind("identifier", "Expected rest parameter name");
-      return { params, variadic: true };
+      const rest = parseRestOrVariadicParam(parser);
+      if (rest === null) return { params, variadic: true };
+      params.push(rest);
+      return { params, variadic: false };
     }
     params.push(parseFunctionParam(parser));
   } while (parser.matchText(","));
   return { params, variadic: false };
+}
+
+function parseRestOrVariadicParam(parser: DeclarationParser): CastParam | null {
+  const name = parser.expectKind("identifier", "Expected rest parameter name");
+  if (!parser.matchText(":")) return null;
+  const type = parser.parseTypeRef();
+  return {
+    name: name.text,
+    rest: true,
+    type,
+    defaultValue: null,
+    span: span(name.span.start, type.span.end),
+  };
 }
 
 function parseFunctionParam(parser: DeclarationParser): CastParam {

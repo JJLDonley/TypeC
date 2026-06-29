@@ -1,3 +1,4 @@
+import { IMPORT_PATH_ESCAPE, IMPORT_PATH_INVALID } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import {
@@ -31,20 +32,43 @@ export function validateImportPath(
   if (!isRelativeImportPath(path) && !isStdImportPath(path) && !dependency) {
     throw importPathError(path, "must be relative, std, or a project dependency", span);
   }
-  if (!dependency && !isTypeCImportFile(path)) {
+  if (!dependency && !isExtensionlessStdImportPath(path) && !isTypeCImportFile(path)) {
     throw importPathError(path, "must target a .tc or .h file", span);
   }
   if (isStdImportPath(path) && hasParentTraversal(path)) {
-    throw new TypeCError([{ message: `Std import path '${path}' must stay within std`, span }]);
+    throw new TypeCError([{
+      message: `Std import path '${path}' must stay within std`,
+      code: IMPORT_PATH_ESCAPE,
+      span,
+    }]);
+  }
+  if (dependency && hasParentTraversal(path)) {
+    throw new TypeCError([{
+      message: `Project dependency import path '${path}' must stay within its package`,
+      code: IMPORT_PATH_ESCAPE,
+      span,
+    }]);
   }
 }
 
 export { isStdImportPath } from "paths/import_kinds.ts";
 
 export function isDependencyImportPath(path: Str, config: ProjectConfig): b8 {
-  return config.dependencies.has(path);
+  if (config.dependencies.has(path)) return true;
+  for (const alias of config.dependencies.keys()) {
+    if (path.startsWith(`${alias}/`)) return true;
+  }
+  return false;
+}
+
+function isExtensionlessStdImportPath(path: Str): b8 {
+  return isStdImportPath(path) && !isTypeCImportFile(path);
 }
 
 function importPathError(path: Str, reason: Str, span: Diagnostic["span"]): TypeCError {
-  return new TypeCError([{ message: `Import path '${path}' ${reason}`, span }]);
+  return new TypeCError([{
+    message: `Import path '${path}' ${reason}`,
+    code: IMPORT_PATH_INVALID,
+    span,
+  }]);
 }

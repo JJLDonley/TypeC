@@ -26,14 +26,15 @@ Deno.test("classifies JSON primitive values", () => {
 
 Deno.test("reads JSON text", () => {
   assertText(readJsonText("typec", "expected text"), "typec");
-  assertJsonValueError(() => readJsonText(1n, "expected text"), "expected text");
+  assertJsonValueError(() => readJsonText(1n, "expected text"), "expected text", "E3100");
 });
 
-function assertJsonValueError(run: () => void, message: Str): void {
+function assertJsonValueError(run: () => void, message: Str, code: Str): void {
   try {
     run();
   } catch (error) {
-    if (error instanceof TypeCError && error.diagnostics[0]?.message === message) return;
+    const diagnostic = error instanceof TypeCError ? error.diagnostics[0] : undefined;
+    if (diagnostic?.message === message && diagnostic.code === code) return;
     throw error;
   }
   throw new Error(`Expected ${message}`);

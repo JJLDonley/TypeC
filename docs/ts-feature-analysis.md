@@ -9,17 +9,17 @@ ergonomics**.
 
 ## Recently completed critical features
 
-### Phase 43: Optional Value Constructors
+### Optional Value Constructors
 
-TypeC now supports explicit optional construction:
+TypeC supports contextual optional construction:
 
 ```ts
-const present: i32? = Some<i32>(42);
-const empty: i32? = None<i32>();
+const present: i32? = Some(42);
+const empty: i32? = None();
 ```
 
-These are compiler builtins over TypeC optional structs, not JavaScript `null` or `undefined`. Type
-arguments are required.
+These are compiler builtins over TypeC optional structs, not JavaScript `null` or `undefined`.
+Explicit `Some<T>(value)` and `None<T>()` remain accepted when context is not enough.
 
 ### Phase 42: Static Class Inheritance
 
@@ -77,8 +77,9 @@ class Ship implements Drawable {
 }
 ```
 
-This is compile-time only. It does not add interface-typed values, vtables, runtime dispatch,
-inheritance, or `new`.
+This nominal contract is used by generic constraints and explicit borrowed interface conversions.
+Owning interface-typed values, structural conversion, JavaScript object dispatch, inheritance, and
+`new` are still rejected.
 
 ### Phase 39: Basic `for` Loops
 
@@ -90,8 +91,9 @@ for (let i: usize = 0; i < count; i++) {
 }
 ```
 
-The initializer is scoped to the loop. Conditions must be `bool`. `for..in`, `for..of`, iterators,
-and `continue` are still not implemented.
+The initializer is scoped to the loop. Conditions must be `bool`. TypeC also supports static
+`for..of`, static `for..in`, and `continue`; JavaScript iterators and enumerable-property semantics
+are still rejected.
 
 ### Phase 38: General Assignment Targets
 
@@ -114,31 +116,30 @@ destructuring assignment, logical assignment, or nullish assignment.
 
 These are the most important missing or partial features for writing real TypeScript-like programs.
 
-| Priority | Feature                                     | Status          | Why it matters                     | Current impact                                                                   |
-| -------- | ------------------------------------------- | --------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
-| P1       | Function/local type inference               | Partial         | Reduces annotation noise.          | Some local initializer cases work; no broad TS-style inference.                  |
-| P1       | Runtime dispatch / interface values         | Missing         | Needed for polymorphic OO APIs.    | `extends` and `implements` are static only; no subtype/interface value dispatch. |
-| P1       | Optional constructor inference              | Missing         | Reduces optional annotation noise. | `Some<T>`/`None<T>` work, but type arguments are required.                       |
-| P2       | Destructuring                               | Missing         | Common TS binding syntax.          | No object/array destructuring in params or locals.                               |
-| P2       | Object/array spread                         | Missing         | Common TS copy/update syntax.      | No spread semantics; record copying/updating needs explicit design.              |
-| P2       | Default/rest parameters for TypeC functions | Partial/missing | Common TS call ergonomics.         | C variadic externs exist; ordinary TS-style defaults/rest are not implemented.   |
-| P2       | Type unions/intersections                   | Missing         | Major TS type-system feature.      | Use explicit tagged unions instead of `A                                         |
+| Priority | Feature                                     | Status      | Why it matters                  | Current impact                                                                                    |
+| -------- | ------------------------------------------- | ----------- | ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| P1       | Broader interface ergonomics                | Partial     | Needed for polymorphic OO APIs. | Explicit borrowed `Interface&` dispatch exists; owning/structural interface values are rejected.  |
+| P1       | Function/local type inference               | Partial     | Reduces annotation noise.       | Local inference and contextual optionals work; full TS-style inference is out of scope.           |
+| P2       | Destructuring                               | Partial     | Common TS binding syntax.       | Local record/tuple/array destructuring exists; parameter and assignment destructuring are absent. |
+| P2       | Object/array spread                         | Partial     | Common TS copy/update syntax.   | Static record spread/rest exists; JS array/object runtime spread is rejected.                     |
+| P2       | Default/rest parameters for TypeC functions | Implemented | Common TS call ergonomics.      | Defaults rewrite at call sites and rest parameters lower to slices, not JS arrays.                |
+| P2       | Type unions/intersections                   | Partial     | Major TS type-system feature.   | Tagged-union and static intersection aliases exist without TS runtime semantics.                  |
 
 ## Implemented but narrower than TypeScript
 
-| Feature                                | Current TypeC behavior                                                                          | Important limitation                                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Records / object type literals         | Static record type aliases, record literals, field reads, and field assignment.                 | No optional fields, readonly fields, index signatures, object spread, or dynamic keys.              |
-| Arrays                                 | Fixed/inferred arrays, literals, indexing, indexed assignment, slices, C array interop.         | No array methods, no sparse arrays, no push/pop.                                                    |
-| Classes                                | Static layout lowered to records plus functions with constructors, `extends`, and `implements`. | Inheritance is flattened/static only; no prototype model or runtime dispatch.                       |
-| Methods                                | Instance-call syntax lowers to explicit functions; inherited methods are copied.                | Dispatch is static; methods receive values unless a reference type is used explicitly.              |
-| Interfaces                             | Static method-shape contracts for generic constraints and class `implements`.                   | Interfaces are not value types; no runtime dispatch.                                                |
-| Generics                               | Compile-time monomorphization for functions/classes.                                            | Requires explicit type arguments in many places; no TS-level inference or conditional/mapped types. |
-| Imports                                | Static named imports, aliases, namespace imports.                                               | No default imports, re-exports, live JS bindings, or dynamic loading.                               |
-| Optional chaining / nullish coalescing | Optional-type based, statically checked; explicit `Some<T>`/`None<T>` constructors.             | No implicit `null` or `undefined`; optional constructor type arguments are required.                |
-| Logical operators                      | Bool-only.                                                                                      | No truthiness; `&&` and `                                                                           |
-| Bitwise operators                      | Fixed-width integer-only.                                                                       | No JS `ToInt32`/`ToUint32` coercions.                                                               |
-| Assignment/update operators            | Statement-only updates over static lvalue targets.                                              | No expression-valued assignment or destructuring assignment.                                        |
+| Feature                                | Current TypeC behavior                                                                          | Important limitation                                                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Records / object type literals         | Static record/scalar aliases, optional fields, literals, field reads/writes, spread/rest.       | No index signatures, prototype properties, or dynamic keys.                            |
+| Arrays                                 | Fixed/inferred arrays, literals, indexing, indexed assignment, `Array.fill`, slices, C interop. | No sparse arrays, push/pop, or JS array object model.                                  |
+| Classes                                | Static layout lowered to records plus functions with constructors, `extends`, and `implements`. | Inheritance is flattened/static only; no prototype model or runtime dispatch.          |
+| Methods                                | Instance-call syntax lowers to explicit functions; inherited methods are copied.                | Dispatch is static; methods receive values unless a reference type is used explicitly. |
+| Interfaces                             | Static contracts plus explicit borrowed `Interface&` dispatch views.                            | Owning interface values, structural conversion, and JS object dispatch are rejected.   |
+| Generics                               | Compile-time monomorphization for functions/classes.                                            | Inference is intentionally static and limited compared with full TypeScript.           |
+| Imports                                | Static named/default imports, aliases, namespace imports, and re-exports.                       | No live JS bindings, module objects, or dynamic loading.                               |
+| Optional chaining / nullish coalescing | Optional-type based, statically checked; contextual `Some`/`None` constructors.                 | No implicit `null` or `undefined`.                                                     |
+| Logical operators                      | Bool-only.                                                                                      | No truthiness; `&&` and `                                                              |
+| Bitwise operators                      | Fixed-width integer-only.                                                                       | No JS `ToInt32`/`ToUint32` coercions.                                                  |
+| Assignment/update operators            | Statement-only updates over static lvalue targets.                                              | No expression-valued assignment or destructuring assignment.                           |
 
 ## Not implemented by design
 
@@ -159,22 +160,22 @@ These are intentionally rejected unless a future phase defines a static, C-emitt
 
 | TypeScript area       | Status             | Honest summary                                                                                                                                                                          |
 | --------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Function declarations | Implemented        | TS-like syntax with required static types.                                                                                                                                              |
-| Locals                | Implemented subset | `const`/`let` exist; assignments target static lvalues and remain statements only.                                                                                                      |
-| Control flow          | Partial            | `if`, `else`, `else if`, `while`, `do while`, basic `for`, `switch`, `break`, empty statements exist; no `for..of`, `for..in`, labeled statements, `continue`, `try`, or `throw`.       |
+| Function declarations | Implemented        | TS-like syntax with required static types plus default, optional, and rest parameters.                                                                                                  |
+| Locals                | Implemented subset | `const`/`let`, local inference, and local destructuring exist; assignments target static lvalues and remain statements only.                                                            |
+| Control flow          | Partial            | `if`, `else`, `else if`, loops, `for..of`, `for..in`, `switch`, `break`, `continue`, and empty statements exist; no labeled statements, `try`, or `throw`.                              |
 | Expressions           | Partial            | Numeric, boolean, calls, field/index reads and writes, conditionals, nullish/optional operators, logical/bitwise operators exist; many JS/TS expression forms are intentionally absent. |
-| Records/objects       | Partial            | Creation, read access, and field mutation exist; TS object type features are mostly missing.                                                                                            |
-| Arrays                | Partial            | Static arrays/slices, reads, and indexed mutation exist; no JS array API.                                                                                                               |
+| Records/objects       | Partial            | Creation, optional fields, read/write access, spread/rest, and field mutation exist; dynamic TS object features are absent.                                                             |
+| Arrays                | Partial            | Static arrays/slices, reads, indexed mutation, `Array.fill`, and slice helpers exist; no JS array object model.                                                                         |
 | Classes               | Partial            | Static class layout, constructors, methods, `extends`, and `implements` exist; no runtime dispatch/prototype semantics.                                                                 |
-| Interfaces/contracts  | Partial            | Interface declarations, generic constraints, and class implementation declarations exist; no interface value types or runtime dispatch.                                                 |
-| Generics              | Partial            | Compile-time generics exist; no full TS inference/type-level programming.                                                                                                               |
-| Modules               | Partial            | Static named/namespace imports and aliases exist; no default imports/re-exports/dynamic imports.                                                                                        |
+| Interfaces/contracts  | Partial            | Interface declarations, generic constraints, class implementation declarations, and borrowed `Interface&` dispatch exist; owning interface values are rejected.                         |
+| Generics              | Partial            | Compile-time generics exist with static inference; no full TS inference/type-level programming.                                                                                         |
+| Modules               | Partial            | Static named/default/namespace imports, aliases, and re-exports exist; no dynamic imports or JS module object.                                                                          |
 | C interop             | Implemented subset | Externs/header imports work for supported C ABI shapes; complex macros and unsupported C forms are excluded.                                                                            |
 
 ## Recommended next phases
 
-### Later: runtime dispatch / interface values
+### Later: broader interface polymorphism
 
-Polymorphism needs a separate spec. It should not copy JavaScript prototypes. If added, it should
-define explicit interface value representation, dispatch tables, ownership/lifetime rules, and C
-emission strategy.
+Borrowed `Interface&` dispatch exists. Any broader polymorphism should not copy JavaScript
+prototypes. If added, it should define explicit interface value representation, dispatch tables,
+ownership/lifetime rules, and C emission strategy.

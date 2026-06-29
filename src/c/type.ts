@@ -4,8 +4,10 @@ import { recordCTypeName } from "c/records.ts";
 import { sliceCTypeName } from "c/slice_names.ts";
 import { tupleCTypeName } from "c/tuples.ts";
 import { optionalTypeElement } from "core/optional_types.ts";
+import { borrowedInterfaceAliasMarker } from "core/borrowed_interfaces.ts";
 
 type Str = string;
+type b8 = boolean;
 type usize = number;
 
 export type CTypeAliases = Map<Str, TypeAliasDecl>;
@@ -18,9 +20,12 @@ export function emitCType(
     case "NamedTypeRef":
       return emitNamedCType(type, aliases);
     case "PointerTypeRef":
-    case "ReferenceTypeRef":
     case "SafePointerTypeRef":
       return `${emitCType(type.element, aliases)}*`;
+    case "ReferenceTypeRef":
+      return isBorrowedInterfaceElement(type.element, aliases)
+        ? emitCType(type.element, aliases)
+        : `${emitCType(type.element, aliases)}*`;
     case "SliceTypeRef":
       return sliceCTypeName(type.element);
     case "InferredArrayTypeRef":
@@ -41,6 +46,12 @@ export function emitCType(
       throw new Error("Cannot emit mapped type directly");
     case "FunctionTypeRef":
       throw new Error("Cannot emit function pointer type without a declarator");
+    case "LiteralTypeRef":
+      throw new Error("Cannot emit literal type directly");
+    case "KeyofTypeRef":
+      throw new Error("Cannot emit keyof type directly");
+    case "TypeofTypeRef":
+      throw new Error("Cannot emit typeof type directly");
     case "RecordTypeRef":
       return recordCTypeName(type);
   }
@@ -158,6 +169,12 @@ function arrayDimensions(sizes: Str[]): Str {
 
 function arrayDimension(size: Str, _index: usize): Str {
   return `[${size}]`;
+}
+
+function isBorrowedInterfaceElement(type: TypeRef, aliases: CTypeAliases): b8 {
+  if (type.kind !== "NamedTypeRef") return false;
+  const aliasType = aliases.get(type.name)?.type ?? null;
+  return aliasType?.kind === "NamedTypeRef" && aliasType.name === borrowedInterfaceAliasMarker;
 }
 
 function emitNamedCType(

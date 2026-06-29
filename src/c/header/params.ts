@@ -1,8 +1,10 @@
 import type { CHeaderParam } from "c/header/ast.ts";
+import { C_HEADER_MALFORMED_AST } from "core/diagnostic_codes.ts";
 import { sanitizeHeaderParamName, uniqueHeaderParamName } from "c/header/identifiers.ts";
+import { readHeaderJsonText } from "c/header/json_values.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { isJsonRecord, type JsonRecord } from "json/record.ts";
-import { isJsonArray, isNonEmptyJsonText, readJsonText } from "json/values.ts";
+import { isJsonArray, isNonEmptyJsonText } from "json/values.ts";
 
 type Str = string;
 type usize = number;
@@ -21,7 +23,7 @@ function readParam(value: JsonRecord, index: usize, names: Set<Str>): CHeaderPar
   const type = requireRecord(value.type, "Parameter has no type");
   return {
     name: readParamName(value, index, names),
-    type: readJsonText(type.qualType, "Parameter has no type"),
+    type: readHeaderJsonText(type.qualType, "Parameter has no type"),
   };
 }
 
@@ -38,5 +40,5 @@ function isParam(value: unknown): value is JsonRecord {
 
 function requireRecord(value: unknown, message: Str): JsonRecord {
   if (isJsonRecord(value)) return value;
-  throw new TypeCError([{ message }]);
+  throw new TypeCError([{ message, code: C_HEADER_MALFORMED_AST }]);
 }

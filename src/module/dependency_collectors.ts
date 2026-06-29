@@ -186,6 +186,10 @@ function collectExpressionDeps(
       collectExpressionDeps(expression.left, selected, ignoredTypes);
       collectExpressionDeps(expression.fallback, selected, ignoredTypes);
       return;
+    case "SatisfiesExpr":
+      collectTypeDeps(expression.type, selected, ignoredTypes);
+      collectExpressionDeps(expression.expression, selected, ignoredTypes);
+      return;
     case "CallExpr":
       collectCallDeps(expression, selected, ignoredTypes);
       return;

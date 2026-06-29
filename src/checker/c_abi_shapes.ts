@@ -51,6 +51,12 @@ export function cTypeShape(type: TypeRef, aliases: TypeAliasIndex): Str {
       return `${cTypeShape(type.objectType, aliases)}[${type.indexName}]`;
     case "MappedTypeRef":
       return `{[${type.keyName} in keyof ${cTypeShape(type.sourceType, aliases)}]}`;
+    case "LiteralTypeRef":
+      return type.text;
+    case "KeyofTypeRef":
+      return `keyof ${cTypeShape(type.target, aliases)}`;
+    case "TypeofTypeRef":
+      return `typeof ${type.name}`;
     case "RecordTypeRef":
       return recordTypeShape(type, aliases);
   }

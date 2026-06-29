@@ -1,7 +1,13 @@
 import type { CHeaderRecord, CHeaderRecordField } from "c/header/ast.ts";
+import { readHeaderJsonText } from "c/header/json_values.ts";
+import {
+  C_HEADER_MALFORMED_AST,
+  C_HEADER_RECORD_DECLARATION,
+  C_HEADER_RECORD_FIELDS,
+} from "core/diagnostic_codes.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { isJsonRecord, type JsonRecord } from "json/record.ts";
-import { isJsonArray, isJsonText, readJsonText } from "json/values.ts";
+import { isJsonArray, isJsonText } from "json/values.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -33,14 +39,20 @@ export function readHeaderRecordDecl(
 function readRecord(value: JsonRecord, mainSourceFile: Str | null): CHeaderRecord {
   const record = findRecordDecl(value.inner);
   if (!record) {
-    throw new TypeCError([{ message: `Typedef '${value.name}' has no record declaration` }]);
+    throw new TypeCError([{
+      message: `Typedef '${value.name}' has no record declaration`,
+      code: C_HEADER_RECORD_DECLARATION,
+    }]);
   }
   const fields = readRecordFields(record.inner);
   if (fields.length === 0) {
-    throw new TypeCError([{ message: `Typedef '${value.name}' has no record fields` }]);
+    throw new TypeCError([{
+      message: `Typedef '${value.name}' has no record fields`,
+      code: C_HEADER_RECORD_FIELDS,
+    }]);
   }
   return {
-    name: readJsonText(value.name, "Typedef has no name"),
+    name: readHeaderJsonText(value.name, "Typedef has no name"),
     fields,
     sourceFile: readSourceFile(value, mainSourceFile) ?? readSourceFile(record, mainSourceFile),
   };
@@ -49,10 +61,13 @@ function readRecord(value: JsonRecord, mainSourceFile: Str | null): CHeaderRecor
 function readRecordDecl(value: JsonRecord, mainSourceFile: Str | null): CHeaderRecord {
   const fields = readRecordFields(value.inner);
   if (fields.length === 0) {
-    throw new TypeCError([{ message: `Record '${value.name}' has no fields` }]);
+    throw new TypeCError([{
+      message: `Record '${value.name}' has no fields`,
+      code: C_HEADER_RECORD_FIELDS,
+    }]);
   }
   return {
-    name: readJsonText(value.name, "Record has no name"),
+    name: readHeaderJsonText(value.name, "Record has no name"),
     fields,
     sourceFile: readSourceFile(value, mainSourceFile),
   };
@@ -77,8 +92,8 @@ function readRecordField(value: unknown): CHeaderRecordField[] {
   if (!isFieldDecl(value)) return [];
   const type = requireRecord(value.type, `Field '${value.name}' has no type`);
   return [{
-    name: readJsonText(value.name, "Field has no name"),
-    type: readJsonText(type.qualType, `Field '${value.name}' has no type`),
+    name: readHeaderJsonText(value.name, "Field has no name"),
+    type: readHeaderJsonText(type.qualType, `Field '${value.name}' has no type`),
   }];
 }
 
@@ -103,5 +118,5 @@ function isMainFileLocation(loc: JsonRecord): b8 {
 
 function requireRecord(value: unknown, message: Str): JsonRecord {
   if (isJsonRecord(value)) return value;
-  throw new TypeCError([{ message }]);
+  throw new TypeCError([{ message, code: C_HEADER_MALFORMED_AST }]);
 }

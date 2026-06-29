@@ -1,4 +1,5 @@
 import type { Expression } from "core/ast.ts";
+import { ARRAY_LITERAL_ELEMENT_TYPE, ARRAY_LITERAL_INFERENCE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { isAssignable } from "checker/types.ts";
@@ -20,7 +21,11 @@ export function checkInferredArrayLocalType(
 ): InferredArrayLocalTypeCheck {
   if (expr.elements.length === 0) {
     return {
-      diagnostics: [{ message: "Cannot infer empty array type", span: expr.span }],
+      diagnostics: [{
+        message: "Cannot infer empty array type",
+        code: ARRAY_LITERAL_INFERENCE,
+        span: expr.span,
+      }],
       type: "<error>",
     };
   }
@@ -43,6 +48,7 @@ function elementDiagnostics(
     if (isAssignable(actualType, expectedType)) continue;
     diagnostics.push({
       message: `Array element type '${actualType}' is not assignable to '${expectedType}'`,
+      code: ARRAY_LITERAL_ELEMENT_TYPE,
       span: elements[index].span,
     });
   }

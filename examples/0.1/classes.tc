@@ -1,0 +1,15 @@
+class Counter {
+  value: i32;
+
+  add(delta: i32): i32 {
+    return this.value + delta;
+  }
+}
+
+function main(): i32 {
+  const counter: Counter = { value: 40 };
+  if (counter.add(2) == 42) {
+    return 0;
+  }
+  return 1;
+}

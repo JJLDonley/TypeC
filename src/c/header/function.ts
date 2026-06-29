@@ -1,8 +1,13 @@
+import { readHeaderJsonText } from "c/header/json_values.ts";
 import { readHeaderParams } from "c/header/params.ts";
+import {
+  C_HEADER_MALFORMED_AST,
+  C_HEADER_UNSUPPORTED_FUNCTION_TYPE,
+} from "core/diagnostic_codes.ts";
 import type { CHeaderFunction } from "c/header/ast.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { isJsonRecord, type JsonRecord } from "json/record.ts";
-import { isJsonArray, isJsonText, readJsonText } from "json/values.ts";
+import { isJsonArray, isJsonText } from "json/values.ts";
 
 type Str = string;
 type b8 = boolean;
@@ -21,9 +26,9 @@ export function readHeaderFunction(
 
 function readFunction(value: JsonRecord, mainSourceFile: Str | null): CHeaderFunction {
   const type = requireRecord(value.type, `Function '${value.name}' has no type`);
-  const functionType = readJsonText(type.qualType, `Function '${value.name}' has no type`);
+  const functionType = readHeaderJsonText(type.qualType, `Function '${value.name}' has no type`);
   return {
-    name: readJsonText(value.name, "Function has no name"),
+    name: readHeaderJsonText(value.name, "Function has no name"),
     functionType,
     returnType: readReturnType(functionType),
     params: readHeaderParams(value.inner),
@@ -35,7 +40,12 @@ function readFunction(value: JsonRecord, mainSourceFile: Str | null): CHeaderFun
 
 function readReturnType(type: Str): Str {
   const index = type.indexOf("(");
-  if (index < 0) throw new TypeCError([{ message: `Unsupported function type '${type}'` }]);
+  if (index < 0) {
+    throw new TypeCError([{
+      message: `Unsupported function type '${type}'`,
+      code: C_HEADER_UNSUPPORTED_FUNCTION_TYPE,
+    }]);
+  }
   return type.slice(0, index).trim();
 }
 
@@ -70,5 +80,5 @@ function isCompoundStmt(value: unknown): b8 {
 
 function requireRecord(value: unknown, message: Str): JsonRecord {
   if (isJsonRecord(value)) return value;
-  throw new TypeCError([{ message }]);
+  throw new TypeCError([{ message, code: C_HEADER_MALFORMED_AST }]);
 }

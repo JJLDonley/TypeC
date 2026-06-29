@@ -1,3 +1,11 @@
+import {
+  LEX_NUMERIC_SEPARATOR,
+  LEX_TEMPLATE_INTERPOLATION,
+  LEX_UNEXPECTED_CHARACTER,
+  LEX_UNTERMINATED_BLOCK_COMMENT,
+  LEX_UNTERMINATED_STRING,
+  LEX_UNTERMINATED_TEMPLATE,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourcePos } from "core/diagnostics.ts";
 import { TypeCError } from "core/diagnostics.ts";
 import { type StaticTemplateText, staticTemplateText } from "core/static_template_literals.ts";
@@ -104,6 +112,7 @@ class Lexer {
 
       this.diagnostics.push({
         message: `Unexpected character '${ch}'`,
+        code: LEX_UNEXPECTED_CHARACTER,
         span: { start, end: start },
       });
       this.advance();
@@ -135,6 +144,7 @@ class Lexer {
         if (this.isAtEnd()) {
           this.diagnostics.push({
             message: "Unterminated block comment",
+            code: LEX_UNTERMINATED_BLOCK_COMMENT,
             span: { start, end: this.pos() },
           });
           return;
@@ -175,6 +185,7 @@ class Lexer {
     if (!isDigit(next)) {
       this.diagnostics.push({
         message: "Numeric separators must appear between digits",
+        code: LEX_NUMERIC_SEPARATOR,
         span: { start, end: this.pos() },
       });
     }
@@ -282,6 +293,7 @@ class Lexer {
   private reportUnterminatedString(start: SourcePos): void {
     this.diagnostics.push({
       message: "Unterminated string literal",
+      code: LEX_UNTERMINATED_STRING,
       span: { start, end: this.pos() },
     });
   }
@@ -289,6 +301,7 @@ class Lexer {
   private reportUnterminatedTemplateString(start: SourcePos): void {
     this.diagnostics.push({
       message: "Unterminated template literal",
+      code: LEX_UNTERMINATED_TEMPLATE,
       span: { start, end: this.pos() },
     });
   }
@@ -296,6 +309,7 @@ class Lexer {
   private reportTemplateError(start: SourcePos, message: Str): void {
     this.diagnostics.push({
       message,
+      code: LEX_TEMPLATE_INTERPOLATION,
       span: { start, end: this.pos() },
     });
   }

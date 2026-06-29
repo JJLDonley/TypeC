@@ -1,3 +1,9 @@
+import {
+  DUPLICATE_RECORD_FIELD,
+  MISSING_RECORD_FIELD,
+  RECORD_LITERAL_TARGET,
+  UNKNOWN_RECORD_FIELD,
+} from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression, RecordTypeRef } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -16,6 +22,7 @@ export function checkRecordLiteralTarget(
   if (record) return [];
   return [{
     message: `Record literal is not assignable to non-record type '${expected}'`,
+    code: RECORD_LITERAL_TARGET,
     span: expr.span,
   }];
 }
@@ -28,12 +35,17 @@ export function checkRecordLiteralFieldName(
 ): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   if (seen.has(field.name)) {
-    diagnostics.push({ message: `Duplicate field '${field.name}'`, span: field.span });
+    diagnostics.push({
+      message: `Duplicate field '${field.name}'`,
+      code: DUPLICATE_RECORD_FIELD,
+      span: field.span,
+    });
   }
   seen.add(field.name);
   if (!record.fields.some((candidate) => candidate.name === field.name)) {
     diagnostics.push({
       message: `Unknown field '${field.name}' on type '${expected}'`,
+      code: UNKNOWN_RECORD_FIELD,
       span: field.span,
     });
   }
@@ -48,9 +60,11 @@ export function checkRecordLiteralMissingFields(
 ): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (const field of record.fields) {
+    if (field.optional === true) continue;
     if (!seen.has(field.name)) {
       diagnostics.push({
         message: `Missing field '${field.name}' on type '${expected}'`,
+        code: MISSING_RECORD_FIELD,
         span: expr.span,
       });
     }

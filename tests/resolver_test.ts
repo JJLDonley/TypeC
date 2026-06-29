@@ -18,6 +18,10 @@ Deno.test("rejects duplicate functions", () => {
     `function main(): i32 { return 0; } function main(): i32 { return 1; }`,
     "Duplicate function 'main'",
   );
+  assertResolveCode(
+    `function main(): i32 { return 0; } function main(): i32 { return 1; }`,
+    "E0003",
+  );
 });
 
 Deno.test("rejects duplicate type aliases", () => {
@@ -40,6 +44,7 @@ Deno.test("rejects duplicate locals", () => {
 
 Deno.test("rejects unknown identifiers", () => {
   assertResolveError(`function main(): i32 { return x; }`, "Unknown identifier 'x'");
+  assertResolveCode(`function main(): i32 { return x; }`, "E0001");
 });
 
 Deno.test("allows block-local shadowing", () => {
@@ -77,6 +82,18 @@ function assertResolveError(source: Str, message: Str): void {
     ) return;
   }
   throw new Error(`Expected resolver error: ${message}`);
+}
+
+function assertResolveCode(source: Str, code: Str): void {
+  try {
+    resolve(parse(lex(source)));
+  } catch (error) {
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.code === code)
+    ) return;
+  }
+  throw new Error(`Expected resolver diagnostic code: ${code}`);
 }
 
 function assertIncludes(values: Str[], expected: Str): void {

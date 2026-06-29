@@ -12,6 +12,8 @@ type b8 = boolean;
 type usize = number;
 type IntLiteralValue = bigint;
 
+const TYPE_ASSIGNABILITY_RECURSION_LIMIT: usize = 64;
+
 export interface IntegerRange {
   min: IntLiteralValue;
   max: IntLiteralValue;
@@ -121,6 +123,11 @@ export function isFloatType(type: TypeName): b8 {
 }
 
 export function isAssignable(actual: TypeName, expected: TypeName): b8 {
+  return isAssignableSeen(actual, expected, 0);
+}
+
+function isAssignableSeen(actual: TypeName, expected: TypeName, depth: usize): b8 {
+  if (depth > TYPE_ASSIGNABILITY_RECURSION_LIMIT) return false;
   if (actual === expected) return true;
   if (canonicalNumericType(actual) === canonicalNumericType(expected)) return true;
   const expectedArray = parseArrayTypeName(expected);
@@ -133,7 +140,7 @@ export function isAssignable(actual: TypeName, expected: TypeName): b8 {
   if (expectedSlice && actualArray !== null && actualArray.length !== null) {
     return expectedSlice.element === actualArray.element;
   }
-  if (areFunctionTypesAssignable(actual, expected)) return true;
+  if (areFunctionTypesAssignable(actual, expected, depth)) return true;
   if (isArrayPointerAssignable(actual, expected)) return true;
   return isPointerAssignable(actual, expected);
 }
@@ -168,13 +175,16 @@ function canonicalNumericType(type: TypeName): TypeName {
   }
 }
 
-function areFunctionTypesAssignable(actual: TypeName, expected: TypeName): b8 {
+function areFunctionTypesAssignable(actual: TypeName, expected: TypeName, depth: usize): b8 {
   const actualFunction = parseFunctionTypeName(actual);
   const expectedFunction = parseFunctionTypeName(expected);
   if (!actualFunction || !expectedFunction) return false;
-  if (!isAssignable(actualFunction.returnType, expectedFunction.returnType)) return false;
+  const nextDepth = depth + 1;
+  if (!isAssignableSeen(actualFunction.returnType, expectedFunction.returnType, nextDepth)) {
+    return false;
+  }
   if (actualFunction.params.length !== expectedFunction.params.length) return false;
   return actualFunction.params.every((param, index) =>
-    isAssignable(param.type, expectedFunction.params[index]!.type)
+    isAssignableSeen(param.type, expectedFunction.params[index]!.type, nextDepth)
   );
 }

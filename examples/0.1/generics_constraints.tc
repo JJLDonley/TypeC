@@ -1,0 +1,20 @@
+type Item = {
+  id: i32;
+};
+
+function read<T extends { id: i32; }>(value: T): i32 {
+  return value.id;
+}
+
+function identity<T>(value: T): T {
+  return value;
+}
+
+function main(): i32 {
+  const item: Item = { id: 42 };
+  const copied: Item = identity(item);
+  if (read(copied) == 42) {
+    return 0;
+  }
+  return 1;
+}

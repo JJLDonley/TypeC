@@ -1,0 +1,22 @@
+type Pair = {
+  left: i32;
+  right: i32;
+};
+
+struct Point {
+  x: i32;
+  y: i32;
+}
+
+function sum(pair: Pair, point: Point): i32 {
+  return pair.left + pair.right + point.x + point.y;
+}
+
+function main(): i32 {
+  const pair: Pair = { left: 10, right: 20 };
+  const point: Point = { x: 5, y: 7 };
+  if (sum(pair, point) == 42) {
+    return 0;
+  }
+  return 1;
+}

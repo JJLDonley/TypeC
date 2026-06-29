@@ -1,221 +1,278 @@
-import type { BlockStmt, Expression, FunctionDecl, Program, Statement } from "core/ast.ts";
+import type {
+  BlockStmt,
+  ConstDecl,
+  Expression,
+  FunctionDecl,
+  Program,
+  Statement,
+} from "core/ast.ts";
 
 type Str = string;
 
+interface ValueNamespaceScope {
+  functions: Set<Str>;
+  values: Set<Str>;
+}
+
 export function namespaceProgramFunctions(program: Program, namespace: Str): Program {
-  const functions = new Set<Str>(program.functions.map((fn) => fn.name));
+  const scope = valueNamespaceScope(program);
   return {
     ...program,
-    functions: program.functions.map((fn) => namespaceFunctionBody(fn, namespace, functions)),
+    constants: (program.constants ?? []).map((constant) =>
+      namespaceConstantInitializer(constant, namespace, scope)
+    ),
+    functions: program.functions.map((fn) => namespaceFunctionBody(fn, namespace, scope)),
+  };
+}
+
+function valueNamespaceScope(program: Program): ValueNamespaceScope {
+  const functions = new Set<Str>(program.functions.map((fn) => fn.name));
+  return {
+    functions,
+    values: new Set<Str>([
+      ...functions,
+      ...(program.constants ?? []).map((constant) => constant.name),
+    ]),
+  };
+}
+
+function namespaceConstantInitializer(
+  constant: ConstDecl,
+  namespace: Str,
+  scope: ValueNamespaceScope,
+): ConstDecl {
+  return {
+    ...constant,
+    initializer: namespaceExpression(constant.initializer, namespace, scope),
   };
 }
 
 function namespaceFunctionBody(
   fn: FunctionDecl,
   namespace: Str,
-  functions: Set<Str>,
+  scope: ValueNamespaceScope,
 ): FunctionDecl {
-  return fn.body ? { ...fn, body: namespaceBlock(fn.body, namespace, functions) } : fn;
+  return fn.body ? { ...fn, body: namespaceBlock(fn.body, namespace, scope) } : fn;
 }
 
-function namespaceBlock(block: BlockStmt, namespace: Str, functions: Set<Str>): BlockStmt {
+function namespaceBlock(block: BlockStmt, namespace: Str, scope: ValueNamespaceScope): BlockStmt {
   return {
     ...block,
-    statements: block.statements.map((stmt) => namespaceStatement(stmt, namespace, functions)),
+    statements: block.statements.map((stmt) => namespaceStatement(stmt, namespace, scope)),
   };
 }
 
-function namespaceStatement(stmt: Statement, namespace: Str, functions: Set<Str>): Statement {
+function namespaceStatement(
+  stmt: Statement,
+  namespace: Str,
+  scope: ValueNamespaceScope,
+): Statement {
   switch (stmt.kind) {
     case "EmptyStmt":
-      return stmt;
-    case "ReturnStmt":
-      return stmt.expression
-        ? { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) }
-        : stmt;
-    case "DeferStmt":
-      return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
-    case "ExpressionStmt":
-      return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, functions) };
     case "BreakStmt":
     case "ContinueStmt":
       return stmt;
+    case "ReturnStmt":
+      return stmt.expression
+        ? { ...stmt, expression: namespaceExpression(stmt.expression, namespace, scope) }
+        : stmt;
+    case "DeferStmt":
+    case "ExpressionStmt":
+      return { ...stmt, expression: namespaceExpression(stmt.expression, namespace, scope) };
     case "VarDeclStmt":
-      return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, functions) };
+      return { ...stmt, initializer: namespaceExpression(stmt.initializer, namespace, scope) };
     case "RecordRestStmt":
-      return { ...stmt, source: namespaceExpression(stmt.source, namespace, functions) };
     case "ArrayDestructureStmt":
-      return { ...stmt, source: namespaceExpression(stmt.source, namespace, functions) };
+      return { ...stmt, source: namespaceExpression(stmt.source, namespace, scope) };
     case "AssignmentStmt":
       return {
         ...stmt,
-        target: namespaceExpression(stmt.target, namespace, functions) as typeof stmt.target,
-        expression: namespaceExpression(stmt.expression, namespace, functions),
+        target: namespaceExpression(stmt.target, namespace, scope) as typeof stmt.target,
+        expression: namespaceExpression(stmt.expression, namespace, scope),
       };
     case "IncDecStmt":
       return {
         ...stmt,
-        target: namespaceExpression(stmt.target, namespace, functions) as typeof stmt.target,
+        target: namespaceExpression(stmt.target, namespace, scope) as typeof stmt.target,
       };
     case "SwitchStmt":
-      return {
-        ...stmt,
-        expression: namespaceExpression(stmt.expression, namespace, functions),
-        cases: stmt.cases.map((switchCase) => ({
-          ...switchCase,
-          labels: switchCase.labels.map((label) =>
-            namespaceExpression(label, namespace, functions)
-          ),
-          statements: switchCase.statements.map((child) =>
-            namespaceStatement(child, namespace, functions)
-          ),
-        })),
-        defaultCase: stmt.defaultCase
-          ? {
-            ...stmt.defaultCase,
-            statements: stmt.defaultCase.statements.map((child) =>
-              namespaceStatement(child, namespace, functions)
-            ),
-          }
-          : null,
-      };
+      return namespaceSwitchStatement(stmt, namespace, scope);
     case "WhileStmt":
       return {
         ...stmt,
-        condition: namespaceExpression(stmt.condition, namespace, functions),
-        body: namespaceBlock(stmt.body, namespace, functions),
+        condition: namespaceExpression(stmt.condition, namespace, scope),
+        body: namespaceBlock(stmt.body, namespace, scope),
       };
     case "DoWhileStmt":
       return {
         ...stmt,
-        body: namespaceBlock(stmt.body, namespace, functions),
-        condition: namespaceExpression(stmt.condition, namespace, functions),
+        body: namespaceBlock(stmt.body, namespace, scope),
+        condition: namespaceExpression(stmt.condition, namespace, scope),
       };
     case "ForStmt":
-      return {
-        ...stmt,
-        initializer: stmt.initializer
-          ? namespaceStatement(stmt.initializer, namespace, functions) as typeof stmt.initializer
-          : null,
-        condition: namespaceExpression(stmt.condition, namespace, functions),
-        update: stmt.update
-          ? namespaceStatement(stmt.update, namespace, functions) as typeof stmt.update
-          : null,
-        body: namespaceBlock(stmt.body, namespace, functions),
-      };
+      return namespaceForStatement(stmt, namespace, scope);
     case "ForOfStmt":
-      return {
-        ...stmt,
-        iterable: namespaceExpression(stmt.iterable, namespace, functions),
-        body: namespaceBlock(stmt.body, namespace, functions),
-      };
     case "ForInStmt":
       return {
         ...stmt,
-        iterable: namespaceExpression(stmt.iterable, namespace, functions),
-        body: namespaceBlock(stmt.body, namespace, functions),
+        iterable: namespaceExpression(stmt.iterable, namespace, scope),
+        body: namespaceBlock(stmt.body, namespace, scope),
       };
     case "IfStmt":
       return {
         ...stmt,
-        condition: namespaceExpression(stmt.condition, namespace, functions),
-        thenBody: namespaceBlock(stmt.thenBody, namespace, functions),
-        elseBody: stmt.elseBody ? namespaceBlock(stmt.elseBody, namespace, functions) : null,
+        condition: namespaceExpression(stmt.condition, namespace, scope),
+        thenBody: namespaceBlock(stmt.thenBody, namespace, scope),
+        elseBody: stmt.elseBody ? namespaceBlock(stmt.elseBody, namespace, scope) : null,
       };
   }
 }
 
-function namespaceExpression(expr: Expression, namespace: Str, functions: Set<Str>): Expression {
+function namespaceSwitchStatement(
+  stmt: Extract<Statement, { kind: "SwitchStmt" }>,
+  namespace: Str,
+  scope: ValueNamespaceScope,
+): Statement {
+  return {
+    ...stmt,
+    expression: namespaceExpression(stmt.expression, namespace, scope),
+    cases: stmt.cases.map((switchCase) => ({
+      ...switchCase,
+      labels: switchCase.labels.map((label) => namespaceExpression(label, namespace, scope)),
+      statements: switchCase.statements.map((child) => namespaceStatement(child, namespace, scope)),
+    })),
+    defaultCase: stmt.defaultCase
+      ? {
+        ...stmt.defaultCase,
+        statements: stmt.defaultCase.statements.map((child) =>
+          namespaceStatement(child, namespace, scope)
+        ),
+      }
+      : null,
+  };
+}
+
+function namespaceForStatement(
+  stmt: Extract<Statement, { kind: "ForStmt" }>,
+  namespace: Str,
+  scope: ValueNamespaceScope,
+): Statement {
+  return {
+    ...stmt,
+    initializer: stmt.initializer
+      ? namespaceStatement(stmt.initializer, namespace, scope) as typeof stmt.initializer
+      : null,
+    condition: namespaceExpression(stmt.condition, namespace, scope),
+    update: stmt.update
+      ? namespaceStatement(stmt.update, namespace, scope) as typeof stmt.update
+      : null,
+    body: namespaceBlock(stmt.body, namespace, scope),
+  };
+}
+
+function namespaceExpression(
+  expr: Expression,
+  namespace: Str,
+  scope: ValueNamespaceScope,
+): Expression {
   switch (expr.kind) {
     case "CallExpr":
       return {
         ...expr,
-        callee: namespaceCallee(expr.callee, namespace, functions),
-        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+        callee: namespaceCallee(expr.callee, namespace, scope.functions),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, scope)),
       };
     case "NewExpr":
       return {
         ...expr,
-        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, scope)),
       };
     case "MethodCallExpr":
       return {
         ...expr,
-        receiver: namespaceExpression(expr.receiver, namespace, functions),
-        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+        receiver: namespaceExpression(expr.receiver, namespace, scope),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, scope)),
       };
     case "UnaryExpr":
-      return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
+      return { ...expr, operand: namespaceExpression(expr.operand, namespace, scope) };
     case "BinaryExpr":
       return {
         ...expr,
-        left: namespaceExpression(expr.left, namespace, functions),
-        right: namespaceExpression(expr.right, namespace, functions),
+        left: namespaceExpression(expr.left, namespace, scope),
+        right: namespaceExpression(expr.right, namespace, scope),
       };
     case "ConditionalExpr":
       return {
         ...expr,
-        condition: namespaceExpression(expr.condition, namespace, functions),
-        whenTrue: namespaceExpression(expr.whenTrue, namespace, functions),
-        whenFalse: namespaceExpression(expr.whenFalse, namespace, functions),
+        condition: namespaceExpression(expr.condition, namespace, scope),
+        whenTrue: namespaceExpression(expr.whenTrue, namespace, scope),
+        whenFalse: namespaceExpression(expr.whenFalse, namespace, scope),
       };
     case "NullishCoalesceExpr":
       return {
         ...expr,
-        left: namespaceExpression(expr.left, namespace, functions),
-        fallback: namespaceExpression(expr.fallback, namespace, functions),
+        left: namespaceExpression(expr.left, namespace, scope),
+        fallback: namespaceExpression(expr.fallback, namespace, scope),
       };
     case "CastExpr":
-      return { ...expr, expression: namespaceExpression(expr.expression, namespace, functions) };
+    case "SatisfiesExpr":
+      return { ...expr, expression: namespaceExpression(expr.expression, namespace, scope) };
     case "PostfixPointerExpr":
     case "NonNullAssertExpr":
-      return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
+      return { ...expr, operand: namespaceExpression(expr.operand, namespace, scope) };
     case "FieldAccessExpr":
     case "OptionalFieldAccessExpr":
-      return { ...expr, operand: namespaceExpression(expr.operand, namespace, functions) };
+      return { ...expr, operand: namespaceExpression(expr.operand, namespace, scope) };
     case "OptionalMethodCallExpr":
       return {
         ...expr,
-        receiver: namespaceExpression(expr.receiver, namespace, functions),
-        args: expr.args.map((arg) => namespaceExpression(arg, namespace, functions)),
+        receiver: namespaceExpression(expr.receiver, namespace, scope),
+        args: expr.args.map((arg) => namespaceExpression(arg, namespace, scope)),
       };
     case "OptionalIndexExpr":
       return {
         ...expr,
-        operand: namespaceExpression(expr.operand, namespace, functions),
-        index: namespaceExpression(expr.index, namespace, functions),
+        operand: namespaceExpression(expr.operand, namespace, scope),
+        index: namespaceExpression(expr.index, namespace, scope),
       };
     case "RecordLiteralExpr":
       return {
         ...expr,
         fields: expr.fields.map((field) => ({
           ...field,
-          expression: namespaceExpression(field.expression, namespace, functions),
+          expression: namespaceExpression(field.expression, namespace, scope),
         })),
       };
     case "ArrayLiteralExpr":
       return {
         ...expr,
-        elements: expr.elements.map((element) =>
-          namespaceExpression(element, namespace, functions)
-        ),
+        elements: expr.elements.map((element) => namespaceExpression(element, namespace, scope)),
       };
     case "IndexExpr":
       return {
         ...expr,
-        operand: namespaceExpression(expr.operand, namespace, functions),
-        index: namespaceExpression(expr.index, namespace, functions),
+        operand: namespaceExpression(expr.operand, namespace, scope),
+        index: namespaceExpression(expr.index, namespace, scope),
       };
+    case "IdentifierExpr":
+      return namespaceIdentifier(expr, namespace, scope.values);
+    case "ArrowFunctionExpr":
+      return { ...expr, body: namespaceExpression(expr.body, namespace, scope) };
     case "IntegerLiteral":
     case "FloatLiteral":
     case "BoolLiteral":
     case "StringLiteral":
     case "ZeroValueExpr":
-    case "IdentifierExpr":
       return expr;
-    case "ArrowFunctionExpr":
-      return { ...expr, body: namespaceExpression(expr.body, namespace, functions) };
   }
+}
+
+function namespaceIdentifier(
+  expr: Extract<Expression, { kind: "IdentifierExpr" }>,
+  namespace: Str,
+  values: Set<Str>,
+): Expression {
+  return values.has(expr.name) ? { ...expr, name: `${namespace}.${expr.name}` } : expr;
 }
 
 function namespaceCallee(callee: Str, namespace: Str, functions: Set<Str>): Str {

@@ -1,3 +1,4 @@
+import { POINTER_ADDRESS_TARGET, POINTER_DEREFERENCE_TARGET } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -25,6 +26,7 @@ function checkAddressOperation(expr: PostfixPointerExpr, operand: TypeName): Poi
     type: `${operand}&`,
     diagnostics: [{
       message: "Cannot take address of non-addressable expression",
+      code: POINTER_ADDRESS_TARGET,
       span: expr.span,
     }],
   };
@@ -39,6 +41,7 @@ function checkDereferenceOperation(
     type: "<error>",
     diagnostics: [{
       message: `Cannot dereference non-pointer-like type '${operand}'`,
+      code: POINTER_DEREFERENCE_TARGET,
       span: expr.span,
     }],
   };

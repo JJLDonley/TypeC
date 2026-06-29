@@ -29,10 +29,26 @@ Deno.test("resolves project dependency module imports", () => {
   assertText(resolveModuleImportPath("/project/src/main.tc", "abs/math", config), "/opt/math.tc");
 });
 
+Deno.test("resolves package dependency submodule imports", () => {
+  const config = projectConfig("/project", [["pkg", "vendor/pkg/mod.tc"]]);
+  assertText(
+    resolveModuleImportPath("/project/src/main.tc", "pkg/math.tc", config),
+    "/project/vendor/pkg/math.tc",
+  );
+  assertText(
+    resolveModuleImportPath("/project/src/main.tc", "pkg/math", config),
+    "/project/vendor/pkg/math.tc",
+  );
+});
+
 Deno.test("resolves std module imports", () => {
   const config = projectConfig("/project", [["basic/math", "std/math.tc"]]);
   assertSame(
     resolveModuleImportPath("/project/src/main.tc", "std/math.tc", config).endsWith("/std/math.tc"),
+    true,
+  );
+  assertSame(
+    resolveModuleImportPath("/project/src/main.tc", "std/math", config).endsWith("/std/math.tc"),
     true,
   );
   assertSame(

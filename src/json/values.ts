@@ -1,3 +1,4 @@
+import { JSON_TEXT_REQUIRED } from "core/diagnostic_codes.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -13,7 +14,7 @@ export function isNonEmptyJsonText(value: unknown): value is Str {
 
 export function readJsonText(value: unknown, message: Str): Str {
   if (isJsonText(value)) return value;
-  throw new TypeCError([{ message }]);
+  throw new TypeCError([{ message, code: JSON_TEXT_REQUIRED }]);
 }
 
 export function isJsonArray(value: unknown): value is unknown[] {

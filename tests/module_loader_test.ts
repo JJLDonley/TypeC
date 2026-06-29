@@ -27,6 +27,39 @@ Deno.test("loads namespace imported functions", async () => {
   assertText(dependency?.cName ?? "", "Math_inc");
 });
 
+Deno.test("loads generated extern namespace functions", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/math.tc`,
+    `export extern function add_i32(left: i32, right: i32): i32;`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import * as Math from "./math.tc"; function main(): i32 { return Math.add_i32(1, 2); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  const imported = program.functions.find((fn) => fn.name === "Math.add_i32");
+  if (!imported?.external) throw new Error("Expected imported extern function");
+  assertText(imported.cName ?? "", "add_i32");
+});
+
+Deno.test("loads only referenced namespace members", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/math.tc`,
+    `export const FACTOR: i32 = 2; export const UNUSED: i32 = 9; export function scale(value: i32): i32 { return value * FACTOR; } export function unused(): i32 { return UNUSED; }`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import * as Math from "./math.tc"; function main(): i32 { return Math.scale(Math.FACTOR); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "Math.scale");
+  assertExcludes(program.functions.map((fn) => fn.name), "Math.unused");
+  assertIncludes((program.constants ?? []).map((constant) => constant.name), "Math.FACTOR");
+  assertExcludes((program.constants ?? []).map((constant) => constant.name), "Math.UNUSED");
+});
+
 Deno.test("loads namespace imported type aliases", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(
@@ -50,6 +83,113 @@ Deno.test("loads imported type aliases", async () => {
   await writeText(
     `${dir}/main.tc`,
     `import { Pair } from "./types.tc"; function main(): i32 { const p: Pair = { left: 1, right: 2 }; return p.left; }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.typeAliases.map((typeAlias) => typeAlias.name), "Pair");
+});
+
+Deno.test("loads type-only imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/types.tc`,
+    `export type Pair = { left: i32; right: i32; }; export function unused(): i32 { return 1; }`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import type { Pair } from "./types.tc"; function main(): i32 { const p: Pair = { left: 1, right: 2 }; return p.left; }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.typeAliases.map((typeAlias) => typeAlias.name), "Pair");
+  assertExcludes(program.functions.map((fn) => fn.name), "unused");
+});
+
+Deno.test("loads re-exported declarations", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/math.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await writeText(`${dir}/index.tc`, `export { add } from "./math.tc";`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { add } from "./index.tc"; function main(): i32 { return add(1, 2); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "add");
+});
+
+Deno.test("loads aliased imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/math.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { add as sum } from "./math.tc"; function main(): i32 { return sum(1, 2); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "sum");
+});
+
+Deno.test("loads aliased re-exported declarations", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/math.tc`, `export function add(a: i32, b: i32): i32 { return a + b; }`);
+  await writeText(`${dir}/index.tc`, `export { add as sum } from "./math.tc";`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { sum } from "./index.tc"; function main(): i32 { return sum(1, 2); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "sum");
+});
+
+Deno.test("rejects duplicate import aliases", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/ops.tc`,
+    `export function one(): i32 { return 1; } export function two(): i32 { return 2; }`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import { one as value } from "./ops.tc"; import { two as value } from "./ops.tc"; function main(): i32 { return value(); }`,
+  );
+  await assertLoadError(`${dir}/main.tc`, "Duplicate import alias 'value'");
+});
+
+Deno.test("rejects ambiguous re-exported type aliases", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/a.tc`, `export type Value = { a: i32; };`);
+  await writeText(`${dir}/b.tc`, `export type Value = { b: i32; };`);
+  await writeText(
+    `${dir}/index.tc`,
+    `export { Value } from "./a.tc"; export { Value } from "./b.tc";`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import type { Value } from "./index.tc"; function main(): i32 { return 0; }`,
+  );
+  await assertLoadError(`${dir}/main.tc`, "Module export 'Value' is ambiguous");
+});
+
+Deno.test("loads default imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/thing.tc`,
+    `export function value(): i32 { return 7; } export default value;`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import getValue from "./thing.tc"; function main(): i32 { return getValue(); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "getValue");
+});
+
+Deno.test("loads type-only re-exports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/types.tc`, `export type Pair = { left: i32; right: i32; };`);
+  await writeText(
+    `${dir}/index.tc`,
+    `import type { Pair } from "./types.tc"; export type { Pair };`,
+  );
+  await writeText(
+    `${dir}/main.tc`,
+    `import type { Pair } from "./index.tc"; function main(): i32 { const p: Pair = { left: 1, right: 2 }; return p.right; }`,
   );
   const program = await loadProgram(`${dir}/main.tc`);
   assertIncludes(program.typeAliases.map((typeAlias) => typeAlias.name), "Pair");
@@ -145,6 +285,30 @@ Deno.test("loads std project dependency imports", async () => {
   );
   const program = await loadProgram(`${dir}/main.tc`);
   assertIncludes(program.functions.map((fn) => fn.name), "abs_i32");
+});
+
+Deno.test("loads extensionless std imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(
+    `${dir}/main.tc`,
+    `import { abs_i32 } from "std/math"; function main(): i32 { return abs_i32(0 - 1); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "abs_i32");
+});
+
+Deno.test("loads package dependency submodule imports", async () => {
+  const dir = await Deno.makeTempDir();
+  await Deno.mkdir(`${dir}/vendor/pkg`, { recursive: true });
+  await writeText(`${dir}/project.json`, `{"dependencies":{"pkg":"vendor/pkg/mod.tc"}}`);
+  await writeText(`${dir}/vendor/pkg/mod.tc`, `export function root(): i32 { return 1; }`);
+  await writeText(`${dir}/vendor/pkg/math.tc`, `export function answer(): i32 { return 42; }`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { answer } from "pkg/math"; function main(): i32 { return answer(); }`,
+  );
+  const program = await loadProgram(`${dir}/main.tc`);
+  assertIncludes(program.functions.map((fn) => fn.name), "answer");
 });
 
 Deno.test("loads relative project dependency imports", async () => {
@@ -257,6 +421,16 @@ Deno.test("rejects missing exports", async () => {
   await assertLoadError(`${dir}/main.tc`, "Module does not export 'hidden'");
 });
 
+Deno.test("reports module diagnostic codes", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/math.tc`, `function hidden(): i32 { return 1; }`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { hidden } from "./math.tc"; function main(): i32 { return hidden(); }`,
+  );
+  await assertLoadDiagnosticCode(`${dir}/main.tc`, "E0504");
+});
+
 Deno.test("rejects missing modules", async () => {
   const dir = await Deno.makeTempDir();
   await writeText(
@@ -285,6 +459,19 @@ Deno.test("rejects std imports escaping std", async () => {
     `import { add } from "std/../math.tc"; function main(): i32 { return 0; }`,
   );
   await assertLoadError(`${dir}/main.tc`, "Std import path 'std/../math.tc' must stay within std");
+});
+
+Deno.test("rejects package dependency imports escaping package", async () => {
+  const dir = await Deno.makeTempDir();
+  await writeText(`${dir}/project.json`, `{"dependencies":{"pkg":"vendor/pkg/mod.tc"}}`);
+  await writeText(
+    `${dir}/main.tc`,
+    `import { add } from "pkg/../math.tc"; function main(): i32 { return 0; }`,
+  );
+  await assertLoadError(
+    `${dir}/main.tc`,
+    "Project dependency import path 'pkg/../math.tc' must stay within its package",
+  );
 });
 
 Deno.test("rejects encoded std imports escaping std", async () => {
@@ -385,6 +572,18 @@ async function assertLoadError(path: Str, message: Str): Promise<void> {
     ) return;
   }
   throw new Error(`Expected loader error: ${message}`);
+}
+
+async function assertLoadDiagnosticCode(path: Str, code: Str): Promise<void> {
+  try {
+    await loadProgram(path);
+  } catch (error) {
+    if (
+      error instanceof TypeCError &&
+      error.diagnostics.some((diagnostic) => diagnostic.code === code)
+    ) return;
+  }
+  throw new Error(`Expected loader diagnostic code: ${code}`);
 }
 
 async function writeText(path: Str, content: Str): Promise<void> {

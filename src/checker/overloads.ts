@@ -1,3 +1,4 @@
+import { OVERLOAD_IMPLEMENTATION, OVERLOAD_ORDER } from "core/diagnostic_codes.ts";
 import type { FunctionDecl, TypeRef } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import { checkCallArgumentType, checkCallArity } from "checker/call_args.ts";
@@ -51,6 +52,7 @@ function checkOverloadOrder(functions: FunctionDecl[]): Diagnostic[] {
     .filter((fn) => fn.overload === true)
     .map((fn) => ({
       message: `Overload declaration for '${fn.name}' must appear before implementation`,
+      code: OVERLOAD_ORDER,
       span: fn.span,
     }));
 }
@@ -62,6 +64,7 @@ function checkOverloadImplementation(
   if (implementations.length === 1) return [];
   return overloads.map((fn) => ({
     message: `Overloaded function '${fn.name}' requires exactly one implementation`,
+    code: OVERLOAD_IMPLEMENTATION,
     span: fn.span,
   }));
 }

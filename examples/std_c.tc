@@ -1,0 +1,8 @@
+import { c_int_zero, c_size_zero, c_uint_zero } from "std/c.tc";
+
+function main(): i32 {
+  const signed_zero: c_int = c_int_zero();
+  const unsigned_zero: c_uint = c_uint_zero();
+  const size_zero: usize = c_size_zero();
+  return (signed_zero as i32) + (unsigned_zero as i32) + (size_zero as i32);
+}

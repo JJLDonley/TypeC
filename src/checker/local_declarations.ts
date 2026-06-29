@@ -1,3 +1,4 @@
+import { LOCAL_INITIALIZER_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { Expression, Statement, TypeRef } from "core/ast.ts";
 import type { TypeName } from "core/tast.ts";
@@ -28,27 +29,30 @@ export function checkLocalDeclaration(
   stmt: VarDeclStmt,
   typeAliases: Map<Str, TypeRef>,
   resolveType: TypeResolver,
+  interfaceNames: Set<Str> = new Set<Str>(),
 ): LocalDeclarationCheck {
   if (stmt.type === null) return checkInferredLocalDeclaration(stmt, resolveType);
-  return checkAnnotatedLocalDeclaration(stmt, typeAliases, resolveType);
+  return checkAnnotatedLocalDeclaration(stmt, typeAliases, resolveType, interfaceNames);
 }
 
 function checkAnnotatedLocalDeclaration(
   stmt: VarDeclStmt,
   typeAliases: Map<Str, TypeRef>,
   resolveType: TypeResolver,
+  interfaceNames: Set<Str>,
 ): LocalDeclarationCheck {
   if (stmt.type === null) return { diagnostics: [], type: "<error>" };
   const expected = typeName(stmt.type);
   const diagnostics: Diagnostic[] = [
-    ...checkTypeRef(stmt.type, typeAliases),
+    ...checkTypeRef(stmt.type, typeAliases, interfaceNames),
     ...checkValueType(stmt.type, `Variable '${stmt.name}' cannot have type 'void'`, stmt.span),
     ...checkArrayInitializer(stmt.initializer, expected, stmt.span),
   ];
   const actual = resolveType(stmt.initializer, expected);
-  if (!isAssignable(actual, expected)) {
+  if (actual !== "<error>" && !isAssignable(actual, expected)) {
     diagnostics.push({
       message: `Initializer type '${actual}' is not assignable to '${expected}'`,
+      code: LOCAL_INITIALIZER_TYPE,
       span: stmt.span,
     });
   }

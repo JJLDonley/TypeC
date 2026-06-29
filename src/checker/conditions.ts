@@ -1,3 +1,4 @@
+import { CONDITION_TYPE } from "core/diagnostic_codes.ts";
 import type { Diagnostic, SourceSpan } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 
@@ -13,5 +14,9 @@ export function checkIfCondition(type: TypeName, span: SourceSpan): Diagnostic[]
 
 function checkBoolCondition(type: TypeName, label: Str, span: SourceSpan): Diagnostic[] {
   if (type === "bool") return [];
-  return [{ message: `${label} condition type '${type}' is not assignable to 'bool'`, span }];
+  return [{
+    message: `${label} condition type '${type}' is not assignable to 'bool'`,
+    code: CONDITION_TYPE,
+    span,
+  }];
 }

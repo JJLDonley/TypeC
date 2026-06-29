@@ -32,6 +32,7 @@ type b8 = boolean;
 type usize = number;
 
 type DeferredCalls = Str[];
+type ForInitializer = NonNullable<Extract<Statement, { kind: "ForStmt" }>["initializer"]>;
 
 interface DeferredContext {
   returnDefers: DeferredCalls;
@@ -462,11 +463,7 @@ function emitForWithDefers(
   return lines.join("\n");
 }
 
-function emitForClause(
-  stmt: Extract<Statement, { kind: "ForStmt" }>["initializer"] & {},
-  context: EmitContext,
-  locals: LocalTypes,
-): Str {
+function emitForClause(stmt: ForInitializer, context: EmitContext, locals: LocalTypes): Str {
   switch (stmt.kind) {
     case "VarDeclStmt":
       registerVarDeclLocalType(locals, stmt, context);

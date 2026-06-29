@@ -34,10 +34,8 @@ Deno.test("reports invalid constant modifiers", () => {
   assertText(diagnostics[0]?.message ?? "", "Constants cannot be extern");
 });
 
-Deno.test("reports invalid function modifiers", () => {
-  const diagnostics = functionModifierDiagnostics(token("export"), token("extern"));
-
-  assertText(diagnostics[0]?.message ?? "", "Extern functions cannot be exported");
+Deno.test("accepts exported extern function modifiers", () => {
+  assertLen(functionModifierDiagnostics(token("export"), token("extern")).length, 0);
 });
 
 Deno.test("accepts valid declaration modifiers", () => {

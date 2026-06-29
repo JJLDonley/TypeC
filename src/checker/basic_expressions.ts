@@ -1,4 +1,5 @@
 import type { Expression } from "core/ast.ts";
+import { STRING_LITERAL_CONTEXT } from "core/diagnostic_codes.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
 import { checkIntegerLiteralRange } from "checker/literal_ranges.ts";
@@ -33,6 +34,7 @@ function checkKnownBasicExpression(expr: BasicExpr): BasicExpressionCheck {
     case "StringLiteral":
       return handled(stringLiteralType(expr), [{
         message: "String literals require an expected C string type",
+        code: STRING_LITERAL_CONTEXT,
         span: expr.span,
       }]);
   }

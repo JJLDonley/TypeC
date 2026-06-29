@@ -1,3 +1,4 @@
+import { FOR_OF_ITERABLE } from "core/diagnostic_codes.ts";
 import type { Statement } from "core/ast.ts";
 import type { Diagnostic } from "core/diagnostics.ts";
 import type { TypeName } from "core/tast.ts";
@@ -17,7 +18,11 @@ export function checkForOfIterable(stmt: ForOfStmt, iterableType: TypeName): For
   if (elementType !== null) return { elementType, diagnostics: [] };
   return {
     elementType: "<error>",
-    diagnostics: [{ message: "For-of iterable must be an array or slice", span: stmt.iterable.span }],
+    diagnostics: [{
+      message: "For-of iterable must be an array or slice",
+      code: FOR_OF_ITERABLE,
+      span: stmt.iterable.span,
+    }],
   };
 }
 

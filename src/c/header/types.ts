@@ -11,6 +11,7 @@ import type { CPointerToArrayShape } from "c/header/array_types.ts";
 import { isTypeCIdentifier } from "c/header/identifiers.ts";
 import { mapScalarCHeaderType } from "c/header/scalar_types.ts";
 import { normalizeCHeaderType } from "c/header/type_normalization.ts";
+import { C_HEADER_UNSUPPORTED_TYPE } from "core/diagnostic_codes.ts";
 import { TypeCError } from "core/diagnostics.ts";
 
 type Str = string;
@@ -77,7 +78,10 @@ function mapCArrayHeaderType(
 }
 
 function unsupportedCHeaderType(type: Str): TypeCError {
-  return new TypeCError([{ message: `Unsupported C type '${type}'` }]);
+  return new TypeCError([{
+    message: `Unsupported C type '${type}'`,
+    code: C_HEADER_UNSUPPORTED_TYPE,
+  }]);
 }
 
 function mapRecordCHeaderType(type: Str, recordNames: Set<Str>): Str | null {
