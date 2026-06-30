@@ -19,13 +19,14 @@ TypeC 0.1.2 is the current patch release in the TypeC 0.1 release line.
 
 ## Install and verify TypeC 0.1.2
 
-Build the compiler binary:
+TypeC 0.1.2 is built with Deno. Before installing `STC`, make sure Deno is installed and build the
+compiler binary from this repository:
 
 ```sh
 deno task build
 ```
 
-Install `STC` into `~/.local/bin/STC`:
+Only after the Deno build succeeds, install `STC` into `~/.local/bin/STC`:
 
 ```sh
 ./install.sh
@@ -236,8 +237,8 @@ while (i < 10) {
 
 ```ts
 type Vec2 = {
-  x: f32,
-  y: f32,
+  x: f32;
+  y: f32;
 };
 
 const p: Vec2 = { x: 1.0, y: 2.0 };
