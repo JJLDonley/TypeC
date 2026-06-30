@@ -7,6 +7,15 @@ truthiness.
 
 TypeC 0.1.2 is the current patch release in the TypeC 0.1 release line.
 
+## Project provenance
+
+TypeC was built with coding agents. The agents worked under strict system/developer prompts that
+shaped both the project layout and the language design: small single-purpose modules, deterministic
+compiler behavior, stable diagnostics, portable C emission, no dead-code placeholders, documented
+phases, and explicit rejection of JavaScript runtime semantics. Human direction set the goals,
+constraints, and acceptance criteria; agent work implemented and validated the compiler, language
+features, documentation, tests, CLI/LSP tooling, and examples under those constraints.
+
 - Release notes: [`docs/0.1-release.md`](docs/0.1-release.md)
 - Release candidate notes: [`docs/0.1-release-candidate.md`](docs/0.1-release-candidate.md)
 - CLI reference: [`docs/cli.md`](docs/cli.md)
