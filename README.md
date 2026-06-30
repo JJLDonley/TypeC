@@ -1,214 +1,426 @@
-# TypeC TypeScript Syntax Support
+# TypeC 0.1.2
 
-TypeC 0.1.2 is the current 0.1 patch release. See [`docs/0.1-release.md`](docs/0.1-release.md) for
-supported features, rejected features, commands, examples, and known limitations.
+TypeC 0.1.2 is a statically typed systems language with TypeScript-like syntax that emits portable
+C11. It is **not** TypeScript, JavaScript, or a JavaScript runtime. There is no `any`, no
+`undefined`, no prototype model, no hidden garbage collector, no dynamic object maps, and no JS
+truthiness.
 
-TypeC is a statically typed, C-emitting language with TypeScript-like syntax. It is **not** a
-TypeScript runtime and does **not** implement JavaScript object, prototype, truthiness, `any`,
-`null`/`undefined`, hidden allocation, or garbage-collected semantics.
+TypeC 0.1.2 is the current patch release in the TypeC 0.1 release line.
 
-For a deeper gap analysis, see [`docs/ts-feature-analysis.md`](docs/ts-feature-analysis.md).
+- Release notes: [`docs/0.1-release.md`](docs/0.1-release.md)
+- Release candidate notes: [`docs/0.1-release-candidate.md`](docs/0.1-release-candidate.md)
+- CLI reference: [`docs/cli.md`](docs/cli.md)
+- Diagnostics reference: [`docs/diagnostics.md`](docs/diagnostics.md)
+- C emission reference: [`docs/c-emission.md`](docs/c-emission.md)
+- Language reference: [`docs/language.md`](docs/language.md)
+- LSP reference: [`docs/lsp.md`](docs/lsp.md)
+- Standard library reference: [`docs/stdlib.md`](docs/stdlib.md)
+- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
-## Install locally
+## Install and verify TypeC 0.1.2
 
-Build the compiler as `./bin/STC`:
+Build the compiler binary:
 
 ```sh
 deno task build
 ```
 
-Install it to `~/.local/bin/STC` and add that directory to `~/.bashrc`:
+Install `STC` into `~/.local/bin/STC`:
 
 ```sh
 ./install.sh
 source ~/.bashrc
 ```
 
-## Important honesty note
+Verify the exact version:
 
-Several TS-looking features are still **partially implemented**. General assignment targets are now
-implemented, so mutable record fields and array elements can be updated:
-
-```ts
-x = x + 1;
-obj.x = 1;
-arr[i] = value;
-obj.pos.x += dx;
+```sh
+STC --version
+# TypeC 0.1.2
 ```
 
-Borrowed interface values are available through explicit reference-style `Interface&` types. Owning
-interface values, structural interface conversion, and JavaScript-style object dispatch remain out
-of scope.
+The repo-local binary is built at:
 
-## Support Matrix
+```sh
+./bin/STC --version
+# TypeC 0.1.2
+```
 
-| TypeScript feature                  | TypeC status       | Notes                                                                                                        |
-| ----------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Function declarations               | Implemented        | `function name(...): Type { ... }`; supports static default, optional, and rest parameters.                  |
-| Primitive type names                | Implemented        | TypeC source uses `bool`, integer/float aliases like `i32`, `f32`, `usize`, and `void`.                      |
-| Local `const`                       | Implemented        | Immutable local with initializer.                                                                            |
-| Local `let`                         | Implemented        | Mutable local variable.                                                                                      |
-| Module `const`                      | Implemented        | Compile-time constants in supported expressions.                                                             |
-| Assignment `x = value`              | Implemented        | Statement-only; no assignment expression value.                                                              |
-| Field assignment `obj.x = value`    | Implemented        | Static lvalue targets only.                                                                                  |
-| Indexed assignment `arr[i] = value` | Implemented        | Static lvalue targets only.                                                                                  |
-| Compound assignment                 | Implemented        | Statement-only; supports static lvalue targets.                                                              |
-| Increment/decrement                 | Implemented        | Statement-only; supports integer static lvalue targets.                                                      |
-| Assignment expressions              | Not implemented    | No JS expression-valued assignment.                                                                          |
-| `if` / `else` / `else if`           | Implemented        | Conditions must be `bool`; no truthiness.                                                                    |
-| `while`                             | Implemented        | Condition must be `bool`.                                                                                    |
-| `do while`                          | Implemented        | Condition must be `bool`.                                                                                    |
-| `for`                               | Implemented        | Basic counted loops.                                                                                         |
-| `for..of`                           | Implemented        | Static iteration over arrays and slices; no JS iterator protocol.                                            |
-| `for..in`                           | Implemented        | Static record/class field keys and enum members; no JS enumerable-property semantics.                        |
-| `switch` / `case` / `default`       | Implemented        | Static subset.                                                                                               |
-| `break`                             | Implemented        | Supported in control flow.                                                                                   |
-| `continue`                          | Implemented        | Supported in `while`, `do while`, and basic `for` loops.                                                     |
-| Empty statement `;`                 | Implemented        | No-op statement.                                                                                             |
-| Arithmetic operators                | Implemented        | Static numeric typing.                                                                                       |
-| Comparison operators                | Implemented        | Static typed result.                                                                                         |
-| Conditional operator `?:`           | Implemented        | Branches checked statically.                                                                                 |
-| Logical `!`, `&&`, `\|\|`           | Implemented        | `bool` only; `&&`/`\|\|` return `bool`, not operand values.                                                  |
-| Bitwise operators                   | Implemented        | Integer-only; no JS numeric coercions.                                                                       |
-| Nullish coalescing `??`             | Implemented        | Optional-type based, not JS `null`/`undefined`.                                                              |
-| Optional construction               | Implemented        | `Some(value)` and `None()` infer from expected optional types; explicit type arguments remain accepted.      |
-| Optional chaining                   | Implemented        | Optional-type based field/index/method access.                                                               |
-| Non-null assertion                  | Implemented        | Optional-type based.                                                                                         |
-| Numeric separators                  | Implemented        | Decimal literals like `1_000`.                                                                               |
-| String literals                     | Implemented        | Double-quoted and single-quoted.                                                                             |
-| Template literals                   | Implemented        | Plain backtick literals and compile-time literal interpolation; runtime interpolation rejected.              |
-| Arrays                              | Partial            | Static arrays/slices, literals, indexing, mutation, `Array.fill`, slice helpers, and C interop.              |
-| Array holes/sparse arrays           | Not implemented    | Intentionally no JS sparse arrays.                                                                           |
-| Tuples                              | Implemented        | Fixed-size value tuples, tuple literals, and constant indexing; no JS array methods or sparse values.        |
-| Records/object types                | Partial            | Static record aliases, optional fields, literals, field reads/writes, spread/rest; no index signatures.      |
-| Record literal shorthand            | Implemented        | `{ x }` means `{ x: x }`.                                                                                    |
-| Object spread/rest                  | Implemented        | Static record/class shapes only; direct field copies, no JS enumerability/prototypes/symbols.                |
-| Dynamic property access             | Not implemented    | No default dynamic object model.                                                                             |
-| Field access `obj.x`                | Implemented        | Static field read/write via assignment targets.                                                              |
-| Index access `arr[i]`               | Implemented        | Static index read/write via assignment targets.                                                              |
-| Named type references               | Implemented        | Includes qualified names.                                                                                    |
-| Parenthesized type refs             | Implemented        | `(T)` grouping.                                                                                              |
-| Function type refs                  | Implemented        | Example: `(value: i32) => i32`.                                                                              |
-| Pointer/reference/slice type refs   | Implemented        | TypeC/C-oriented memory model.                                                                               |
-| Type aliases                        | Partial            | Record, scalar, generic, tuple, union, intersection, conditional, mapped, and reflection aliases are static. |
-| Enums                               | Implemented        | Static scoped enums with fixed representation.                                                               |
-| Tagged unions                       | Implemented        | Explicit `union` declarations and `A \| B` type-alias sugar.                                                 |
-| TS union types `A \| B`             | Implemented        | Type-alias sugar over tagged unions; existing constructor/payload syntax applies.                            |
-| Intersection types `A & B`          | Implemented subset | Static record-shape composition in type aliases; no runtime merge/prototype behavior.                        |
-| Classes                             | Partial            | Static layout, constructors, methods, and static inheritance lower to records/functions.                     |
-| Class fields                        | Partial            | Static layout, constructor initialization, field assignment, and inherited field flattening.                 |
-| Class methods                       | Partial            | Calls and inherited method reuse work; dispatch is static, not virtual.                                      |
-| `this` in methods                   | Implemented subset | Field reads/method lowering; not JS receiver semantics.                                                      |
-| Constructors                        | Implemented subset | Value-returning `new Class(...)`; no heap allocation, overloads, `super`, or parameter properties.           |
-| Class `implements`                  | Implemented        | Explicit nominal interface contracts used by generics and borrowed interface conversion.                     |
-| Class inheritance `extends`         | Partial            | Single concrete static base class; fields flatten and methods copy; no prototypes/subtyping/`super`.         |
-| Method overriding                   | Partial            | Child method with same name replaces copied base method for static dispatch only.                            |
-| Interfaces                          | Partial            | Static method signatures plus explicit borrowed `Interface&` views; owning interface values are rejected.    |
-| Generics                            | Partial            | Compile-time generics/monomorphization; limited inference.                                                   |
-| Generic constraints                 | Implemented        | `T extends InterfaceName` style constraints.                                                                 |
-| Conditional/mapped types            | Implemented subset | Static non-distributive conditional aliases and concrete record mapped aliases.                              |
-| Type inference                      | Partial            | Local inference, contextual literals/optionals, argument/result generics, and non-exported returns.          |
-| Named imports                       | Implemented        | Static module imports.                                                                                       |
-| Named import aliases                | Implemented        | `import { exported as local } from "..."`.                                                                   |
-| Namespace imports                   | Implemented        | `import * as NS from "..."`; qualified use required.                                                         |
-| Default imports                     | Implemented        | Static default export/import selection; no JS module object semantics.                                       |
-| Re-exports                          | Implemented        | Static named and type-only re-exports; no live JS bindings.                                                  |
-| Dynamic import                      | Not implemented    | No runtime module loader.                                                                                    |
-| C extern functions                  | Implemented        | Checked C ABI subset.                                                                                        |
-| C header imports                    | Partial            | Supported C declarations only; complex macros/C forms excluded.                                              |
-| `defer`                             | Implemented        | TypeC feature, not TypeScript.                                                                               |
-| Arenas/safe pointers                | Implemented        | TypeC systems features, not TypeScript.                                                                      |
-| `any`                               | Not implemented    | Intentionally forbidden.                                                                                     |
-| `unknown` / `never`                 | Not implemented    | Not yet specified.                                                                                           |
-| `null` / `undefined` values         | Not implemented    | Optional types use explicit `Some<T>`/`None<T>`; no implicit JS nullish values.                              |
-| Truthiness                          | Not implemented    | Conditions must be `bool`.                                                                                   |
-| Exceptions `throw` / `try`          | Not implemented    | Not yet specified.                                                                                           |
-| Async/await / promises              | Not implemented    | No JS runtime dependency.                                                                                    |
-| Decorators                          | Not implemented    | Not yet specified.                                                                                           |
-| JSX                                 | Not implemented    | Out of scope.                                                                                                |
-| Prototypes / `eval`                 | Not implemented    | Intentionally forbidden.                                                                                     |
+## Quick start
 
-## Most important missing language work
+Create `main.tc`:
 
-1. **Generic type-system completeness**: add generic type aliases, broader contextual generic
-   inference, deeper alias interactions, and constraint diagnostics that remain cascade-free.
-2. **Static object and record type ergonomics**: expand indexed access, mapped types, utility types,
-   readonly propagation, `as const`, and literal inference without adding JavaScript object
-   semantics.
-3. **Control-flow type refinement**: improve discriminant narrowing, equality narrowing,
-   exhaustiveness checks, and tagged-union diagnostics while keeping checks compile-time only.
-4. **Interface ergonomics**: keep explicit borrowed `Interface&` dispatch available while any future
-   structural or owned interface value support waits for documented coherence, ambiguity, ownership,
-   and allocation rules.
-5. **Diagnostics and tooling behavior**: keep errors actionable, preserve exact source spans, avoid
-   duplicate diagnostics, and keep LSP/CLI behavior delegated to the compiler.
-6. **Spec tightening**: document each accepted TypeScript-like feature with its static TypeC
-   semantics and explicitly reject JavaScript runtime-only behavior.
+```tc
+function square(value: i32): i32 {
+  return value * value;
+}
 
-## TypeScript type-system TODO
+function main(): i32 {
+  return square(6) - 36;
+}
+```
 
-These are planned/specification candidates only. They are not implemented until a later phase
-explicitly documents syntax, semantics, lowering, diagnostics, and tests.
+Check, build, and run:
 
-### Generic types and inference
+```sh
+STC check main.tc
+STC build main.tc
+STC run main.tc
+```
 
-- Deeper generic type alias interactions with conditional/mapped/utility aliases.
-- Recursive generic inference through records, tuples, arrays, slices, pointers, function types, and
-  nested named type arguments.
-- Generic method and generic class inference edge cases, including overload and contextual return
-  positions.
-- Constraint diagnostics that report the root mismatch without cascaded unknown-type or assignment
-  noise.
+Or from source during development:
 
-### Static object, record, and property types
+```sh
+deno run -A src/driver/main.ts check main.tc
+deno run -A src/driver/main.ts build main.tc
+deno run -A src/driver/main.ts run main.tc
+```
 
-- Deeper indexed access type evaluation, including nested record/tuple access.
-- Static index-signature alternatives, if they can lower without dynamic property maps.
-- More complete record spread/rest type computation.
-- `satisfies` coverage for deeper static shapes and clearer mismatch diagnostics.
-- `as const` for compile-time literal freezing without runtime freeze metadata.
+## What TypeC 0.1.2 is
 
-### Conditional, mapped, and utility types
+TypeC 0.1.2 is a small, self-contained language release focused on deterministic native programs:
 
-- Distributive conditional types only if finite, deterministic expansion rules are defined.
-- Type-level `infer` only after explicit non-recursive scope and termination rules are documented.
-- Mapped type key remapping and modifier transforms such as readonly/optional add/remove.
-- Static utility aliases such as `Partial<T>`, `Required<T>`, `Readonly<T>`, `Pick<T>`, `Omit<T>`,
-  and `Record<K, V>`.
-- Template literal types for finite compile-time text unions.
+- TypeScript-like syntax where it helps readability.
+- Strict static type checking.
+- Deterministic C11 emission.
+- Fixed-width primitive aliases such as `i32`, `u64`, `f32`, `bool`, and `usize`.
+- Explicit C interop through `extern function` and C header import/generation tools.
+- Static modules, namespace imports, re-exports, classes, borrowed interfaces, generics, tagged
+  unions, arrays, tuples, slices, optionals, arenas, and safe pointers.
 
-### Literal types, unions, intersections, and narrowing
+TypeC 0.1.2 intentionally avoids JavaScript runtime semantics:
 
-- Broader literal type inference for constants, records, tuples, and enum-like string unions.
-- Exhaustiveness diagnostics for tagged unions and literal unions.
-- Discriminant-field narrowing in `if` and `switch` statements.
-- Equality narrowing for literal unions and tagged-union discriminants.
-- `in`-style shape narrowing only if it remains static and does not imply JS property lookup.
-- Intersection conflict rules for duplicate fields, readonly modifiers, functions, and incompatible
-  layouts.
+- No `any`.
+- No implicit `undefined` or `null`.
+- No truthiness: conditions must be `bool`.
+- No prototype inheritance.
+- No dynamic property maps.
+- No reflection runtime.
+- No hidden heap allocation.
+- No garbage collector.
+- No async/promise runtime.
 
-### Interfaces and structural typing
+## CLI commands in TypeC 0.1.2
 
-- Structural interface conversion only after coherence and ambiguity rules are specified.
-- Owned interface/trait objects only after an explicit allocation, ownership, and lifetime model is
-  selected.
-- Borrowed interface conversion diagnostics for ambiguous or missing methods.
-- Interface constraints over generic records/classes without hidden vtables unless explicitly
-  requested by borrowed interface syntax.
+```sh
+STC --version
+STC check <file.tc>
+STC build <file.tc> [--build-dir <dir>]
+STC run <file.tc> [--build-dir <dir>]
+STC clean [--build-dir <dir>]
+STC fmt <file.tc>
+STC syntax <file.tc>
+STC watch <file.tc> [--build-dir <dir>]
+STC lsp
+STC emit-externs <header.h> [-o <file.tc>] [-- <clang flags...>]
+```
 
-### Readonly, modules, and unsupported TS features
+Examples:
 
-- Comprehensive compile-time readonly propagation through records, tuples, arrays, mapped types, and
-  generic aliases.
-- Type-only namespace ergonomics where they remain static and do not create runtime module objects.
-- Clear rejections or static alternatives for declaration merging, namespaces-as-values, decorators,
-  exceptions, async/await, JSX, `any`, `unknown`, `never`, `null`, and `undefined`.
+```sh
+STC check examples/0.1/main.tc
+STC build examples/0.1/main.tc
+STC run examples/0.1/main.tc
+```
 
-## TypeC 0.1 Examples
+Generate TypeC extern declarations from a C header:
 
-Complete 0.1 example programs live under [`examples/0.1`](examples/0.1):
+```sh
+STC emit-externs raylib.h -o raylib.tc -- -I/path/to/include
+```
 
-- [`main.tc`](examples/0.1/main.tc)
+The generated `.tc` file can be imported as a normal TypeC module:
+
+```tc
+import * as RL from "./raylib.tc";
+
+function main(): i32 {
+  RL.InitWindow(720, 720, "TypeC");
+  RL.CloseWindow();
+  return 0;
+}
+```
+
+Native compiler/linker flags still belong in `project.json`.
+
+## Project configuration
+
+TypeC 0.1.2 reads `project.json` near the entry file. Project dependencies map static import names
+to TypeC modules or C headers. Compiler flags are passed to the native C compiler.
+
+Example:
+
+```json
+{
+  "dependencies": {
+    "raylib": "/path/to/raylib.h"
+  },
+  "compiler": {
+    "flags": [
+      "-I/path/to/include",
+      "-L/path/to/lib",
+      "-lraylib",
+      "-lm",
+      "-ldl",
+      "-lpthread",
+      "-lGL",
+      "-lrt",
+      "-lX11"
+    ]
+  }
+}
+```
+
+Then source can use:
+
+```tc
+import * as RL from "raylib";
+```
+
+TypeC 0.1.2 LSP diagnostics and inlay hints are project-aware for real `file://` documents.
+
+## Language overview for TypeC 0.1.2
+
+### Functions
+
+```tc
+function add(left: i32, right: i32): i32 {
+  return left + right;
+}
+```
+
+`main` is the native entry point:
+
+```tc
+function main(): i32 {
+  return 0;
+}
+```
+
+### Variables
+
+```tc
+const immutable: i32 = 10;
+let mutable: i32 = 20;
+mutable += immutable;
+```
+
+Local type inference is supported:
+
+```tc
+const value = 42; // inferred i32
+```
+
+### Control flow
+
+```tc
+if (value > 0) {
+  return value;
+} else {
+  return 0;
+}
+```
+
+Conditions must be `bool`. Braced blocks are required.
+
+Loops:
+
+```tc
+let i: i32 = 0;
+while (i < 10) {
+  i++;
+}
+```
+
+### Records
+
+```tc
+type Vec2 = {
+  x: f32,
+  y: f32,
+};
+
+const p: Vec2 = { x: 1.0, y: 2.0 };
+```
+
+Records are static value layouts. They are not JavaScript objects.
+
+### Arrays, tuples, and slices
+
+```tc
+const values: i32[3] = [1, 2, 3];
+const first: i32 = values[0];
+```
+
+Static arrays have fixed length. Slices are explicit views; there is no JavaScript array runtime.
+
+### Optionals
+
+TypeC optionals are explicit static optional values, not JS `null`/`undefined`:
+
+```tc
+function maybe(flag: bool): i32? {
+  if (flag) {
+    return Some(42);
+  }
+  return None();
+}
+```
+
+Optional chaining and nullish coalescing are optional-type based.
+
+### Enums and tagged unions
+
+```tc
+enum Mode {
+  Menu,
+  Playing,
+  GameOver,
+}
+
+union Result {
+  Ok: i32;
+  Err: i32;
+}
+```
+
+Tagged unions are explicit runtime layouts emitted to C.
+
+### Classes in TypeC 0.1.2
+
+Classes are static value-layout types. They are not JavaScript objects.
+
+```tc
+class Counter {
+  value: i32;
+
+  add(delta: i32): i32 {
+    return this.value + delta;
+  }
+}
+
+function main(): i32 {
+  const counter: Counter = { value: 40 };
+  return counter.add(2) - 42;
+}
+```
+
+Important class rules in TypeC 0.1.2:
+
+- Class values have static C-compatible layout where supported.
+- Methods lower to deterministic C functions.
+- `this.method()` works inside methods in TypeC 0.1.2.
+- Dispatch is static unless using explicit borrowed interfaces.
+- No prototype chain.
+- No hidden object header.
+- No heap allocation for `new`.
+- No JS `super` semantics.
+
+### Interfaces in TypeC 0.1.2
+
+Interfaces are static method contracts. Borrowed interface values are explicit non-owning views:
+
+```tc
+interface Readable {
+  get(): i32;
+}
+
+class Box implements Readable {
+  value: i32;
+
+  get(): i32 {
+    return this.value;
+  }
+}
+
+function read(value: Readable&): i32 {
+  return value.get();
+}
+
+function main(): i32 {
+  const box: Box = { value: 42 };
+  const readable: Readable& = box.&;
+  return read(readable) - 42;
+}
+```
+
+Owning interface values are intentionally not supported in TypeC 0.1.2.
+
+### Generics
+
+TypeC 0.1.2 supports compile-time generics and monomorphization:
+
+```tc
+function identity<T>(value: T): T {
+  return value;
+}
+
+function main(): i32 {
+  return identity(42) - 42;
+}
+```
+
+Generic constraints are supported with interface constraints.
+
+### Modules
+
+Named imports:
+
+```tc
+import { add } from "./math.tc";
+```
+
+Namespace imports:
+
+```tc
+import * as Math from "./math.tc";
+```
+
+Default imports and re-exports are supported as static compile-time module operations. There is no
+dynamic module loader.
+
+### C interop
+
+Declare C functions:
+
+```tc
+extern function puts(text: u8*): i32;
+```
+
+Export extern declarations from generated modules:
+
+```tc
+export extern function cosf(value: f32): f32;
+```
+
+TypeC 0.1.2 checks a supported C ABI subset before emission.
+
+## Standard library in TypeC 0.1.2
+
+The TypeC 0.1.2 standard library is intentionally small and ABI-safe:
+
+- `std/c`
+- `std/math`
+- `std/mem`
+- `std/option`
+- `std/result`
+- `std/slice`
+- `std/test`
+
+Examples live in:
+
+- [`examples/std_c.tc`](examples/std_c.tc)
+- [`examples/std_math.tc`](examples/std_math.tc)
+- [`examples/std_mem.tc`](examples/std_mem.tc)
+- [`examples/std_option.tc`](examples/std_option.tc)
+- [`examples/std_result.tc`](examples/std_result.tc)
+- [`examples/std_slice.tc`](examples/std_slice.tc)
+- [`examples/std_test.tc`](examples/std_test.tc)
+
+## TypeC 0.1.2 examples
+
+Complete TypeC 0.1 examples live in [`examples/0.1`](examples/0.1):
+
 - [`hello.tc`](examples/0.1/hello.tc)
 - [`arithmetic.tc`](examples/0.1/arithmetic.tc)
 - [`records_structs.tc`](examples/0.1/records_structs.tc)
@@ -222,21 +434,124 @@ Complete 0.1 example programs live under [`examples/0.1`](examples/0.1):
 - [`c_extern.tc`](examples/0.1/c_extern.tc)
 - [`arena_safe_pointer.tc`](examples/0.1/arena_safe_pointer.tc)
 - [`stdlib_helpers.tc`](examples/0.1/stdlib_helpers.tc)
+- [`main.tc`](examples/0.1/main.tc)
 
-## Planned phase roadmap
+Raylib demo:
 
-Completed implementation phases are documented in `TYPEC_PHASES.md` through Phase 300. The active
-roadmap is the **TypeC 0.1 Completion Checklist**. These phases define 0.1 as the first
-self-contained TypeC language release and require specification, diagnostics, lowering behavior,
-examples, and tests for every supported construct.
+- [`raylib/main.tc`](raylib/main.tc)
+- [`raylib/project.json`](raylib/project.json)
 
-## Latest documented phase
+The Raylib demo uses TypeC 0.1.2 classes for game entities and managers (`Player`, `World`,
+`Asteroid`, `UI`, managers) plus static C interop through Raylib declarations.
 
-Latest completed phase: **Phase 300 — TypeC 0.1 Release Candidate**. The TypeC 0.1 completion track
-is complete for the 0.1 release candidate.
+## LSP and editor support
 
-Run the compiler with:
+TypeC 0.1.2 includes an LSP server:
 
-```bash
-deno run -A src/driver/main.ts run examples/main.tc
+```sh
+STC lsp
 ```
+
+The VSCode extension in [`vscode-extension`](vscode-extension) starts the LSP for `.tc` files.
+
+Supported LSP features include diagnostics, formatting, hover, definitions, declarations,
+references, rename, inlay hints, semantic tokens, document symbols, folding, selection ranges, code
+lens, and call hierarchy.
+
+TypeC 0.1.2 inlay hints include inferred local variable types. For example:
+
+```tc
+const c = cosf(angle);
+```
+
+can display as:
+
+```tc
+const c: f32 = cosf(angle);
+```
+
+## Diagnostics
+
+Diagnostics use stable codes documented in [`docs/diagnostics.md`](docs/diagnostics.md). Example
+categories include:
+
+- name resolution
+- type checking
+- records
+- modules
+- control flow
+- field access
+- operators
+- generics
+- C ABI compatibility
+- parser and lexer diagnostics
+
+Every diagnostic is intended to be actionable and deterministic.
+
+## C emission guarantees in TypeC 0.1.2
+
+TypeC 0.1.2 emits portable C11.
+
+Important guarantees:
+
+- Fixed-width primitive aliases are emitted in the C prelude.
+- TypeC primitive names map one-to-one to C typedef names where possible.
+- Class methods lower to deterministic C functions.
+- Borrowed interface calls lower to explicit fat views and generated shims.
+- No JavaScript runtime is emitted.
+- Standard C headers are emitted only when required by the generated program.
+
+See [`docs/c-emission.md`](docs/c-emission.md).
+
+## Known limitations in TypeC 0.1.2
+
+TypeC 0.1.2 is a complete 0.1 release line, but it is not a complete TypeScript replacement and not
+yet self-hosting.
+
+Major limitations:
+
+- No general heap allocation API.
+- No owned strings.
+- No general dynamic arrays or maps.
+- No async/await.
+- No exceptions.
+- No `any`, `unknown`, or `never`.
+- No `null` or `undefined` values.
+- No JavaScript runtime objects.
+- No prototype inheritance.
+- No structural interface conversion beyond explicit borrowed interface views.
+- No owning interface values.
+- C header support intentionally accepts only supported ABI-safe declarations.
+
+Self-hosting the TypeC compiler is not expected in TypeC 0.1.2. A future bootstrap path needs
+allocator support, owned strings, dynamic collections, file/process APIs, parser-friendly buffers,
+and a larger package/build story.
+
+## Development validation
+
+Before committing TypeC compiler changes, run:
+
+```sh
+deno fmt --check
+deno task check
+deno task lint
+deno test -A
+deno task build
+```
+
+`deno task build` runs lint and tests before compiling `./bin/STC`.
+
+For the Raylib demo:
+
+```sh
+STC check raylib/main.tc
+STC build raylib/main.tc --build-dir raylib/build
+```
+
+## Release status
+
+Current version: **TypeC 0.1.2**
+
+Latest completed documented phase: **Phase 300 — TypeC 0.1 Release Candidate**.
+
+There is currently no documented Phase 301 in `TYPEC_PHASES.md`.
