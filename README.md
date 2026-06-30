@@ -50,7 +50,7 @@ The repo-local binary is built at:
 
 Create `main.tc`:
 
-```tc
+```ts
 function square(value: i32): i32 {
   return value * value;
 }
@@ -131,7 +131,7 @@ STC emit-externs raylib.h -o raylib.tc -- -I/path/to/include
 
 The generated `.tc` file can be imported as a normal TypeC module:
 
-```tc
+```ts
 import * as RL from "./raylib.tc";
 
 function main(): i32 {
@@ -173,7 +173,7 @@ Example:
 
 Then source can use:
 
-```tc
+```ts
 import * as RL from "raylib";
 ```
 
@@ -183,7 +183,7 @@ TypeC 0.1.2 LSP diagnostics and inlay hints are project-aware for real `file://`
 
 ### Functions
 
-```tc
+```ts
 function add(left: i32, right: i32): i32 {
   return left + right;
 }
@@ -191,7 +191,7 @@ function add(left: i32, right: i32): i32 {
 
 `main` is the native entry point:
 
-```tc
+```ts
 function main(): i32 {
   return 0;
 }
@@ -199,7 +199,7 @@ function main(): i32 {
 
 ### Variables
 
-```tc
+```ts
 const immutable: i32 = 10;
 let mutable: i32 = 20;
 mutable += immutable;
@@ -207,13 +207,13 @@ mutable += immutable;
 
 Local type inference is supported:
 
-```tc
+```ts
 const value = 42; // inferred i32
 ```
 
 ### Control flow
 
-```tc
+```ts
 if (value > 0) {
   return value;
 } else {
@@ -225,7 +225,7 @@ Conditions must be `bool`. Braced blocks are required.
 
 Loops:
 
-```tc
+```ts
 let i: i32 = 0;
 while (i < 10) {
   i++;
@@ -234,7 +234,7 @@ while (i < 10) {
 
 ### Records
 
-```tc
+```ts
 type Vec2 = {
   x: f32,
   y: f32,
@@ -247,7 +247,7 @@ Records are static value layouts. They are not JavaScript objects.
 
 ### Arrays, tuples, and slices
 
-```tc
+```ts
 const values: i32[3] = [1, 2, 3];
 const first: i32 = values[0];
 ```
@@ -258,7 +258,7 @@ Static arrays have fixed length. Slices are explicit views; there is no JavaScri
 
 TypeC optionals are explicit static optional values, not JS `null`/`undefined`:
 
-```tc
+```ts
 function maybe(flag: bool): i32? {
   if (flag) {
     return Some(42);
@@ -271,7 +271,7 @@ Optional chaining and nullish coalescing are optional-type based.
 
 ### Enums and tagged unions
 
-```tc
+```ts
 enum Mode {
   Menu,
   Playing,
@@ -290,7 +290,7 @@ Tagged unions are explicit runtime layouts emitted to C.
 
 Classes are static value-layout types. They are not JavaScript objects.
 
-```tc
+```ts
 class Counter {
   value: i32;
 
@@ -320,7 +320,7 @@ Important class rules in TypeC 0.1.2:
 
 Interfaces are static method contracts. Borrowed interface values are explicit non-owning views:
 
-```tc
+```ts
 interface Readable {
   get(): i32;
 }
@@ -350,7 +350,7 @@ Owning interface values are intentionally not supported in TypeC 0.1.2.
 
 TypeC 0.1.2 supports compile-time generics and monomorphization:
 
-```tc
+```ts
 function identity<T>(value: T): T {
   return value;
 }
@@ -366,13 +366,13 @@ Generic constraints are supported with interface constraints.
 
 Named imports:
 
-```tc
+```ts
 import { add } from "./math.tc";
 ```
 
 Namespace imports:
 
-```tc
+```ts
 import * as Math from "./math.tc";
 ```
 
@@ -383,13 +383,13 @@ dynamic module loader.
 
 Declare C functions:
 
-```tc
+```ts
 extern function puts(text: u8*): i32;
 ```
 
 Export extern declarations from generated modules:
 
-```tc
+```ts
 export extern function cosf(value: f32): f32;
 ```
 
@@ -460,13 +460,13 @@ lens, and call hierarchy.
 
 TypeC 0.1.2 inlay hints include inferred local variable types. For example:
 
-```tc
+```ts
 const c = cosf(angle);
 ```
 
 can display as:
 
-```tc
+```ts
 const c: f32 = cosf(angle);
 ```
 
